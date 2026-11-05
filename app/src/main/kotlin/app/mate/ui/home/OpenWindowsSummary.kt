@@ -18,9 +18,6 @@ object OpenWindowsSummary {
 
     fun compact(family: ShapeFamily) = family == ShapeFamily.PILL || family == ShapeFamily.ROW || family == ShapeFamily.COLUMN
 
-    /** Éléments de [item] px qui tiennent dans [room] px, [gap] px entre deux ; au moins 1 (vue pas encore mesurée). */
-    fun fit(room: Int, item: Int, gap: Int): Int = maxOf(1, (room + gap) / (item + gap))
-
     /** Applis qui ont au moins une fenêtre, celle du premier plan en tête, les autres dans l'ordre reçu. */
     fun apps(data: OpenWindows): List<Entry> = data.apps
         .filter { it.windows.isNotEmpty() }
@@ -28,10 +25,6 @@ object OpenWindowsSummary {
         .sortedByDescending { it.front }
 
     fun total(data: OpenWindows) = data.apps.sumOf { it.windows.size }
-
-    /** Toutes les fenêtres, appli par appli dans l'ordre de [apps], celle du premier plan d'abord. */
-    fun windows(data: OpenWindows): List<Pair<OpenApp, ComputerWindow>> =
-        apps(data).flatMap { entry -> entry.app.windows.sortedByDescending { it.front }.map { entry.app to it } }
 
     /** Fenêtre qu'un toucher sur l'appli met devant : celle du premier plan, sinon la première non réduite, sinon la première. */
     fun target(app: OpenApp): ComputerWindow? =

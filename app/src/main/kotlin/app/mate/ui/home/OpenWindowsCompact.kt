@@ -31,16 +31,26 @@ import kotlinx.coroutines.launch
 /**
  * Fenêtres ouvertes en Pastille, Ligne et Colonne (#183) : un résumé sans défilement ni glisser ([OpenWindowsSummary]).
  * Pastille : l'icône de l'appli au premier plan et le nombre de fenêtres ; Ligne : les icônes des applis, un trait
- * sous celle du premier plan ; Colonne : la liste des applis (icône, nom, nombre de fenêtres), comme Touches et Applis.
- * Toucher une appli met sa fenêtre devant. Relu toutes les 5 s, seulement page à l'écran.
+ * sous celle du premier plan ; Colonne : la liste des applis (icône, nom, nombre de fenêtres), comme Touches et Applis
+ * ([TileShapes]). Toucher une appli met sa fenêtre devant. Relu toutes les 5 s, seulement page à l'écran ; redessiné
+ * seulement si la liste, la phrase ou la taille changent. [initial] : la liste déjà lue avant un changement de forme.
  */
-class OpenWindowsCompact(context: Context, private val scope: CoroutineScope, private val family: ShapeFamily) : FrameLayout(context) {
-    private var data: OpenWindows? = null
+class OpenWindowsCompact(
+    context: Context,
+    private val scope: CoroutineScope,
+    private val family: ShapeFamily,
+    initial: OpenWindows? = null,
+) : FrameLayout(context) {
+    /** Dernière liste lue, gardée par le widget quand la forme change. */
+    var data: OpenWindows? = initial
+        private set
     private var status: String = context.getString(R.string.open_loading)
     private var poll: Job? = null
+    private var action: Job? = null
     private var sample = false
-    private var drawnWidth = 0
-    private var drawnHeight = 0
+
+    /** Ce qui est à l'écran : rien n'est refait tant que ça ne change pas (un toucher en cours n'est pas perdu). */
+    private var drawn: Triple<Any?, Int, Int>? = null
 
     /** Aperçu du catalogue : des données fixes, ni réseau ni boucle. */
     fun showSample(sample: OpenWindows) {
@@ -51,6 +61,7 @@ class OpenWindowsCompact(context: Context, private val scope: CoroutineScope, pr
 
     fun setActive(active: Boolean) {
         poll?.cancel()
+        action?.cancel()
         poll = null
         if (!active || sample) return
         poll = scope.launch {
@@ -71,12 +82,13 @@ class OpenWindowsCompact(context: Context, private val scope: CoroutineScope, pr
 
     override fun onSizeChanged(w: Int, h: Int, oldw: Int, oldh: Int) {
         super.onSizeChanged(w, h, oldw, oldh)
-        if (w != drawnWidth || h != drawnHeight) post { render() }
+        post { render() }
     }
 
     private fun render() {
-        drawnWidth = width
-        drawnHeight = height
+        val state = Triple(data ?: status, width, height)
+        if (state == drawn) return
+        drawn = state
         removeAllViews()
         val current = data ?: return addView(note(status), LayoutParams(MATCH, WRAP, Gravity.CENTER))
         val apps = OpenWindowsSummary.apps(current)
@@ -85,70 +97,99 @@ class OpenWindowsCompact(context: Context, private val scope: CoroutineScope, pr
     }
 
     private fun icons(apps: List<OpenWindowsSummary.Entry>, total: Int): View = when (family) {
-        ShapeFamily.PILL -> FrameLayout(context).apply {
-            addView(tappable(icon(apps.first().app, PILL_ICON_DP), apps.first().app), LayoutParams(dp(PILL_ICON_DP), dp(PILL_ICON_DP), Gravity.CENTER))
-            addView(label(14f, R.attr.c_text_dim).apply { text = total.toString() }, LayoutParams(WRAP, WRAP, Gravity.BOTTOM or Gravity.END))
-        }
+        ShapeFamily.PILL -> pill(apps.first(), total)
         ShapeFamily.ROW -> LinearLayout(context).apply {
             gravity = Gravity.CENTER_VERTICAL
-            val fit = OpenWindowsSummary.fit(room.width, dp(ICON_CELL_DP), dp(GAP_DP))
+            val fit = TileShapes.fit(room.width, dp(TileShapes.ICON_DP), dp(TileShapes.ICON_GAP_DP))
             apps.take(fit).forEachIndexed { i, entry ->
                 val cell = LinearLayout(context).apply {
                     orientation = LinearLayout.VERTICAL
                     gravity = Gravity.CENTER
-                    addView(icon(entry.app, ICON_DP), LinearLayout.LayoutParams(dp(ICON_DP), dp(ICON_DP)))
-                    // Le premier plan : un trait sous l'icône (en plus du nom lu par TalkBack), pas une couleur seule.
+                    setBackgroundResource(R.drawable.row_bg)
+                    addView(icon(entry.app), LinearLayout.LayoutParams(dp(ICON_DP), dp(ICON_DP)))
+                    // Le premier plan : un trait sous l'icône, et « au premier plan » dans la description lue par TalkBack.
                     addView(View(context).apply {
                         setBackgroundColor(color(R.attr.c_accent))
                         visibility = if (entry.front) VISIBLE else INVISIBLE
                     }, LinearLayout.LayoutParams(dp(FRONT_MARK_DP), dp(3)).apply { topMargin = dp(6) })
                 }
-                addView(tappable(cell, entry.app), LinearLayout.LayoutParams(dp(ICON_CELL_DP), MATCH).apply { if (i > 0) marginStart = dp(GAP_DP) })
+                val lp = LinearLayout.LayoutParams(dp(TileShapes.ICON_DP), MATCH).apply { if (i > 0) marginStart = dp(TileShapes.ICON_GAP_DP) }
+                addView(tappable(cell, entry, describe(entry)), lp)
             }
         }
-        else -> column(apps) { entry -> row(entry.app, countText(entry.windows)) }
+        else -> LinearLayout(context).apply {
+            orientation = LinearLayout.VERTICAL
+            val fit = TileShapes.fit(room.height, dp(TileShapes.LIST_ROW_DP), dp(TileShapes.LIST_GAP_DP))
+            apps.take(fit).forEachIndexed { i, entry ->
+                addView(row(entry), LinearLayout.LayoutParams(MATCH, dp(TileShapes.LIST_ROW_DP)).apply { if (i > 0) topMargin = dp(TileShapes.LIST_GAP_DP) })
+            }
+        }
     }
 
-    /** Liste sans défilement : autant de lignes que la hauteur en tient. */
-    private fun <T> column(items: List<T>, line: (T) -> View) = LinearLayout(context).apply {
-        orientation = LinearLayout.VERTICAL
-        val fit = OpenWindowsSummary.fit(room.height, dp(LIST_ROW_DP), dp(LIST_GAP_DP))
-        items.take(fit).forEachIndexed { i, item ->
-            addView(line(item), LinearLayout.LayoutParams(MATCH, dp(LIST_ROW_DP)).apply { if (i > 0) topMargin = dp(LIST_GAP_DP) })
+    /** Pastille : l'icône de l'appli au premier plan, le nombre de fenêtres juste dessous. */
+    private fun pill(front: OpenWindowsSummary.Entry, total: Int): View {
+        val box = LinearLayout(context).apply {
+            orientation = LinearLayout.VERTICAL
+            gravity = Gravity.CENTER
+            setBackgroundResource(R.drawable.row_bg)
+            addView(icon(front.app), LinearLayout.LayoutParams(dp(PILL_ICON_DP), dp(PILL_ICON_DP)))
+            addView(label(13f, R.attr.c_text_dim).apply {
+                text = total.toString()
+                importantForAccessibility = IMPORTANT_FOR_ACCESSIBILITY_NO
+            }, LinearLayout.LayoutParams(WRAP, WRAP).apply { topMargin = dp(4) })
         }
+        val windows = context.resources.getQuantityString(R.plurals.widget_open_windows, total, total)
+        return tappable(box, front, context.getString(R.string.widget_open_pill_desc, front.app.name, windows))
     }
 
     /** Une ligne de la Colonne : icône et nom de l'appli, son nombre de fenêtres à droite s'il y en a plusieurs. */
-    private fun row(app: OpenApp, count: String?): View {
+    private fun row(entry: OpenWindowsSummary.Entry): View {
         val line = LinearLayout(context).apply {
             gravity = Gravity.CENTER_VERTICAL
             setBackgroundResource(R.drawable.row_bg)
             setPadding(dp(8), 0, dp(8), 0)
-            addView(icon(app, LIST_ICON_DP), LinearLayout.LayoutParams(dp(LIST_ICON_DP), dp(LIST_ICON_DP)))
-            addView(single(label(14f, R.attr.c_text)).apply { text = app.name }, LinearLayout.LayoutParams(0, WRAP, 1f).apply { marginStart = dp(10) })
-            count?.let { addView(label(13f, R.attr.c_text_dim).apply { text = it }, LinearLayout.LayoutParams(WRAP, WRAP).apply { marginStart = dp(8) }) }
+            addView(icon(entry.app), LinearLayout.LayoutParams(dp(LIST_ICON_DP), dp(LIST_ICON_DP)))
+            addView(single(label(14f, R.attr.c_text)).apply { text = entry.app.name }, LinearLayout.LayoutParams(0, WRAP, 1f).apply { marginStart = dp(10) })
+            if (entry.windows > 1) {
+                addView(label(13f, R.attr.c_text_dim).apply { text = context.getString(R.string.widget_open_times, entry.windows) }, LinearLayout.LayoutParams(WRAP, WRAP).apply { marginStart = dp(8) })
+            }
         }
-        return tappable(line, app)
+        val windows = context.resources.getQuantityString(R.plurals.widget_open_windows, entry.windows, entry.windows)
+        return tappable(line, entry, context.getString(R.string.widget_open_row_desc, describe(entry), windows))
     }
 
-    private fun countText(windows: Int) = if (windows > 1) "×$windows" else null
+    /** « Mettre Chrome devant », ou « Discord, au premier plan » : le premier plan n'est pas dit par le seul trait. */
+    private fun describe(entry: OpenWindowsSummary.Entry) =
+        context.getString(if (entry.front) R.string.widget_open_front_desc else R.string.widget_open_focus, entry.app.name)
 
-    /** Toucher met la fenêtre devant ; l'aperçu du catalogue ne touche pas l'ordinateur. */
-    private fun tappable(view: View, app: OpenApp): View = view.apply {
-        contentDescription = context.getString(R.string.widget_open_focus, app.name)
+    /**
+     * Toucher met la fenêtre devant, puis relit la liste quand l'ordinateur a fini (sa réponse si elle la contient,
+     * sinon après son animation) ; l'aperçu du catalogue ne touche pas l'ordinateur.
+     */
+    private fun tappable(view: View, entry: OpenWindowsSummary.Entry, description: String): View = view.apply {
+        contentDescription = description
         if (sample) return@apply
         setOnClickListener {
-            val target = OpenWindowsSummary.target(app) ?: return@setOnClickListener
+            val target = OpenWindowsSummary.target(entry.app) ?: return@setOnClickListener
             performHapticFeedback(HapticFeedbackConstants.VIRTUAL_KEY)
-            scope.launch {
-                runCatchingCancellable { BackendClient(context).windows.openWindowAction(app, target, "focus") }
+            action?.cancel()
+            action = scope.launch {
+                runCatchingCancellable { BackendClient(context).windows.openWindowAction(entry.app, target, "focus") }
+                    .onSuccess { list ->
+                        if (list != null) {
+                            data = list
+                            render()
+                        } else {
+                            delay(SETTLE_MS)
+                            refresh()
+                        }
+                    }
                     .onFailure { Toast.makeText(context, context.errorText(it), Toast.LENGTH_LONG).show() }
-                refresh()
             }
         }
     }
 
-    private fun icon(app: OpenApp, sizeDp: Int) = ImageView(context).apply {
+    private fun icon(app: OpenApp) = ImageView(context).apply {
         importantForAccessibility = IMPORTANT_FOR_ACCESSIBILITY_NO
         scaleType = ImageView.ScaleType.FIT_CENTER
         setImageResource(R.drawable.ic_deck)
@@ -159,7 +200,6 @@ class OpenWindowsCompact(context: Context, private val scope: CoroutineScope, pr
         }
         if (sample) return@apply
         IconCache.peekApp(app.name)?.let(::show) ?: scope.launch { IconCache.loadApp(BackendClient(context), app.name)?.let(::show) }
-        minimumWidth = dp(sizeDp)
     }
 
     private fun note(text: String) = label(14f, R.attr.c_text_dim).apply {
@@ -186,13 +226,12 @@ class OpenWindowsCompact(context: Context, private val scope: CoroutineScope, pr
         const val MATCH = ViewGroup.LayoutParams.MATCH_PARENT
         const val WRAP = ViewGroup.LayoutParams.WRAP_CONTENT
         const val POLL_MS = 5_000L
+
+        /** Attente de l'animation de l'ordinateur avant de relire, comme la vue des écrans. */
+        const val SETTLE_MS = 1_500L
         const val PILL_ICON_DP = 56
         const val ICON_DP = 40
-        const val ICON_CELL_DP = 64
-        const val GAP_DP = 8
         const val FRONT_MARK_DP = 20
-        const val LIST_ROW_DP = 56
-        const val LIST_GAP_DP = 4
         const val LIST_ICON_DP = 28
     }
 }

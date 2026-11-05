@@ -37,7 +37,8 @@ class OpenWindowsWidget(context: Context, host: HomeHost, placed: Placed) : Home
         summary?.setActive(false)
         val shown: View = if (compact) {
             // Le résumé dépend de la famille (Pastille, Ligne, Colonne) : refait à chaque changement de forme.
-            OpenWindowsCompact(context, host.scope, family).apply {
+            // La liste déjà lue passe à la nouvelle forme : pas de « Lecture… » ni de relecture en plus.
+            OpenWindowsCompact(context, host.scope, family, summary?.data).apply {
                 if (sample) showSample(OpenWindowsSample.data(context))
                 summary = this
             }

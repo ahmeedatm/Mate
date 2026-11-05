@@ -39,19 +39,7 @@ class OpenWindowsSummaryTest {
     }
 
     @Test
-    fun `les fenetres en liste, celle du premier plan d'abord`() {
-        assertEquals(listOf("Musique" to "f1", "Mail" to "f1", "Mail" to "f2"), OpenWindowsSummary.windows(data).map { (app, w) -> app.name to w.title })
-    }
-
-    @Test
     fun `seules Pastille, Ligne et Colonne ont la vue resumee`() {
         assertEquals(setOf(ShapeFamily.PILL, ShapeFamily.ROW, ShapeFamily.COLUMN), ShapeFamily.entries.filter { OpenWindowsSummary.compact(it) }.toSet())
-    }
-
-    @Test
-    fun `autant d'elements que la place en tient, au moins un`() {
-        assertEquals(3, OpenWindowsSummary.fit(room = 208, item = 64, gap = 8))
-        assertEquals(2, OpenWindowsSummary.fit(room = 207, item = 64, gap = 8))
-        assertEquals(1, OpenWindowsSummary.fit(room = 0, item = 64, gap = 8))
     }
 }
