@@ -16,7 +16,16 @@ data class ListShape(
     val addRow: Boolean,
     val sideHead: Boolean,
 ) {
+    /**
+     * Tête resserrée (chiffre et légende sur une ligne, anneau à la hauteur de la carte) : Pastille ou Ligne posée dans
+     * une rangée basse (92 dp au profil le plus serré). `innerDp` : hauteur utile de la carte, 0 tant qu'elle n'est pas mesurée.
+     */
+    fun compact(innerDp: Int): Boolean = innerDp in 1 until COMPACT_BELOW_DP && (!list || sideHead)
+
     companion object {
+        /** Hauteur utile sous laquelle la tête se resserre (rangée de 92 dp moins les marges de la carte). */
+        const val COMPACT_BELOW_DP = 80
+
         fun of(size: WidgetSize): ListShape = when (size.family) {
             ShapeFamily.PILL -> ListShape(list = false, columns = 1, checks = false, addRow = false, sideHead = false)
             ShapeFamily.ROW -> ListShape(list = true, columns = size.w - 1, checks = true, addRow = false, sideHead = true)

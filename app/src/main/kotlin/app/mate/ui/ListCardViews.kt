@@ -30,8 +30,9 @@ class ListCardViews(private val card: LinearLayout) {
     val status: TextView = card.findViewById(R.id.tasks_status)
     val addRow: View = card.findViewById(R.id.tasks_add_row)
 
-    var shape = ListShape.of(WidgetSize.L)
-        private set
+    /** Forme rangée ; null tant que [apply] n'est pas passé (gabarit tel que dans le XML : Bloc). */
+    private var applied: ListShape? = null
+    val shape get() = applied ?: ListShape.of(WidgetSize.L)
 
     init {
         ring.color = themeColor(context, R.attr.c_ok)
@@ -42,8 +43,10 @@ class ListCardViews(private val card: LinearLayout) {
         }
     }
 
-    fun apply(shape: ListShape) {
-        this.shape = shape
+    /** false : la forme n'a pas changé, rien n'est refait. */
+    fun apply(shape: ListShape): Boolean {
+        if (shape == applied) return false
+        applied = shape
         val side = shape.sideHead
         card.orientation = if (side) LinearLayout.HORIZONTAL else LinearLayout.VERTICAL
         head.layoutParams = LinearLayout.LayoutParams(if (side) WRAP_CONTENT else MATCH_PARENT, if (shape.list) WRAP_CONTENT else MATCH_PARENT)
@@ -62,7 +65,9 @@ class ListCardViews(private val card: LinearLayout) {
             LinearLayout.LayoutParams(MATCH_PARENT, 0, 1f).apply { topMargin = card.dp(8) }
         }
         addRow.isVisible = shape.addRow
+        caption.isVisible = !side
         fitHead()
+        return true
     }
 
     /** `number` vide : rien de lu encore (la légende dit le titre ou l'erreur). */
@@ -105,10 +110,10 @@ class ListCardViews(private val card: LinearLayout) {
         row.setOnClickListener { check.performClick() }
     }
 
-    /** Tête compacte quand la carte est basse (Pastille, Ligne) : anneau et chiffre tiennent dans la hauteur. */
+    /** Tête compacte quand la carte est basse (Pastille, Ligne) : anneau, chiffre et légende tiennent dans la hauteur. */
     private fun fitHead() {
         val inner = card.height - card.paddingTop - card.paddingBottom
-        val compact = inner in 1 until card.dp(COMPACT_BELOW_DP) && (!shape.list || shape.sideHead)
+        val compact = shape.compact((inner / context.resources.displayMetrics.density).toInt())
         val ringSize = if (compact) inner.coerceAtMost(card.dp(RING_DP)) else card.dp(RING_DP)
         ringBox.layoutParams.let {
             if (it.width != ringSize) {
@@ -119,14 +124,18 @@ class ListCardViews(private val card: LinearLayout) {
         }
         number.textSize = if (compact) 24f else 34f
         caption.maxLines = if (compact) 1 else 2
+        // Compacte : « 5 tâches restantes » sur une ligne, la légende alignée sur le pied du chiffre.
+        (title as LinearLayout).orientation = if (compact) LinearLayout.HORIZONTAL else LinearLayout.VERTICAL
+        caption.layoutParams = if (compact) {
+            LinearLayout.LayoutParams(0, WRAP_CONTENT, 1f).apply { marginStart = card.dp(8) }
+        } else {
+            LinearLayout.LayoutParams(MATCH_PARENT, WRAP_CONTENT).apply { topMargin = card.dp(4) }
+        }
     }
 
     private companion object {
         const val RING_DP = 56
         const val HEAD_GAP_DP = 16
         const val COLUMN_GAP_DP = 16
-
-        /** Hauteur utile sous laquelle la tête se resserre (rangée de 92 dp moins les marges de la carte). */
-        const val COMPACT_BELOW_DP = 80
     }
 }

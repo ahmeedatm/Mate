@@ -27,8 +27,8 @@ import kotlinx.coroutines.launch
  * config/tasks.json comme le worklog Jira, cochée toute seule quand la journée est saisie) et ponctuelles (ici ou
  * par Claude), avec rappel parlé. 🔁 : toutes les récurrentes, même celles qui ne tombent pas aujourd'hui.
  * Tête : anneau faites / total et nombre restant ([ListCardViews], rangée selon la forme par [setShape]) ; cases
- * rondes, pas de croix par ligne (toucher la ligne ouvre la suppression ; l'appui long est pris par le mode Modifier de
- * l'Accueil), toucher le nombre ouvre les récurrentes, toucher l'anneau relit les tâches, « + Nouvelle tâche » en
+ * rondes, pas de croix par ligne (toucher la ligne ouvre la suppression, sauf en Colonne où il la coche ; l'appui long
+ * est pris par le mode Modifier de l'Accueil), toucher le nombre ouvre les récurrentes, toucher l'anneau relit les tâches, « + Nouvelle tâche » en
  * dernière ligne.
  */
 class TasksCard @JvmOverloads constructor(
@@ -65,8 +65,7 @@ class TasksCard @JvmOverloads constructor(
     private var preview = false
 
     fun setShape(shape: ListShape) {
-        views.apply(shape)
-        shown?.let { render(it) }
+        if (views.apply(shape)) shown?.let { render(it) }
     }
 
     /** Aperçu du catalogue : les tâches d'exemple, sans toucher à l'ordinateur ni à la pastille de la barre latérale. */
@@ -178,7 +177,8 @@ class TasksCard @JvmOverloads constructor(
         showStatus(if (tasks.isEmpty()) context.getString(R.string.tasks_empty) else null)
 
         if (tasks.isNotEmpty()) Look.revealOnce(list)
-        views.fill(tasks.sortedBy { it.done }.map { taskRow(it) })
+        // Pastille : pas de liste à l'écran, pas de lignes à construire.
+        views.fill(if (views.shape.list) tasks.sortedBy { it.done }.map { taskRow(it) } else emptyList())
     }
 
     private fun showCount() {
@@ -216,8 +216,8 @@ class TasksCard @JvmOverloads constructor(
         // Sauf « Tour de X » : c'est l'information d'une corvée, elle reste visible.
         if (!detail.text.isNullOrEmpty() && task.assignee == null) {
             row.addOnLayoutChangeListener { _, left, _, right, _, _, _, _, _ ->
-                val shown = right - left >= context.dp(NARROW_ROW_DP)
-                if (detail.isVisible != shown) row.post { detail.isVisible = shown }
+                val wide = right - left >= context.dp(NARROW_ROW_DP)
+                if (detail.isVisible != wide) row.post { detail.isVisible = wide }
             }
         }
         row.findViewById<ImageButton>(R.id.task_open).apply {

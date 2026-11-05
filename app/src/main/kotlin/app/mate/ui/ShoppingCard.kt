@@ -22,7 +22,7 @@ import kotlinx.coroutines.launch
 /**
  * Widget « Courses » : la liste d'articles de l'ordinateur, cochée d'un toucher (les cochés descendent sous les autres).
  * Même gabarit que la carte Tâches, rangé selon la forme ([setShape]). Toucher la tête relit la liste, la dernière ligne supprime les articles cochés (après confirmation), toucher un
- * article ouvre sa suppression, « + Ajouter un article » ouvre le champ. L'ajout à la voix passe par `VoiceCommand.AddShopping`.
+ * article ouvre sa suppression (en Colonne, il le coche), « + Ajouter un article » ouvre le champ. L'ajout à la voix passe par `VoiceCommand.AddShopping`.
  */
 class ShoppingCard @JvmOverloads constructor(
     context: Context,
@@ -52,8 +52,7 @@ class ShoppingCard @JvmOverloads constructor(
     private var preview = false
 
     fun setShape(shape: ListShape) {
-        views.apply(shape)
-        shown?.let { shown = null; render(it) }
+        if (views.apply(shape)) shown?.let { shown = null; render(it) }
     }
 
     /** Aperçu du catalogue : les articles d'exemple, sans toucher à l'ordinateur. */
@@ -152,6 +151,8 @@ class ShoppingCard @JvmOverloads constructor(
         views.showHead(left.toString(), caption, doneCount, items.size)
         showStatus(if (items.isEmpty()) context.getString(R.string.shopping_empty) else null)
         if (items.isNotEmpty()) Look.revealOnce(list)
+        // Pastille : pas de liste à l'écran, pas de lignes à construire.
+        if (!views.shape.list) return views.fill(emptyList())
         views.fill(items.sortedBy { it.done }.map { itemRow(it) })
         if (doneCount > 0 && !preview) list.addView(clearRow())
     }

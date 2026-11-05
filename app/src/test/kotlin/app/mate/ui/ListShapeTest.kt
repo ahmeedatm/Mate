@@ -53,6 +53,16 @@ class ListShapeTest {
     }
 
     @Test
+    fun `la tete se resserre seulement en pastille ou en ligne, dans une rangee basse`() {
+        assertTrue(ListShape.of(WidgetSize.S).compact(44))
+        assertTrue(ListShape.of(WidgetSize.W).compact(44))
+        assertFalse(ListShape.of(WidgetSize.S).compact(136))
+        assertFalse(ListShape.of(WidgetSize.S).compact(0))
+        assertFalse(ListShape.of(WidgetSize.V).compact(44))
+        assertFalse(ListShape.of(WidgetSize.L).compact(44))
+    }
+
+    @Test
     fun `les lignes se rangent ligne par ligne`() {
         assertEquals(listOf(listOf(1, 2, 3), listOf(4, 5)), ListShape.rows(listOf(1, 2, 3, 4, 5), columns = 3))
         assertEquals(listOf(listOf(1), listOf(2)), ListShape.rows(listOf(1, 2), columns = 1))
