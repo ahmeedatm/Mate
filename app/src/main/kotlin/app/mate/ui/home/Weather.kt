@@ -64,8 +64,11 @@ object Weather {
         val hours: List<Hour> = emptyList(),
     )
 
-    /** Une heure de la courbe : heure de la tablette (0 à 23), température et temps de l'heure qui suit. */
-    class Hour(val hour: Int, val temperature: Double, val code: Int)
+    /** Une heure de la courbe : début (ms), heure de la tablette (0 à 23), température et temps de l'heure qui suit. */
+    class Hour(val at: Long, val hour: Int, val temperature: Double, val code: Int)
+
+    /** Les heures pas encore finies à [now] (ms) : une prévision gardée faute de réseau ne montre pas le passé. */
+    fun upcoming(hours: List<Hour>, now: Long) = hours.filter { it.at + HOUR_MS > now }
 
     /** Un jour suivant : date (« 2026-10-29 », jour de la tablette), temps, min et max. */
     class Day(val date: String, val code: Int, val min: Double, val max: Double)
@@ -108,7 +111,7 @@ object Weather {
         )
         val today = dayOf(byDay[0].key, byDay[0].value)
         val gap = steps.zipWithNext().indexOfFirst { (a, b) -> b.at - a.at > HOUR_MS }
-        val hours = (if (gap < 0) steps else steps.take(gap + 1)).take(HOURS).map { Hour(it.hour, it.temperature, codeOf(it.symbol)) }
+        val hours = (if (gap < 0) steps else steps.take(gap + 1)).take(HOURS).map { Hour(it.at, it.hour, it.temperature, codeOf(it.symbol)) }
         return Forecast(steps[0].temperature, codeOf(steps[0].symbol), today.min, today.max, byDay.drop(1).map { dayOf(it.key, it.value) }, hours)
     }
 

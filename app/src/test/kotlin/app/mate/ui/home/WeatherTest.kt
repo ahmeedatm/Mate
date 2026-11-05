@@ -69,6 +69,19 @@ class WeatherTest {
     }
 
     @Test
+    fun `une prevision gardee faute de reseau ne montre plus les heures passees`() {
+        val json = forecast(
+            step("2026-11-05T14:00:00Z", 12.0, "cloudy"),
+            step("2026-11-05T15:00:00Z", 11.0, "cloudy"),
+            step("2026-11-05T16:00:00Z", 10.0, "cloudy"),
+        )
+        val hours = Weather.parse(json, paris).hours
+        val at1530 = hours[1].at + 30 * 60_000L
+        // 15 h 30 UTC : l'heure de 15 h est encore en cours, celle de 14 h est passée.
+        assertEquals(listOf(16, 17), Weather.upcoming(hours, at1530).map { it.hour })
+    }
+
+    @Test
     fun `au plus 12 prochaines heures`() {
         val steps = (0 until 20).map { step("2026-11-05T%02d:00:00Z".format(it), 10.0, "cloudy") }
         assertEquals(Weather.HOURS, Weather.parse(forecast(*steps.toTypedArray()), paris).hours.size)

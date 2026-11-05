@@ -49,6 +49,7 @@ class ClockWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidget
     override fun applySize() {
         face = ClockFace.of(placed.size)
         for (part in listOf(greeting, clock, hours, minutes, seconds, date, dial, ring)) (part.parent as? ViewGroup)?.removeView(part)
+        ring.removeAllViews()
         view.removeAllViews()
         val pad = dp(if (family == ShapeFamily.PILL) PILL_PAD_DP else PAD_DP)
         view.setPadding(pad, pad, pad, pad)
@@ -185,7 +186,9 @@ class ClockWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidget
         })
         // Dans le cadran de la Pastille, date courte (« Mer. 5 ») ; ailleurs, la date entière.
         val pattern = if (face.dateInDial) "EEE d" else "EEEE d MMMM"
-        date.text = SimpleDateFormat(pattern, Locale.FRANCE).format(Date()).replaceFirstChar { it.uppercase() }
+        val text = SimpleDateFormat(pattern, Locale.FRANCE).format(Date()).replaceFirstChar { it.uppercase() }
+        // Même texte : pas de nouvelle mise en page (une fois par minute sur la tablette).
+        if (date.text.toString() != text) date.text = text
         dial.show(ClockFace.lit(now.get(Calendar.MINUTE)))
     }
 

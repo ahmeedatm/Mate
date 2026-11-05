@@ -288,7 +288,8 @@ class WidgetModelTest {
                 // Maintenu, le tableau s'agrandit en plein écran.
                 assertEquals("$type", WidgetSize.FULL, type.zoomSize)
             } else if (type.sizes.size == WidgetSize.entries.size) {
-                // Les 16 formes (#178) : la règle de WidgetRulesTest remplace celle-ci.
+                // Les 16 formes (#178) : la règle de WidgetRulesTest remplace celle-ci, l'ajout reste hors plein écran.
+                assertFalse("$type : l'ajout ne commence pas en plein ecran", type.sizes.first() == WidgetSize.FULL)
             } else if (type == WidgetType.YTMUSIC) {
                 // Exception : YouTube Music en 3 x 2 montre la file d'attente à côté du lecteur (branche Gen2).
                 assertEquals("$type", listOf(WidgetSize.L3), big)

@@ -10,7 +10,6 @@ import app.mate.R
 import app.mate.ui.dp
 import app.mate.ui.themeColor
 import app.mate.ui.themeFont
-import kotlin.math.ceil
 import kotlin.math.roundToInt
 
 /**
@@ -40,34 +39,31 @@ class TempCurve(context: Context) : View(context) {
 
     fun show(list: List<Weather.Hour>) {
         hours = list
-        contentDescription = list.joinToString(", ") { context.getString(R.string.widget_weather_hour, it.hour, it.temperature.roundToInt()) }
+        contentDescription = list.take(maxPoints).joinToString(", ") { context.getString(R.string.widget_weather_hour, it.hour, it.temperature.roundToInt()) }
         invalidate()
-    }
-
-    /** Étiquettes à la taille de la courbe : lisibles de loin en grand, discrètes en Pastille. */
-    override fun onSizeChanged(w: Int, h: Int, oldw: Int, oldh: Int) {
-        val side = if (across) h else w
-        temp.textSize = (side * LABEL_PART).coerceIn(sp(TEMP_SP), sp(TEMP_MAX_SP))
-        hour.textSize = temp.textSize * HOUR_PART
     }
 
     override fun onDraw(canvas: Canvas) {
         // Trop petite (Pastille d'une rangée fine) : rien plutôt qu'un trait illisible.
         val room = if (across) height else width
         if (hours.size < 2 || width == 0 || room < context.dp(MIN_ROOM_DP)) return
+        // Étiquettes à la taille de la courbe : lisibles de loin en grand, discrètes en Pastille.
+        temp.textSize = (room * LABEL_PART).coerceIn(sp(TEMP_SP), sp(TEMP_MAX_SP))
+        hour.textSize = temp.textSize * HOUR_PART
         if (across) drawAcross(canvas) else drawDown(canvas)
     }
 
     private fun drawAcross(canvas: Canvas) {
         val labelW = temp.measureText("-88°")
-        val n = count(width - labelW, context.dp(MIN_STEP_DP))
+        val n = CurvePlan.count(width - labelW, context.dp(MIN_STEP_DP).toFloat(), minOf(hours.size, maxPoints))
+        if (n == 0) return
         val list = hours.take(n)
         val top = temp.textSize * LABEL_ROOM
         val bottom = height - if (withHours) hour.textSize * LABEL_ROOM else radius * 2
         val left = labelW / 2
         val step = (width - labelW) / (n - 1)
-        val every = ceil(labelW * LABEL_GAP / step).toInt().coerceAtLeast(1)
-        val ys = place(list, bottom, top)
+        val every = CurvePlan.every(labelW * LABEL_GAP, step)
+        val ys = CurvePlan.place(list.map { it.temperature }, bottom, top)
         path.reset()
         list.indices.forEach { i -> if (i == 0) path.moveTo(left, ys[0]) else path.lineTo(left + i * step, ys[i]) }
         canvas.drawPath(path, line)
@@ -81,12 +77,13 @@ class TempCurve(context: Context) : View(context) {
     }
 
     private fun drawDown(canvas: Canvas) {
-        val n = count(height - hour.textSize * 2, context.dp(MIN_ROW_DP))
+        val n = CurvePlan.count(height - hour.textSize * 2, context.dp(MIN_ROW_DP).toFloat(), minOf(hours.size, maxPoints))
+        if (n == 0) return
         val list = hours.take(n)
         val hourW = hour.measureText("88h") + context.dp(8)
         val labelW = temp.measureText("-88°") + context.dp(8)
         val step = (height - hour.textSize * 2) / (n - 1)
-        val xs = place(list, hourW + radius, width - labelW)
+        val xs = CurvePlan.place(list.map { it.temperature }, hourW + radius, width - labelW)
         path.reset()
         list.indices.forEach { i -> if (i == 0) path.moveTo(xs[0], hour.textSize) else path.lineTo(xs[i], hour.textSize + i * step) }
         canvas.drawPath(path, line)
@@ -96,16 +93,6 @@ class TempCurve(context: Context) : View(context) {
             canvas.drawText(context.getString(R.string.widget_weather_hour_short, h.hour), 0f, y + hour.textSize / 3, hour.start())
             canvas.drawText(degrees(h), xs[i] + radius * 3, y + temp.textSize / 3, temp.start())
         }
-    }
-
-    /** Nombre d'heures qui tiennent sur [length] px avec au moins [minStep] px entre deux. */
-    private fun count(length: Float, minStep: Int) = (length / minStep).toInt().plus(1).coerceIn(2, minOf(hours.size, maxPoints))
-
-    /** Position de chaque température entre [low] (la plus froide) et [high] (la plus chaude) ; toutes égales : au milieu. */
-    private fun place(list: List<Weather.Hour>, low: Float, high: Float): FloatArray {
-        val min = list.minOf { it.temperature }
-        val max = list.maxOf { it.temperature }
-        return FloatArray(list.size) { i -> if (max - min < FLAT) (low + high) / 2 else low + ((list[i].temperature - min) / (max - min)).toFloat() * (high - low) }
     }
 
     private fun degrees(h: Weather.Hour) = context.getString(R.string.widget_weather_temp, h.temperature.roundToInt())
@@ -142,8 +129,5 @@ class TempCurve(context: Context) : View(context) {
 
         /** Une étiquette de température prend sa largeur plus cette marge avant la suivante. */
         const val LABEL_GAP = 1.2f
-
-        /** En dessous de cet écart (degrés), la courbe est plate. */
-        const val FLAT = 0.5
     }
 }

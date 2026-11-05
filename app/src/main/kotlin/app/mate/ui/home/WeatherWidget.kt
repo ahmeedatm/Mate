@@ -35,7 +35,7 @@ class WeatherSample(val city: Int, val forecast: Weather.Forecast, val air: Int)
                     Weather.Day("2026-11-09", 0, 4.0, 12.0),
                 ),
                 hours = listOf(13.0, 13.0, 12.0, 11.0, 10.0, 9.0, 9.0, 8.0, 8.0, 8.0, 7.0, 7.0)
-                    .mapIndexed { i, t -> Weather.Hour((14 + i) % 24, t, if (i < 4) 2 else 3) },
+                    .mapIndexed { i, t -> Weather.Hour(Long.MAX_VALUE / 2, (14 + i) % 24, t, if (i < 4) 2 else 3) },
             ),
             air = 2,
         )
@@ -174,7 +174,7 @@ class WeatherWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidg
         // L'air est un plus, lu après l'affichage de la météo (sa réponse peut traîner) et seulement si elle est à jour.
         if (current == null) return
         airIndex = runCatching { AirQuality.index(placed.config.getDouble("lat"), placed.config.getDouble("lon")) }.getOrNull() ?: airIndex
-        render()
+        renderAir()
     }
 
     private fun render() {
@@ -211,8 +211,9 @@ class WeatherWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidg
         sky.setText(weather.text)
         range.text = context.getString(R.string.widget_weather_range, f.min.roundToInt(), f.max.roundToInt())
         smallCity.text = if (family == ShapeFamily.COLUMN) context.getString(R.string.widget_weather_city_range, name, f.min.roundToInt(), f.max.roundToInt()) else name
-        curve.visibility = if (f.hours.size >= 2) View.VISIBLE else View.GONE
-        curve.show(f.hours)
+        val hours = Weather.upcoming(f.hours, System.currentTimeMillis())
+        curve.visibility = if (hours.size >= 2) View.VISIBLE else View.GONE
+        curve.show(hours)
         renderAir()
         renderDays(f.days)
     }
