@@ -38,7 +38,6 @@ class OpenWindowsWidget(context: Context, host: HomeHost, placed: Placed) : Home
         val shown: View = if (compact) {
             // Le résumé dépend de la famille (Pastille, Ligne, Colonne) : refait à chaque changement de forme.
             OpenWindowsCompact(context, host.scope, family).apply {
-                variant = placed.config.optString("variant", "A")
                 if (sample) showSample(OpenWindowsSample.data(context))
                 summary = this
             }

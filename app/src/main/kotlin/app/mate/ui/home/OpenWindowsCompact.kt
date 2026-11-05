@@ -15,7 +15,6 @@ import android.widget.TextView
 import android.widget.Toast
 import app.mate.R
 import app.mate.net.BackendClient
-import app.mate.net.ComputerWindow
 import app.mate.net.OpenApp
 import app.mate.net.OpenWindows
 import app.mate.net.runCatchingCancellable
@@ -23,7 +22,6 @@ import app.mate.ui.IconCache
 import app.mate.ui.dp
 import app.mate.ui.errorText
 import app.mate.ui.themeColor
-import app.mate.ui.themeFont
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
@@ -32,16 +30,11 @@ import kotlinx.coroutines.launch
 
 /**
  * Fenêtres ouvertes en Pastille, Ligne et Colonne (#183) : un résumé sans défilement ni glisser ([OpenWindowsSummary]).
+ * Pastille : l'icône de l'appli au premier plan et le nombre de fenêtres ; Ligne : les icônes des applis, un trait
+ * sous celle du premier plan ; Colonne : la liste des applis (icône, nom, nombre de fenêtres), comme Touches et Applis.
  * Toucher une appli met sa fenêtre devant. Relu toutes les 5 s, seulement page à l'écran.
- * [variant] : provisoire, le temps qu'Ahmed choisisse (A icônes, B chiffre, C titres).
  */
 class OpenWindowsCompact(context: Context, private val scope: CoroutineScope, private val family: ShapeFamily) : FrameLayout(context) {
-    var variant = "A"
-        set(value) {
-            field = value
-            render()
-        }
-
     private var data: OpenWindows? = null
     private var status: String = context.getString(R.string.open_loading)
     private var poll: Job? = null
@@ -88,16 +81,8 @@ class OpenWindowsCompact(context: Context, private val scope: CoroutineScope, pr
         val current = data ?: return addView(note(status), LayoutParams(MATCH, WRAP, Gravity.CENTER))
         val apps = OpenWindowsSummary.apps(current)
         if (apps.isEmpty()) return addView(note(context.getString(R.string.widget_open_none_short)), LayoutParams(MATCH, WRAP, Gravity.CENTER))
-        val total = OpenWindowsSummary.total(current)
-        val content = when (variant) {
-            "B" -> numberFirst(apps, total)
-            "C" -> titles(current, apps)
-            else -> icons(apps, total)
-        }
-        addView(content, LayoutParams(MATCH, MATCH))
+        addView(icons(apps, OpenWindowsSummary.total(current)), LayoutParams(MATCH, MATCH))
     }
-
-    // ---- A : icônes (comme Touches et Applis) ----
 
     private fun icons(apps: List<OpenWindowsSummary.Entry>, total: Int): View = when (family) {
         ShapeFamily.PILL -> FrameLayout(context).apply {
@@ -121,67 +106,8 @@ class OpenWindowsCompact(context: Context, private val scope: CoroutineScope, pr
                 addView(tappable(cell, entry.app), LinearLayout.LayoutParams(dp(ICON_CELL_DP), MATCH).apply { if (i > 0) marginStart = dp(GAP_DP) })
             }
         }
-        else -> column(apps) { entry -> row(entry.app, entry.app.name, null, countText(entry.windows)) }
+        else -> column(apps) { entry -> row(entry.app, countText(entry.windows)) }
     }
-
-    // ---- B : le nombre d'abord ----
-
-    private fun numberFirst(apps: List<OpenWindowsSummary.Entry>, total: Int): View {
-        val number = label(if (family == ShapeFamily.PILL) 40f else 34f, R.attr.c_text).apply {
-            typeface = themeFont(context, R.attr.c_font_light)
-            text = total.toString()
-        }
-        val unit = label(13f, R.attr.c_text_dim).apply { text = context.resources.getQuantityString(R.plurals.widget_open_count, total, total).substringAfter(' ') }
-        return when (family) {
-            ShapeFamily.PILL -> LinearLayout(context).apply {
-                orientation = LinearLayout.VERTICAL
-                gravity = Gravity.CENTER
-                addView(number)
-                addView(unit)
-            }
-            ShapeFamily.ROW -> LinearLayout(context).apply {
-                gravity = Gravity.CENTER_VERTICAL
-                addView(number)
-                addView(unit, LinearLayout.LayoutParams(WRAP, WRAP).apply { marginStart = dp(8) })
-                addView(single(label(14f, R.attr.c_text_dim)).apply {
-                    text = context.getString(R.string.widget_open_front, apps.first().app.name)
-                    gravity = Gravity.END
-                }, LinearLayout.LayoutParams(0, WRAP, 1f).apply { marginStart = dp(12) })
-            }
-            else -> LinearLayout(context).apply {
-                orientation = LinearLayout.VERTICAL
-                gravity = Gravity.CENTER_HORIZONTAL
-                addView(number)
-                addView(unit, LinearLayout.LayoutParams(WRAP, WRAP).apply { bottomMargin = dp(8) })
-                val fit = OpenWindowsSummary.fit(room.height - dp(NUMBER_BLOCK_DP), dp(ICON_CELL_DP), dp(GAP_DP))
-                apps.take(fit).forEach { entry ->
-                    addView(tappable(icon(entry.app, ICON_DP), entry.app), LinearLayout.LayoutParams(dp(ICON_CELL_DP), dp(ICON_CELL_DP)).apply { topMargin = dp(GAP_DP) })
-                }
-            }
-        }
-    }
-
-    // ---- C : les titres des fenêtres ----
-
-    private fun titles(current: OpenWindows, apps: List<OpenWindowsSummary.Entry>): View {
-        val front = apps.first().app
-        val frontWindow = OpenWindowsSummary.target(front)
-        return when (family) {
-            ShapeFamily.PILL -> tappable(LinearLayout(context).apply {
-                orientation = LinearLayout.VERTICAL
-                gravity = Gravity.CENTER
-                addView(icon(front, ICON_DP), LinearLayout.LayoutParams(dp(ICON_DP), dp(ICON_DP)))
-                addView(single(label(13f, R.attr.c_text)).apply {
-                    text = front.name
-                    gravity = Gravity.CENTER
-                }, LinearLayout.LayoutParams(MATCH, WRAP).apply { topMargin = dp(6) })
-            }, front)
-            ShapeFamily.ROW -> row(front, front.name, frontWindow, null)
-            else -> column(OpenWindowsSummary.windows(current)) { (app, window) -> row(app, app.name, window, null, window) }
-        }
-    }
-
-    // ---- Briques ----
 
     /** Liste sans défilement : autant de lignes que la hauteur en tient. */
     private fun <T> column(items: List<T>, line: (T) -> View) = LinearLayout(context).apply {
@@ -192,32 +118,27 @@ class OpenWindowsCompact(context: Context, private val scope: CoroutineScope, pr
         }
     }
 
-    /** Une ligne : icône, nom de l'appli et titre de la fenêtre (ou un nombre de fenêtres à droite). */
-    private fun row(app: OpenApp, name: String, window: ComputerWindow?, count: String?, target: ComputerWindow? = null): View {
-        val texts = LinearLayout(context).apply {
-            orientation = LinearLayout.VERTICAL
-            addView(single(label(14f, R.attr.c_text)).apply { text = name })
-            window?.let { w -> addView(single(label(13f, R.attr.c_text_dim)).apply { text = w.title.ifBlank { context.getString(R.string.windows_untitled) } }) }
-        }
+    /** Une ligne de la Colonne : icône et nom de l'appli, son nombre de fenêtres à droite s'il y en a plusieurs. */
+    private fun row(app: OpenApp, count: String?): View {
         val line = LinearLayout(context).apply {
             gravity = Gravity.CENTER_VERTICAL
             setBackgroundResource(R.drawable.row_bg)
             setPadding(dp(8), 0, dp(8), 0)
             addView(icon(app, LIST_ICON_DP), LinearLayout.LayoutParams(dp(LIST_ICON_DP), dp(LIST_ICON_DP)))
-            addView(texts, LinearLayout.LayoutParams(0, WRAP, 1f).apply { marginStart = dp(10) })
+            addView(single(label(14f, R.attr.c_text)).apply { text = app.name }, LinearLayout.LayoutParams(0, WRAP, 1f).apply { marginStart = dp(10) })
             count?.let { addView(label(13f, R.attr.c_text_dim).apply { text = it }, LinearLayout.LayoutParams(WRAP, WRAP).apply { marginStart = dp(8) }) }
         }
-        return tappable(line, app, target)
+        return tappable(line, app)
     }
 
     private fun countText(windows: Int) = if (windows > 1) "×$windows" else null
 
     /** Toucher met la fenêtre devant ; l'aperçu du catalogue ne touche pas l'ordinateur. */
-    private fun tappable(view: View, app: OpenApp, window: ComputerWindow? = null): View = view.apply {
+    private fun tappable(view: View, app: OpenApp): View = view.apply {
         contentDescription = context.getString(R.string.widget_open_focus, app.name)
         if (sample) return@apply
         setOnClickListener {
-            val target = window ?: OpenWindowsSummary.target(app) ?: return@setOnClickListener
+            val target = OpenWindowsSummary.target(app) ?: return@setOnClickListener
             performHapticFeedback(HapticFeedbackConstants.VIRTUAL_KEY)
             scope.launch {
                 runCatchingCancellable { BackendClient(context).windows.openWindowAction(app, target, "focus") }
@@ -273,8 +194,5 @@ class OpenWindowsCompact(context: Context, private val scope: CoroutineScope, pr
         const val LIST_ROW_DP = 56
         const val LIST_GAP_DP = 4
         const val LIST_ICON_DP = 28
-
-        /** Hauteur du nombre et de son unité en haut de la Colonne (variante B). */
-        const val NUMBER_BLOCK_DP = 72
     }
 }
