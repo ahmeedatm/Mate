@@ -94,7 +94,8 @@ class ChecklistWidget(context: Context, host: HomeHost, placed: Placed) : HomeWi
         renderHead(list)
         views.status.setText(R.string.checklist_empty)
         views.status.isVisible = list.steps.isEmpty()
-        views.fill(list.steps.mapIndexed { i, step -> stepRow(i, step) })
+        // Les étapes à faire d'abord (une étape cochée descend au prochain affichage), chacune garde son rang dans la config.
+        views.fill(list.steps.withIndex().sortedBy { it.value.done }.map { (i, step) -> stepRow(i, step) })
         views.addRow.isVisible = views.shape.addRow && list.total < Checklist.MAX_STEPS
     }
 

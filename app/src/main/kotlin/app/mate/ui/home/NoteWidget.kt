@@ -60,6 +60,8 @@ class NoteWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidget(
         view.orientation = if (shape.side) LinearLayout.HORIZONTAL else LinearLayout.VERTICAL
         view.gravity = if (shape.side) Gravity.CENTER_VERTICAL else Gravity.NO_GRAVITY
         title.isVisible = shape.title
+        // Colonne : le texte part sous l'icône ; ailleurs il se centre dans la place qui reste.
+        text.gravity = if (placed.size.family == ShapeFamily.COLUMN) Gravity.TOP else Gravity.CENTER_VERTICAL
         text.layoutParams = if (shape.side) {
             LinearLayout.LayoutParams(0, MATCH_PARENT, 1f).apply { marginStart = dp(16) }
         } else {
