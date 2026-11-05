@@ -292,8 +292,9 @@ test.describe("page locale GET /", () => {
     expect(await page.locator("#twin").evaluate((el) => el.style.getPropertyValue("--t-now"))).toBe("#FF2BD6");
     expect(await page.locator("#twin").evaluate((el) => el.style.getPropertyValue("--t-tile"))).toBe("#000000");
 
-    // Les 15 thèmes de la tablette ont leur bouton, dans l'ordre de l'appli.
+    // Les 16 thèmes de la tablette ont leur bouton, dans l'ordre de l'appli.
     await expect(page.locator(".themes button")).toHaveText([
+      "Chaleur",
       "Console",
       "Console jour",
       "Clair",
@@ -318,6 +319,7 @@ test.describe("page locale GET /", () => {
 
     // Accent de l'aperçu de chaque thème = c_accent de palettes.xml (valeurs relevées à la main). showTwin direct : un clic enverrait un ordre à la tablette.
     const accents = {
+      CHALEUR: "#AE5030",
       CONSOLE: "#B8F34A",
       CONSOLE_JOUR: "#3F6B00",
       CLAIR: "#CA0538",
