@@ -161,6 +161,8 @@ abstract class CallWidget(
             .forEach { (it.parent as? ViewGroup)?.removeView(it) }
         view.removeAllViews()
         view.gravity = Gravity.NO_GRAVITY
+        featured.centered = false
+        bigRow.centered = false
         plan = planCall(family, island, shownTiles())
         when {
             family == ShapeFamily.PILL -> pillLayout()
@@ -222,13 +224,16 @@ abstract class CallWidget(
                 view.addView(memberColumn, LinearLayout.LayoutParams(match, 0, 1f).apply { topMargin = dp(8); bottomMargin = dp(8) })
                 rows = listOf(memberColumn)
             }
-            ShapeFamily.FULL -> {
+            // Plein écran, et Grand assez haut : celui qui parle en grand, les autres en rangée dessous.
+            ShapeFamily.FULL, ShapeFamily.LARGE.takeIf { placed.size.h >= FEATURED_MIN_ROWS } -> {
                 val center = LinearLayout(context).apply { orientation = LinearLayout.VERTICAL; gravity = Gravity.CENTER }
                 center.addView(featured, LinearLayout.LayoutParams(match, wrap))
                 center.addView(featuredName, LinearLayout.LayoutParams(match, wrap).apply { topMargin = dp(8) })
                 center.addView(bigRow, LinearLayout.LayoutParams(wrap, wrap).apply { topMargin = dp(16) })
                 view.addView(center, LinearLayout.LayoutParams(match, 0, 1f))
                 rows = listOf(bigRow)
+                featured.centered = true
+                bigRow.centered = true
             }
             else -> {
                 val row = if (family == ShapeFamily.LARGE) bigRow else memberRow
@@ -321,7 +326,11 @@ abstract class CallWidget(
     private fun renderKeys() {
         val lit = { tile: DeckTile -> tile to tileLit(tile, voice) }
         if (keys.parent != null) {
-            val metrics = if (plan.bigKeys && innerH >= TileMetrics.LARGE.cellDp * 2) TileMetrics.LARGE else TileGridView.metrics(context)
+            val metrics = when {
+                !plan.bigKeys || innerH < TileMetrics.LARGE.cellDp * 2 -> TileGridView.metrics(context)
+                family == ShapeFamily.FULL -> FULL_KEYS
+                else -> TileMetrics.LARGE
+            }
             val next = plan.keys.map(lit)
             if (listOf(next, metrics) == drawn) return
             drawn = listOf(next, metrics)
@@ -332,7 +341,7 @@ abstract class CallWidget(
         if (innerH == 0) return
         val sizes = keySizes()
         val main = plan.main?.let(lit)
-        val small = plan.keys.take(sizes.count).map(lit)
+        val small = fitKeys(plan.keys, sizes.count).map(lit)
         val next = listOf(main, small, sizes)
         if (next == drawn) return
         drawn = next
@@ -440,7 +449,9 @@ abstract class CallWidget(
             else -> null
         }
         flag.text = alert?.let { context.getString(it) }.orEmpty()
-        flag.visibility = if (alert == null) View.GONE else View.VISIBLE
+        // Pastille et Ligne : la touche du micro, allumée, le dit déjà.
+        val keyTells = family == ShapeFamily.PILL || family == ShapeFamily.ROW
+        flag.visibility = if (alert == null || keyTells) View.GONE else View.VISIBLE
         val names = v?.people?.takeIf { inCall && it.isNotEmpty() }
         people.text = names?.let { context.getString(R.string.deck_voice_with, it.joinToString(", ")) }.orEmpty()
         renderPhotos(v, inCall)
@@ -604,6 +615,12 @@ abstract class CallWidget(
         const val HALO_OUT_MS = 300L
         const val BIG_PHOTO_DP = 56
         const val FEATURED_PHOTO_DP = 120
+
+        /** Grand de l'îlot haut d'au moins 3 cases : celui qui parle en grand, comme en Plein écran. */
+        const val FEATURED_MIN_ROWS = 3
+
+        /** Touches du Plein écran de la télécommande : plus grandes que les grandes cotes du thème Contraste. */
+        val FULL_KEYS = TileMetrics(columnDp = 200, cellDp = 196, plateDp = 112, labelSp = 20f, initialSp = 54f)
     }
 }
 

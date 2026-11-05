@@ -23,6 +23,13 @@ import app.mate.ui.themeFont
  * [photoDp] : diamètre d'une photo ; [vertical] : les photos en colonne (Colonne de l'îlot Discord).
  */
 class MemberRowView(context: Context, photoDp: Int = PHOTO_DP, private val vertical: Boolean = false) : View(context) {
+    /** Rangée centrée dans sa largeur (Plein écran de l'îlot Discord) ; sinon calée à gauche. */
+    var centered = false
+        set(value) {
+            field = value
+            invalidate()
+        }
+
     /** Photo déjà chargée d'un participant ; null : initiales. */
     var photoOf: (String) -> Bitmap? = { null }
 
@@ -99,7 +106,8 @@ class MemberRowView(context: Context, photoDp: Int = PHOTO_DP, private val verti
     private fun replan() {
         val length = if (vertical) height else width
         val fits = if (length == 0) 0 else ((length + spacing) / (cell + spacing)).toInt()
-        plan = planMembers(members, lastSpoke, fits)
+        // Une seule place : un visage (le dernier à avoir parlé), jamais un « +N » tout seul.
+        plan = if (fits == 1) planMembers(members, lastSpoke, 2).let { MemberRowPlan(it.shown.take(1), 0) } else planMembers(members, lastSpoke, fits)
         labels = plan.shown.associate { it.id to initials(it.name) }
         moreLabel = if (plan.more > 0) "+${plan.more}" else ""
         val speaking = members.filter { it.speaking }.map { it.id }.toSet()
@@ -134,7 +142,13 @@ class MemberRowView(context: Context, photoDp: Int = PHOTO_DP, private val verti
     override fun onDraw(canvas: Canvas) {
         val radius = photoSize / 2
         // Position le long de la rangée (gauche à droite, ou haut en bas en colonne) ; l'autre axe est centré.
-        var along = if (vertical) paddingTop.toFloat() else paddingLeft.toFloat()
+        val count = plan.shown.size + if (moreLabel.isEmpty()) 0 else 1
+        val content = count * cell + (count - 1).coerceAtLeast(0) * spacing
+        var along = when {
+            vertical -> paddingTop.toFloat()
+            centered -> ((width - content) / 2).coerceAtLeast(paddingLeft.toFloat())
+            else -> paddingLeft.toFloat()
+        }
         for (member in plan.shown) {
             val cx = if (vertical) width / 2f else along + cell / 2
             val cy = if (vertical) along + cell / 2 else height / 2f

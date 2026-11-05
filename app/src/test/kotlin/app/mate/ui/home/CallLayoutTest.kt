@@ -90,6 +90,14 @@ class CallLayoutTest {
     }
 
     @Test
+    fun `ligne trop courte, la derniere touche de la page (quitter) reste`() {
+        assertEquals(listOf(open, mic, leave), fitKeys(inCall, 3))
+        assertEquals(inCall, fitKeys(inCall, 4))
+        assertEquals(inCall, fitKeys(inCall, 9))
+        assertEquals(listOf(leave), fitKeys(inCall, 1))
+    }
+
+    @Test
     fun `en avant, qui parle, sinon le dernier a avoir parle, sinon le premier`() {
         val a = member("a")
         val b = member("b")

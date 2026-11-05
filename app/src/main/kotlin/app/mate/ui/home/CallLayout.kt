@@ -58,3 +58,10 @@ fun featuredMember(members: List<VoiceMember>, speaking: Set<String>, lastSpoke:
     members.firstOrNull { it.id in speaking }
         ?: members.filter { it.id in lastSpoke }.maxByOrNull { lastSpoke.getValue(it.id) }
         ?: members.firstOrNull()
+
+/** Les [count] touches qui tiennent en Ligne : les premières de la page, et toujours la dernière (« Quitter l'appel »). */
+fun fitKeys(keys: List<DeckTile>, count: Int): List<DeckTile> = when {
+    keys.size <= count -> keys
+    count <= 1 -> keys.takeLast(1)
+    else -> keys.take(count - 1) + keys.last()
+}

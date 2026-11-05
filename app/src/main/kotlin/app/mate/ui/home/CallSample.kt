@@ -24,7 +24,7 @@ class CallSample(val meeting: Boolean) : WidgetSample {
     private fun discord(context: Context, people: List<String>): Call {
         fun s(id: Int) = context.getString(id)
         val tiles = listOf(
-            tile("open", s(R.string.call_sample_open), glyph = "🎮"),
+            tile("open", s(R.string.call_sample_open), symbol = "apps"),
             tile("mute", s(R.string.call_sample_mute), symbol = "mic_off", whenState = "call", lit = "muted"),
             tile("deafen", s(R.string.call_sample_deafen), symbol = "volume_off", whenState = "call", lit = "deafened"),
             tile("leave", s(R.string.call_sample_leave), symbol = "call_end", whenState = "call"),
