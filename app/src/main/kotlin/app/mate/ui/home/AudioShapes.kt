@@ -72,7 +72,8 @@ class AudioShapes(private val context: Context, private val link: AudioLink) {
             onMute = { link.toggleMute() }
         }
         return Shape(fill) { state ->
-            fill.isEnabled = state?.output != null
+            // Sans volume réglable, le toucher coupe encore le son (le glisser est ignoré par la vue).
+            fill.isEnabled = state != null
             fill.muted = state?.muted == true
             fill.volume = state?.output
         }

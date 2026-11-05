@@ -20,6 +20,15 @@ import kotlin.math.abs
 import kotlin.math.roundToInt
 
 /**
+ * Volume après un glisser de [downY] à [y] dans une vue haute de [height] : toute la hauteur vaut 100 points, vers le
+ * haut monte ; sans saut au départ, borné à 0..100.
+ */
+internal fun volumeAfterDrag(start: Int, downY: Float, y: Float, height: Int): Int {
+    if (height <= 0) return start
+    return (start + (downY - y) / height * AudioLink.MAX).roundToInt().coerceIn(0, AudioLink.MAX)
+}
+
+/**
  * Volume en remplissage : la carte se remplit du bas à hauteur du volume, l'icône en haut, le volume en grand en bas.
  * Glisser de haut en bas n'importe où règle le volume (sans saut : le doigt déplace d'autant) ; toucher coupe ou rend
  * le son. Une seule vue dessinée à la main (la tablette est lente).
@@ -53,6 +62,14 @@ class VolumeFill(context: Context) : View(context) {
     }
     private val cFill = themeColor(context, R.attr.c_accent_soft)
     private val cFillMuted = themeColor(context, R.attr.c_ko_soft)
+
+    // Arête du niveau : le remplissage pâle se distingue mal du fond de carte dans les thèmes sombres.
+    private val cEdge = themeColor(context, R.attr.c_accent)
+    private val cEdgeMuted = themeColor(context, R.attr.c_ko)
+    private val edge = context.dp(EDGE_DP).toFloat()
+
+    /** Texte du volume, calculé quand il change (pas à chaque image). */
+    private var shown = ""
     private val iconOn: Drawable = icon(R.drawable.ic_volume)
     private val iconOff: Drawable = icon(R.drawable.ic_volume_off)
     private val pad = context.dp(PAD_DP)
@@ -65,6 +82,8 @@ class VolumeFill(context: Context) : View(context) {
     init {
         isClickable = true
         isFocusable = true
+        // Toucher et TalkBack (ACTION_CLICK) passent par le même écouteur.
+        setOnClickListener { onMute?.invoke() }
         tintIcon()
         describe()
     }
@@ -79,12 +98,21 @@ class VolumeFill(context: Context) : View(context) {
     override fun onDraw(canvas: Canvas) {
         val level = (volume ?: 0) / AudioLink.MAX.toFloat()
         fill.color = if (muted) cFillMuted else cFill
-        if (level > 0f) canvas.drawRect(0f, height * (1 - level), width.toFloat(), height.toFloat(), fill)
+        if (level > 0f) {
+            val top = height * (1 - level)
+            canvas.drawRect(0f, top, width.toFloat(), height.toFloat(), fill)
+            fill.color = if (muted) cEdgeMuted else cEdge
+            canvas.drawRect(0f, top, width.toFloat(), top + edge, fill)
+        }
         val icon = if (muted) iconOff else iconOn
         icon.setBounds(pad, pad, pad + iconSize, pad + iconSize)
         icon.draw(canvas)
-        big.textSize = (minOf(width, height) * TEXT_RATIO).coerceIn(context.dp(TEXT_MIN_DP).toFloat(), context.dp(TEXT_MAX_DP).toFloat())
-        canvas.drawText(valueText(), pad.toFloat(), height - pad - big.descent(), big)
+        canvas.drawText(shown, pad.toFloat(), height - pad - big.descent(), big)
+    }
+
+    override fun onSizeChanged(w: Int, h: Int, oldw: Int, oldh: Int) {
+        super.onSizeChanged(w, h, oldw, oldh)
+        big.textSize = (minOf(w, h) * TEXT_RATIO).coerceIn(context.dp(TEXT_MIN_DP).toFloat(), context.dp(TEXT_MAX_DP).toFloat())
     }
 
     private fun valueText() = when {
@@ -111,12 +139,15 @@ class VolumeFill(context: Context) : View(context) {
             }
             MotionEvent.ACTION_UP -> {
                 isPressed = false
-                if (dragging) drag(event.y, final = true) else { performClick(); onMute?.invoke() }
+                if (dragging) drag(event.y, final = true) else performClick()
                 dragging = false
             }
             MotionEvent.ACTION_CANCEL -> {
                 isPressed = false
+                // Toucher repris par la grille (mode Modifier) en plein glisser : le lâcher libère la relecture.
+                val wasDragging = dragging
                 dragging = false
+                if (wasDragging) volume?.let { onVolume?.invoke(it, true) }
             }
         }
         return true
@@ -125,7 +156,7 @@ class VolumeFill(context: Context) : View(context) {
     override fun performClick(): Boolean = super.performClick()
 
     private fun drag(y: Float, final: Boolean) {
-        val next = (startVolume + (downY - y) / height * AudioLink.MAX).roundToInt().coerceIn(0, AudioLink.MAX)
+        val next = volumeAfterDrag(startVolume, downY, y, height)
         if (next != volume || final) {
             val wasDragging = dragging
             dragging = false
@@ -136,7 +167,8 @@ class VolumeFill(context: Context) : View(context) {
     }
 
     private fun describe() {
-        contentDescription = context.getString(R.string.computer_volume) + ", " + valueText()
+        shown = valueText()
+        contentDescription = context.getString(R.string.computer_volume) + ", " + shown
     }
 
     // TalkBack : glisser n'est pas un geste possible ; monter et baisser par les actions de défilement.
@@ -160,6 +192,7 @@ class VolumeFill(context: Context) : View(context) {
 
     private companion object {
         const val PAD_DP = 16
+        const val EDGE_DP = 2
         const val ICON_DP = 28
         const val TEXT_RATIO = 0.26f
         const val TEXT_MIN_DP = 28

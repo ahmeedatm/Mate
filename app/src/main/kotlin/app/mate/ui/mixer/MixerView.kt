@@ -158,10 +158,16 @@ class MixerView @JvmOverloads constructor(
             if (editing) leaveEditing()
             return
         }
+        startPolling()
+    }
+
+    /** Scènes lues si elles sont montrées ; tranches relues seulement si elles le sont (petites formes du widget). */
+    private fun startPolling() {
+        poll?.cancel()
         stopped = false
         poll = scope.launch {
-            loadScenes()
-            while (isActive && !stopped) {
+            if (scenesShown) loadScenes()
+            while (isActive && !stopped && stripsShown) {
                 val ok = refresh { mixer() }
                 delay(if (ok) POLL_MS else ERROR_POLL_MS)
             }
@@ -197,6 +203,7 @@ class MixerView @JvmOverloads constructor(
             field = value
             sceneScroll.visibility = if (value) VISIBLE else GONE
             invalidate()
+            if (active) startPolling()
         }
 
     /** Tranches montrées ; faux : les scènes seules, sur toute la hauteur (forme Ligne). */
@@ -209,6 +216,7 @@ class MixerView @JvmOverloads constructor(
                 weight = if (value) 0f else 1f
             }
             invalidate()
+            if (active) startPolling()
         }
 
     /** Applis à régler ensemble quand on touche la voie `id` (groupe de la table) ; null : une voie simple. */
@@ -250,7 +258,10 @@ class MixerView @JvmOverloads constructor(
             channels.forEach { c -> views[c.id] = reuse[c.id] ?: newStrip(c) }
             views.values.forEach { strips.addView(it, LinearLayout.LayoutParams(dp(MIN_STRIP_DP), ViewGroup.LayoutParams.MATCH_PARENT)) }
             // La note du Mac (« Volume par appli… ») n'est pas une voie : pas de trait avant elle sur une table nue.
-            views.values.forEachIndexed { i, strip -> strip.last = i == views.size - 1 }
+            views.values.forEachIndexed { i, strip ->
+                strip.last = i == views.size - 1
+                strip.alone = views.size == 1
+            }
             if (next.apps == null && channelFilter == null) strips.addView(note, LinearLayout.LayoutParams(dp(320), ViewGroup.LayoutParams.MATCH_PARENT))
             fitStrips()
         }

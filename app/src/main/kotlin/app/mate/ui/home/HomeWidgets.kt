@@ -54,6 +54,7 @@ import app.mate.ui.showForTyping
 import app.mate.ui.showImmersive
 import app.mate.ui.themeBool
 import app.mate.ui.themeColor
+import app.mate.ui.themeColorList
 import app.mate.ui.themeFont
 import app.mate.ui.themePx
 import app.mate.ui.themeRes
@@ -494,19 +495,22 @@ class AudioWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidget
 
     /** Pastille et Colonne : une forme d'[AudioShapes], relue par un [AudioLink]. */
     private fun showShape(padded: Boolean, make: (AudioShapes) -> AudioShapes.Shape) {
-        val audioLink = AudioLink(context, host.scope) { state -> shape?.render?.invoke(state) }
-        val made = make(AudioShapes(context, audioLink))
+        // La forme est tenue par ce lien : une réponse en retard après un changement de taille vise l'ancienne vue.
+        var made: AudioShapes.Shape? = null
+        val audioLink = AudioLink(context, host.scope, shown = { view.isShown }) { state -> made?.render?.invoke(state) }
+        val built = make(AudioShapes(context, audioLink))
+        made = built
         link = audioLink
-        shape = made
+        shape = built
         // Le remplissage se tire à la verticale : le widget garde le balayage, sinon la grille changerait de profil.
         view.addView(
             OwnerFrameLayout(context, ownsLongPress = false, ownsSwipe = !padded).asCard(if (padded) 16 else 0).apply {
                 clipToOutline = true
-                addView(made.view, fill)
+                addView(built.view, fill)
             },
             fill,
         )
-        made.render(null)
+        built.render(null)
     }
 
     /** Ligne : muet, curseur, volume et micro ; dès 3 × 1 le titre à côté, empilés ils ne tiennent pas en hauteur. */
@@ -556,6 +560,8 @@ class AudioWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidget
 
     private fun outputButton() = ImageButton(context, null, 0, R.style.IconButton).apply {
         setImageResource(R.drawable.ic_headphones)
+        // Le tint du style n'est pas appliqué à un bouton créé en code : l'icône blanche disparaîtrait en thème clair.
+        ImageViewCompat.setImageTintList(this, themeColorList(context, R.attr.c_text))
         contentDescription = context.getString(R.string.mixer_output_action)
         val chooser = AudioOutputChooser(
             context,

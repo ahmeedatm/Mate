@@ -65,6 +65,8 @@ class MixerWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidget
         mixer.channelFilter = if (all) null else { channels -> channels.filter { it.id == "master" } }
         mixer.stripsShown = family != ShapeFamily.ROW
         mixer.scenesShown = family != ShapeFamily.PILL
+        // L'état déjà reçu (ou l'exemple du catalogue) suit tout de suite les nouvelles voies.
+        mixer.refreshApps()
     }
 
     override fun showPreview(sample: WidgetSample) {

@@ -15,9 +15,14 @@ import kotlinx.coroutines.launch
 /**
  * Son de l'ordinateur pour les formes du widget Son qui ne passent pas par [app.mate.ui.ComputerAudioView] (anneau,
  * remplissage) : relu chaque seconde tant que le widget est à l'écran, le volume part pendant le glisser.
- * [holding] : doigt posé, l'état relu ne fait pas sauter l'affichage.
+ * [holding] : doigt posé, l'état relu ne fait pas sauter l'affichage. [shown] : faux, la vue est cachée, rien à relire.
  */
-class AudioLink(private val context: Context, private val scope: CoroutineScope, private val onState: (AudioState?) -> Unit) {
+class AudioLink(
+    private val context: Context,
+    private val scope: CoroutineScope,
+    private val shown: () -> Boolean,
+    private val onState: (AudioState?) -> Unit,
+) {
     var state: AudioState? = null
         private set
     var holding = false
@@ -27,10 +32,12 @@ class AudioLink(private val context: Context, private val scope: CoroutineScope,
     fun setActive(active: Boolean) {
         poll?.cancel()
         poll = null
+        // Un glisser coupé net (changement de taille, écran quitté) ne doit pas figer l'affichage.
+        holding = false
         if (!active) return
         poll = scope.launch {
             while (isActive) {
-                if (!holding) runCatchingCancellable { api().audio() }.getOrNull()?.let(::show)
+                if (!holding && shown()) runCatchingCancellable { api().audio() }.getOrNull()?.let(::show)
                 delay(POLL_MS)
             }
         }
