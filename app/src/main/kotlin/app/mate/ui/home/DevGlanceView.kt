@@ -3,6 +3,7 @@ package app.mate.ui.home
 import android.content.Context
 import android.content.res.ColorStateList
 import android.text.TextUtils
+import android.util.TypedValue
 import android.view.Gravity
 import android.view.View
 import android.view.ViewGroup
@@ -37,14 +38,27 @@ class DevGlanceView(context: Context, private val title: Int) : LinearLayout(con
     /** Dernier affichage demandé : refait quand la hauteur réelle change de classe (rangées de hauteur variable). */
     private var shown: (() -> Unit)? = null
 
-    /** Pastille plus basse que [PILL_TALL_DP] (rangée basse du profil) : le nombre et son libellé sur une seule ligne. */
-    private var low = false
+    /** Comment la Pastille tient dans la hauteur réelle (rangées de hauteur variable, polices de chaque thème). */
+    private enum class PillFit { TALL, LOW, FLAT }
+
+    private var fit = PillFit.TALL
+
+    /** Hauteur disponible, gardée pour la Pastille à plat (nombre réduit à la hauteur de la ligne). */
+    private var room = 0
 
     override fun onSizeChanged(w: Int, h: Int, oldw: Int, oldh: Int) {
         super.onSizeChanged(w, h, oldw, oldh)
-        val nowLow = h < dp(PILL_TALL_DP)
-        if (nowLow == low) return
-        low = nowLow
+        room = h - paddingTop - paddingBottom
+        val title = titleView().paint.fontSpacing
+        val line = text("0", ROW_SIZE, R.attr.c_text).paint.fontSpacing
+        val tall = title + text("0", PILL_SIZE, R.attr.c_text).paint.fontSpacing + text("0", 13f, R.attr.c_text).paint.fontSpacing
+        val now = when {
+            room >= tall -> PillFit.TALL
+            room >= title + line -> PillFit.LOW
+            else -> PillFit.FLAT
+        }
+        if (now == fit) return
+        fit = now
         // Pas de nouvelle mise en page en plein passage de mise en page : au prochain tour.
         shown?.let { post(it) }
     }
@@ -53,6 +67,7 @@ class DevGlanceView(context: Context, private val title: Int) : LinearLayout(con
     fun show(content: GlanceContent?, w: Int, h: Int, note: String? = null) {
         shown = { show(content, w, h, note) }
         removeAllViews()
+        gravity = Gravity.NO_GRAVITY
         orientation = if (h == 1 && w > 1 && content != null && note == null) HORIZONTAL else VERTICAL
         if (content == null || note != null) {
             addView(titleView())
@@ -60,7 +75,14 @@ class DevGlanceView(context: Context, private val title: Int) : LinearLayout(con
             return
         }
         when {
-            w == 1 && h == 1 && low -> {
+            w == 1 && h == 1 && fit == PillFit.FLAT -> {
+                // Rangée très basse : le titre et le nombre sur une seule ligne, le nombre à la hauteur de la ligne.
+                orientation = HORIZONTAL
+                gravity = Gravity.CENTER_VERTICAL
+                addView(titleView(), LayoutParams(0, -2, 1f))
+                addView(countLine(content).apply { (getChildAt(0) as TextView).setTextSize(TypedValue.COMPLEX_UNIT_PX, minOf((getChildAt(0) as TextView).textSize, room / LINE_SPACING)) })
+            }
+            w == 1 && h == 1 && fit == PillFit.LOW -> {
                 addView(titleView())
                 addView(View(context), fill())
                 addView(countLine(content))
@@ -148,8 +170,8 @@ class DevGlanceView(context: Context, private val title: Int) : LinearLayout(con
         const val COLUMN_SIZE = 34f
         const val NOTE_LINES = 4
 
-        /** Hauteur sous laquelle la Pastille met le nombre et son libellé sur une ligne (titre + grand nombre + libellé n'y tiennent pas). */
-        const val PILL_TALL_DP = 120
+        /** Interligne d'un texte par rapport à sa taille (marge des jambages) : le nombre à plat tient dans la hauteur. */
+        const val LINE_SPACING = 1.25f
         const val LINE_DP = 26
         const val MAX_LINES = 20
 
