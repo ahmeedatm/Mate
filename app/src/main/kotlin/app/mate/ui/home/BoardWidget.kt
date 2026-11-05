@@ -49,7 +49,6 @@ class BoardWidget(
     override fun applySize() {
         view.asCard(if (small) 16 else 12)
         compact?.visibility = if (small) View.VISIBLE else View.GONE
-        compact?.style = glanceStyle(context)
         setActive(active)
         last?.let { (content, note) -> compact?.show(content, placed.size.w, placed.size.h, note) }
     }
@@ -78,11 +77,6 @@ class BoardWidget(
 /** Ce qu'une petite forme d'un tableau montre : son titre, et sa lecture (contenu, ou phrase à la place : à connecter, vide). */
 class Glancer(val title: Int, val load: suspend () -> Pair<GlanceContent?, String?>)
 
-/** shortcut: choix de la variante à départager (#185), lu dans les préférences ; à retirer quand Ahmed a choisi. */
-private fun glanceStyle(context: Context) =
-    context.getSharedPreferences("companion", Context.MODE_PRIVATE).getString("glance_style", null)
-        ?.let { name -> GlanceStyle.entries.firstOrNull { it.name == name } } ?: GlanceStyle.COUNTER
-
 fun jiraWidget(context: Context, host: HomeHost, placed: Placed): BoardWidget {
     val board = JiraView(context).apply { attach(host.owner) }
     // ⚙ : colonnes affichées et « tous les tickets » ; la vue se relit dès qu'il est enregistré.
@@ -108,7 +102,7 @@ private suspend fun mrsGlance(context: Context, host: HomeHost, forge: Forge): P
             host.scope.launch { runCatchingCancellable { BackendClient(context).forge(forge).open(mr.project, mr.iid) } }
         }
     }
-    return GlanceContent(glance.count, context.getString(R.string.glance_to_review), glance.lead, context.getString(texts.pipeline(glance.lead)), lines) to null
+    return GlanceContent(glance.count, context.getString(R.string.glance_to_review), lines) to null
 }
 
 /** shortcut: données d'exemple forcées pour les captures des variantes (#185) ; remplacé par l'aperçu de la règle (#178). */
