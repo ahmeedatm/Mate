@@ -251,11 +251,16 @@ class WidgetModelTest {
 
     @Test
     fun `widget maintenu, agrandi dans sa plus grande taille, la plus large a surface egale`() {
-        assertEquals(WidgetSize.L, WidgetType.MEDIA.zoomSize)
-        assertEquals(WidgetSize.XL, WidgetType.KEYS.zoomSize)
-        // Tâches : Grand, Haut (2 × 4), Vertical, Moyen : Haut a la plus grande surface.
-        assertEquals(WidgetSize.T, WidgetType.TASKS.zoomSize)
-        assertEquals(WidgetSize.M, WidgetType.WATER.zoomSize)
+        // Règle seulement : les formes de chaque widget changent avec les familles (#180 à #186).
+        for (type in WidgetType.entries) {
+            val zoom = type.zoomSize
+            assertTrue("$type", zoom in type.sizes)
+            for (size in type.sizes) {
+                val area = size.w * size.h
+                assertTrue("$type : $size plus grand que $zoom", area <= zoom.w * zoom.h)
+                if (area == zoom.w * zoom.h) assertTrue("$type : $size plus large que $zoom", size.w <= zoom.w)
+            }
+        }
         assertTrue(WidgetType.MEDIA.zoomable)
         assertFalse(WidgetType.HERO.zoomable)
     }
@@ -278,32 +283,20 @@ class WidgetModelTest {
     private val boards = listOf(WidgetType.AGENTS, WidgetType.JIRA, WidgetType.GITLAB, WidgetType.PIPELINES, WidgetType.GITHUB, WidgetType.ACTIONS, WidgetType.OPEN, WidgetType.MIXER, WidgetType.WEB)
 
     @Test
-    fun `les tailles 3 x 2, 3 x 4 et plein ecran sont reservees aux tableaux`() {
+    fun `les tableaux ne s'ajoutent pas en plein ecran et s'agrandissent en plein ecran`() {
         assertEquals(listOf(3 to 2, 3 to 4, 4 to 4), listOf(WidgetSize.L3, WidgetSize.T3, WidgetSize.FULL).map { it.w to it.h })
-        for (type in WidgetType.entries) {
-            val big = type.sizes.filter { it == WidgetSize.L3 || it == WidgetSize.T3 || it == WidgetSize.FULL }
-            if (type in boards) {
-                assertEquals("$type", listOf(WidgetSize.L3, WidgetSize.T3, WidgetSize.FULL), big)
-                assertFalse("$type : l'ajout ne commence pas en plein ecran", type.sizes.first() == WidgetSize.FULL)
-                // Maintenu, le tableau s'agrandit en plein écran.
-                assertEquals("$type", WidgetSize.FULL, type.zoomSize)
-            } else if (type.sizes.size == WidgetSize.entries.size) {
-                // Les 16 formes (#178) : la règle de WidgetRulesTest remplace celle-ci, l'ajout reste hors plein écran.
-                assertFalse("$type : l'ajout ne commence pas en plein ecran", type.sizes.first() == WidgetSize.FULL)
-            } else if (type == WidgetType.YTMUSIC) {
-                // Exception : YouTube Music en 3 x 2 montre la file d'attente à côté du lecteur (branche Gen2).
-                assertEquals("$type", listOf(WidgetSize.L3), big)
-            } else {
-                assertTrue("$type", big.isEmpty())
-            }
+        // Les formes acceptées par chaque widget relèvent de la règle des 16 formes (WidgetRulesTest, #178).
+        for (type in boards) {
+            assertFalse("$type : l'ajout ne commence pas en plein ecran", type.sizes.first() == WidgetSize.FULL)
+            // Maintenu, le tableau s'agrandit en plein écran.
+            assertEquals("$type", WidgetSize.FULL, type.zoomSize)
         }
     }
 
     @Test
-    fun `le mixeur a une taille 4 x 3 posee en bas, les autres tableaux non`() {
+    fun `le mixeur a une taille 4 x 3 posee en bas`() {
         assertEquals(4 to 3, WidgetSize.XL3.w to WidgetSize.XL3.h)
         assertEquals(WidgetSize.XL3, WidgetType.MIXER.sizes.single { it.w == 4 && it.h == 3 })
-        for (type in boards - WidgetType.MIXER) assertFalse("$type", WidgetSize.XL3 in type.sizes)
         val mixer = Placed(WidgetType.MIXER, WidgetSize.XL, 0, 0, 1)
         val layout = HomeLayout(mutableListOf(mixer), 1)
         assertEquals(WidgetSize.XL3, layout.pick(mixer, 4f, 3f))
@@ -314,14 +307,14 @@ class WidgetModelTest {
     @Test
     fun `une taille inconnue relue retombe sur la premiere taille du widget`() {
         val context = app.mate.FakeContext()
-        // Une taille connue mais refusée par ce widget : la première aussi (tant qu'un widget n'a pas les 16 formes, #178).
-        val narrow = WidgetType.entries.firstOrNull { WidgetSize.FULL !in it.sizes && it.sizes.first().h <= 2 }
-        val second = narrow?.let { """,{"t":"${it.key}","s":"FULL","p":0,"c":0,"r":2,"cfg":{}}""" }.orEmpty()
-        val json = """{"v":2,"pages":1,"widgets":[{"t":"jira","s":"GEANT","p":0,"c":0,"r":0,"cfg":{}}$second]}"""
+        // Une taille connue mais refusée par un widget : la première aussi. Plus aucune une fois les 16 formes faites partout.
+        val refused = WidgetType.entries.firstNotNullOfOrNull { type -> WidgetSize.entries.firstOrNull { it !in type.sizes }?.let { type to it } }
+        val other = refused?.let { (type, size) -> """,{"t":"${type.key}","s":"${size.name}","p":0,"c":0,"r":2,"cfg":{}}""" }.orEmpty()
+        val json = """{"v":2,"pages":1,"widgets":[{"t":"jira","s":"GEANT","p":0,"c":0,"r":0,"cfg":{}}$other]}"""
         context.getSharedPreferences("companion", 0).edit().putString(HomeLayout.KEY, json).apply()
         val widgets = HomeLayout.load(context).widgets
         assertEquals(WidgetType.JIRA.sizes.first(), widgets.single { it.type == WidgetType.JIRA }.size)
-        if (narrow != null) assertEquals(narrow.sizes.first(), widgets.single { it.type == narrow }.size)
+        refused?.let { (type, _) -> assertEquals(type.sizes.first(), widgets.single { it.type == type }.size) }
     }
 
     @Test
