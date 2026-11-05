@@ -87,4 +87,23 @@ class ValorantTableTest {
         assertEquals("Je", ValorantKit.initials("Jett"))
         assertEquals("KA", ValorantKit.initials("KAY/O"))
     }
+
+    @Test
+    fun statTonesFollowTheThresholds() {
+        val t = ValorantArt.Tone.entries
+        assertEquals(listOf(t[0], t[1], t[2], t[3]), listOf(1.2, 0.9, 0.89, null).map { ValorantArt.kdTone(it) })
+        assertEquals(listOf(t[0], t[1], t[2], t[3]), listOf(25, 17, 16, null).map { ValorantArt.hsTone(it) })
+        assertEquals(listOf(t[0], t[1], t[2], t[3]), listOf(55, 45, 44, null).map { ValorantArt.wrTone(it) })
+    }
+
+    @Test
+    fun placeInTheMatchGivesTheTone() {
+        // Dix joueurs : les 3 premiers bons, les 3 derniers faibles.
+        assertEquals(ValorantArt.Tone.GOOD, ValorantArt.rankTone(2, 10))
+        assertEquals(ValorantArt.Tone.MID, ValorantArt.rankTone(3, 10))
+        assertEquals(ValorantArt.Tone.MID, ValorantArt.rankTone(6, 10))
+        assertEquals(ValorantArt.Tone.LOW, ValorantArt.rankTone(7, 10))
+        assertEquals(ValorantArt.Tone.MID, ValorantArt.rankTone(0, 1))
+        assertEquals(ValorantArt.Tone.MID, ValorantArt.rankTone(-1, 10))
+    }
 }

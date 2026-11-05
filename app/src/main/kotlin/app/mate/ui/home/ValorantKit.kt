@@ -106,14 +106,6 @@ class ValorantKit(val context: Context, private val scope: CoroutineScope, priva
         else -> valorantRankName(divisions, tier) ?: string(R.string.valorant_unranked)
     }
 
-    /** Trait vertical de la couleur du groupe (deux joueurs venus ensemble ont le même) ; rien pour un joueur seul. */
-    fun partyBar(party: Int?, height: Int = ViewGroup.LayoutParams.MATCH_PARENT): View = View(context).apply {
-        val hue = partyHue(party)
-        background = hue?.let { GradientDrawable().apply { cornerRadius = dp(2).toFloat(); setColor(color(it)) } }
-        importantForAccessibility = View.IMPORTANT_FOR_ACCESSIBILITY_NO
-        layoutParams = LinearLayout.LayoutParams(dp(PARTY_BAR_DP), height)
-    }
-
     /** Ligne horizontale (enfants alignés au centre). */
     fun row(vararg children: View, gravity: Int = Gravity.CENTER_VERTICAL) = LinearLayout(context).apply {
         orientation = LinearLayout.HORIZONTAL
@@ -153,7 +145,6 @@ class ValorantKit(val context: Context, private val scope: CoroutineScope, priva
         fun initials(name: String): String = name.filter { it.isLetter() }.take(2)
 
         const val DIM_ALPHA = 0.4f
-        const val PARTY_BAR_DP = 3
         private const val RADIANT = 27
 
         /** Teintes de groupe, dans l'ordre des numéros ; au-delà de 4 groupes, elles recommencent. */
