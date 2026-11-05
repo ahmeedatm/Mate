@@ -47,7 +47,11 @@ class AgentsWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidge
         addView(note)
     }
 
+    /** Pastille (1 × 1) : le nombre de sessions qui attendent, comme les autres widgets Dev ([DevGlanceView]). */
+    private val pill = DevGlanceView(context, R.string.agents_title)
+
     private val full get() = placed.size.w >= 3
+    private val small get() = placed.size == WidgetSize.S
 
     override val view = object : OwnerFrameLayout(context) {
         // Seul le tableau garde les gestes de la grille ; les compteurs laissent l'appui long au mode Modifier.
@@ -56,11 +60,13 @@ class AgentsWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidge
     }.asCard(16).apply {
         addView(summary, ViewGroup.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT))
         addView(board, ViewGroup.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT))
+        addView(pill, ViewGroup.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT))
     }
 
     override fun applySize() {
         view.asCard(if (full) 12 else 16)
-        summary.visibility = if (full) View.GONE else View.VISIBLE
+        summary.visibility = if (full || small) View.GONE else View.VISIBLE
+        pill.visibility = if (small) View.VISIBLE else View.GONE
         if (full) {
             view.setOnClickListener(null)
             view.isClickable = false
@@ -101,12 +107,15 @@ class AgentsWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidge
         if (state == null) {
             note.text = context.errorText(snapshot.error)
             note.visibility = View.VISIBLE
+            pill.show(null, 1, 1, note.text.toString())
             return
         }
         note.visibility = View.GONE
+        val waiting = state.counts.waiting + state.counts.limit
+        pill.show(GlanceContent(waiting, context.resources.getQuantityString(R.plurals.agent_count_waiting, waiting), emptyList()), 1, 1)
         counter(AgentState.WORKING, false, state.counts.working, R.plurals.agent_count_working)
         counter(AgentState.WORKING, true, state.counts.monitoring, R.plurals.agent_count_monitoring)
-        counter(AgentState.WAITING, false, state.counts.waiting + state.counts.limit, R.plurals.agent_count_waiting)
+        counter(AgentState.WAITING, false, waiting, R.plurals.agent_count_waiting)
         counter(AgentState.DONE, false, state.counts.done + state.counts.idle, R.plurals.agent_count_done)
         if (placed.size != WidgetSize.L) return
         val shown = shortList(state.sessions, MAX_ROWS)

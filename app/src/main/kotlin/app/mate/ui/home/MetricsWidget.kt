@@ -28,6 +28,13 @@ class MetricsWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidg
     }
 
     private var metrics: List<Metric>? = null
+    private var error: String? = null
+
+    override fun applySize() {
+        // Ligne (une case de haut) : les chiffres côte à côte ; sinon empilés.
+        rows.orientation = if (placed.size.h == 1 && placed.size.w > 1) LinearLayout.HORIZONTAL else LinearLayout.VERTICAL
+        render(error)
+    }
 
     override fun setActive(active: Boolean) {
         if (active) host.scope.launch { load() }
@@ -35,8 +42,8 @@ class MetricsWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidg
 
     override suspend fun load() {
         runCatchingCancellable { BackendClient(context).metrics.latest() }
-            .onSuccess { metrics = it; render(null) }
-            .onFailure { render(context.errorText(it)) }
+            .onSuccess { metrics = it; error = null; render(null) }
+            .onFailure { error = context.errorText(it); render(error) }
     }
 
     /** `error` : phrase de l'échec de la dernière lecture ; les dernières valeurs reçues restent affichées dessous. */
@@ -47,14 +54,18 @@ class MetricsWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidg
         val note = error ?: if (current?.isEmpty() == true) context.getString(R.string.widget_metrics_empty) else null
         status.text = note
         status.visibility = if (note == null) View.GONE else View.VISIBLE
-        current?.forEach { rows.addView(row(it), LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, 0, 1f)) }
+        val side = rows.orientation == LinearLayout.HORIZONTAL
+        val shown = metricsShown(placed.size.w, placed.size.h)?.let { current?.take(it) } ?: current
+        shown?.forEach {
+            rows.addView(row(it), if (side) LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.MATCH_PARENT, 1f) else LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, 0, 1f))
+        }
     }
 
     private fun row(metric: Metric) = LinearLayout(context).apply {
         orientation = LinearLayout.VERTICAL
         gravity = android.view.Gravity.CENTER_VERTICAL
         if (metric.value == null) contentDescription = context.getString(R.string.widget_metrics_unavailable, metric.label)
-        addView(label(if (placed.size == WidgetSize.XL) 30f else 22f).apply {
+        addView(label(if (placed.size == WidgetSize.XL || placed.size == WidgetSize.S) 30f else 22f).apply {
             text = metric.value ?: context.getString(R.string.widget_metrics_none)
             maxLines = 1
             ellipsize = android.text.TextUtils.TruncateAt.END
@@ -65,4 +76,11 @@ class MetricsWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidg
             ellipsize = android.text.TextUtils.TruncateAt.END
         })
     }
+}
+
+/** Petites formes : combien de chiffres tiennent (Pastille le premier, Ligne un par case, Colonne deux par case moins le titre) ; null : tous. */
+internal fun metricsShown(w: Int, h: Int): Int? = when {
+    h == 1 -> w
+    w == 1 -> 2 * h - 1
+    else -> null
 }
