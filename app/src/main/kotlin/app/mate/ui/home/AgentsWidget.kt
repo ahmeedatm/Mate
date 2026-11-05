@@ -126,7 +126,7 @@ class AgentsWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidge
         }
         note.visibility = View.GONE
         val waiting = state.counts.waiting + state.counts.limit
-        pill.show(GlanceContent(waiting, context.resources.getQuantityString(R.plurals.agent_count_waiting, waiting), emptyList()), 1, 1)
+        if (family == ShapeFamily.PILL) pill.show(GlanceContent(waiting, context.resources.getQuantityString(R.plurals.agent_count_waiting, waiting), emptyList()), 1, 1)
         counter(AgentState.WORKING, false, state.counts.working, R.plurals.agent_count_working)
         counter(AgentState.WORKING, true, state.counts.monitoring, R.plurals.agent_count_monitoring)
         counter(AgentState.WAITING, false, waiting, R.plurals.agent_count_waiting)

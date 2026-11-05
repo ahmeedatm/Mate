@@ -9,30 +9,28 @@ import app.mate.net.JiraIssues
 import app.mate.net.Pipeline
 
 /**
- * Ce qu'une petite forme d'un widget Dev montre (Pastille, Ligne, Colonne) : un compteur, l'état qui mène (icône et
- * couleur) et les éléments du plus urgent au moins urgent. Les grandes formes gardent le tableau complet.
+ * Ce qu'une petite forme d'un widget Dev montre (Pastille, Ligne, Colonne) : un compteur et les éléments du plus urgent
+ * au moins urgent. Les grandes formes gardent le tableau complet.
  */
-data class DevGlance<T>(val count: Int, val lead: Pipeline, val rows: List<T>)
-
-/** Du plus grave au moins grave : l'état qui mène une liste est le premier de cet ordre qu'on y trouve. */
-private val SEVERITY = listOf(Pipeline.FAILED, Pipeline.RUNNING, Pipeline.SUCCESS, Pipeline.CANCELED)
-
-private fun worst(states: List<Pipeline>) = SEVERITY.firstOrNull { it in states } ?: Pipeline.NONE
+data class DevGlance<T>(val count: Int, val rows: List<T>)
 
 /** MR GitLab ou PR GitHub : le compteur dit celles à relire ; les lignes suivent l'ordre des colonnes du tableau. */
 fun mrGlance(mrs: GitLabMrs): DevGlance<GitLabMr> {
     val rows = (mrs.mine + mrs.review).sortedBy { it.column.ordinal }
-    return DevGlance(mrs.review.size, worst(rows.map { it.pipeline }), rows)
+    return DevGlance(mrs.review.size, rows)
 }
 
-/** Pipelines GitLab ou runs Actions : le plus récent en tête, son état mène ; le compteur dit les échecs. */
+/**
+ * Pipelines GitLab ou runs Actions : le compteur dit les échecs, et ils passent en tête (une Ligne n'a la place que de
+ * deux ou trois runs : un échec ancien ne doit pas disparaître sous les réussites récentes) ; puis le plus récent.
+ */
 fun pipelineGlance(pipelines: GitLabPipelines): DevGlance<GitLabPipeline> {
-    val rows = (pipelines.schedules + pipelines.mrs + pipelines.pipelines).sortedBy { it.ageSec }
-    return DevGlance(rows.count { it.status == Pipeline.FAILED }, rows.firstOrNull()?.status ?: Pipeline.NONE, rows)
+    val rows = (pipelines.schedules + pipelines.mrs + pipelines.pipelines).sortedWith(compareBy({ it.status != Pipeline.FAILED }, { it.ageSec }))
+    return DevGlance(rows.count { it.status == Pipeline.FAILED }, rows)
 }
 
 /** Jira : mes tickets ouverts (ni terminés, ni à quelqu'un d'autre), une fois chacun, dans l'ordre des colonnes. */
 fun jiraGlance(issues: JiraIssues): DevGlance<JiraIssue> {
     val rows = issues.columns.flatMap { it.issues }.filter { !it.done && it.assignee == null }.distinctBy { it.key }
-    return DevGlance(rows.size, Pipeline.NONE, rows)
+    return DevGlance(rows.size, rows)
 }

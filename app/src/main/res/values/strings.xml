@@ -1300,7 +1300,10 @@
     <string name="widget_hero_desc">L\'heure en grand, le prochain rendez-vous, la météo et l\'eau</string>
     <string name="widget_jira">Jira</string>
     <string name="widget_jira_desc">Tes tickets en colonnes ; toucher un ticket pour le faire avancer</string>
-    <string name="glance_open">ouverts</string>
+    <plurals name="glance_open">
+        <item quantity="one">ouvert</item>
+        <item quantity="other">ouverts</item>
+    </plurals>
     <string name="widget_gitlab">GitLab</string>
     <string name="widget_gitlab_desc">Tes MR par colonne (prête à merger, à fixer, brouillon…), celles à relire, pipeline et fusion</string>
     <string name="widget_github">GitHub</string>

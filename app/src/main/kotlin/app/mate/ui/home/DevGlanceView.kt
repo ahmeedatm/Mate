@@ -85,10 +85,12 @@ class DevGlanceView(context: Context, private val title: Int) : LinearLayout(con
 
     private fun lines(list: List<GlanceLine>, gravity: Int) = WholeLines(context, dp(LINE_DP)).apply {
         this.gravity = gravity
-        list.forEach { addView(line(it), LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, dp(LINE_DP))) }
+        // Pas plus de lignes que n'en tient la plus haute Colonne (1 × 4) : une longue liste ne crée pas de vues pour rien.
+        list.take(MAX_LINES).forEach { addView(line(it), LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, dp(LINE_DP))) }
     }
 
     /** Icône de l'état puis titre sur une ligne : l'icône dit l'état, la couleur seule ne suffit pas. */
+    // shortcut: ligne touchable de 26 dp (moins que les 48 dp conseillés) et sans retour d'appui, pour que la Ligne en tienne deux ; à revoir après l'essai sur la tablette.
     private fun line(l: GlanceLine) = LinearLayout(context).apply {
         gravity = Gravity.CENTER_VERTICAL
         addView(
@@ -122,6 +124,7 @@ class DevGlanceView(context: Context, private val title: Int) : LinearLayout(con
         const val COLUMN_SIZE = 34f
         const val NOTE_LINES = 4
         const val LINE_DP = 26
+        const val MAX_LINES = 20
 
         /** Largeur du nombre et de son libellé dans une Ligne. */
         const val ROW_LEFT_DP = 110

@@ -3,6 +3,7 @@ package app.mate.ui.home
 import android.content.Context
 import android.view.View
 import android.view.ViewGroup
+import app.mate.MainActivity
 import app.mate.R
 import app.mate.github.Forge
 import app.mate.gitlab.pipelineTitle
@@ -45,6 +46,9 @@ class BoardWidget(
     private var active = false
     private var last: Pair<GlanceContent?, String?>? = null
 
+    /** Numéro de la dernière lecture lancée : la réponse d'une lecture dépassée est ignorée. */
+    private var lastRead = 0
+
     /** Aperçu du catalogue : l'exemple reste, ni lecture ni boucle. */
     private var previewing = false
 
@@ -60,8 +64,16 @@ class BoardWidget(
     override fun applySize() {
         view.asCard(if (small) 16 else 12)
         compact.visibility = if (small) View.VISIBLE else View.GONE
-        if (previewing) board.visibility = if (small) View.GONE else View.VISIBLE else setActive(active)
-        last?.let { (content, note) -> compact.show(content, placed.size.w, placed.size.h, note) }
+        if (previewing) {
+            board.visibility = if (small) View.GONE else View.VISIBLE
+        } else {
+            activate(active && !small)
+            // Passé d'une grande forme à une petite sans rien lu encore : une lecture tout de suite.
+            if (active && small && last == null) host.scope.launch { load() }
+        }
+        // Avant la première lecture, le titre seul : la carte n'est jamais vide.
+        val (content, note) = last ?: (null to "")
+        compact.show(content, placed.size.w, placed.size.h, note)
     }
 
     override fun showPreview(sample: WidgetSample) {
@@ -71,14 +83,19 @@ class BoardWidget(
     }
 
     override fun setActive(active: Boolean) {
+        val started = active && !this.active
         this.active = active
+        if (previewing) return
         activate(active && !small)
-        if (active && small) host.scope.launch { load() }
+        // Seulement quand la page arrive à l'écran : ensuite, la boucle de l'Accueil relit chaque minute.
+        if (started && small) host.scope.launch { load() }
     }
 
     override suspend fun load() {
-        if (!active || !small) return
+        if (previewing || !active || !small) return
+        val id = ++lastRead
         val shown = runCatchingCancellable { glance.load() }.fold({ it }, { null to context.errorText(it) })
+        if (id != lastRead || !active || !small) return
         last = shown
         compact.show(shown.first, placed.size.w, placed.size.h, shown.second)
     }
@@ -110,6 +127,17 @@ class Glancer<T>(
     }
 }
 
+/** Ouvre un élément d'une ligne sur l'ordinateur, et le dit dans le bandeau : ouvert, ou l'erreur (ordinateur injoignable…). */
+private fun openOnComputer(context: Context, host: HomeHost, open: suspend () -> Unit) {
+    host.scope.launch {
+        val text = runCatchingCancellable { open() }.fold({ context.getString(R.string.opened_on_computer) }, { context.errorText(it) })
+        (context as? MainActivity)?.showBanner(text, BANNER_SECONDS)
+    }
+}
+
+/** Durée du bandeau après un toucher sur une ligne. */
+private const val BANNER_SECONDS = 3
+
 fun jiraWidget(context: Context, host: HomeHost, placed: Placed): BoardWidget {
     val board = JiraView(context).apply { attach(host.owner) }
     val glance = Glancer(R.string.widget_jira, { BackendClient(context).jira.issues() }, { jiraSummary(context, host, it) }, { (it as? JiraSample)?.issues }, board::showSample)
@@ -125,10 +153,10 @@ private fun jiraSummary(context: Context, host: HomeHost, issues: JiraIssues): P
     val lines = glance.rows.map { issue ->
         val column = issues.columns.first { c -> c.issues.any { it.key == issue.key } }.title
         GlanceLine(issue.summary, "${issue.key} · $column", Pipeline.NONE) {
-            host.scope.launch { runCatchingCancellable { BackendClient(context).jira.openOnComputer(issue.key) } }
+            openOnComputer(context, host) { BackendClient(context).jira.openOnComputer(issue.key) }
         }
     }
-    return GlanceContent(glance.count, context.getString(R.string.glance_open), lines) to null
+    return GlanceContent(glance.count, context.resources.getQuantityString(R.plurals.glance_open, glance.count), lines) to null
 }
 
 /** MR GitLab, ou PR GitHub (`forge`) : même vue. */
@@ -147,7 +175,7 @@ private fun mrsSummary(context: Context, host: HomeHost, forge: Forge, mrs: GitL
     if (glance.rows.isEmpty()) return null to context.getString(texts.empty)
     val lines = glance.rows.map { mr ->
         GlanceLine(mr.title, "${shortProject(mr.project)} · ${context.getString(mrColumnTitle(mr.column, forge))}", mr.pipeline) {
-            host.scope.launch { runCatchingCancellable { BackendClient(context).forge(forge).open(mr.project, mr.iid) } }
+            openOnComputer(context, host) { BackendClient(context).forge(forge).open(mr.project, mr.iid) }
         }
     }
     return GlanceContent(glance.count, context.getString(R.string.glance_to_review), lines) to null
@@ -173,7 +201,7 @@ fun pipelinesWidget(context: Context, host: HomeHost, placed: Placed, forge: For
     )
 }
 
-/** Pipelines (ou runs Actions) en petite forme : les échecs en compteur, les derniers runs en lignes, le plus récent en tête. */
+/** Pipelines (ou runs Actions) en petite forme : les échecs en compteur, les derniers runs en lignes, les échecs en tête. */
 private fun pipelinesSummary(context: Context, host: HomeHost, forge: Forge, pipelines: GitLabPipelines): Pair<GlanceContent?, String?> {
     val texts = forgeTexts(forge)
     if (!pipelines.connected) return null to context.getString(texts.connect)
@@ -181,7 +209,7 @@ private fun pipelinesSummary(context: Context, host: HomeHost, forge: Forge, pip
     if (glance.rows.isEmpty()) return null to context.getString(texts.boardEmpty)
     val lines = glance.rows.map { p ->
         GlanceLine(pipelineTitle(p), pipelineTimeText(context, timeOf(p)), p.status) {
-            host.scope.launch { runCatchingCancellable { BackendClient(context).forge(forge).openPipeline(p.project, p.id) } }
+            openOnComputer(context, host) { BackendClient(context).forge(forge).openPipeline(p.project, p.id) }
         }
     }
     return GlanceContent(glance.count, context.getString(R.string.glance_failed), lines) to null

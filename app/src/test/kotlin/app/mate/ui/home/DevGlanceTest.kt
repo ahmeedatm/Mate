@@ -34,29 +34,21 @@ class DevGlanceTest {
     }
 
     @Test
-    fun `MR - l'etat de tete est le pire pipeline des lignes`() {
-        val glance = mrGlance(GitLabMrs(mine = listOf(mr(1, MrColumn.READY, Pipeline.RUNNING), mr(2, MrColumn.FIX, Pipeline.FAILED)), review = emptyList()))
-        assertEquals(Pipeline.FAILED, glance.lead)
-    }
-
-    @Test
     fun `MR - rien d'ouvert, rien a montrer`() {
         val glance = mrGlance(GitLabMrs(emptyList(), emptyList()))
         assertEquals(0, glance.count)
-        assertEquals(Pipeline.NONE, glance.lead)
         assertEquals(emptyList<GitLabMr>(), glance.rows)
     }
 
     @Test
-    fun `Pipelines - le plus recent en tete, son etat mene, le compteur dit les echecs`() {
+    fun `Pipelines - les echecs en tete (le compteur les annonce), puis le plus recent`() {
         val glance = pipelineGlance(
             GitLabPipelines(
                 schedules = listOf(run(1, Pipeline.SUCCESS, 3600), run(2, Pipeline.FAILED, 600)),
                 mrs = listOf(run(3, Pipeline.RUNNING, 60)),
             ),
         )
-        assertEquals(listOf(3L, 2L, 1L), glance.rows.map { it.id })
-        assertEquals(Pipeline.RUNNING, glance.lead)
+        assertEquals(listOf(2L, 3L, 1L), glance.rows.map { it.id })
         assertEquals(1, glance.count)
     }
 
@@ -64,7 +56,6 @@ class DevGlanceTest {
     fun `Actions - la liste a plat de GitHub compte aussi`() {
         val glance = pipelineGlance(GitLabPipelines(pipelines = listOf(run(7, Pipeline.SUCCESS, 120), run(8, Pipeline.FAILED, 30))))
         assertEquals(listOf(8L, 7L), glance.rows.map { it.id })
-        assertEquals(Pipeline.FAILED, glance.lead)
     }
 
     @Test
