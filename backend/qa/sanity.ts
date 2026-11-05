@@ -824,7 +824,27 @@ export async function runSanity(opts: { url: string; token: string; os?: Os; hoo
         expect(states.includes(res.json.state), `état inattendu : ${res.json.state}`);
         expect(Array.isArray(res.json.players), "liste des joueurs absente");
         if (os !== "windows") expect(res.json.state === "off", "Valorant annoncé hors Windows");
+        // Champs de la refonte (stats de tracker) : ajoutés, jamais absents.
+        expect(Array.isArray(res.json.history), "historique absent");
+        expect("end" in res.json, "tableau de fin absent");
         return res.json.state === "off" ? "client Riot fermé" : `${res.json.state}, ${res.json.players.length} joueur(s)`;
+      },
+    },
+    {
+      name: "Valorant (logo de rang servi par l'ordinateur)",
+      run: async () => {
+        // Lecture seule : téléchargé une fois depuis valorant-api.com, puis gardé dans .cache.
+        const res = await fetch(`${base}/valorant/rank?tier=24`, {
+          headers: { authorization: `Bearer ${opts.token}` },
+          signal: AbortSignal.timeout(30_000),
+        });
+        const body = Buffer.from(await res.arrayBuffer());
+        if (res.status === 404) throw new Skip("valorant-api.com injoignable depuis l'ordinateur");
+        expect(res.status === 200, `/valorant/rank : ${res.status} au lieu de 200`);
+        expect(body.subarray(1, 4).toString("ascii") === "PNG", "la réponse n'est pas un PNG");
+        const side = body.readUInt32BE(16);
+        expect(side <= 128, `logo trop grand pour la tablette : ${side} px`);
+        return `PNG de ${side} px`;
       },
     },
     {
