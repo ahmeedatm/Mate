@@ -62,13 +62,35 @@ object Water {
         if (!s.reminder || s.glasses >= s.goal) return false
         val hour = now.get(Calendar.HOUR_OF_DAY)
         if (hour < FROM_HOUR || hour >= UNTIL_HOUR) return false
-        val dayStart = (now.clone() as Calendar).apply { set(Calendar.HOUR_OF_DAY, FROM_HOUR); set(Calendar.MINUTE, 0) }.timeInMillis
-        val p = prefs(context)
-        val since = maxOf(p.getLong("last", 0), p.getLong("reminded", 0), dayStart)
-        if (now.timeInMillis - since < s.intervalMinutes * 60_000L) return false
-        p.edit().putLong("reminded", now.timeInMillis).apply()
+        if (now.timeInMillis - since(context, now) < s.intervalMinutes * 60_000L) return false
+        prefs(context).edit().putLong("reminded", now.timeInMillis).apply()
         return true
     }
+
+    /**
+     * Heure du prochain rappel (millisecondes), maintenant s'il est en retard ; null si le rappel est coupé, l'objectif
+     * atteint, ou s'il tomberait après [UNTIL_HOUR] h. Pour l'affichage seulement : [reminderDue] reste seul juge.
+     */
+    fun nextReminder(context: Context, now: Calendar = Calendar.getInstance()): Long? {
+        val s = state(context)
+        if (!s.reminder || s.glasses >= s.goal) return null
+        val next = maxOf(since(context, now) + s.intervalMinutes * 60_000L, now.timeInMillis)
+        val dayEnd = at(now, UNTIL_HOUR)
+        return next.takeIf { it < dayEnd }
+    }
+
+    /** Point de départ de l'intervalle : dernier verre, dernier rappel, ou [FROM_HOUR] h aujourd'hui. */
+    private fun since(context: Context, now: Calendar): Long {
+        val p = prefs(context)
+        return maxOf(p.getLong("last", 0), p.getLong("reminded", 0), at(now, FROM_HOUR))
+    }
+
+    private fun at(day: Calendar, hour: Int) = (day.clone() as Calendar).apply {
+        set(Calendar.HOUR_OF_DAY, hour)
+        set(Calendar.MINUTE, 0)
+        set(Calendar.SECOND, 0)
+        set(Calendar.MILLISECOND, 0)
+    }.timeInMillis
 
     fun observe(listener: (State) -> Unit) {
         listeners += listener

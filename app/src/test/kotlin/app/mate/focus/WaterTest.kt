@@ -3,6 +3,7 @@ package app.mate.focus
 import app.mate.FakeContext
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import java.util.Calendar
@@ -16,6 +17,7 @@ class WaterTest {
         set(Calendar.HOUR_OF_DAY, hour)
         set(Calendar.MINUTE, minute)
         set(Calendar.SECOND, 0)
+        set(Calendar.MILLISECOND, 0)
     }
 
     @Test
@@ -77,5 +79,30 @@ class WaterTest {
         Water.configure(context, goal = 2, reminder = true, intervalMinutes = 60)
         Water.add(context, 2)
         assertFalse(Water.reminderDue(context, at(15)))
+    }
+
+    @Test
+    fun `prochain rappel un intervalle apres 9 h ou apres le dernier verre`() {
+        Water.configure(context, goal = 8, reminder = true, intervalMinutes = 60)
+        assertEquals(at(10).timeInMillis, Water.nextReminder(context, at(7)))
+        context.getSharedPreferences("water", 0).edit().putLong("last", at(13, 15).timeInMillis).apply()
+        assertEquals(at(14, 15).timeInMillis, Water.nextReminder(context, at(13, 30)))
+    }
+
+    @Test
+    fun `prochain rappel en retard est maintenant`() {
+        Water.configure(context, goal = 8, reminder = true, intervalMinutes = 30)
+        assertEquals(at(12).timeInMillis, Water.nextReminder(context, at(12)))
+    }
+
+    @Test
+    fun `pas de prochain rappel coupe, objectif atteint ou apres 20 h`() {
+        Water.configure(context, goal = 2, reminder = false, intervalMinutes = 60)
+        assertNull(Water.nextReminder(context, at(10)))
+        Water.configure(context, goal = 2, reminder = true, intervalMinutes = 120)
+        context.getSharedPreferences("water", 0).edit().putLong("last", at(18, 30).timeInMillis).apply()
+        assertNull(Water.nextReminder(context, at(19)))
+        Water.add(context, 2)
+        assertNull(Water.nextReminder(context, at(10)))
     }
 }
