@@ -105,4 +105,13 @@ class WaterTest {
         Water.add(context, 2)
         assertNull(Water.nextReminder(context, at(10)))
     }
+
+    @Test
+    fun `toucher un verre de la jauge pose le compte jusqu'a lui`() {
+        Water.add(context, 2)
+        Water.set(context, 5)
+        assertEquals(5, Water.state(context).glasses)
+        Water.set(context, 1)
+        assertEquals(1, Water.state(context).glasses)
+    }
 }

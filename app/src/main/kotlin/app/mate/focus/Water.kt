@@ -42,6 +42,9 @@ object Water {
         notifyChanged(context)
     }
 
+    /** Pose le compte du jour (verre touché sur la jauge) : un verre de plus compte comme bu maintenant. */
+    fun set(context: Context, glasses: Int) = add(context, glasses - state(context).glasses)
+
     /** Rappel marche / arrêt (cloche du widget Eau) ; coupé tant qu'on ne l'a pas activé. */
     fun setReminder(context: Context, on: Boolean) {
         prefs(context).edit().putBoolean("reminder", on).apply()
