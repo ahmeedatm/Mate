@@ -304,6 +304,7 @@ class WidgetModelTest {
     fun `le mixeur a une taille 4 x 3 posee en bas, les autres tableaux non`() {
         assertEquals(4 to 3, WidgetSize.XL3.w to WidgetSize.XL3.h)
         assertEquals(WidgetSize.XL3, WidgetType.MIXER.sizes.single { it.w == 4 && it.h == 3 })
+        // Un tableau qui a les 16 formes (#178) a aussi le 4 × 3 : seuls les autres sont vérifiés.
         for (type in boards - WidgetType.MIXER) assertFalse("$type", WidgetSize.XL3 in type.sizes && type.sizes.size < WidgetSize.entries.size)
         val mixer = Placed(WidgetType.MIXER, WidgetSize.XL, 0, 0, 1)
         val layout = HomeLayout(mutableListOf(mixer), 1)

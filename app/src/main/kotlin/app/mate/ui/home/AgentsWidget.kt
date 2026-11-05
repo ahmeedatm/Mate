@@ -54,12 +54,7 @@ class AgentsWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidge
     private val full get() = placed.size.w >= 3 && family != ShapeFamily.ROW
     private val small get() = family == ShapeFamily.PILL
 
-    /** Sessions listées sous les compteurs : aucune en Ligne et en 1 × 2, plus la forme est haute plus il y en a. */
-    private val listRows get() = when {
-        family == ShapeFamily.COLUMN -> 2 * (placed.size.h - 2)
-        placed.size.w == 2 && placed.size.h >= 2 -> 2 * placed.size.h
-        else -> 0
-    }
+    private val listRows get() = agentsListRows(placed.size)
 
     /** Aperçu du catalogue : l'exemple reste, sans abonnement. */
     private var previewing = false
@@ -197,4 +192,11 @@ class AgentsWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidge
             LinearLayout.LayoutParams(if (vertical) ViewGroup.LayoutParams.MATCH_PARENT else 0, ViewGroup.LayoutParams.WRAP_CONTENT, if (vertical) 0f else 1f),
         )
     }
+}
+
+/** Sessions listées sous les compteurs d'Agents : aucune en Pastille, en Ligne et en 1 × 2, plus la forme est haute plus il y en a. */
+internal fun agentsListRows(size: WidgetSize): Int = when {
+    size.family == ShapeFamily.COLUMN -> 2 * (size.h - 2)
+    size.w == 2 && size.h >= 2 -> 2 * size.h
+    else -> 0
 }
