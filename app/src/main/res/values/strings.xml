@@ -1294,6 +1294,7 @@
     <string name="glance_to_review">à relire</string>
     <string name="widget_actions">Actions</string>
     <string name="widget_actions_desc">Le dernier run GitHub Actions de tes dépôts : en cours, échecs, durée</string>
+    <string name="glance_failed">en échec</string>
     <string name="widget_ytmusic">YouTube Music</string>
     <string name="widget_ytmusic_desc">YouTube Music qui joue sur l\'ordi, piloté d\'ici : titre, file d\'attente, j\'aime</string>
     <string name="ytmusic_empty">Rien ne joue dans YouTube Music</string>

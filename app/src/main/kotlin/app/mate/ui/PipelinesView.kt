@@ -289,7 +289,7 @@ class PipelinesView @JvmOverloads constructor(
     }
 
     private fun showTime(row: View, p: GitLabPipeline) {
-        val time = timeText(timeOf(p))
+        val time = pipelineTimeText(context, timeOf(p))
         row.findViewById<TextView>(R.id.pipeline_time).text = time
         // TalkBack lit l'état (l'icône n'est pas lue) puis la ligne.
         row.contentDescription = context.getString(R.string.pipelines_row_cd, context.getString(texts.pipeline(p.status)), pipelineTitle(p), time)
@@ -305,20 +305,6 @@ class PipelinesView @JvmOverloads constructor(
         }
     }
 
-    private fun timeText(t: PipelineTime): String = when (t) {
-        is PipelineTime.Since -> context.getString(R.string.pipelines_since, spanText(t.age))
-        is PipelineTime.Took -> context.getString(R.string.pipelines_took, spanText(t.duration), spanText(t.age))
-        is PipelineTime.Ago -> context.getString(R.string.pipelines_ago, spanText(t.age))
-    }
-
-    /** « 45 s », « 6 min 12 s », « 4 min », « 1 h 05 », « 2 h », « 3 j » : `rest` (secondes ou minutes) seulement s'il n'est pas nul. */
-    private fun spanText(s: Span) = when (s.unit) {
-        SpanUnit.SECONDS -> context.getString(R.string.pipelines_sec, s.value)
-        SpanUnit.MINUTES -> if (s.rest == 0) context.getString(R.string.pipelines_min, s.value) else context.getString(R.string.pipelines_min_sec, s.value, s.rest)
-        SpanUnit.HOURS -> if (s.rest == 0) context.getString(R.string.pipelines_h, s.value) else context.getString(R.string.pipelines_h_min, s.value, s.rest)
-        SpanUnit.DAYS -> context.getString(R.string.pipelines_d, s.value)
-    }
-
     private companion object {
         const val POLL_MS = 30_000L
         const val CONNECT_POLL_MS = 3_000L
@@ -328,4 +314,19 @@ class PipelinesView @JvmOverloads constructor(
         const val SIDE_BY_SIDE_DP = 880
         const val SECTION_GAP_DP = 16
     }
+}
+
+/** « depuis 4 min », « 6 min 12 s · il y a 2 h », « il y a 3 j » : le temps d'une ligne de pipeline, au tableau comme en petite forme. */
+internal fun pipelineTimeText(context: Context, t: PipelineTime): String = when (t) {
+    is PipelineTime.Since -> context.getString(R.string.pipelines_since, spanText(context, t.age))
+    is PipelineTime.Took -> context.getString(R.string.pipelines_took, spanText(context, t.duration), spanText(context, t.age))
+    is PipelineTime.Ago -> context.getString(R.string.pipelines_ago, spanText(context, t.age))
+}
+
+/** « 45 s », « 6 min 12 s », « 4 min », « 1 h 05 », « 2 h », « 3 j » : `rest` (secondes ou minutes) seulement s'il n'est pas nul. */
+private fun spanText(context: Context, s: Span) = when (s.unit) {
+    SpanUnit.SECONDS -> context.getString(R.string.pipelines_sec, s.value)
+    SpanUnit.MINUTES -> if (s.rest == 0) context.getString(R.string.pipelines_min, s.value) else context.getString(R.string.pipelines_min_sec, s.value, s.rest)
+    SpanUnit.HOURS -> if (s.rest == 0) context.getString(R.string.pipelines_h, s.value) else context.getString(R.string.pipelines_h_min, s.value, s.rest)
+    SpanUnit.DAYS -> context.getString(R.string.pipelines_d, s.value)
 }

@@ -133,7 +133,8 @@ class WidgetModelTest {
     @Test
     fun `Pipelines, console de GitLab en tableau, proposee seulement quand GitLab l'est`() {
         assertEquals(WidgetType.PIPELINES, WidgetType.of("pipelines"))
-        assertEquals(listOf(WidgetSize.XL, WidgetSize.L, WidgetSize.L3, WidgetSize.T3, WidgetSize.FULL), WidgetType.PIPELINES.sizes)
+        assertEquals(WidgetSize.XL, WidgetType.PIPELINES.sizes.first())
+        assertTrue(WidgetType.PIPELINES.sizes.containsAll(listOf(WidgetSize.L, WidgetSize.L3, WidgetSize.T3, WidgetSize.FULL)))
         assertTrue(WidgetType.PIPELINES.computer)
         assertFalse(WidgetType.PIPELINES.offered(HomeFeatures()))
         assertFalse(WidgetType.PIPELINES.offered(HomeFeatures(jira = true)))

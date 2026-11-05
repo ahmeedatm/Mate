@@ -5,7 +5,9 @@ import android.view.View
 import android.view.ViewGroup
 import app.mate.R
 import app.mate.github.Forge
+import app.mate.gitlab.pipelineTitle
 import app.mate.gitlab.shortProject
+import app.mate.gitlab.timeOf
 import app.mate.net.BackendClient
 import app.mate.net.runCatchingCancellable
 import app.mate.ui.GitLabView
@@ -15,6 +17,7 @@ import app.mate.ui.ScheduleChoicesDialog
 import app.mate.ui.errorText
 import app.mate.ui.forgeTexts
 import app.mate.ui.mrColumnTitle
+import app.mate.ui.pipelineTimeText
 import kotlinx.coroutines.launch
 
 /**
@@ -111,7 +114,9 @@ private fun glanceDemo(context: Context) = context.getSharedPreferences("compani
 /** Pipelines GitLab (⚙ : planifications), ou runs GitHub Actions (`forge`) : même vue. */
 fun pipelinesWidget(context: Context, host: HomeHost, placed: Placed, forge: Forge = Forge.GITLAB): BoardWidget {
     val board = PipelinesView(context, forge = forge).apply { attach(host.scope) }
-    if (forge == Forge.GITHUB) return BoardWidget(context, host, placed, board, board::setActive)
+    val title = if (forge == Forge.GITHUB) R.string.widget_actions else R.string.widget_pipelines
+    val glance = Glancer(title) { pipelinesGlance(context, host, forge) }
+    if (forge == Forge.GITHUB) return BoardWidget(context, host, placed, board, board::setActive, glance = glance)
     // ⚙ : choix des planifications ; la vue les relit dès qu'il est enregistré.
     val choices = ScheduleChoicesDialog(context, host.scope, board::reload)
     // Cachée, le widget ferme aussi son choix de planifications (comme JiraView ses fenêtres).
@@ -122,5 +127,21 @@ fun pipelinesWidget(context: Context, host: HomeHost, placed: Placed, forge: For
             if (!active) choices.dismiss()
         },
         choices::show,
+        glance,
     )
+}
+
+/** Pipelines (ou runs Actions) en petite forme : les échecs en compteur, les derniers runs en lignes, le plus récent en tête. */
+private suspend fun pipelinesGlance(context: Context, host: HomeHost, forge: Forge): Pair<GlanceContent?, String?> {
+    val texts = forgeTexts(forge)
+    val pipelines = if (glanceDemo(context)) samplePipelines(forge) else BackendClient(context).forge(forge).pipelines()
+    if (!pipelines.connected) return null to context.getString(texts.connect)
+    val glance = pipelineGlance(pipelines)
+    if (glance.rows.isEmpty()) return null to context.getString(texts.boardEmpty)
+    val lines = glance.rows.map { p ->
+        GlanceLine(pipelineTitle(p), pipelineTimeText(context, timeOf(p)), p.status) {
+            host.scope.launch { runCatchingCancellable { BackendClient(context).forge(forge).openPipeline(p.project, p.id) } }
+        }
+    }
+    return GlanceContent(glance.count, context.getString(R.string.glance_failed), lines) to null
 }
