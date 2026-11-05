@@ -24,7 +24,6 @@ import app.mate.ui.themeColorList
 import app.mate.ui.themeFont
 import app.mate.ui.themeRes
 import kotlin.math.abs
-import kotlin.math.min
 
 /**
  * Fiche d'un widget du catalogue, à droite de la liste : l'aperçu à données d'exemple ([WidgetSamples]) dans la forme
@@ -53,7 +52,13 @@ class CatalogueSheet(context: Context, private val host: HomeHost) : LinearLayou
     private val prev = arrow(R.drawable.ic_chevron_left, R.string.catalogue_shape_prev) { step(-1) }
     private val next = arrow(R.drawable.ic_chevron_right, R.string.catalogue_shape_next) { step(1) }
     private val dots = LinearLayout(context).apply { gravity = Gravity.CENTER }
-    private val shapeName = text(16f, R.attr.c_text).apply { gravity = Gravity.CENTER }
+    private val shapeName = text(16f, R.attr.c_text).apply {
+        gravity = Gravity.CENTER
+        // TalkBack lit la nouvelle forme après une flèche ou un glissement.
+        accessibilityLiveRegion = ACCESSIBILITY_LIVE_REGION_POLITE
+    }
+    private val dotOn = themeColorList(context, R.attr.c_accent)
+    private val dotOff = themeColorList(context, R.attr.c_text_faint)
 
     private val icon = ImageView(context).apply {
         setBackgroundResource(R.drawable.round_bg)
@@ -114,7 +119,9 @@ class CatalogueSheet(context: Context, private val host: HomeHost) : LinearLayou
         title.setText(type.title)
         description.setText(type.description)
         dots.removeAllViews()
-        choices.forEach { _ -> dots.addView(View(context).apply { setBackgroundResource(R.drawable.dot) }) }
+        choices.forEach { _ ->
+            dots.addView(View(context).apply { setBackgroundResource(R.drawable.dot) }, LayoutParams(dp(DOT_DP), dp(DOT_DP)).apply { marginStart = dp(3); marginEnd = dp(3) })
+        }
         render()
     }
 
@@ -122,6 +129,8 @@ class CatalogueSheet(context: Context, private val host: HomeHost) : LinearLayou
     fun clear() {
         holder.removeAllViews()
         type = null
+        choices = emptyList()
+        onAdd = null
     }
 
     private fun step(delta: Int) {
@@ -147,10 +156,10 @@ class CatalogueSheet(context: Context, private val host: HomeHost) : LinearLayou
         next.alpha = if (index < choices.size - 1) 1f else DISABLED_ALPHA
         for (i in 0 until dots.childCount) {
             val on = i == index
-            dots.getChildAt(i).apply {
-                layoutParams = LayoutParams(dp(if (on) DOT_ON_DP else DOT_DP), dp(DOT_DP)).apply { marginStart = dp(3); marginEnd = dp(3) }
-                backgroundTintList = themeColorList(context, if (on) R.attr.c_accent else R.attr.c_text_faint)
-            }
+            val dot = dots.getChildAt(i)
+            val w = dp(if (on) DOT_ON_DP else DOT_DP)
+            if (dot.layoutParams.width != w) dot.layoutParams = dot.layoutParams.apply { width = w }
+            dot.backgroundTintList = if (on) dotOn else dotOff
         }
         val name = context.getString(R.string.catalogue_shape, size.w, size.h, context.getString(size.family.label))
         shapeName.text = name
@@ -174,9 +183,7 @@ class CatalogueSheet(context: Context, private val host: HomeHost) : LinearLayou
     private fun renderPreview(type: WidgetType, size: WidgetSize, fits: Boolean) {
         if (stage.width == 0) return
         val (cellW, cellH) = cell
-        val maxW = choices.maxOf { it.size.w } * cellW
-        val maxH = choices.maxOf { it.size.h } * cellH
-        val scale = min(1f, min(stage.width.toFloat() / maxW, stage.height.toFloat() / maxH))
+        val scale = previewScale(choices.map { it.size }, cellW, cellH, stage.width, stage.height)
         val fullW = size.w * cellW
         val fullH = size.h * cellH
         holder.removeAllViews()

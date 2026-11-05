@@ -90,7 +90,7 @@ class CatalogueView(context: Context, host: HomeHost) : FrameLayout(context) {
         val request = request ?: return
         rows.forEach { (t, row) -> row.isSelected = t == type }
         val choices = request.layout.shapeChoices(type, request.page, request.col, request.row)
-        sheet.show(type, choices, openingShape(type), request.cellW, request.cellH) { chosen, fit ->
+        sheet.show(type, choices, openingShape(type, choices), request.cellW, request.cellH) { chosen, fit ->
             val add = onAdd
             hide()
             add?.invoke(chosen, fit)

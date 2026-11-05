@@ -59,11 +59,27 @@ class CatalogueModelTest {
     }
 
     @Test
-    fun `la fiche s ouvre sur la forme par defaut du widget`() {
+    fun `la fiche s ouvre sur la forme par defaut du widget quand elle tient`() {
         WidgetType.entries.forEach { type ->
-            val choices = layout().shapeChoices(type, 0, 2, 0)
-            assertEquals(type.sizes.first(), choices[openingShape(type)].size)
+            val choices = HomeLayout(mutableListOf(), 1).shapeChoices(type, 0, 0, 0)
+            assertEquals(type.sizes.first(), choices[openingShape(type, choices)].size)
         }
+    }
+
+    @Test
+    fun `sinon la fiche s ouvre sur la premiere forme qui tient a la case`() {
+        // Case (1, 1), voisine d'un 2 × 2 en (2, 0) : la Météo 2 × 1 (sa forme d'ajout) et 2 × 2 butent dessus, la 1 × 1 tient.
+        val busy = HomeLayout(mutableListOf(Placed(WidgetType.CLOCK, WidgetSize.L, 0, 2, 0), Placed(WidgetType.CLOCK, WidgetSize.L, 0, 0, 2)), 1)
+        val choices = busy.shapeChoices(WidgetType.WEATHER, 0, 1, 1)
+        assertEquals(WidgetSize.S, choices[openingShape(WidgetType.WEATHER, choices)].size)
+    }
+
+    @Test
+    fun `l echelle de l apercu fait tenir la plus grande forme du widget`() {
+        // Cases de 200 × 100 ; formes jusqu'à 2 × 2 (400 × 200) dans une scène de 300 × 300 : la largeur limite.
+        assertEquals(0.75f, previewScale(listOf(WidgetSize.S, WidgetSize.L), 200, 100, 300, 300), 0.001f)
+        // Jamais agrandi au-delà de la taille réelle.
+        assertEquals(1f, previewScale(listOf(WidgetSize.S), 200, 100, 1000, 1000), 0.001f)
     }
 
     @Test

@@ -32,8 +32,25 @@ fun HomeLayout.shapeChoices(type: WidgetType, page: Int, col: Int, row: Int): Li
     ShapeChoice(size, free, atCase = col < 0 && free != null)
 }
 
-/** Rang, dans [shapeChoices], de la forme sur laquelle la fiche s'ouvre : celle d'un ajout (la première de `sizes`). */
-fun openingShape(type: WidgetType) = SHAPE_ORDER.filter { it in type.sizes }.indexOf(type.sizes.first())
+/**
+ * Rang, dans `choices` ([shapeChoices]), de la forme sur laquelle la fiche s'ouvre : celle d'un ajout (la première de
+ * `sizes`) si elle tient à la case, sinon la première qui y tient, sinon celle d'un ajout.
+ */
+fun openingShape(type: WidgetType, choices: List<ShapeChoice>): Int {
+    val default = choices.indexOfFirst { it.size == type.sizes.first() }.coerceAtLeast(0)
+    if (choices.getOrNull(default)?.atCase == true) return default
+    return choices.indexOfFirst { it.atCase }.takeIf { it >= 0 } ?: default
+}
+
+/**
+ * Échelle de l'aperçu, commune à toutes les formes `sizes` du widget : la plus grande largeur et la plus grande hauteur
+ * (cases de `cellW` × `cellH` px) tiennent dans la scène de `stageW` × `stageH` px. Jamais au-delà de la taille réelle.
+ */
+fun previewScale(sizes: List<WidgetSize>, cellW: Int, cellH: Int, stageW: Int, stageH: Int): Float {
+    val maxW = sizes.maxOf { it.w } * cellW.coerceAtLeast(1)
+    val maxH = sizes.maxOf { it.h } * cellH.coerceAtLeast(1)
+    return minOf(1f, stageW.toFloat() / maxW, stageH.toFloat() / maxH)
+}
 
 /** Nom de la famille de formes, sous l'aperçu (« 2 × 1 · Ligne »). */
 @get:StringRes

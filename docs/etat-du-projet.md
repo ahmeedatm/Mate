@@ -168,7 +168,7 @@ Fait et testé sur la Gen2 (APK debug, compagnon lancé depuis le dépôt) :
 
 ## À faire, dans l'ordre
 
-**Widgets en 16 formes** (suivi #187) : la règle est posée (#178 : 16 formes, familles `ShapeFamily`, aperçu `WidgetSamples`, `WidgetRulesTest`). Reste à vider les listes d'exceptions `app/src/test/.../ui/home/WidgetGaps*.kt`, une par famille de widgets (#180 à #186), et le catalogue d'ajout (#179).
+**Widgets en 16 formes** (suivi #187) : la règle est posée (#178 : 16 formes, familles `ShapeFamily`, aperçu `WidgetSamples`, `WidgetRulesTest`). Catalogue d'ajout fait (#179, PR #188 : liste par rayon, fiche à droite, choix de la forme). Reste à vider les listes d'exceptions `app/src/test/.../ui/home/WidgetGaps*.kt`, une par famille de widgets (#180 à #186) ; chaque aperçu ajouté apparaît tout seul dans le catalogue.
 
 **Page par appli** (#23 puis #61) : la tablette passe sur la page dont une appli est au premier plan de l'ordinateur (ordre `foreground`), change de page d'une appli à l'autre, et revient 8 s après. Vérifié par tests JVM, tests backend et e2e. Non testé : émulateur, tablette réelle, Windows (`frontApp` par l'exe), une appli en plein écran.
 

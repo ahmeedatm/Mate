@@ -2,17 +2,12 @@ package app.mate.ui
 
 import android.graphics.drawable.GradientDrawable
 import android.os.Bundle
-import android.view.Gravity
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.widget.FrameLayout
-import android.widget.ImageView
-import android.widget.LinearLayout
 import android.widget.ScrollView
-import android.widget.TextView
 import android.widget.Toast
-import androidx.appcompat.app.AlertDialog
 import androidx.core.content.ContextCompat
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.LifecycleOwner
@@ -124,6 +119,7 @@ class HomeFragment : Fragment(), HomeHost, WidgetGrid.Listener {
 
     override fun onViewCreated(view: View, state: Bundle?) {
         deckOverlays = null
+        catalogueView = null
         grid = view.findViewById(R.id.home_grid)
         scroll = view.findViewById(R.id.home_scroll)
         editBar = view.findViewById(R.id.home_edit_bar)
@@ -611,6 +607,8 @@ class HomeFragment : Fragment(), HomeHost, WidgetGrid.Listener {
     fun isEditing() = view != null && grid.editing
 
     private fun endEdit(keep: Boolean) {
+        // Le catalogue pose dans la disposition en cours de modification : il ne survit pas à la fin du mode Modifier.
+        catalogueView?.hide()
         if (!grid.editing) return
         scaleWidgets(1f)
         deckOverlays?.hideAll()
