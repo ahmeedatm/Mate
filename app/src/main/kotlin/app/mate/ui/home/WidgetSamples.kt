@@ -1,7 +1,11 @@
 package app.mate.ui.home
 
 import app.mate.R
+import app.mate.focus.FocusTimer
+import app.mate.focus.NoisePlayer
+import app.mate.focus.Water
 import app.mate.github.Forge
+import java.util.Calendar
 
 /**
  * Données d'exemple d'un widget, pour son aperçu dans le catalogue ([HomeWidget.showPreview]) : écrites en dur, sans
@@ -61,10 +65,20 @@ object WidgetSamples {
         WidgetType.METRICS -> MetricsSample(sampleMetrics())
 
         // #186 Perso, maison et jeux
-        WidgetType.FOCUS -> null
-        WidgetType.WATER -> null
+        WidgetType.FOCUS -> FocusSample(FocusTimer.State(FocusTimer.Phase.FOCUS, 25 * MINUTE, 18 * MINUTE + 42_000, running = true, completed = 2), NoisePlayer.Kind.FOREST)
+        WidgetType.WATER -> WaterSample(Water.State(glasses = 5, goal = 8, reminder = true, intervalMinutes = 60), todayAt(15))
         WidgetType.AWAY -> null
         WidgetType.HA -> null
-        WidgetType.VALORANT -> null
+        WidgetType.VALORANT -> ValorantWidget.SAMPLE
     }
+
+    private const val MINUTE = 60_000L
+
+    /** Aujourd'hui à [hour] heures pile (le prochain rappel de l'exemple de l'Eau). */
+    private fun todayAt(hour: Int) = Calendar.getInstance().apply {
+        set(Calendar.HOUR_OF_DAY, hour)
+        set(Calendar.MINUTE, 0)
+        set(Calendar.SECOND, 0)
+        set(Calendar.MILLISECOND, 0)
+    }.timeInMillis
 }
