@@ -45,8 +45,8 @@ object WidgetSamples {
         WidgetType.WEB -> null
 
         // #184 Appels
-        WidgetType.DISCORD -> null
-        WidgetType.MEETING -> null
+        WidgetType.DISCORD -> CallSample(meeting = false)
+        WidgetType.MEETING -> CallSample(meeting = true)
         WidgetType.CALL -> null
         WidgetType.PRESENT -> null
 

@@ -1426,6 +1426,25 @@
     <string name="call_idle">Pas d\'appel</string>
     <string name="call_lobby">Avant la réunion</string>
     <string name="call_no_page">Pas de page pour ce widget sur cet ordinateur</string>
+    <string name="call_speaking">%1$s parle</string>
+    <!-- Aperçu du catalogue (CallSample) : un appel Discord et une réunion d'exemple. -->
+    <string name="call_sample_channel">Salon général</string>
+    <string name="call_sample_meeting">Point d\'équipe</string>
+    <string-array name="call_sample_people">
+        <item>Eliot</item>
+        <item>Bruno</item>
+        <item>Léa</item>
+        <item>Sam</item>
+        <item>Nora</item>
+    </string-array>
+    <string name="call_sample_open">Ouvrir Discord</string>
+    <string name="call_sample_mute">Couper mon micro</string>
+    <string name="call_sample_deafen">Sourdine (casque)</string>
+    <string name="call_sample_leave">Quitter l\'appel</string>
+    <string name="call_sample_mic">Micro</string>
+    <string name="call_sample_camera">Caméra</string>
+    <string name="call_sample_share">Partager l\'écran</string>
+    <string name="call_sample_hand">Lever la main</string>
     <string name="widget_perf">Performances du PC</string>
     <string name="widget_perf_desc">Processeur, carte graphique et mémoire en direct</string>
     <string name="perf_title">PC · %1$s</string>

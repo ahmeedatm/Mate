@@ -209,7 +209,8 @@ fun reconcileKeys(chosen: List<KeyRef>, pages: List<DeckPage>): List<KeyRef>? {
  * contient la plaque, [LABEL_GAP_DP] et deux lignes de libellé ; `TileGridView.newCell` l'agrandit si la taille du texte
  * choisie dans les Réglages dépasse ces cotes.
  */
-class TileMetrics(val columnDp: Int, val cellDp: Int, val plateDp: Int, val labelSp: Float, val initialSp: Float) {
+/** Cotes d'une case de touche ; [round] : plaque ronde (touches de l'îlot d'un widget d'appel). */
+class TileMetrics(val columnDp: Int, val cellDp: Int, val plateDp: Int, val labelSp: Float, val initialSp: Float, val round: Boolean = false) {
     companion object {
         /** Espace entre la plaque et le libellé. */
         const val LABEL_GAP_DP = 6
