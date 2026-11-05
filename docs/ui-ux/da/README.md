@@ -6,8 +6,8 @@ Choisie par Ahmed parmi trois directions (Sobre, Chaleur, Nuit), sur maquettes H
 couleurs relevées sur les sites le 05/11 : calme, chaleureux, comme un carnet posé sur le bureau. Aucun logo ni marque repris.
 
 - Fond crème `#FAF9F5`, barre `#F0EEE6`, tuiles blanches à filet crème `#E8E6DC` (1 dp), rayon 16, sans ombre (`chaleur_tile_bg`).
-- Accent terre cuite `#AE5030` : le `#D97757` du site ne fait que 3:1 sur le crème, la version foncée tient 4,5:1
-  (`ThemePalettesTest`). Parler en terre cuite, encre `#141413`, textes secondaires `#3D3D3A` et `#5E5D59`.
+- Accent terre cuite `#A34A2B` : le `#D97757` du site ne fait que 3:1 sur le crème, la version foncée tient 4,5:1
+  sur le fond, les tuiles et la tuile appuyée (`ThemePalettesTest`). Parler en terre cuite, encre `#141413`, textes secondaires `#3D3D3A` et `#5E5D59`.
 - Titres et grands chiffres en serif de livre Source Serif 4 (500 et 300), textes en Hanken Grotesk (400 et 500), OFL.
 - Palette `Palette.Chaleur` (`res/values/palettes.xml`), thème `AppTheme.CHALEUR`, groupe Chaleur en tête des Réglages.
   Les autres thèmes restent au choix ; un thème enregistré est gardé.
@@ -33,6 +33,9 @@ Mate est un accessoire gamer et domotique casual posé sur le bureau : lisible d
 | Interface du Steam Deck | fond ardoise sombre, accent vif, barre de navigation à gauche |
 
 ## Principes
+
+Ces principes valent pour Console, Console jour, Contraste élevé et leurs dérivés ; Chaleur a les siens (plus haut), les autres thèmes gardent leur DA.
+
 
 - Nuit (Console, le thème par défaut jusqu'au 05/11/2026), jour au choix (Console jour), Contraste élevé pour l'accessibilité, Hush pour le style (nuit noire, accent rose, halos rose et violet animés derrière les écrans, widgets transparents ; `Palette.Hush`, `HushPaletteTest`), Spider-Verse pour le style (le logo araignée en fond fixe, accent magenta, libellés cyan, widgets sans cadre rangés en deux colonnes autour d'une colonne vide où le logo reste net, filigrane quand le milieu est occupé ; `Palette.SpiderMan`, `SpiderManPaletteTest`).
 - Une seule couleur vivante : le vert acide `c_accent`. Il marque l'élément choisi de la barre fixe, l'action principale, les curseurs et interrupteurs actifs.

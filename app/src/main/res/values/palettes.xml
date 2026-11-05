@@ -492,10 +492,8 @@
         <item name="c_pattern_color">#00000000</item>
     </style>
 
-    <!-- Clair et Sombre : la DA Cadran sans texture (blanc et noir francs, sans grain ni tubes), rouge Unowhy en accent, Outfit.
-         Venus d'UnoMate (palettes Cadran clair et Cadran sombre). Textes au moins 4,5:1 sur le fond, la tuile et le relief (ThemePalettesTest). -->
     <!-- Chaleur (par défaut, 05/11/2026) : la DA de claude.ai et anthropic.com relevée sur les sites (crème, terre cuite,
-         serif de livre), choisie par Ahmed. Terre cuite foncée #AE5030 pour tenir 4,5:1 (le #D97757 du site ne fait que 3:1 sur
+         serif de livre), choisie par Ahmed. Terre cuite foncée #A34A2B pour tenir 4,5:1 (tuile appuyée comprise) (le #D97757 du site ne fait que 3:1 sur
          le crème). Titres et grands chiffres en Source Serif 4, textes en Hanken Grotesk (OFL). Tuiles blanches à filet crème. -->
     <style name="Palette.Chaleur" parent="">
         <item name="c_card_bg">@drawable/chaleur_tile_bg</item>
@@ -528,7 +526,7 @@
         <item name="c_surface_raised">#FFF5F4ED</item>
         <item name="c_surface_pressed">#FFE8E6DC</item>
         <item name="c_stroke">#FFE8E6DC</item>
-        <item name="c_accent">#FFAE5030</item>
+        <item name="c_accent">#FFA34A2B</item>
         <item name="c_accent_soft">#FFFBEDE6</item>
         <item name="c_on_accent">#FFFFFFFF</item>
         <item name="c_text">#FF141413</item>
@@ -547,11 +545,11 @@
         <item name="c_agent_wait">#FFB23A2E</item>
         <item name="c_agent_done">#FF4A6A2E</item>
         <item name="c_agent_limit">#FF2F5F8F</item>
-        <item name="c_agent_work">#FFAE5030</item>
+        <item name="c_agent_work">#FFA34A2B</item>
         <item name="c_agent_monitor">#FF7A5B00</item>
         <item name="c_paper">#FFFFFFFF</item>
         <item name="c_scrim">#52000000</item>
-        <item name="c_hue_orange">#FFAE5030</item>
+        <item name="c_hue_orange">#FFA34A2B</item>
         <item name="c_hue_cyan">#FF2F6F78</item>
         <item name="c_hue_violet">#FF6A5596</item>
         <item name="c_hue_pink">#FF9E4566</item>
@@ -591,6 +589,8 @@
         <item name="c_pattern_color">#00000000</item>
     </style>
 
+    <!-- Clair et Sombre : la DA Cadran sans texture (blanc et noir francs, sans grain ni tubes), rouge Unowhy en accent, Outfit.
+         Venus d'UnoMate (palettes Cadran clair et Cadran sombre). Textes au moins 4,5:1 sur le fond, la tuile et le relief (ThemePalettesTest). -->
     <style name="Palette.CadranClair" parent="">
         <item name="c_card_bg">@drawable/cadran_tile_bg</item>
         <item name="c_tile_bg">@drawable/cadran_tile_bg</item>

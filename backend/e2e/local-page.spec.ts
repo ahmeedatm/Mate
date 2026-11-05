@@ -319,7 +319,7 @@ test.describe("page locale GET /", () => {
 
     // Accent de l'aperçu de chaque thème = c_accent de palettes.xml (valeurs relevées à la main). showTwin direct : un clic enverrait un ordre à la tablette.
     const accents = {
-      CHALEUR: "#AE5030",
+      CHALEUR: "#A34A2B",
       CONSOLE: "#B8F34A",
       CONSOLE_JOUR: "#3F6B00",
       CLAIR: "#CA0538",
@@ -345,6 +345,12 @@ test.describe("page locale GET /", () => {
       ),
     );
     expect(shown).toEqual(accents);
+    // Thème inconnu (tablette plus récente que le compagnon) : l'aperçu prend Chaleur, le thème par défaut.
+    const fallback = await page.evaluate(() => {
+      (window as unknown as { showTwin: (t: string) => void }).showTwin("INCONNU");
+      return document.getElementById("twin")!.style.getPropertyValue("--t-now");
+    });
+    expect(fallback).toBe("#A34A2B");
 
     await page.locator("#nightdim").uncheck();
     await expect(page.locator("#tabletmsg")).toHaveText("Réglé sur la tablette.");

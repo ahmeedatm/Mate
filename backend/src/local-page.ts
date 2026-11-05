@@ -139,7 +139,7 @@ ${FAVICON}
   .twin-grid { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.05fr); gap: 28px; align-items: start; }
   .twin { margin: 0; position: sticky; top: 32px; }
   .device { background: #0E0F11; border-radius: 26px; padding: 18px; box-shadow: 0 24px 48px -28px rgba(0, 0, 0, .5), 0 0 0 1px var(--line); }
-  .screen { --t-bg: #17181B; --t-tile: #23252A; --t-ink: #ECEDEF; --t-ink2: #B4B8C0; --t-now: #B8F34A; --t-line: #3A3D44; --t-on: #16210A;
+  .screen { --t-bg: #FAF9F5; --t-tile: #FFFFFF; --t-ink: #141413; --t-ink2: #3D3D3A; --t-now: #A34A2B; --t-line: #E8E6DC; --t-on: #FFFFFF;
     aspect-ratio: 16 / 10; border-radius: 8px; overflow: hidden; background: var(--t-bg); color: var(--t-ink); container-type: inline-size;
     display: grid; grid-template-columns: 9% 1fr; transition: background 300ms, color 300ms, filter 250ms; }
   .screen .rl { display: flex; flex-direction: column; align-items: center; gap: 5cqw; padding-top: 4.5cqw; }
@@ -1035,7 +1035,7 @@ ${FAVICON}
 
   // Aperçu de la tablette : couleurs des thèmes (fond, tuile, texte, texte 2, accent, filet, texte sur l'accent), d'après palettes.xml.
   const THEMES = {
-    CHALEUR: ["#FAF9F5", "#FFFFFF", "#141413", "#3D3D3A", "#AE5030", "#E8E6DC", "#FFFFFF"],
+    CHALEUR: ["#FAF9F5", "#FFFFFF", "#141413", "#3D3D3A", "#A34A2B", "#E8E6DC", "#FFFFFF"],
     CONSOLE: ["#17181B", "#23252A", "#ECEDEF", "#B4B8C0", "#B8F34A", "#3A3D44", "#16210A"],
     CONSOLE_JOUR: ["#F4F2EE", "#FFFFFF", "#1B1C1F", "#474B54", "#3F6B00", "#D8D3CA", "#FFFFFF"],
     CLAIR: ["#FAF2F1", "#FFFFFF", "#1E1B1B", "#4D4545", "#CA0538", "#D0C4C3", "#FFFFFF"],
