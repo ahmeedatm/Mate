@@ -1,9 +1,7 @@
 package app.mate.ui.home
 
 import android.content.Context
-import android.graphics.drawable.GradientDrawable
 import android.text.TextUtils
-import android.util.TypedValue
 import android.view.Gravity
 import android.view.View
 import android.view.ViewGroup
@@ -13,45 +11,30 @@ import app.mate.R
 import app.mate.net.BackendClient
 import app.mate.net.Valorant
 import app.mate.net.ValorantEndStatus
+import app.mate.net.ValorantMe
 import app.mate.net.ValorantPlayer
+import app.mate.net.ValorantScore
 import app.mate.net.ValorantState
 import app.mate.net.runCatchingCancellable
 import app.mate.ui.errorText
-import app.mate.ui.themeFont
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 
-/**
- * Teinte de la pastille d'un rang (tier Riot : 3 à 26 par divisions de trois, 27 Radiant). Le nom du rang est toujours
- * écrit à côté : la couleur ne fait que le redire. Radiant n'a pas l'accent, qui vaut le vert d'Ascendant dans Console.
- */
-fun rankHue(tier: Int?): Int = when {
-    rankHollow(tier) -> R.attr.c_text_faint
-    tier!! >= 27 -> R.attr.c_hue_pink
-    else -> when ((tier - 3) / 3) {
-        0 -> R.attr.c_text_dim // Fer
-        1 -> R.attr.c_hue_orange // Bronze
-        2 -> R.attr.c_text // Argent
-        3 -> R.attr.c_hue_yellow // Or
-        4 -> R.attr.c_hue_cyan // Platine
-        5 -> R.attr.c_hue_violet // Diamant
-        6 -> R.attr.c_hue_green // Ascendant
-        else -> R.attr.c_hue_red // Immortel
-    }
-}
-
-/** Non classé : pastille en anneau creux, pour ne pas le confondre avec Fer ou Argent, gris eux aussi. */
-fun rankHollow(tier: Int?): Boolean = tier == null || tier < 3
+/** Aperçu du catalogue : une partie en cours, sans réseau ni images (cases vides à la place des logos). */
+class ValorantSample(val valorant: Valorant) : WidgetSample
 
 /**
  * Valorant, lu par le compagnon dans le client Riot de l'ordinateur (Windows ; le jeton Riot n'en sort pas). En partie :
- * une ligne par joueur (agent, nom, rang et RR), ton équipe puis l'équipe d'en face, côte à côte quand le widget est
- * large ; pendant la sélection, ton équipe seulement (Riot ne donne l'autre qu'au début de la partie). Hors partie : ton
- * rang. Relu toutes les 5 s pendant une file ou une partie, toutes les 15 s sinon, seulement quand le widget est affiché.
+ * une ligne par joueur (agent, nom, niveau, rang et RR, meilleur rang, K/D, % tête, % de victoires, groupe), ton équipe
+ * puis l'équipe d'en face, côte à côte quand le widget est large ; pendant la sélection, ton équipe seulement (Riot ne
+ * donne l'autre qu'au début de la partie). Après la partie : le tableau des scores, 2 min. Au menu : ton rang et tes
+ * dernières classées. Pastille, ligne et colonne : ton rang et le score seulement ([ValorantShape]). Relu toutes les 5 s
+ * pendant une file ou une partie, toutes les 15 s sinon, seulement quand le widget est affiché.
  */
 class ValorantWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidget(context, host, placed) {
+    private val title = cardTitle(R.string.widget_valorant)
     private val status = label(15f).apply {
         maxLines = 1
         ellipsize = TextUtils.TruncateAt.END
@@ -66,21 +49,33 @@ class ValorantWidget(context: Context, host: HomeHost, placed: Placed) : HomeWid
 
     override val view = LinearLayout(context).asCard(16).apply {
         orientation = LinearLayout.VERTICAL
-        addView(cardTitle(R.string.widget_valorant), LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT))
+        addView(title, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT))
         addView(status, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT).apply { topMargin = dp(4) })
         addView(scroll, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, 0, 1f).apply { topMargin = dp(8) })
     }
 
+    private var kit = ValorantKit(context, host.scope)
     private var last: Valorant? = null
     private var error: String? = null
     private var job: Job? = null
 
-    /** Dernier état dessiné, avec la largeur : rien n'est refait tant que rien ne change (la plupart des relevés). */
-    private var drawn: Pair<Valorant?, Boolean>? = null
-
-    private val wide get() = placed.size.w >= 4
+    /** Dernier état dessiné, avec la forme : rien n'est refait tant que rien ne change (la plupart des relevés). */
+    private var drawn: Pair<Valorant?, WidgetSize>? = null
 
     override fun applySize() {
+        // Pastille : ni titre ni ligne d'état, le logo et le chiffre prennent toute la case.
+        val pill = family == ShapeFamily.PILL
+        title.visibility = if (pill) View.GONE else View.VISIBLE
+        status.visibility = if (pill) View.GONE else View.VISIBLE
+        drawn = null
+        render()
+    }
+
+    override fun showPreview(sample: WidgetSample) {
+        val example = (sample as? ValorantSample)?.valorant ?: return
+        kit = ValorantKit(context, host.scope, online = false)
+        last = example.copy(me = example.me?.copy(rank = kit.rankName(example.me.tier)), players = example.players.map { it.copy(rank = kit.rankName(it.tier)) })
+        error = null
         drawn = null
         render()
     }
@@ -113,43 +108,26 @@ class ValorantWidget(context: Context, host: HomeHost, placed: Placed) : HomeWid
         if (status.text.toString() != line) status.text = line
         // Ordinateur muet : la dernière partie reste, estompée, pour ne pas passer pour l'état présent.
         body.alpha = if (error != null) STALE_ALPHA else 1f
-        if (drawn == v to wide) return
-        drawn = v to wide
+        if (drawn == v to placed.size) return
+        drawn = v to placed.size
         body.removeAllViews()
-        val full = LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT)
+        val shape = ValorantShape.of(placed.size)
+        val fill = LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT)
         val end = v?.end?.takeIf { it.status == ValorantEndStatus.READY }
-        when {
-            v == null || v.state == ValorantState.OFF -> body.addView(center(context.getString(R.string.valorant_off_hint)))
-            end != null -> body.addView(look.end(end, kit, fit), full)
-            v.state == ValorantState.MENU || v.state == ValorantState.QUEUE -> body.addView(look.menu(v, kit, fit), full)
-            else -> body.addView(look.match(v, kit, fit), full)
-        }
-    }
-
-    private val kit = ValorantKit(context, host.scope)
-    private val fit get() = when {
-        placed.size.w >= 4 -> ValorantFit.FULL
-        placed.size.h >= 4 -> ValorantFit.STRIP
-        else -> ValorantFit.COMPACT
-    }
-
-    // shortcut: variante lue dans une préférence de développement le temps du choix d'Ahmed (05/11), retirée ensuite.
-    private val look: ValorantLook get() = when (context.getSharedPreferences("companion", Context.MODE_PRIVATE).getString("valorant_look", "A")) {
-        "B" -> ValorantLookCards
-        "C" -> ValorantLookVersus
-        else -> ValorantLookTable
+        body.addView(
+            when {
+                v == null || v.state == ValorantState.OFF -> center(context.getString(R.string.valorant_off_hint))
+                shape.summary -> ValorantTable.summary(v, kit, family)
+                end != null -> ValorantTable.end(end, kit, shape)
+                v.state == ValorantState.MENU || v.state == ValorantState.QUEUE -> ValorantTable.menu(v, kit, shape)
+                else -> ValorantTable.match(v, kit, shape)
+            },
+            fill,
+        )
     }
 
     private fun statusLine(v: Valorant?): String {
         if (v == null || v.state == ValorantState.OFF) return context.getString(R.string.valorant_off)
-        val state = context.getString(
-            when (v.state) {
-                ValorantState.QUEUE -> R.string.valorant_queue
-                ValorantState.PREGAME -> R.string.valorant_pregame
-                ValorantState.INGAME -> R.string.valorant_ingame
-                else -> R.string.valorant_menu
-            },
-        )
         v.end?.let { end ->
             return when (end.status) {
                 ValorantEndStatus.READY -> listOfNotNull(
@@ -162,6 +140,14 @@ class ValorantWidget(context: Context, host: HomeHost, placed: Placed) : HomeWid
                 ValorantEndStatus.MISSING -> context.getString(R.string.valorant_end_missing)
             }
         }
+        val state = context.getString(
+            when (v.state) {
+                ValorantState.QUEUE -> R.string.valorant_queue
+                ValorantState.PREGAME -> R.string.valorant_pregame
+                ValorantState.INGAME -> R.string.valorant_ingame
+                else -> R.string.valorant_menu
+            },
+        )
         val score = v.score?.let { context.getString(R.string.valorant_score, it.ally, it.enemy) }
         return listOfNotNull(state, v.queue, v.map, score).joinToString(" · ")
     }
@@ -169,16 +155,38 @@ class ValorantWidget(context: Context, host: HomeHost, placed: Placed) : HomeWid
     private fun center(text: String) = label(16f, R.attr.c_text_dim).apply {
         this.text = text
         gravity = Gravity.CENTER
-        setPadding(0, dp(24), 0, 0)
+        setPadding(0, dp(if (family == ShapeFamily.PILL) 0 else 24), 0, 0)
     }
 
-    private fun sp(value: Int) = TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_SP, value.toFloat(), context.resources.displayMetrics).toInt()
+    companion object {
+        private const val BUSY_MS = 5_000L
+        private const val IDLE_MS = 15_000L
+        private const val STALE_ALPHA = 0.4f
 
-    private companion object {
-        const val BUSY_MS = 5_000L
-        const val IDLE_MS = 15_000L
-        const val ROW_DP = 34
-        const val AGENT_SP = 76
-        const val STALE_ALPHA = 0.4f
+        private fun player(name: String?, tier: Int, rr: Int, ally: Boolean, level: Int, peak: Int, kd: Double, hs: Int, wr: Int, party: Int? = null, me: Boolean = false) =
+            ValorantPlayer(name, null, true, tier, null, rr, ally, me, null, level, peak, wr, kd, hs, party)
+
+        /** Exemple du catalogue : une partie classée à 7 – 5 ; rangs nommés au dessin ([ValorantWidget.showPreview]). */
+        val SAMPLE = ValorantSample(
+            Valorant(
+                ValorantState.INGAME,
+                null,
+                null,
+                ValorantScore(7, 5),
+                ValorantMe("Eliot#EUW", 14, "", 42, 214, 17),
+                listOf(
+                    player("Nox#7781", 19, 12, true, 36, 24, 1.62, 31, 82),
+                    player("Kinj#EUW", 15, 61, true, 187, 16, 0.87, 18, 59, party = 1),
+                    player("Eliot#EUW", 14, 42, true, 214, 17, 1.13, 24, 56, party = 1, me = true),
+                    player("Mélodie#FR1", 13, 88, true, 402, 14, 0.98, 21, 49),
+                    player(null, 11, 30, true, 77, 12, 0.80, 15, 44),
+                    player("Lune#2402", 21, 7, false, 22, 25, 1.96, 34, 92),
+                    player("Coco#EUW", 17, 33, false, 260, 18, 0.91, 19, 53),
+                    player("Bastos#EUW", 16, 70, false, 156, 17, 1.20, 22, 55, party = 2),
+                    player("Gigi#Ok", 15, 44, false, 98, 15, 0.73, 16, 44, party = 2),
+                    player("PasDeChance#404", 12, 95, false, 311, 14, 1.02, 23, 52),
+                ),
+            ),
+        )
     }
 }

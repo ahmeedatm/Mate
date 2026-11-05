@@ -4,5 +4,4 @@ package app.mate.ui.home
 val GAPS_PERSO = listOf(
     WidgetGap(WidgetType.AWAY, shapes = true, preview = true, reason = "formes et aperçu à faire (#186)"),
     WidgetGap(WidgetType.HA, shapes = true, preview = true, reason = "formes et aperçu à faire (#186)"),
-    WidgetGap(WidgetType.VALORANT, shapes = true, preview = true, reason = "formes et aperçu à faire (#186)"),
 )

@@ -3,10 +3,10 @@ package app.mate.ui.home
 import android.content.Context
 import android.graphics.drawable.GradientDrawable
 import android.text.TextUtils
+import android.util.TypedValue
 import android.view.Gravity
 import android.view.View
 import android.view.ViewGroup
-import android.widget.FrameLayout
 import android.widget.ImageView
 import android.widget.LinearLayout
 import android.widget.TextView
@@ -22,10 +22,14 @@ import java.util.Locale
 
 /**
  * Morceaux communs du widget Valorant : icône d'agent et logo de rang (servis par l'ordinateur, gardés par [IconCache]),
- * textes à chiffres alignés, chiffres au format français, couleur du trait de groupe.
+ * textes à chiffres alignés, chiffres au format français, couleur du trait de groupe. `online` faux (aperçu du
+ * catalogue) : aucune image n'est demandée, celles déjà en mémoire s'affichent, les autres gardent leur case.
  */
-class ValorantKit(val context: Context, private val scope: CoroutineScope) {
+class ValorantKit(val context: Context, private val scope: CoroutineScope, private val online: Boolean = true) {
     fun dp(value: Int) = context.dp(value)
+
+    /** Largeur en sp : une colonne de chiffres suit la taille du texte. */
+    fun sp(value: Int) = TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_SP, value.toFloat(), context.resources.displayMetrics).toInt()
     fun color(attr: Int) = themeColor(context, attr)
     fun string(id: Int, vararg args: Any): String = context.getString(id, *args)
 
@@ -68,7 +72,7 @@ class ValorantKit(val context: Context, private val scope: CoroutineScope) {
         layoutParams = ViewGroup.LayoutParams(dp(size), dp(size))
         if (id != null) {
             val cached = IconCache.peekAgent(id)
-            if (cached != null) setImageBitmap(cached) else scope.launch { IconCache.loadAgent(BackendClient(context), id)?.let(::setImageBitmap) }
+            if (cached != null) setImageBitmap(cached) else if (online) scope.launch { IconCache.loadAgent(BackendClient(context), id)?.let(::setImageBitmap) }
         }
     }
 
@@ -79,7 +83,7 @@ class ValorantKit(val context: Context, private val scope: CoroutineScope) {
         layoutParams = ViewGroup.LayoutParams(dp(size), dp(size))
         val t = tier ?: 0
         val cached = IconCache.peekRank(t)
-        if (cached != null) setImageBitmap(cached) else scope.launch { IconCache.loadRank(BackendClient(context), t)?.let(::setImageBitmap) }
+        if (cached != null) setImageBitmap(cached) else if (online) scope.launch { IconCache.loadRank(BackendClient(context), t)?.let(::setImageBitmap) }
     }
 
     /** Nom du rang d'un tier Riot (0 à 2 non classé, 3 à 26 par trois, 27 Radiant), comme `rankName` du compagnon. */
@@ -107,13 +111,6 @@ class ValorantKit(val context: Context, private val scope: CoroutineScope) {
         orientation = LinearLayout.VERTICAL
         this.gravity = gravity
         children.forEach { addView(it) }
-    }
-
-    /** Vue posée dans un FrameLayout au coin `gravity` (logo de rang sur l'icône d'agent). */
-    fun overlay(base: View, badge: View, gravity: Int, baseSize: Int, badgeSize: Int) = FrameLayout(context).apply {
-        addView(base, FrameLayout.LayoutParams(dp(baseSize), dp(baseSize)))
-        addView(badge, FrameLayout.LayoutParams(dp(badgeSize), dp(badgeSize), gravity))
-        layoutParams = ViewGroup.LayoutParams(dp(baseSize + badgeSize / 3), dp(baseSize + badgeSize / 3))
     }
 
     fun space(width: Int) = View(context).apply { layoutParams = LinearLayout.LayoutParams(dp(width), 1) }

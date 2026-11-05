@@ -1571,7 +1571,7 @@
     <string name="widget_mail_empty">Connecte tes mails sur la page de l\'ordinateur</string>
     <string name="widget_mail_a11y">Mails : %1$d non lus. Toucher pour ouvrir la boîte sur l\'ordinateur</string>
     <string name="widget_valorant">Valorant</string>
-    <string name="widget_valorant_desc">Pendant une partie, le rang et l\'agent de chaque joueur, ton équipe et en face ; hors partie, ton rang</string>
+    <string name="widget_valorant_desc">Pendant une partie, l\'agent, le rang et les stats de chaque joueur ; après, le tableau des scores ; hors partie, ton rang et tes dernières classées</string>
     <string name="valorant_off">Fermé</string>
     <string name="valorant_off_hint">Lance Valorant sur l\'ordinateur</string>
     <string name="valorant_menu">Au menu</string>
@@ -1583,7 +1583,6 @@
     <string name="valorant_enemies_later">Visible au début de la partie</string>
     <string name="valorant_hidden">Joueur masqué</string>
     <string name="valorant_you">toi</string>
-    <string name="valorant_no_agent">Pas encore choisi</string>
     <string name="valorant_rr">%1$d RR</string>
     <string name="valorant_level">niveau %1$d</string>
     <string name="valorant_score">%1$d – %2$d</string>
@@ -1605,7 +1604,6 @@
     <string name="valorant_last_matches">Dernières classées</string>
     <string name="valorant_no_history">Pas de classée récente</string>
     <string name="valorant_kda">%1$d / %2$d / %3$d</string>
-    <string name="valorant_pct">%1$d %%</string>
     <string name="valorant_party">groupe %1$d</string>
     <string name="valorant_mvp">MVP</string>
     <string name="valorant_peak">meilleur rang %1$s</string>
@@ -1615,12 +1613,9 @@
     <string name="valorant_adr_value">%1$d ADR</string>
     <string name="valorant_fk_value">%1$d premiers kills</string>
     <string name="valorant_acs_value">%1$d ACS</string>
-    <string name="valorant_rr_progress">%1$d / 100 RR</string>
     <string name="valorant_rr_change">%1$s RR</string>
-    <string name="valorant_team_avg">moyenne %1$s</string>
     <string name="valorant_ffa">Chacun pour soi</string>
     <string name="valorant_hovered">%1$s, pas encore verrouillé</string>
-    <string name="valorant_no_stat">pas encore lu</string>
     <string name="valorant_unranked">Non classé</string>
     <string name="valorant_radiant">Radiant</string>
     <string-array name="valorant_divisions">

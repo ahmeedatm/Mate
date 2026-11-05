@@ -4,23 +4,25 @@ import android.graphics.drawable.GradientDrawable
 import android.view.View
 import android.widget.LinearLayout
 import app.mate.R
-import app.mate.net.Valorant
 import app.mate.net.ValorantEnd
 import app.mate.net.ValorantEndPlayer
 import app.mate.net.ValorantMatch
 import app.mate.net.ValorantPlayer
 
-/** Place du widget : tout (XL, agrandi), l'essentiel (L), le minimum (T). */
-enum class ValorantFit { FULL, COMPACT, STRIP }
-
 /**
- * Une mise en forme du widget Valorant : partie (sélection ou en cours), tableau de fin, menu.
- * shortcut: trois variantes A, B, C côte à côte pour le choix d'Ahmed (05/11), une seule restera.
+ * Mise en page du widget selon sa forme : `summary` (pastille, ligne, colonne) ne montre que mon rang et le score ;
+ * `side` met les équipes côte à côte (4 cases de large, ou 3 × 2, trop bas pour dix lignes l'une sous l'autre) ;
+ * `detail` a toutes les colonnes de stats (4 de large, ou 3 de large et 3 de haut), sinon l'essentiel (agent, nom,
+ * rang, K/D).
  */
-interface ValorantLook {
-    fun match(v: Valorant, kit: ValorantKit, fit: ValorantFit): View
-    fun end(end: ValorantEnd, kit: ValorantKit, fit: ValorantFit): View
-    fun menu(v: Valorant, kit: ValorantKit, fit: ValorantFit): View
+data class ValorantShape(val summary: Boolean, val detail: Boolean, val side: Boolean) {
+    companion object {
+        fun of(size: WidgetSize) = ValorantShape(
+            summary = size.family == ShapeFamily.PILL || size.family == ShapeFamily.ROW || size.family == ShapeFamily.COLUMN,
+            detail = size.w >= 4 || (size.w == 3 && size.h >= 3),
+            side = size.w >= 4 || (size.w == 3 && size.h <= 2),
+        )
+    }
 }
 
 /** Barre de RR 0 à 100 : piste en relief, remplie d'accent. */

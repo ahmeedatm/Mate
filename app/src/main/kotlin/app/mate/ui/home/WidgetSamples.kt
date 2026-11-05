@@ -68,7 +68,7 @@ object WidgetSamples {
         WidgetType.WATER -> WaterSample(Water.State(glasses = 5, goal = 8, reminder = true, intervalMinutes = 60), todayAt(15))
         WidgetType.AWAY -> null
         WidgetType.HA -> null
-        WidgetType.VALORANT -> null
+        WidgetType.VALORANT -> ValorantWidget.SAMPLE
     }
 
     private const val MINUTE = 60_000L
