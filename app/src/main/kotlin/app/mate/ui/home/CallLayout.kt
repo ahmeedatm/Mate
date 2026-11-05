@@ -122,3 +122,22 @@ fun callKeySizes(family: ShapeFamily, island: Boolean, innerW: Int, innerH: Int,
     val small = (main * SMALL_SHARE).roundToInt().coerceAtLeast(MIN_KEY_DP)
     CallKeySizes(main, false, small, false, keyCount, 0)
 }
+
+/** Une cote de grille de touches, en dp : largeur de colonne et hauteur d'une case (plaque et deux lignes de libellé). */
+data class GridCut(val columnDp: Int, val cellDp: Int)
+
+/** Cote retenue ([cut], rang dans la liste) et nombre de touches qui tiennent ([count]). */
+data class GridFit(val cut: Int, val count: Int)
+
+/**
+ * Grille de la télécommande dans sa place ([w] × [h] dp) : la plus grande des [cuts] (de la plus grande à la plus petite)
+ * où les [count] touches tiennent ; sinon la plus petite, avec les touches qui tiennent (une au moins). Colonnes
+ * comptées comme la grille (`autoFitColumns`), [gap] entre deux cases.
+ */
+fun fitGrid(count: Int, w: Int, h: Int, cuts: List<GridCut>, gap: Int): GridFit {
+    fun rowsOf(cut: GridCut) = (count + autoFitColumns(w, cut.columnDp, gap) - 1) / autoFitColumns(w, cut.columnDp, gap)
+    cuts.withIndex().firstOrNull { (_, cut) -> rowsOf(cut).let { it * cut.cellDp + (it - 1) * gap } <= h }?.let { return GridFit(it.index, count) }
+    val last = cuts.last()
+    val rows = maxOf(1, (h + gap) / (last.cellDp + gap))
+    return GridFit(cuts.lastIndex, minOf(count, rows * autoFitColumns(w, last.columnDp, gap)))
+}

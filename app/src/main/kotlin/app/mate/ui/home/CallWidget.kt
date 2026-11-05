@@ -133,7 +133,21 @@ abstract class CallWidget(
     }
 
     /** Place sous l'en-tête : la grille y est centrée en hauteur (plus de vide sous elle en Grand). */
-    private val keys = FrameLayout(context)
+    private val keys = FrameLayout(context).apply {
+        addOnLayoutChangeListener { v, l, t, r, b, _, _, _, _ ->
+            val density = context.resources.displayMetrics.density
+            val w = ((r - l) / density).roundToInt()
+            val h = ((b - t) / density).roundToInt()
+            if (w == gridW && h == gridH) return@addOnLayoutChangeListener
+            gridW = w
+            gridH = h
+            v.post { renderKeys() }
+        }
+    }
+
+    /** Place de la grille de la télécommande, en dp : la cote des touches s'y règle (`fitGrid`). */
+    private var gridW = 0
+    private var gridH = 0
 
     /** Touches une à une : la Pastille, la rangée de la Ligne, les petits ronds de l'îlot (avec le gros au milieu). */
     private val keyRow = LinearLayout(context).apply { gravity = Gravity.CENTER }
@@ -163,9 +177,13 @@ abstract class CallWidget(
         view.gravity = Gravity.NO_GRAVITY
         featured.centered = false
         bigRow.centered = false
+        memberRow.centered = false
+        keyRow.gravity = Gravity.CENTER
         // Place utile relevée à nouveau : pas de touches dessinées aux cotes de la forme d'avant.
         innerW = 0
         innerH = 0
+        gridW = 0
+        gridH = 0
         plan = planCall(family, island, shownTiles())
         when {
             family == ShapeFamily.PILL -> pillLayout()
@@ -192,6 +210,8 @@ abstract class CallWidget(
     private fun rowLayout() {
         val wrap = ViewGroup.LayoutParams.WRAP_CONTENT
         val line = LinearLayout(context).apply { gravity = Gravity.CENTER_VERTICAL }
+        // Télécommande : plaques alignées en haut, qu'un libellé tienne sur une ligne ou deux.
+        if (!island) keyRow.gravity = Gravity.TOP or Gravity.CENTER_HORIZONTAL
         line.addView(header, LinearLayout.LayoutParams(0, wrap, 1f))
         line.addView(keyRow, LinearLayout.LayoutParams(wrap, wrap).apply { marginStart = dp(8) })
         view.addView(line, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, 0, 1f))
@@ -241,6 +261,7 @@ abstract class CallWidget(
             }
             else -> {
                 val row = if (family == ShapeFamily.LARGE) bigRow else memberRow
+                row.centered = true
                 view.addView(row, LinearLayout.LayoutParams(match, wrap).apply { topMargin = dp(6) })
                 view.addView(View(context), LinearLayout.LayoutParams(match, 0, 1f))
                 rows = listOf(row)
@@ -330,12 +351,17 @@ abstract class CallWidget(
     private fun renderKeys() {
         val lit = { tile: DeckTile -> tile to tileLit(tile, voice) }
         if (keys.parent != null) {
-            val metrics = when {
-                !plan.bigKeys || innerH < TileMetrics.LARGE.cellDp * 2 -> TileGridView.metrics(context)
-                family == ShapeFamily.FULL -> FULL_KEYS
-                else -> TileMetrics.LARGE
-            }
-            val next = plan.keys.map(lit)
+            // De la plus grande cote à la plus petite : la première où toutes les touches tiennent, sinon « Quitter » reste.
+            val choices = listOfNotNull(
+                FULL_KEYS.takeIf { family == ShapeFamily.FULL },
+                TileMetrics.LARGE.takeIf { plan.bigKeys },
+                TileGridView.metrics(context),
+                TileMetrics.NORMAL,
+                SMALL_KEYS,
+            ).distinct()
+            val fit = if (gridH == 0) GridFit(choices.lastIndex, plan.keys.size) else fitGrid(plan.keys.size, gridW, gridH, choices.map(::cutOf), GRID_GAP_DP)
+            val metrics = choices[fit.cut]
+            val next = fitKeys(plan.keys, fit.count).map(lit)
             if (listOf(next, metrics) == drawn) return
             drawn = listOf(next, metrics)
             grid.cellMetrics = metrics
@@ -379,6 +405,14 @@ abstract class CallWidget(
         marginEnd = dp(CallKeyMetrics.KEY_GAP_DP / 2)
     }
 
+    /** Cote d'une case de la grille, en dp : la plaque et deux lignes de libellé, au moins `cellDp` (comme `TileGridView`). */
+    private fun cutOf(metrics: TileMetrics): GridCut {
+        val line = lineDp.getOrPut(metrics.labelSp) { (TextView(context).apply { textSize = metrics.labelSp }.lineHeight / context.resources.displayMetrics.density).roundToInt() }
+        return GridCut(metrics.columnDp, maxOf(metrics.cellDp, metrics.plateDp + TileMetrics.LABEL_GAP_DP + 2 * line))
+    }
+
+    private val lineDp = HashMap<Float, Int>()
+
     /** Hauteur d'une ligne de libellé, en dp : relue une fois (elle suit la taille du texte des Réglages). */
     private val labelLineDp by lazy { (TextView(context).apply { textSize = KEY_LABEL_SP }.lineHeight / context.resources.displayMetrics.density).roundToInt() }
 
@@ -389,7 +423,8 @@ abstract class CallWidget(
         val cell = TileGridView.newCell(context, metrics)
         TileGridView.bind(cell, TileGridView.Cell(KeyRef.of(tile), on, type = tile.type), host.scope)
         cell.findViewById<TextView>(R.id.tile_label).visibility = if (withLabel) View.VISIBLE else View.GONE
-        cell.contentDescription = tile.label
+        // L'état allumé (micro coupé, caméra coupée) se dit aussi, pas seulement par la couleur de la plaque.
+        cell.contentDescription = if (on) context.getString(R.string.call_key_on, tile.label) else tile.label
         cell.setOnClickListener { run(tile) }
         Look.pressSpring(cell)
         return cell
@@ -426,8 +461,8 @@ abstract class CallWidget(
             else -> null
         }
         flag.text = alert?.let { context.getString(it) }.orEmpty()
-        // Pastille et Ligne : la touche du micro, allumée, le dit déjà.
-        val keyTells = family == ShapeFamily.PILL || family == ShapeFamily.ROW
+        // Pastille, Ligne et Colonne de l'îlot : la touche du micro, allumée, le dit déjà (et laisse la place au salon).
+        val keyTells = family == ShapeFamily.PILL || family == ShapeFamily.ROW || (island && family == ShapeFamily.COLUMN)
         flag.visibility = if (alert == null || keyTells) View.GONE else View.VISIBLE
         val names = v?.people?.takeIf { inCall && it.isNotEmpty() }
         people.text = names?.let { context.getString(R.string.deck_voice_with, it.joinToString(", ")) }.orEmpty()
@@ -577,6 +612,12 @@ abstract class CallWidget(
 
         /** Touches du Plein écran de la télécommande : plus grandes que les grandes cotes du thème Contraste. */
         val FULL_KEYS = TileMetrics(columnDp = 200, cellDp = 196, plateDp = 112, labelSp = 20f, initialSp = 54f)
+
+        /** Touches serrées d'une grille qui ne tient pas aux cotes normales (rangées basses, texte agrandi). */
+        val SMALL_KEYS = TileMetrics(columnDp = 76, cellDp = 72, plateDp = 44, labelSp = 11f, initialSp = 22f)
+
+        /** Espace entre deux cases de la grille (`TileGridView`). */
+        const val GRID_GAP_DP = 8
     }
 }
 

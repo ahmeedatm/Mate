@@ -143,6 +143,21 @@ class CallLayoutTest {
         assertEquals(3, sizes.count)
     }
 
+    /** Grandes (148 × 148), normales (96 × 110), petites (72 × 80) : de la plus grande à la plus petite. */
+    private val cuts = listOf(GridCut(148, 148), GridCut(96, 110), GridCut(72, 80))
+
+    @Test
+    fun `grille, la plus grande cote ou toutes les touches tiennent`() {
+        assertEquals(GridFit(0, 5), fitGrid(5, w = 580, h = 320, cuts, gap = 8))
+        assertEquals("colonne étroite et basse : les normales", GridFit(1, 5), fitGrid(5, w = 270, h = 360, cuts, gap = 8))
+    }
+
+    @Test
+    fun `grille trop petite meme en petites cotes, celles qui tiennent`() {
+        assertEquals(GridFit(2, 3), fitGrid(5, w = 270, h = 150, cuts, gap = 8))
+        assertEquals("une touche au moins", GridFit(2, 1), fitGrid(5, w = 60, h = 40, cuts, gap = 8))
+    }
+
     @Test
     fun `en avant, qui parle, sinon le dernier a avoir parle, sinon le premier`() {
         val a = member("a")

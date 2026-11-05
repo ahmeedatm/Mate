@@ -1438,6 +1438,7 @@
     <string name="call_lobby">Avant la réunion</string>
     <string name="call_no_page">Pas de page pour ce widget sur cet ordinateur</string>
     <string name="call_speaking">%1$s parle</string>
+    <string name="call_key_on">%1$s, activé</string>
     <!-- Aperçu du catalogue (CallSample) : un appel Discord et une réunion d'exemple. -->
     <string name="call_sample_channel">Salon général</string>
     <string name="call_sample_meeting">Point d\'équipe</string>
