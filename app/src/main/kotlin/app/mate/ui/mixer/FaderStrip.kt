@@ -96,6 +96,9 @@ class FaderStrip(context: Context) : View(context) {
 
     /** Dernière tranche de la rangée (posé par MixerView) : sur une table nue, pas de filet après elle. */
     var last = false
+
+    /** Seule voie de la table (petites formes du widget) : pas de filet, il n'y a rien à séparer. */
+    var alone = false
         set(value) {
             if (field == value) return
             field = value
@@ -333,7 +336,7 @@ class FaderStrip(context: Context) : View(context) {
         // Filet entre deux tranches (ton plus sombre puis plus clair : une rainure) et vis du module. Table nue (Hush) :
         // ni vis ni filet après la dernière tranche, le trait ne sert qu'à séparer deux voies.
         val groove = dp(if (tight) 8 else 16).toFloat()
-        if (!bare || !last) {
+        if ((!bare || !last) && !alone) {
             paint.color = cShadow
             canvas.drawRect(w - dp(2), groove, w - dp(1), h - groove, paint)
             paint.color = cHighlight

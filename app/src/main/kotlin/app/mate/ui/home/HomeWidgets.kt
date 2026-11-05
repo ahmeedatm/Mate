@@ -43,10 +43,12 @@ import app.mate.ui.TitleView
 import app.mate.ui.dp
 import app.mate.ui.errorText
 import app.mate.ui.label
+import app.mate.ui.mixer.AudioOutputChooser
 import app.mate.ui.showForTyping
 import app.mate.ui.showImmersive
 import app.mate.ui.themeBool
 import app.mate.ui.themeColor
+import app.mate.ui.themeColorList
 import app.mate.ui.themeFont
 import app.mate.ui.themePx
 import app.mate.ui.themeRes
@@ -297,75 +299,144 @@ class ClockWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidget
 }
 
 /**
- * Son et micro de l'ordinateur ; petit : muet et volume −/+ ; grand : une ligne par source (sortie, micro et, sur
- * Windows, chaque appli qui a du son).
+ * Son de l'ordinateur, une mise en page par famille de formes : Pastille, le volume en anneau (toucher coupe) ; Ligne,
+ * muet, curseur, volume et micro ; Colonne, la carte se remplit à hauteur du volume (glisser règle, toucher coupe) ;
+ * Bloc et plus grand, une ligne par source (sortie, micro, applis sous Windows), et dès Grand le choix de la sortie audio.
  */
 class AudioWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidget(context, host, placed) {
     /** Conteneur stable : le contenu est refait quand la taille change. */
     override val view = FrameLayout(context)
     private var audio: ComputerAudioView? = null
     private var mixer: SoundList? = null
+    private var link: AudioLink? = null
+    private var shape: AudioShapes.Shape? = null
     private var shownSize: WidgetSize? = null
     private var active = false
+    private var preview = false
 
     override fun applySize() {
         if (placed.size == shownSize) return
         shownSize = placed.size
         mixer?.setActive(false)
+        link?.setActive(false)
         view.removeAllViews()
         audio = null
         mixer = null
-        val fill = FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT)
-        if (placed.size == WidgetSize.L) {
-            val list = SoundList(context, host.scope)
-            mixer = list
-            view.addView(
-                LinearLayout(context).asCard(16).apply {
-                    orientation = LinearLayout.VERTICAL
-                    addView(cardTitle(R.string.computer_volume))
-                    addView(
-                        ScrollView(context).apply { isVerticalScrollBarEnabled = false; addView(list) },
-                        LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, 0, 1f).apply { topMargin = dp(8) },
-                    )
-                },
-                fill,
-            )
-        } else {
-            val bar = ComputerAudioView(context).apply {
-                attach(host.scope)
-                if (placed.size == WidgetSize.S) compact()
-            }
-            audio = bar
-            // W (ligne basse du profil Deck) : titre et barre côte à côte, empilés ils ne tiennent pas en hauteur.
-            val wide = placed.size == WidgetSize.W
-            view.addView(
-                LinearLayout(context).asCard(16).apply {
-                    orientation = if (wide) LinearLayout.HORIZONTAL else LinearLayout.VERTICAL
-                    gravity = Gravity.CENTER_VERTICAL
-                    addView(cardTitle(R.string.computer_volume))
-                    addView(
-                        bar,
-                        if (wide) {
-                            LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f).apply { marginStart = dp(16) }
-                        } else {
-                            LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT).apply { topMargin = dp(8) }
-                        },
-                    )
-                },
-                fill,
-            )
-            bar.refresh()
+        link = null
+        shape = null
+        when (family) {
+            ShapeFamily.PILL -> showShape(padded = true) { it.ring() }
+            ShapeFamily.COLUMN -> showShape(padded = false) { it.fill() }
+            ShapeFamily.ROW -> showBar()
+            ShapeFamily.BLOCK -> showList(outputs = false)
+            ShapeFamily.LARGE, ShapeFamily.FULL -> showList(outputs = true)
         }
+        if (preview) showPreview(AudioSample)
         setActive(active)
     }
 
+    private val fill get() = FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT)
+
+    /** Pastille et Colonne : une forme d'[AudioShapes], relue par un [AudioLink]. */
+    private fun showShape(padded: Boolean, make: (AudioShapes) -> AudioShapes.Shape) {
+        // La forme est tenue par ce lien : une réponse en retard après un changement de taille vise l'ancienne vue.
+        var made: AudioShapes.Shape? = null
+        val audioLink = AudioLink(context, host.scope, shown = { view.isShown }) { state -> made?.render?.invoke(state) }
+        val built = make(AudioShapes(context, audioLink))
+        made = built
+        link = audioLink
+        shape = built
+        // Le remplissage se tire à la verticale : le widget garde le balayage, sinon la grille changerait de profil.
+        view.addView(
+            OwnerFrameLayout(context, ownsLongPress = false, ownsSwipe = !padded).asCard(if (padded) 16 else 0).apply {
+                clipToOutline = true
+                addView(built.view, fill)
+            },
+            fill,
+        )
+        built.render(null)
+    }
+
+    /** Ligne : muet, curseur, volume et micro ; dès 3 × 1 le titre à côté, empilés ils ne tiennent pas en hauteur. */
+    private fun showBar() {
+        val bar = ComputerAudioView(context)
+        audio = bar
+        val wide = placed.size.w >= 3
+        view.addView(
+            LinearLayout(context).asCard(16).apply {
+                orientation = if (wide) LinearLayout.HORIZONTAL else LinearLayout.VERTICAL
+                gravity = Gravity.CENTER_VERTICAL
+                addView(cardTitle(R.string.computer_volume))
+                addView(
+                    bar,
+                    if (wide) {
+                        LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f).apply { marginStart = dp(16) }
+                    } else {
+                        LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT).apply { topMargin = dp(8) }
+                    },
+                )
+            },
+            fill,
+        )
+    }
+
+    /** Bloc et plus grand : une ligne par source ; [outputs] : le bouton du titre choisit la sortie audio. */
+    private fun showList(outputs: Boolean) {
+        val list = SoundList(context, host.scope)
+        mixer = list
+        val title = LinearLayout(context).apply {
+            gravity = Gravity.CENTER_VERTICAL
+            addView(cardTitle(R.string.computer_volume), LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f))
+            if (outputs) addView(outputButton())
+        }
+        view.addView(
+            LinearLayout(context).asCard(16).apply {
+                orientation = LinearLayout.VERTICAL
+                addView(title)
+                addView(
+                    ScrollView(context).apply { isVerticalScrollBarEnabled = false; addView(list) },
+                    LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, 0, 1f).apply { topMargin = dp(8) },
+                )
+            },
+            fill,
+        )
+    }
+
+    private fun outputButton() = ImageButton(context, null, 0, R.style.IconButton).apply {
+        setImageResource(R.drawable.ic_headphones)
+        // Le tint du style n'est pas appliqué à un bouton créé en code : l'icône blanche disparaîtrait en thème clair.
+        ImageViewCompat.setImageTintList(this, themeColorList(context, R.attr.c_text))
+        contentDescription = context.getString(R.string.mixer_output_action)
+        val chooser = AudioOutputChooser(
+            context,
+            host.scope,
+            onError = { Toast.makeText(context, it, Toast.LENGTH_LONG).show() },
+            onSwitched = {},
+        )
+        setOnClickListener { chooser.show() }
+    }
+
+    override fun showPreview(sample: WidgetSample) {
+        if (sample !is AudioSample) return
+        preview = true
+        shape?.render?.invoke(SoundSamples.audio)
+        audio?.showSample(SoundSamples.audio)
+        mixer?.showSample(SoundSamples.mixer(context))
+    }
+
     override suspend fun load() {
-        audio?.refresh()
+        if (active) audio?.refresh()
     }
 
     override fun setActive(active: Boolean) {
         this.active = active
+        // Rien ne part sur le réseau avant l'écran (le catalogue n'appelle pas setActive).
+        if (active) audio?.let {
+            it.attach(host.scope)
+            it.refresh()
+        }
         mixer?.setActive(active)
+        link?.setActive(active)
     }
 }
 
