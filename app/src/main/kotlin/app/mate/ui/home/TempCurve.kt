@@ -50,7 +50,6 @@ class TempCurve(context: Context) : View(context) {
     fun show(list: List<Weather.Hour>) {
         if (sameHours(list)) return
         hours = list
-        contentDescription = list.take(maxPoints).joinToString(", ") { context.getString(R.string.widget_weather_hour, it.hour, it.temperature.roundToInt()) }
         replan()
     }
 
@@ -64,6 +63,7 @@ class TempCurve(context: Context) : View(context) {
     }
 
     private fun replan() {
+        contentDescription = hours.take(maxPoints).joinToString(", ") { context.getString(R.string.widget_weather_hour, it.hour, it.temperature.roundToInt()) }
         plan()
         invalidate()
     }

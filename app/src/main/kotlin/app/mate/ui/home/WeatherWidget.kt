@@ -84,8 +84,8 @@ class WeatherWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidg
 
     init {
         // La hauteur d'une rangée dépend du profil de l'Accueil (RowProfile) : les tailles se recalculent à chaque changement.
-        view.addOnLayoutChangeListener { _, _, top, _, bottom, _, oldTop, _, oldBottom ->
-            if (bottom - top != oldBottom - oldTop) view.post(::fit)
+        view.addOnLayoutChangeListener { _, left, top, right, bottom, oldLeft, oldTop, oldRight, oldBottom ->
+            if (right - left != oldRight - oldLeft || bottom - top != oldBottom - oldTop) view.post(::fit)
         }
     }
 
@@ -173,6 +173,8 @@ class WeatherWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidg
         emoji.setTextSize(TypedValue.COMPLEX_UNIT_PX, px * EMOJI_PART)
         sky.setTextSize(TypedValue.COMPLEX_UNIT_PX, (px * SKY_PART).coerceIn(sp(DETAIL_MIN_SP), sp(DETAIL_MAX_SP)))
         for (line in listOf(range, city, smallCity, air)) line.setTextSize(TypedValue.COMPLEX_UNIT_PX, (px * DETAIL_PART).coerceIn(sp(DETAIL_MIN_SP), sp(DETAIL_MAX_SP)))
+        // Repliés seulement en Ligne : une autre forme les retrouve.
+        for (line in listOf(range, city)) line.visibility = View.VISIBLE
         if (family == ShapeFamily.ROW) fitDetails(w, h)
     }
 
@@ -187,7 +189,6 @@ class WeatherWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidg
 
     /** Ligne basse ou police agrandie : les détails ne doivent pas déborder ; la ville part d'abord, puis le min / max. */
     private fun fitDetails(w: Int, h: Int) {
-        for (line in listOf(range, city)) line.visibility = View.VISIBLE
         for (line in listOf(city, range)) {
             details.measure(View.MeasureSpec.makeMeasureSpec(w, View.MeasureSpec.AT_MOST), View.MeasureSpec.makeMeasureSpec(0, View.MeasureSpec.UNSPECIFIED))
             if (details.measuredHeight <= h) return
@@ -197,7 +198,7 @@ class WeatherWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidg
 
     /** Chaque minute, la courbe lâche l'heure passée, sans attendre la prochaine lecture (30 min). */
     override fun onMinute() {
-        current?.let { curve.show(Weather.upcoming(it.hours, System.currentTimeMillis())) }
+        current?.let(::showHours)
     }
 
     override fun showPreview(sample: WidgetSample) {
@@ -256,11 +257,16 @@ class WeatherWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidg
         sky.setText(weather.text)
         range.text = context.getString(R.string.widget_weather_range, f.min.roundToInt(), f.max.roundToInt())
         smallCity.text = if (family == ShapeFamily.COLUMN) context.getString(R.string.widget_weather_city_range, name, f.min.roundToInt(), f.max.roundToInt()) else name
+        showHours(f)
+        renderAir()
+        renderDays(f.days)
+    }
+
+    /** Les heures pas encore passées ; moins de deux : pas de courbe, sa place revient au reste. */
+    private fun showHours(f: Weather.Forecast) {
         val hours = Weather.upcoming(f.hours, System.currentTimeMillis())
         curve.visibility = if (hours.size >= 2) View.VISIBLE else View.GONE
         curve.show(hours)
-        renderAir()
-        renderDays(f.days)
     }
 
     private fun renderAir() {

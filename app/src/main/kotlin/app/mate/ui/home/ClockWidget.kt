@@ -37,6 +37,10 @@ class ClockWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidget
     private val dial = ClockDial(context).apply { importantForAccessibility = View.IMPORTANT_FOR_ACCESSIBILITY_NO }
     private val ring = FrameLayout(context)
     private var face = ClockFace.of(placed.size)
+
+    /** Diamètre du cadran et cadran retiré (rangée trop basse), relus par [fitDialDate] quand la date change. */
+    private var dialSize = 0
+    private var dialBare = false
     override val view = FrameLayout(context).asCard(24)
 
     init {
@@ -135,12 +139,17 @@ class ClockWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidget
         }
         val text = if (bare) minOf(byWidth(clock, SAMPLE, w), (h - reserve) / LINE) else byWidth(clock, SAMPLE, size * DIAL_TEXT_PART)
         clock.setTextSize(TypedValue.COMPLEX_UNIT_PX, text)
-        if (face.dateInDial) fitDialDate(size, bare)
+        dialSize = size
+        dialBare = bare
+        if (face.dateInDial) fitDialDate()
         ring.requestLayout()
     }
 
     /** Date dans le cadran : jamais sous [MIN_SP] (illisible de loin) ; si elle n'y tient pas, pas de date. */
-    private fun fitDialDate(size: Int, bare: Boolean) {
+    private fun fitDialDate() {
+        val size = dialSize
+        val bare = dialBare
+        if (size <= 0) return
         val px = (size * DIAL_DATE_PART).coerceAtLeast(sp(MIN_SP))
         date.setTextSize(TypedValue.COMPLEX_UNIT_PX, px)
         val fits = date.paint.measureText(date.text.toString()) <= size * DIAL_TEXT_PART
@@ -182,7 +191,9 @@ class ClockWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidget
         seconds.setTextSize(TypedValue.COMPLEX_UNIT_PX, px * SECONDS_PART)
         // Taille fixe : chaque seconde, le texte change sans remesurer tout l'Accueil (seulement la vue redessinée).
         seconds.layoutParams?.let { lp ->
-            lp.width = kotlin.math.ceil(seconds.paint.measureText(SECONDS_SAMPLE)).toInt() + seconds.paddingLeft + seconds.paddingRight
+            // Les chiffres de certaines polices (Spider-Verse) n'ont pas tous la même chasse : le plus large, deux fois.
+            val digit = DIGITS.maxOf { seconds.paint.measureText(it.toString()) }
+            lp.width = kotlin.math.ceil(digit * 2).toInt() + seconds.paddingLeft + seconds.paddingRight
             lp.height = seconds.lineHeight
             seconds.layoutParams = lp
         }
@@ -202,7 +213,11 @@ class ClockWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidget
         val pattern = if (face.dateInDial) "EEE d" else "EEEE d MMMM"
         val text = SimpleDateFormat(pattern, Locale.FRANCE).format(Date()).replaceFirstChar { it.uppercase() }
         // Même texte : pas de nouvelle mise en page (une fois par minute sur la tablette).
-        if (date.text.toString() != text) date.text = text
+        if (date.text.toString() != text) {
+            date.text = text
+            // « Mer. 9 » devient « Jeu. 10 » à minuit : la date peut ne plus tenir dans le cadran.
+            if (face.dateInDial) fitDialDate()
+        }
         dial.show(ClockFace.lit(now.get(Calendar.MINUTE)))
     }
 
@@ -243,7 +258,7 @@ class ClockWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidget
 
         /** Heure de référence pour mesurer la largeur : tous les chiffres de Figtree ont la même chasse. */
         const val SAMPLE = "00:00"
-        const val SECONDS_SAMPLE = "00"
+        const val DIGITS = "0123456789"
         const val MEASURE_PX = 100f
 
         /** Hauteur d'une ligne de texte, en tailles de texte (chiffres sans marge de police). */
