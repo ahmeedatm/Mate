@@ -106,7 +106,7 @@ class OpenWindowsCompact(context: Context, private val scope: CoroutineScope, pr
         }
         ShapeFamily.ROW -> LinearLayout(context).apply {
             gravity = Gravity.CENTER_VERTICAL
-            val fit = OpenWindowsSummary.fit(width, dp(ICON_CELL_DP), dp(GAP_DP))
+            val fit = OpenWindowsSummary.fit(room.width, dp(ICON_CELL_DP), dp(GAP_DP))
             apps.take(fit).forEachIndexed { i, entry ->
                 val cell = LinearLayout(context).apply {
                     orientation = LinearLayout.VERTICAL
@@ -153,8 +153,8 @@ class OpenWindowsCompact(context: Context, private val scope: CoroutineScope, pr
                 gravity = Gravity.CENTER_HORIZONTAL
                 addView(number)
                 addView(unit, LinearLayout.LayoutParams(WRAP, WRAP).apply { bottomMargin = dp(8) })
-                val room = OpenWindowsSummary.fit(height - dp(NUMBER_BLOCK_DP), dp(ICON_CELL_DP), dp(GAP_DP))
-                apps.take(room).forEach { entry ->
+                val fit = OpenWindowsSummary.fit(room.height - dp(NUMBER_BLOCK_DP), dp(ICON_CELL_DP), dp(GAP_DP))
+                apps.take(fit).forEach { entry ->
                     addView(tappable(icon(entry.app, ICON_DP), entry.app), LinearLayout.LayoutParams(dp(ICON_CELL_DP), dp(ICON_CELL_DP)).apply { topMargin = dp(GAP_DP) })
                 }
             }
@@ -186,7 +186,7 @@ class OpenWindowsCompact(context: Context, private val scope: CoroutineScope, pr
     /** Liste sans défilement : autant de lignes que la hauteur en tient. */
     private fun <T> column(items: List<T>, line: (T) -> View) = LinearLayout(context).apply {
         orientation = LinearLayout.VERTICAL
-        val fit = OpenWindowsSummary.fit(height, dp(LIST_ROW_DP), dp(LIST_GAP_DP))
+        val fit = OpenWindowsSummary.fit(room.height, dp(LIST_ROW_DP), dp(LIST_GAP_DP))
         items.take(fit).forEachIndexed { i, item ->
             addView(line(item), LinearLayout.LayoutParams(MATCH, dp(LIST_ROW_DP)).apply { if (i > 0) topMargin = dp(LIST_GAP_DP) })
         }
@@ -257,6 +257,9 @@ class OpenWindowsCompact(context: Context, private val scope: CoroutineScope, pr
     }
 
     private fun color(attr: Int) = themeColor(context, attr)
+
+    /** La place du résumé : dans un `apply` sur une vue neuve, `width` et `height` seraient les siens (encore 0). */
+    private val room get() = this
 
     private companion object {
         const val MATCH = ViewGroup.LayoutParams.MATCH_PARENT
