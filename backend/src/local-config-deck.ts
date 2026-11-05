@@ -284,7 +284,7 @@ export const DECK_JS = `
         return [pfDeckField("Nom de la cible (LAN_TARGETS du .env)", pfDeckText(step.name, (v) => { step.name = v; }, { maxlength: 200 }))];
       // La liste des sorties est celle de l'éditeur de la tablette : ici, l'étape est gardée telle quelle.
       case "output":
-        return [pfDeckEl("p", { className: "dim", text: step.name + " (se choisit depuis la tablette)" })];
+        return [pfDeckEl("p", { className: "dim", text: step.name + " — se choisit depuis la tablette" })];
       default:
         return [
           pfDeckField("Appli", pfDeckText(step.app, (v) => { step.app = v; }, { list: "pf-deck-catalog-apps", maxlength: 200 })),

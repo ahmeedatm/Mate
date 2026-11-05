@@ -31,7 +31,9 @@ import app.mate.net.DeckCatalog
 import app.mate.net.PointerGesture
 import app.mate.ui.home.MAX_SPAN
 import app.mate.ui.home.duplicateTargets
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
 import org.json.JSONObject
 
@@ -315,6 +317,8 @@ class KeyEditor @JvmOverloads constructor(
 
     private fun selectType(key: String) {
         type = key
+        // Une lecture des sorties encore en cours ne doit rien écrire sur le formulaire d'un autre type.
+        loadingOutputs?.cancel()
         for (i in 0 until types.childCount) types.getChildAt(i).let { it.isSelected = it.tag == key }
         form.removeAllViews()
         when (key) {
@@ -424,20 +428,22 @@ class KeyEditor @JvmOverloads constructor(
     /** Sorties son de l'ordinateur, relues à chaque ouverture (un casque branché entre-temps apparaît). */
     private fun outputList() {
         note(R.string.loading)
-        scope.launch {
+        loadingOutputs = scope.launch {
             val outputs = try {
                 BackendClient(context).system.audioOutputs()
+            } catch (e: CancellationException) {
+                throw e
             } catch (e: Exception) {
-                if (type == "output") form.removeAllViews()
+                form.removeAllViews()
                 return@launch showError(e)
             }
-            // Un autre type choisi pendant la lecture : son formulaire a pris la place.
-            if (type != "output") return@launch
             form.removeAllViews()
             if (outputs.isEmpty()) return@launch note(R.string.mixer_output_none)
             outputs.forEach { output -> form.addView(row(output.name, false) { addStep(outputStep(output)) }) }
         }
     }
+
+    private var loadingOutputs: Job? = null
 
     // --- Petits éléments d'interface
 
