@@ -132,6 +132,23 @@ class WeatherWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidg
             addView(now)
             if (face.details) addView(details, LinearLayout.LayoutParams(0, WRAP, 1f).apply { marginStart = dp(16) })
         }
+        if (face.curveBeside) {
+            // Large et basse : température, détails et air à gauche, la courbe à droite, les jours dessous.
+            (details.layoutParams as? LinearLayout.LayoutParams)?.apply { width = WRAP; weight = 0f }
+            val left = LinearLayout(context).apply {
+                orientation = LinearLayout.VERTICAL
+                addView(head, LinearLayout.LayoutParams(WRAP, WRAP))
+                addView(air)
+            }
+            val top = LinearLayout(context).apply {
+                gravity = Gravity.CENTER_VERTICAL
+                addView(left, LinearLayout.LayoutParams(WRAP, WRAP))
+                addView(curve, LinearLayout.LayoutParams(0, MATCH, 1f).apply { marginStart = dp(24) })
+            }
+            addView(top, LinearLayout.LayoutParams(MATCH, 0, 1f))
+            addView(days, LinearLayout.LayoutParams(MATCH, WRAP).apply { topMargin = dp(12) })
+            return@apply
+        }
         addView(head, LinearLayout.LayoutParams(MATCH, WRAP))
         if (!face.details) addView(smallCity)
         if (face.air) addView(air)

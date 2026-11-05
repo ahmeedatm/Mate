@@ -53,4 +53,9 @@ class WeatherFaceTest {
         }
         assertFalse(of(WidgetSize.S).air)
     }
+
+    @Test
+    fun `large et basse, la courbe passe a cote de la temperature`() {
+        assertEquals(listOf(WidgetSize.XL, WidgetSize.L3), WidgetSize.entries.filter { of(it).curveBeside })
+    }
 }
