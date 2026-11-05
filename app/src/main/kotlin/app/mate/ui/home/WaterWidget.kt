@@ -4,6 +4,7 @@ import android.content.Context
 import android.content.res.ColorStateList
 import android.graphics.drawable.GradientDrawable
 import android.text.format.DateFormat
+import android.util.TypedValue
 import android.view.Gravity
 import android.view.View
 import android.view.ViewGroup
@@ -35,6 +36,7 @@ class WaterWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidget
     override val view = LinearLayout(context).asCard(16).apply { orientation = LinearLayout.VERTICAL }
 
     private val count = TextView(context).apply {
+        compoundDrawableTintList = ColorStateList.valueOf(color(R.attr.c_hue_cyan))
         typeface = themeFont(context, R.attr.c_font_display)
         fontFeatureSettings = "tnum"
         includeFontPadding = false
@@ -55,7 +57,13 @@ class WaterWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidget
     }.apply { backgroundTintList = ColorStateList.valueOf(color(R.attr.c_hue_cyan)) }
 
     /** Les verres : couchés (pastille, ligne), empilés (colonne) ou debout côte à côte (bloc et plus). */
-    private val gauge = LinearLayout(context)
+    private val gauge = LinearLayout(context).apply {
+        // Les verres ne sont touchables que s'ils font 48 dp de large : la largeur connue, on redessine.
+        addOnLayoutChangeListener { _, left, _, right, _, oldLeft, _, oldRight, _ ->
+            if (right - left != oldRight - oldLeft) post { render() }
+        }
+    }
+    private var drawn: List<Any>? = null
     private val listener: (Water.State) -> Unit = { render() }
     private var preview: WaterSample? = null
     private var bound: WidgetSize? = null
@@ -65,6 +73,7 @@ class WaterWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidget
         bound = placed.size
         for (v in listOf(count, unit, next, bell, minus, plus, gauge)) (v.parent as? ViewGroup)?.removeView(v)
         view.removeAllViews()
+        count.setCompoundDrawablesRelative(null, null, null, null)
         when (family) {
             ShapeFamily.PILL -> pill()
             ShapeFamily.ROW -> row()
@@ -99,9 +108,11 @@ class WaterWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidget
 
     /** Une case : « 3 / 8 », cloche et + sur une ligne, la jauge dessous (corriger : réglages). */
     private fun pill() {
-        view.setPadding(dp(16), dp(12), dp(16), dp(12))
+        view.setPadding(dp(16), dp(8), dp(16), dp(8))
         view.gravity = Gravity.CENTER_VERTICAL
-        count.textSize = 22f
+        countSize(22f)
+        count.setCompoundDrawablesRelativeWithIntrinsicBounds(R.drawable.ic_water, 0, 0, 0)
+        count.compoundDrawablePadding = dp(8)
         gauge.orientation = LinearLayout.HORIZONTAL
         val line = LinearLayout(context).apply {
             gravity = Gravity.CENTER_VERTICAL
@@ -110,14 +121,14 @@ class WaterWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidget
             addView(plus, LinearLayout.LayoutParams(dp(48), dp(48)).apply { marginStart = dp(4) })
         }
         view.addView(line, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT))
-        view.addView(gauge, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, dp(12)).apply { topMargin = dp(12) })
+        view.addView(gauge, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, dp(12)).apply { topMargin = dp(8) })
     }
 
     /** Une ligne : titre, compte, la jauge qui prend la place restante, cloche, − et + (48 dp de haut en tout). */
     private fun row() {
         view.setPadding(dp(16), dp(8), dp(16), dp(8))
         view.gravity = Gravity.CENTER_VERTICAL
-        count.textSize = 20f
+        countSize(20f)
         gauge.orientation = LinearLayout.HORIZONTAL
         val line = LinearLayout(context).apply {
             gravity = Gravity.CENTER_VERTICAL
@@ -135,7 +146,7 @@ class WaterWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidget
     private fun column() {
         view.setPadding(dp(16), dp(12), dp(16), dp(16))
         view.gravity = Gravity.NO_GRAVITY
-        count.textSize = 28f
+        countSize(28f)
         gauge.orientation = LinearLayout.VERTICAL
         view.addView(header(withCount = false))
         view.addView(count, LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT).apply { topMargin = dp(4) })
@@ -148,7 +159,7 @@ class WaterWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidget
     private fun glasses() {
         view.setPadding(dp(20), dp(12), dp(20), dp(16))
         view.gravity = Gravity.NO_GRAVITY
-        count.textSize = if (family == ShapeFamily.FULL) 40f else 28f
+        countSize(if (family == ShapeFamily.FULL) 40f else 28f)
         gauge.orientation = LinearLayout.HORIZONTAL
         view.addView(header(withCount = true))
         view.addView(gauge, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, 0, 1f).apply { topMargin = dp(12) })
@@ -170,6 +181,12 @@ class WaterWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidget
         addView(plus, LinearLayout.LayoutParams(dp(56), dp(56)).apply { marginStart = dp(16) })
     }
 
+    /** Police agrandie (Accessibilité) : le compte ne dépasse pas sa taille à 1,0, celle qui tient sur sa ligne. */
+    private fun countSize(sp: Float) {
+        count.textSize = sp
+        count.setTextSize(TypedValue.COMPLEX_UNIT_PX, minOf(count.textSize, sp * context.resources.displayMetrics.density))
+    }
+
     private fun iconButton(style: Int, icon: Int, description: Int, onClick: (View) -> Unit) = ImageButton(context, null, 0, style).apply {
         setImageResource(icon)
         setPadding(dp(13), dp(13), dp(13), dp(13))
@@ -181,14 +198,8 @@ class WaterWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidget
         val state = preview?.state ?: Water.state(context)
         val done = state.glasses >= state.goal
         val wide = family == ShapeFamily.ROW || family == ShapeFamily.BLOCK || family == ShapeFamily.LARGE || family == ShapeFamily.FULL
-        count.text = context.getString(
-            when {
-                wide -> if (done) R.string.water_done else R.string.water_count
-                else -> if (done) R.string.water_done_short else R.string.water_count_short
-            },
-            state.glasses,
-            state.goal,
-        )
+        // Objectif atteint : dit par le vert du compte et des verres, sans signe dans le texte.
+        count.text = context.getString(if (wide) R.string.water_count else R.string.water_count_short, state.glasses, state.goal)
         count.setTextColor(color(if (done) R.attr.c_ok else R.attr.c_text))
         bell.setImageResource(if (state.reminder) R.drawable.ic_alarm else R.drawable.ic_alarm_off)
         bell.imageTintList = ColorStateList.valueOf(color(if (state.reminder) R.attr.c_hue_cyan else R.attr.c_text_dim))
@@ -199,23 +210,29 @@ class WaterWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidget
     }
 
     private fun drawGauge(state: Water.State, done: Boolean) {
-        gauge.removeAllViews()
         val stacked = gauge.orientation == LinearLayout.VERTICAL
-        val touch = family == ShapeFamily.BLOCK || family == ShapeFamily.LARGE || family == ShapeFamily.FULL
-        val gap = dp(if (touch) 8 else if (stacked) 4 else 3)
+        val upright = family == ShapeFamily.BLOCK || family == ShapeFamily.LARGE || family == ShapeFamily.FULL
+        val gap = dp(if (upright) 8 else if (stacked) 4 else 3)
+        val touch = upright && (gauge.width - gap * (state.goal - 1)) / state.goal >= dp(48)
+        // Redessiné seulement si quelque chose a changé (render passe aussi chaque minute).
+        val key = listOf(state.glasses, state.goal, done, family, touch, stacked)
+        if (key == drawn) return
+        drawn = key
+        gauge.removeAllViews()
         // Empilés, le premier verre est en bas : on dessine du dernier au premier.
         val order = if (stacked) (state.goal - 1 downTo 0) else (0 until state.goal)
         for ((n, i) in order.withIndex()) {
             val filled = i < state.glasses
             val glass = View(context).apply {
+                // Vide : un contour (c_graphic, 3:1 sur la tuile), un aplat c_surface_raised ne se voyait pas.
                 background = GradientDrawable().apply {
-                    setColor(color(if (!filled) R.attr.c_surface_raised else if (done) R.attr.c_ok else R.attr.c_hue_cyan))
-                    cornerRadius = dp(if (touch) 10 else 6).toFloat()
+                    if (filled) setColor(color(if (done) R.attr.c_ok else R.attr.c_hue_cyan)) else setStroke(dp(2), color(R.attr.c_graphic))
+                    cornerRadius = dp(if (upright) 10 else 6).toFloat()
                 }
                 if (touch) {
                     // Toucher un verre pose le compte jusqu'à lui ; toucher le dernier rempli le retire.
                     val target = if (i + 1 == state.glasses) i else i + 1
-                    contentDescription = context.getString(R.string.water_glass_set, i + 1, state.goal)
+                    contentDescription = context.getString(if (filled) R.string.water_glass_full else R.string.water_glass_empty, i + 1, state.goal)
                     setOnClickListener { Water.set(context, target) }
                 } else {
                     importantForAccessibility = View.IMPORTANT_FOR_ACCESSIBILITY_NO

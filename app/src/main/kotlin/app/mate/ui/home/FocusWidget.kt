@@ -1,6 +1,7 @@
 package app.mate.ui.home
 
 import android.content.Context
+import android.text.TextUtils
 import android.util.TypedValue
 import android.view.Gravity
 import android.view.LayoutInflater
@@ -29,7 +30,7 @@ class FocusSample(val state: FocusTimer.State, val noise: NoisePlayer.Kind?) : W
  * bouton = démarrer / pause. Une mise en page par famille de formes :
  * - Pastille : cadran réduit et bouton ;
  * - Ligne : temps, les graduations déroulées en bande, bouton ;
- * - Colonne : temps en haut, la bande à la verticale, bouton ; 1 × 4 : les ambiances en plus ;
+ * - Colonne : temps en haut, la bande à la verticale qui prend toute la hauteur, bouton ;
  * - Bloc, Grand, Plein écran : le cadran à la plus grande taille qui tient, les ambiances (sauf en 2 × 2) ; Grand et
  *   Plein écran ajoutent les séances finies ; plus large que haut, le cadran passe à gauche.
  */
@@ -97,17 +98,28 @@ class FocusWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidget
         toggleIcon = inner.findViewById(R.id.widget_focus_toggle_icon)
         toggle = inner.findViewById(R.id.widget_focus_toggle)
         inner.setPadding(dp(14), dp(14), dp(14), dp(14))
-        inner.findViewById<View>(R.id.widget_focus_ring_box).layoutParams.apply { width = dp(104); height = dp(104) }
+        val ring = inner.findViewById<View>(R.id.widget_focus_ring_box)
+        ring.layoutParams.apply { width = dp(PILL_DIAL_DP); height = dp(PILL_DIAL_DP) }
         (inner.findViewById<View>(R.id.widget_focus_detail).parent as View).visibility = View.GONE
         ((toggle.parent as View).layoutParams as LinearLayout.LayoutParams).marginStart = dp(8)
         capText(time, 26f)
         capText(phase, 11f)
+        // Rangée basse (92 dp) : le cadran suit la hauteur réelle, le temps avec lui, la phase part.
+        inner.addOnLayoutChangeListener { _, _, top, _, bottom, _, oldTop, _, oldBottom ->
+            if (bottom - top == oldBottom - oldTop) return@addOnLayoutChangeListener
+            val side = (bottom - top - inner.paddingTop - inner.paddingBottom).coerceIn(dp(48), dp(PILL_DIAL_DP))
+            if (ring.layoutParams.height == side) return@addOnLayoutChangeListener
+            ring.layoutParams = ring.layoutParams.apply { width = side; height = side }
+            setSp(time, 26f * side / dp(PILL_DIAL_DP))
+            phase.visibility = if (side < dp(LOW_DIAL_DP)) View.GONE else View.VISIBLE
+            inner.post { inner.requestLayout() }
+        }
         return inner
     }
 
     /**
      * Ligne ou colonne : le temps, la bande de graduations qui prend la place restante, le bouton. Ligne basse (la rangée
-     * de 92 dp) : temps plus petit, sans la phase. Colonne d'au moins 4 cases : les ambiances sous la bande.
+     * de 92 dp) : temps plus petit, sans la phase. Pas d'ambiances : en colonne elles écrasaient la bande.
      */
     private fun strip(vertical: Boolean): View {
         val box = LinearLayout(context).apply {
@@ -120,10 +132,11 @@ class FocusWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidget
         }
         time = displayText()
         phase = label(13f, R.attr.c_text_dim).apply { maxLines = 1 }
+        if (vertical) for (t in listOf(time, phase)) t.gravity = Gravity.CENTER_HORIZONTAL
         val texts = LinearLayout(context).apply {
             orientation = LinearLayout.VERTICAL
             gravity = if (vertical) Gravity.CENTER_HORIZONTAL else Gravity.START
-            if (vertical) addView(TitleView(context).apply { setText(R.string.widget_focus) }, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT).apply { bottomMargin = dp(8) })
+            if (vertical) addView(TitleView(context).apply { setText(R.string.widget_focus); gravity = Gravity.CENTER_HORIZONTAL }, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT).apply { bottomMargin = dp(8) })
             addView(time)
             addView(phase)
         }
@@ -138,7 +151,6 @@ class FocusWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidget
                 LinearLayout.LayoutParams(0, dp(BAND_DP), 1f).apply { marginStart = dp(24); marginEnd = dp(24) }
             },
         )
-        if (vertical && placed.size.h >= ROWS) box.addView(noiseColumn(), LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT).apply { bottomMargin = dp(16) })
         box.addView(toggleButton(56))
         // La rangée basse de l'Accueil (92 dp) n'a pas la place du temps en grand et de la phase dessous.
         box.addOnLayoutChangeListener { _, _, top, _, bottom, _, oldTop, _, oldBottom ->
@@ -174,12 +186,13 @@ class FocusWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidget
         val ring = FrameLayout(context).apply { addView(box, FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT, Gravity.CENTER)) }
         val side = LinearLayout(context).apply { orientation = LinearLayout.VERTICAL }
         val title = TitleView(context).apply { setText(R.string.widget_focus) }
+        // En colonne, le bouton est centré sous le cadran ; à côté (large), il ouvre la colonne de droite.
         val controls = LinearLayout(context).apply {
-            gravity = Gravity.CENTER_VERTICAL
-            addView(toggleButton(if (family == ShapeFamily.FULL) 64 else 56))
+            gravity = if (wide) Gravity.CENTER_VERTICAL else Gravity.CENTER
+            addView(toggleButton(if (family == ShapeFamily.FULL) 72 else 56))
             addView(
                 label(14f, R.attr.c_text_faint).apply { maxLines = 1 }.also { detail = it },
-                LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f).apply { marginStart = dp(12) },
+                if (wide) LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f).apply { marginStart = dp(12) } else LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT).apply { marginStart = dp(12) },
             )
         }
         val done = label(14f, R.attr.c_text_dim).also { sessions = it }
@@ -234,14 +247,6 @@ class FocusWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidget
         for (kind in NoisePlayer.Kind.entries) {
             // Largeurs égales imposées par la rangée : peu de marge, une ligne (colonnes étroites de Spider-Verse).
             addView(noiseChip(kind).apply { setPaddingRelative(dp(4), 0, dp(4), 0) }, LinearLayout.LayoutParams(0, dp(48), 1f).apply { marginStart = dp(4); marginEnd = dp(4) })
-        }
-    }
-
-    /** Colonne : les ambiances l'une sous l'autre. */
-    private fun noiseColumn() = LinearLayout(context).apply {
-        orientation = LinearLayout.VERTICAL
-        for (kind in NoisePlayer.Kind.entries) {
-            addView(noiseChip(kind), LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, dp(48)).apply { topMargin = dp(8) })
         }
     }
 
@@ -300,7 +305,11 @@ class FocusWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidget
         }
         band?.show(lit, hue)
         shown = true
-        detail?.text = noise?.let { context.getString(R.string.noise_playing, context.getString(it.label)) } ?: ""
+        detail?.let {
+            it.text = noise?.let { kind -> context.getString(R.string.noise_playing, context.getString(kind.label)) } ?: ""
+            // Vide, il ne décale pas le bouton centré.
+            it.visibility = if (it.text.isEmpty()) View.GONE else View.VISIBLE
+        }
         sessions?.let {
             it.text = context.resources.getQuantityString(R.plurals.focus_sessions_done, state.completed, state.completed)
             it.visibility = if (state.completed > 0) View.VISIBLE else View.INVISIBLE
@@ -329,6 +338,7 @@ class FocusWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidget
             time.setTextColor(app.mate.ui.themeColor(context, R.attr.c_text))
             phase.setTextColor(app.mate.ui.themeColor(context, R.attr.c_text_dim))
             phase.maxLines = 1
+            phase.gravity = Gravity.CENTER_HORIZONTAL
             val texts = LinearLayout(context).apply {
                 orientation = LinearLayout.VERTICAL
                 gravity = Gravity.CENTER_HORIZONTAL
@@ -347,6 +357,7 @@ class FocusWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidget
                 time.setTextSize(TypedValue.COMPLEX_UNIT_PX, side * TIME_RATIO)
                 phase.setTextSize(TypedValue.COMPLEX_UNIT_PX, maxOf(side * PHASE_RATIO, TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_SP, 12f, resources.displayMetrics)))
                 phase.maxWidth = (side * 0.6f).toInt()
+                phase.ellipsize = TextUtils.TruncateAt.END
             }
             val exact = MeasureSpec.makeMeasureSpec(side, MeasureSpec.EXACTLY)
             super.onMeasure(exact, exact)
@@ -355,6 +366,8 @@ class FocusWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidget
 
     private companion object {
         const val BAND_DP = 40
+        const val PILL_DIAL_DP = 104
+        const val LOW_DIAL_DP = 80
         const val LOW_ROW_DP = 120
         const val TIME_RATIO = 40f / 176f
         const val PHASE_RATIO = 13f / 176f

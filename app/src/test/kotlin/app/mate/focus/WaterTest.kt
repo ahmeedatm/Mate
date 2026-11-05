@@ -114,4 +114,17 @@ class WaterTest {
         Water.set(context, 1)
         assertEquals(1, Water.state(context).glasses)
     }
+
+    @Test
+    fun `un ecouteur inscrit deux fois n'est appele qu'une fois et part au premier retrait`() {
+        var calls = 0
+        val listener: (Water.State) -> Unit = { calls++ }
+        Water.observe(listener)
+        Water.observe(listener)
+        Water.add(context, 1)
+        assertEquals(1, calls)
+        Water.unobserve(listener)
+        Water.add(context, 1)
+        assertEquals(1, calls)
+    }
 }

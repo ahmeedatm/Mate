@@ -21,7 +21,7 @@ object Water {
     val GOALS = listOf(6, 8, 10, 12)
     val INTERVALS = listOf(30, 60, 120)
 
-    private val listeners = mutableListOf<(State) -> Unit>()
+    private val listeners = mutableSetOf<(State) -> Unit>()
     private val dayKey = SimpleDateFormat("yyyy-MM-dd", Locale.ROOT)
 
     private fun prefs(context: Context) = context.getSharedPreferences(FILE, Context.MODE_PRIVATE)

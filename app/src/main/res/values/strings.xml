@@ -916,12 +916,10 @@
     <string name="water_title">Eau</string>
     <string name="water_count">%1$d / %2$d verres</string>
     <string name="water_count_short">%1$d / %2$d</string>
-    <string name="water_goal_of">sur %1$d verres</string>
     <string name="water_glasses_label">verres</string>
-    <string name="water_glass_set">Verre %1$d sur %2$d</string>
+    <string name="water_glass_full">Verre %1$d sur %2$d, bu</string>
+    <string name="water_glass_empty">Verre %1$d sur %2$d, pas bu</string>
     <string name="water_next_reminder">Prochain rappel à %1$s</string>
-    <string name="water_done_short">%1$d / %2$d ✓</string>
-    <string name="water_done">%1$d / %2$d verres ✓</string>
     <string name="water_plus">J\'ai bu un verre</string>
     <string name="water_minus">Enlever un verre</string>
     <string name="water_settings">Eau</string>
