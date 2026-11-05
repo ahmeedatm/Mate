@@ -35,9 +35,9 @@ object WidgetSamples {
         WidgetType.MAIL -> null
 
         // #182 Son et musique
-        WidgetType.AUDIO -> null
+        WidgetType.AUDIO -> AudioSample
         WidgetType.MEDIA -> null
-        WidgetType.MIXER -> null
+        WidgetType.MIXER -> MixerSample
         WidgetType.YTMUSIC -> null
 
         // #183 Piloter l'ordinateur

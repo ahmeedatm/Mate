@@ -43,7 +43,6 @@ class ComputerAudioView @JvmOverloads constructor(
     private val sender by lazy { LatestSender<Int>(scope) { render(BackendClient(context).system.setAudio(output = it)) } }
 
     private var state: AudioState? = null
-    private var compacted = false
 
     init {
         orientation = HORIZONTAL
@@ -102,33 +101,11 @@ class ComputerAudioView @JvmOverloads constructor(
         }
     }
 
-    /**
-     * Petit widget de l'Accueil : muet, −, volume, + (sans curseur ni micro, qui ne tiennent pas dans une case).
-     * Les boutons − et + font comme ceux de la tablette.
-     */
-    fun compact() {
-        if (compacted) return
-        compacted = true
-        volume.visibility = GONE
-        mic.visibility = GONE
-        value.gravity = Gravity.CENTER
-        value.textSize = 20f
-        value.setTextColor(themeColor(context, R.attr.c_text))
-        fun step(icon: Int, label: Int, up: Boolean) = ImageButton(context, null, 0, R.style.IconButton).apply {
-            setImageResource(icon)
-            contentDescription = context.getString(label)
-            setOnClickListener { nudge(up) }
-        }
-        addView(step(R.drawable.ic_remove, R.string.volume_down, false), indexOfChild(value))
-        addView(step(R.drawable.ic_add, R.string.volume_up, true), indexOfChild(value) + 1)
-        value.layoutParams = LayoutParams(0, LayoutParams.WRAP_CONTENT, 1f)
-    }
+    /** Aperçu du catalogue : un état d'exemple, sans réseau. */
+    fun showSample(audio: AudioState) = render(audio)
 
     /** Relit l'état : le son a pu changer depuis le Mac. */
     fun refresh() = change { audio() }
-
-    /** Boutons de volume de la tablette. */
-    fun nudge(up: Boolean) = change { setAudio(outputDelta = if (up) 6 else -6) }
 
     private fun change(call: suspend SystemApi.() -> AudioState) {
         scope.launch {

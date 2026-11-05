@@ -56,6 +56,23 @@ class MixerWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidget
         addView(mixer, ViewGroup.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT))
     }
 
+    /**
+     * Une mise en page par famille de formes : Pastille, la tranche Sortie seule ; Ligne, les scènes seules ; Colonne,
+     * les scènes au-dessus de la tranche Sortie ; Bloc et plus grand, la table entière.
+     */
+    override fun applySize() {
+        val all = family == ShapeFamily.BLOCK || family == ShapeFamily.LARGE || family == ShapeFamily.FULL
+        mixer.channelFilter = if (all) null else { channels -> channels.filter { it.id == "master" } }
+        mixer.stripsShown = family != ShapeFamily.ROW
+        mixer.scenesShown = family != ShapeFamily.PILL
+        // L'état déjà reçu (ou l'exemple du catalogue) suit tout de suite les nouvelles voies.
+        mixer.refreshApps()
+    }
+
+    override fun showPreview(sample: WidgetSample) {
+        if (sample is MixerSample) mixer.showSample(SoundSamples.mixer(context), SoundSamples.scenes(context))
+    }
+
     override fun setActive(active: Boolean) {
         // Relu en arrivant sur l'écran, pas à chaque relecture de la table (4 fois par seconde).
         if (active) {
