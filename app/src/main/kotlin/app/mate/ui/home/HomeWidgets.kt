@@ -476,11 +476,31 @@ class MediaWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidget
     }
 
     override fun applySize() {
+        val look = placed.config.optString("look")
+        if (look.isNotEmpty()) return showLook(look)
         // Moyen (une ligne de cases) : titre sur une ligne, l'avancement reste dans la carte.
         playing.titleLines = if (placed.size == WidgetSize.M) 1 else 2
         playing.layout(if (placed.size == WidgetSize.S) NowPlayingView.Layout.SMALL else NowPlayingView.Layout.ROW)
         sites.shown = big
         if (big) host.scope.launch { load() }
+    }
+
+    /** Prototype des variantes (#182), données d'exemple : retiré au choix d'Ahmed. */
+    private fun showLook(look: String) {
+        val shapes = PlayingShapes(context, {}, {}, {})
+        val pill = placed.size == WidgetSize.S
+        val shape = when (look) {
+            "a" -> if (pill) shapes.pillCover() else shapes.columnStack()
+            "b" -> if (pill) shapes.pillDisc() else shapes.columnPoster()
+            else -> if (pill) shapes.pillText() else shapes.columnRemote()
+        }
+        val bleed = (pill && look == "a") || (!pill && look == "b")
+        view.removeAllViews()
+        view.clipToOutline = true
+        val pad = if (bleed) 0 else dp(16)
+        view.setPadding(pad, pad, pad, pad)
+        view.addView(shape.view, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT))
+        shape.render(Playing("Midnight City", "M83", playing = true, progress = 0.25f, cover = PlayingShapes.sampleCover(context)))
     }
 
     override suspend fun load() {
