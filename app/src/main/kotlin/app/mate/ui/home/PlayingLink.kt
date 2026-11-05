@@ -2,15 +2,20 @@ package app.mate.ui.home
 
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
+import android.os.SystemClock
+import app.mate.net.HttpException
 import app.mate.net.MediaSession
 import app.mate.net.YtMusicState
 import app.mate.net.runCatchingCancellable
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 
 /**
@@ -44,9 +49,37 @@ data class NowTrack(
 }
 
 /**
+ * Quand recharger la pochette : une nouvelle se charge ; une tenue ne se recharge pas ; un chargement interrompu se
+ * refait ; après un échec (ordinateur qui n'en a pas), un seul nouvel essai toutes les [RETRY_MS], pas chaque seconde.
+ */
+class CoverTries {
+    private var loadedKey: String? = null
+    private var failedKey: String? = null
+    private var failedAt = 0L
+
+    fun shouldFetch(key: String?, now: Long): Boolean =
+        key != null && key != loadedKey && (key != failedKey || now - failedAt >= RETRY_MS)
+
+    fun loaded(key: String) {
+        loadedKey = key
+        failedKey = null
+    }
+
+    fun failed(key: String, now: Long) {
+        failedKey = key
+        failedAt = now
+    }
+
+    companion object {
+        const val RETRY_MS = 30_000L
+    }
+}
+
+/**
  * Relit [read] chaque seconde tant que le widget est à l'écran ([shown]) et charge la pochette quand [NowTrack.coverKey]
- * change, réduite à [coverPx] (la tablette a 128 Mo de tas). [send] : une action à la fois, puis relecture ; un double
- * appui n'envoie pas deux « suivant ».
+ * change ([CoverTries]), réduite à [coverPx] (la tablette a 128 Mo de tas). [action] : une à la fois, puis relecture ;
+ * un double appui n'envoie pas deux « suivant ». Les relectures passent l'une après l'autre ; un 501 (l'ordinateur ne
+ * sait pas lire ce qui joue) arrête la boucle.
  */
 class PlayingLink(
     private val scope: CoroutineScope,
@@ -58,18 +91,22 @@ class PlayingLink(
     private val onState: (Playing?) -> Unit,
 ) {
     private var poll: Job? = null
+    private var acting: Job? = null
+    private val turn = Mutex()
     private var track: NowTrack? = null
     private var art: Bitmap? = null
-    private var artKey: String? = null
+    private val tries = CoverTries()
     private var sending = false
 
     fun setActive(active: Boolean) {
         poll?.cancel()
+        acting?.cancel()
         poll = null
+        sending = false
         if (!active) return
         poll = scope.launch {
             while (isActive) {
-                if (shown()) refresh()
+                if (shown() && !refresh()) break
                 delay(POLL_MS)
             }
         }
@@ -79,7 +116,7 @@ class PlayingLink(
         val now = track ?: return
         if (sending) return
         sending = true
-        scope.launch {
+        acting = scope.launch {
             runCatchingCancellable { send(now, op) }
             // Le temps que l'appli change de morceau ou d'état.
             delay(SETTLE_MS)
@@ -88,21 +125,37 @@ class PlayingLink(
         }
     }
 
-    private suspend fun refresh() {
-        // Ordinateur injoignable un instant : on garde l'affichage (l'Accueil voile le widget s'il ne répond plus).
-        val next = runCatchingCancellable { read() }.getOrElse { return }
+    /** Faux : l'ordinateur ne sait pas lire ce qui joue (501), rien à relire. */
+    private suspend fun refresh(): Boolean = turn.withLock {
+        val next = try {
+            read()
+        } catch (e: HttpException) {
+            if (e.code == UNSUPPORTED) {
+                track = null
+                onState(null)
+                return@withLock false
+            }
+            return@withLock true
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            // Ordinateur injoignable un instant : on garde l'affichage (l'Accueil voile le widget s'il ne répond plus).
+            return@withLock true
+        }
+        if (next?.coverKey != track?.coverKey) art = null
         track = next
         val key = next?.coverKey
-        if (key != artKey) {
-            artKey = key
-            art = null
-            if (next != null && key != null) {
-                art = runCatchingCancellable { cover(next) }.getOrNull()?.let { withContext(Dispatchers.Default) { decode(it) } }
-                // Échec (ordinateur occupé) : réessayé à la relecture suivante.
-                if (art == null) artKey = null
+        if (next != null && key != null && tries.shouldFetch(key, SystemClock.elapsedRealtime())) {
+            val loaded = runCatchingCancellable { cover(next) }.getOrNull()?.let { withContext(Dispatchers.Default) { decode(it) } }
+            if (loaded != null) {
+                art = loaded
+                tries.loaded(key)
+            } else {
+                tries.failed(key, SystemClock.elapsedRealtime())
             }
         }
         onState(next?.let { Playing(it.title, it.artist, it.playing, it.progress, art) })
+        true
     }
 
     private fun decode(bytes: ByteArray): Bitmap? {
@@ -116,5 +169,6 @@ class PlayingLink(
     private companion object {
         const val POLL_MS = 1_000L
         const val SETTLE_MS = 400L
+        const val UNSUPPORTED = 501
     }
 }

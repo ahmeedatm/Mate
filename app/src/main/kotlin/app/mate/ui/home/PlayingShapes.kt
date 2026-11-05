@@ -156,7 +156,7 @@ class PlayingShapes(
             art.show(p?.cover)
             title.text = p?.title ?: context.getString(empty)
             play.showPlaying(p)
-            describe(art, p)
+            describe(view, p)
         }
     }
 
@@ -182,7 +182,7 @@ class PlayingShapes(
             title.text = p?.title ?: context.getString(empty)
             artist.text = p?.artist.orEmpty()
             play.showPlaying(p)
-            describe(art, p)
+            describe(view, p)
         }
     }
 
@@ -216,7 +216,7 @@ class PlayingShapes(
             bar.visibility = if (p?.progress != null) View.VISIBLE else View.INVISIBLE
             bar.progress = ((p?.progress ?: 0f) * PROGRESS_MAX).toInt()
             play.showPlaying(p)
-            describe(art, p)
+            describe(view, p)
         }
     }
 

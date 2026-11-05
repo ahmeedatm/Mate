@@ -29,7 +29,9 @@ class YtMusicWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidg
         music.showQueue = placed.size.w >= QUEUE_MIN_W
         if (family == shownFamily) return
         shownFamily = family
-        setActive(false)
+        // Arrêt direct : `active` garde l'état de l'écran, relancé plus bas dans la nouvelle forme.
+        music.setActive(false)
+        link?.setActive(false)
         view.removeAllViews()
         link = null
         shape = null
@@ -76,7 +78,7 @@ class YtMusicWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidg
         preview = true
         val art = PlayingShapes.sampleCover(context)
         shape?.render?.invoke(PlayingSamples.playing(context, art))
-        music.showSample(PlayingSamples.ytMusic(context), art)
+        if (shape == null) music.showSample(PlayingSamples.ytMusic(context), art)
     }
 
     override fun setActive(active: Boolean) {

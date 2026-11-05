@@ -492,7 +492,9 @@ class MediaWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidget
         sites.shown = big && !preview
         if (family == shownFamily) return
         shownFamily = family
-        setActive(false)
+        // Arrêt direct : `active` garde l'état de l'écran, relancé plus bas dans la nouvelle forme.
+        playing.setActive(false)
+        link?.setActive(false)
         view.removeAllViews()
         link = null
         shape = null
@@ -543,7 +545,7 @@ class MediaWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidget
         sites.shown = false
         val art = PlayingShapes.sampleCover(context)
         shape?.render?.invoke(PlayingSamples.playing(context, art))
-        playing.showSample(PlayingSamples.media(context), art)
+        if (shape == null) playing.showSample(PlayingSamples.media(context), art)
     }
 
     override suspend fun load() {
