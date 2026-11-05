@@ -279,6 +279,11 @@ export function createMcpServer(api: Api, where: () => string): McpServer {
       name: z.string().describe("Nom d'une cible du réseau local déclarée dans LAN_TARGETS du .env de l'ordinateur (jamais une adresse)"),
     }),
     z.object({
+      type: z.literal("output"),
+      id: z.string().describe("Id d'une sortie son de l'ordinateur (sorties_son de deck_touches_lister)"),
+      name: z.string().describe("Nom de cette sortie, affiché sur la tablette (ex. Casque (USB))"),
+    }),
+    z.object({
       type: z.literal("window"),
       app: z.string(),
       display: z.string().optional().describe("Libellé d'écran (voir deck_touches_lister), sinon l'écran actuel"),
@@ -302,12 +307,18 @@ export function createMcpServer(api: Api, where: () => string): McpServer {
       title: "Touches du deck",
       description:
         "Liste les touches de la page Perso et des pages nommées du deck (numéros 1 et suivants, vides comprises), les icônes " +
-        "possibles, les écrans de l'ordinateur, son système, ses applis installées et les raccourcis Apple disponibles (Mac).",
+        "possibles, les écrans de l'ordinateur, son système, ses applis installées, ses sorties son (étape output) et les raccourcis " +
+        "Apple disponibles (Mac).",
       annotations: { readOnlyHint: true },
     },
     () =>
       attempt(async () => {
         const k = await api("GET", "/local/config/keys");
+        // Ordinateur qui ne pilote pas le son (501) : pas de sortie à proposer, le reste de la liste sert quand même.
+        const outputs = await api("GET", "/system/audio/outputs").then(
+          (r) => (r.outputs as { id: string; name: string }[]).map((o) => ({ id: o.id, name: o.name })),
+          () => [],
+        );
         return text({
           systeme: k.catalog.os,
           perso: numbered(k.perso.keys),
@@ -316,6 +327,7 @@ export function createMcpServer(api: Api, where: () => string): McpServer {
           ecrans: k.catalog.displays,
           applis: k.catalog.apps,
           raccourcis_apple: k.catalog.shortcuts,
+          sorties_son: outputs,
         });
       }),
   );

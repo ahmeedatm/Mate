@@ -1,5 +1,6 @@
 package app.mate.ui
 
+import app.mate.net.AudioOutput
 import org.json.JSONArray
 import org.json.JSONObject
 import org.junit.Assert.assertEquals
@@ -58,5 +59,14 @@ class KeyJsonTest {
         assertTrue(key.getJSONArray("steps").getJSONObject(0).getBoolean("push"))
         assertFalse(key.has("cycle"))
         assertFalse(key.has("hold"))
+    }
+
+    @Test
+    fun `une sortie son devient une etape output avec son id et son nom`() {
+        val step = outputStep(AudioOutput("{0.0.0.00000000}.{casque}", "Casque (USB)", current = true))
+        assertEquals("output", step.getString("type"))
+        assertEquals("{0.0.0.00000000}.{casque}", step.getString("id"))
+        assertEquals("Casque (USB)", step.getString("name"))
+        assertFalse(step.has("current"))
     }
 }

@@ -111,6 +111,22 @@ test.describe("page locale : touches", () => {
     ]);
   });
 
+  test("une touche Sortie son se rouvre avec le nom de la sortie et la garde à l'enregistrement", async ({ page, server }) => {
+    const steps = [
+      { type: "output", id: "{0.0.0.00000000}.{casque}", name: "Casque (USB)" },
+      { type: "output", id: "{0.0.0.00000000}.{enceintes}", name: "Enceintes" },
+    ];
+    fs.writeFileSync(path.join(server.dataDir, "keys.json"), JSON.stringify({ slots: [{ label: "Son", cycle: true, steps }] }));
+    await page.goto("/");
+    const touches = page.locator("#pf-touches");
+    await touches.getByRole("button", { name: "Touche 1 : Son" }).click();
+    await expect(touches.locator('[data-step="0"]').getByLabel("Type de l'étape 1")).toHaveValue("output");
+    await expect(touches.locator('[data-step="0"]')).toContainText("Casque (USB)");
+    await touches.locator("#pf-deck-save").click();
+    await expect(page.locator("#pf-deck-keys-msg")).toHaveText("Touche enregistrée.");
+    expect((await server.call("GET", "/deck/keys/0")).json.key.steps).toEqual(steps);
+  });
+
   test("une touche à cycle garde son cycle quand on la rouvre et l'enregistre", async ({ page, server }) => {
     fs.writeFileSync(
       path.join(server.dataDir, "keys.json"),

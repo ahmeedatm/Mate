@@ -267,6 +267,24 @@ describe("touches perso : routes", () => {
     ]);
   });
 
+  it("une touche Sortie son s'enregistre avec l'id et le nom, et change la sortie à l'appui", async () => {
+    const id = "{0.0.0.00000000}.{a1b2c3d4-0000-4000-8000-000000000001}";
+    server.setOs({ audioOutputs: [{ id, name: "Casque (USB)", current: false }] });
+    server.clearOsCalls();
+    const key = { label: "Casque", steps: [{ type: "output", id, name: "Casque (USB)" }] };
+    assert.equal((await put(8, key)).status, 200);
+    assert.deepEqual((await server.call("GET", "/deck/keys/8")).json.key, key);
+    assert.equal((await put(9, { label: "X", steps: [{ type: "output", name: "Casque" }] })).status, 400);
+    assert.equal((await put(9, { label: "X", steps: [{ type: "output", id: "", name: "Casque" }] })).status, 400);
+    assert.equal((await server.call("POST", "/deck/run", { id: "k-8" })).status, 200);
+    assert.deepEqual(server.osCalls(), [{ fn: "setAudioOutput", args: [id] }]);
+    server.setOs({});
+    const gone = await server.call("POST", "/deck/run", { id: "k-8" });
+    assert.equal(gone.status, 404);
+    assert.equal(gone.json.message, "Sortie son introuvable : Casque (USB)");
+    await server.call("DELETE", "/deck/keys/8");
+  });
+
   it("POST /deck/keys range la touche dans le premier emplacement libre et rend son rang", async () => {
     let free = 0;
     while ((await server.call("GET", `/deck/keys/${free}`)).json.key) free++;
