@@ -54,11 +54,11 @@ class PlayingShapes(
     private fun dp(value: Int) = context.dp(value)
     private fun match() = FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT)
 
-    /** Pochette, ou une note de musique sur la surface quand l'ordinateur n'en donne pas. */
+    /** Pochette, ou une note de musique quand l'ordinateur n'en donne pas ; [radiusDp] > 0 : vignette posée sur la surface. */
     private fun cover(radiusDp: Int) = ImageView(context).apply {
         scaleType = ImageView.ScaleType.CENTER_CROP
-        setBackgroundColor(color(R.attr.c_surface_raised))
         if (radiusDp > 0) {
+            setBackgroundColor(color(R.attr.c_surface_raised))
             clipToOutline = true
             outlineProvider = object : ViewOutlineProvider() {
                 override fun getOutline(view: View, outline: Outline) = outline.setRoundRect(0, 0, view.width, view.height, dp(radiusDp).toFloat())
@@ -67,7 +67,8 @@ class PlayingShapes(
         importantForAccessibility = View.IMPORTANT_FOR_ACCESSIBILITY_NO
     }
 
-    private fun ImageView.show(art: Bitmap?) {
+    /** Vrai : une pochette est posée. */
+    private fun ImageView.show(art: Bitmap?): Boolean {
         if (art != null) {
             scaleType = ImageView.ScaleType.CENTER_CROP
             ImageViewCompat.setImageTintList(this, null)
@@ -77,6 +78,20 @@ class PlayingShapes(
             setImageResource(R.drawable.ic_music_note)
             ImageViewCompat.setImageTintList(this, ColorStateList.valueOf(color(R.attr.c_text_faint)))
         }
+        return art != null
+    }
+
+    /**
+     * Sur une pochette : voile du bas, texte et boutons blancs avec ombre. Sans pochette, la carte du thème reste visible
+     * (fond, bordure du thème Contraste) : ni voile, texte et boutons aux couleurs du thème.
+     */
+    private fun paint(onImage: Boolean, scrim: View, texts: List<TextView>, buttons: List<ImageButton>) {
+        scrim.visibility = if (onImage) View.VISIBLE else View.GONE
+        texts.forEachIndexed { i, t ->
+            t.setTextColor(color(if (onImage) R.attr.c_frame_text else if (i == 0) R.attr.c_text else R.attr.c_text_dim))
+            if (onImage) t.setShadowLayer(dp(4).toFloat(), 0f, dp(1).toFloat(), color(R.attr.c_frame_shadow)) else t.setShadowLayer(0f, 0f, 0f, Color.TRANSPARENT)
+        }
+        buttons.forEach { ImageViewCompat.setImageTintList(it, ColorStateList.valueOf(color(if (onImage) R.attr.c_frame_text else R.attr.c_text))) }
     }
 
     private fun text(size: Float, colorId: Int, medium: Boolean = false) = TextView(context).apply {
@@ -85,12 +100,6 @@ class PlayingShapes(
         maxLines = 1
         ellipsize = TextUtils.TruncateAt.END
         if (medium) typeface = themeFont(context, R.attr.c_font_medium)
-    }
-
-    /** Texte posé sur la pochette : blanc avec une ombre, sur le voile du bas. */
-    private fun TextView.onCover() = apply {
-        setTextColor(color(R.attr.c_frame_text))
-        setShadowLayer(dp(4).toFloat(), 0f, dp(1).toFloat(), color(R.attr.c_frame_shadow))
     }
 
     private fun button(icon: Int, label: Int, op: String, tint: Int = R.attr.c_text) = ImageButton(context, null, 0, R.style.IconButton).apply {
@@ -142,18 +151,19 @@ class PlayingShapes(
     /** Pastille : la pochette plein cadre, le titre dessus en bas, lecture / pause en bas à droite. */
     fun pill(): Shape {
         val art = cover(0)
-        val title = text(15f, R.attr.c_text, medium = true).onCover().apply { maxLines = 2 }
+        val title = text(15f, R.attr.c_text, medium = true).apply { maxLines = 2 }
         val play = playButton()
+        val veil = scrim()
         val view = FrameLayout(context).apply {
             addView(art, match())
-            addView(scrim(), match())
+            addView(veil, match())
             addView(title, FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT, Gravity.BOTTOM).apply {
                 setMargins(dp(16), 0, dp(76), dp(16))
             })
             addView(play, FrameLayout.LayoutParams(dp(52), dp(52), Gravity.BOTTOM or Gravity.END).apply { setMargins(0, 0, dp(12), dp(12)) })
         }
         return Shape(view) { p ->
-            art.show(p?.cover)
+            paint(art.show(p?.cover), veil, listOf(title), emptyList())
             title.text = p?.title ?: context.getString(empty)
             play.showPlaying(p)
             describe(view, p)
@@ -163,22 +173,25 @@ class PlayingShapes(
     /** Colonne : l'affiche ; la pochette remplit la carte, titre, artiste et les trois boutons par-dessus, en bas. */
     fun column(): Shape {
         val art = cover(0)
-        val title = text(18f, R.attr.c_text, medium = true).onCover().apply { maxLines = 2 }
-        val artist = text(14f, R.attr.c_text).onCover()
+        val title = text(18f, R.attr.c_text, medium = true).apply { maxLines = 2 }
+        val artist = text(14f, R.attr.c_text_dim)
         val play = playButton()
+        val veil = scrim()
+        val row = controls(play, onImage = true)
         val view = FrameLayout(context).apply {
             addView(art, match())
-            addView(scrim(), match())
+            addView(veil, match())
             addView(LinearLayout(context).apply {
                 orientation = LinearLayout.VERTICAL
                 setPadding(dp(16), 0, dp(16), dp(14))
                 addView(title)
                 addView(artist)
-                addView(controls(play, onImage = true), LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT).apply { topMargin = dp(10) })
+                addView(row, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT).apply { topMargin = dp(10) })
             }, FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT, Gravity.BOTTOM))
         }
+        val sides = (0 until row.childCount).map { row.getChildAt(it) }.filterIsInstance<ImageButton>().filter { it !== play }
         return Shape(view) { p ->
-            art.show(p?.cover)
+            paint(art.show(p?.cover), veil, listOf(title, artist), sides)
             title.text = p?.title ?: context.getString(empty)
             artist.text = p?.artist.orEmpty()
             play.showPlaying(p)
