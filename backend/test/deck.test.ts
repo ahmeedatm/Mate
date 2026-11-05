@@ -162,6 +162,34 @@ describe("runAction", () => {
     assert.deepEqual(calls.at(-1), { fn: "typeText", args: ["Suite"] });
   });
 
+  it("sortie son : passe sur la sortie de l'étape ; deux étapes en cycle alternent casque et enceintes", async () => {
+    const casque = { id: "{0.0.0.00000000}.{casque}", name: "Casque (USB)", current: false };
+    const enceintes = { id: "{0.0.0.00000000}.{enceintes}", name: "Enceintes (Realtek)", current: true };
+    reset({ audioOutputs: [casque, enceintes] });
+    const cycle: Action = {
+      type: "cycle",
+      steps: [
+        { type: "output", id: casque.id, name: casque.name },
+        { type: "output", id: enceintes.id, name: enceintes.name },
+      ],
+    };
+    await deck.runAction(cycle, "son");
+    await deck.runAction(cycle, "son");
+    assert.deepEqual(calls, [
+      { fn: "setAudioOutput", args: [casque.id] },
+      { fn: "setAudioOutput", args: [enceintes.id] },
+    ]);
+  });
+
+  it("sortie son absente (casque débranché) : erreur claire avec son nom, rien n'est changé", async () => {
+    reset({ audioOutputs: [{ id: "hp", name: "Haut-parleurs", current: true }] });
+    await assert.rejects(
+      deck.runAction({ type: "output", id: "{0.0.0.00000000}.{casque}", name: "Casque (USB)" }),
+      (e: Error & { statusCode?: number }) => e.message === "Sortie son introuvable : Casque (USB)" && e.statusCode === 404,
+    );
+    assert.deepEqual(calls, []);
+  });
+
   it("appuie sur le premier bouton trouvé, erreur si aucun", async () => {
     reset({ buttons: { Discord: ["Couper le micro", "Déconnecter"] } });
     await deck.runAction({ type: "press", app: "Discord", names: ["Mute", "Couper le micro"] });

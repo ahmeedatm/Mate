@@ -55,6 +55,7 @@ Règles transverses, une ligne chacune ; le détail de chaque fonction est dans 
 - **Android** (`app/`) : Kotlin, vues XML (pas de Compose), une Activity (`MainActivity`) + un Fragment par mode.
 - **Couleurs et polices** : attributs de thème `?attr/c_…` (`themeColor(context, R.attr.c_…)` dans le code) et polices par rôle `c_font_*`, jamais en dur ; la liste des thèmes est dans `app/src/main/kotlin/app/mate/ui/Themes.kt`.
 - Textes de l'UI en français, dans `res/values/strings.xml`.
+- **Widgets de l'Accueil** : nouveau widget = les 16 formes de la grille (une mise en page par famille de formes, `ShapeFamily`) + un aperçu à données d'exemple (`WidgetSamples`), sinon `WidgetRulesTest` casse ; détail dans `docs/architecture.md`, « Widgets : les 16 formes ».
 - **Erreurs affichées** : par `errorText(e)` (`ui/Errors.kt`), jamais de `e.message` brut à l'écran.
 - **Dépendances** limitées (appcompat, lifecycle-runtime-ktx, coroutines) : en ajouter une seulement si c'est indispensable et compatible API 24.
 - **HTTP** par `HttpURLConnection` + `org.json`, un client par domaine dans `net/` (point d'accès `net/BackendClient.kt`).
