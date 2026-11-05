@@ -152,6 +152,7 @@ export const DECK_JS = `
       case "wait": return { type: type, ms: 500 };
       case "http": return { type: type, name: "" };
       case "gesture": return { type: type, name: pfDeckGestures[0][0] };
+      case "output": return { type: type, id: "", name: "" };
       default: return { type: "window", app: "", display: "", layout: "keep" };
     }
   }
@@ -163,6 +164,7 @@ export const DECK_JS = `
       case "keys": return s.app.trim() ? { type: s.type, keys: s.keys.trim(), app: s.app.trim() } : { type: s.type, keys: s.keys.trim() };
       case "media": case "system": return { type: s.type, command: s.command };
       case "gesture": return { type: s.type, name: s.name };
+      case "output": return { type: s.type, id: s.id, name: s.name };
       case "text": return { type: s.type, text: s.text };
       case "wait": return { type: s.type, ms: Math.min(10000, Math.max(0, parseInt(s.ms, 10) || 0)) };
       default: {
@@ -280,6 +282,9 @@ export const DECK_JS = `
         return [pfDeckField("Durée en millisecondes (0 à 10000)", pfDeckText(String(step.ms), (v) => { step.ms = v; }, { inputmode: "numeric" }))];
       case "http":
         return [pfDeckField("Nom de la cible (LAN_TARGETS du .env)", pfDeckText(step.name, (v) => { step.name = v; }, { maxlength: 200 }))];
+      // La liste des sorties est celle de l'éditeur de la tablette : ici, l'étape est gardée telle quelle.
+      case "output":
+        return [pfDeckEl("p", { className: "dim", text: step.name + " (se choisit depuis la tablette)" })];
       default:
         return [
           pfDeckField("Appli", pfDeckText(step.app, (v) => { step.app = v; }, { list: "pf-deck-catalog-apps", maxlength: 200 })),
@@ -324,7 +329,8 @@ export const DECK_JS = `
     if (d.steps.length === 0) box.append(pfDeckEl("p", { className: "dim", text: "Aucune étape. Avec plusieurs étapes, la touche devient une macro." }));
     const list = pfDeckEl("ol", { className: "pf-steps" });
     d.steps.forEach((step, i) => {
-      const typeSelect = pfDeckSelect(pfDeckStepTypes, step.type, (v) => { d.steps[i] = pfDeckNewStep(v); pfDeckRenderEditor(); }, "Type de l'étape " + (i + 1));
+      const types = step.type === "output" ? pfDeckStepTypes.concat([["output", "Sortie son"]]) : pfDeckStepTypes;
+      const typeSelect = pfDeckSelect(types, step.type, (v) => { d.steps[i] = pfDeckNewStep(v); pfDeckRenderEditor(); }, "Type de l'étape " + (i + 1));
       const up = pfIconButton(PF_PATHS.up, "Monter l'étape " + (i + 1), () => pfDeckMove(i, -1));
       up.disabled = i === 0;
       const down = pfIconButton(PF_PATHS.down, "Descendre l'étape " + (i + 1), () => pfDeckMove(i, 1));
