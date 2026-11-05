@@ -34,8 +34,24 @@ data class GlanceContent(val count: Int, val countLabel: String, val lines: List
  */
 class DevGlanceView(context: Context, private val title: Int) : LinearLayout(context) {
 
+    /** Dernier affichage demandé : refait quand la hauteur réelle change de classe (rangées de hauteur variable). */
+    private var shown: (() -> Unit)? = null
+
+    /** Pastille plus basse que [PILL_TALL_DP] (rangée basse du profil) : le nombre et son libellé sur une seule ligne. */
+    private var low = false
+
+    override fun onSizeChanged(w: Int, h: Int, oldw: Int, oldh: Int) {
+        super.onSizeChanged(w, h, oldw, oldh)
+        val nowLow = h < dp(PILL_TALL_DP)
+        if (nowLow == low) return
+        low = nowLow
+        // Pas de nouvelle mise en page en plein passage de mise en page : au prochain tour.
+        shown?.let { post(it) }
+    }
+
     /** `w` × `h` : la forme en cases ; `note` : phrase à la place du contenu (vide, erreur, à connecter). */
     fun show(content: GlanceContent?, w: Int, h: Int, note: String? = null) {
+        shown = { show(content, w, h, note) }
         removeAllViews()
         orientation = if (h == 1 && w > 1 && content != null && note == null) HORIZONTAL else VERTICAL
         if (content == null || note != null) {
@@ -44,6 +60,11 @@ class DevGlanceView(context: Context, private val title: Int) : LinearLayout(con
             return
         }
         when {
+            w == 1 && h == 1 && low -> {
+                addView(titleView())
+                addView(View(context), fill())
+                addView(countLine(content))
+            }
             w == 1 && h == 1 -> {
                 addView(titleView())
                 addView(View(context), fill())
@@ -56,11 +77,7 @@ class DevGlanceView(context: Context, private val title: Int) : LinearLayout(con
                         orientation = VERTICAL
                         gravity = Gravity.CENTER_VERTICAL
                         addView(titleView())
-                        addView(LinearLayout(context).apply {
-                            gravity = Gravity.BOTTOM
-                            addView(count(content, ROW_SIZE))
-                            addView(text(content.countLabel, 13f, R.attr.c_text_dim), LayoutParams(-2, -2).apply { marginStart = dp(6); bottomMargin = dp(4) })
-                        })
+                        addView(countLine(content))
                     },
                     LayoutParams(dp(ROW_LEFT_DP), ViewGroup.LayoutParams.MATCH_PARENT),
                 )
@@ -79,6 +96,13 @@ class DevGlanceView(context: Context, private val title: Int) : LinearLayout(con
         setText(title)
         maxLines = 1
         ellipsize = TextUtils.TruncateAt.END
+    }
+
+    /** Le nombre et son libellé côte à côte (« 3 ouverts ») : la Ligne, et la Pastille d'une rangée basse. */
+    private fun countLine(c: GlanceContent) = LinearLayout(context).apply {
+        gravity = Gravity.BOTTOM
+        addView(count(c, ROW_SIZE))
+        addView(text(c.countLabel, 13f, R.attr.c_text_dim), LayoutParams(-2, -2).apply { marginStart = dp(6); bottomMargin = dp(4) })
     }
 
     private fun count(c: GlanceContent, size: Float) = text(c.count.toString(), size, R.attr.c_text, font = R.attr.c_font_light)
@@ -123,6 +147,9 @@ class DevGlanceView(context: Context, private val title: Int) : LinearLayout(con
         const val ROW_SIZE = 30f
         const val COLUMN_SIZE = 34f
         const val NOTE_LINES = 4
+
+        /** Hauteur sous laquelle la Pastille met le nombre et son libellé sur une ligne (titre + grand nombre + libellé n'y tiennent pas). */
+        const val PILL_TALL_DP = 120
         const val LINE_DP = 26
         const val MAX_LINES = 20
 

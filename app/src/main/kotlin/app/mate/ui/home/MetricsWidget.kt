@@ -32,8 +32,12 @@ class MetricsWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidg
     private var metrics: List<Metric>? = null
     private var error: String? = null
 
+    /** Aperçu du catalogue : l'exemple reste, aucune lecture ne l'écrase. */
+    private var previewing = false
+
     override fun showPreview(sample: WidgetSample) {
         metrics = (sample as? MetricsSample)?.metrics ?: return
+        previewing = true
         error = null
         render(null)
     }
@@ -45,10 +49,11 @@ class MetricsWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidg
     }
 
     override fun setActive(active: Boolean) {
-        if (active) host.scope.launch { load() }
+        if (active && !previewing) host.scope.launch { load() }
     }
 
     override suspend fun load() {
+        if (previewing) return
         runCatchingCancellable { BackendClient(context).metrics.latest() }
             .onSuccess { metrics = it; error = null; render(null) }
             .onFailure { error = context.errorText(it); render(error) }
