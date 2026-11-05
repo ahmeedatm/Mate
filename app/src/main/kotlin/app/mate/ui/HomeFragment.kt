@@ -32,6 +32,7 @@ import app.mate.ui.home.Down
 import app.mate.ui.home.Fit
 import app.mate.ui.home.HomeHost
 import app.mate.ui.home.HomeLayout
+import app.mate.ui.home.HomeRefresh
 import app.mate.ui.home.HomeWidget
 import app.mate.ui.home.Placed
 import app.mate.ui.home.ProfilesDialog
@@ -247,10 +248,7 @@ class HomeFragment : Fragment(), HomeHost, WidgetGrid.Listener {
             while (true) {
                 // Le battement d'abord : les chiffres basculent à hh:mm:00, avant les échanges réseau.
                 widgets.values.forEach { it.onMinute() }
-                if (!noComputer && (tick % 5 == 0 || waitingLink) && showsCalendar()) {
-                    fetchCalendar()
-                    renderCalendar()
-                }
+                refreshFromComputer(HomeRefresh.due(tick, waitingLink))
                 for (widget in shownWidgets()) widget.load()
                 zoomView?.current()?.let {
                     it.onMinute()
@@ -267,12 +265,26 @@ class HomeFragment : Fragment(), HomeHost, WidgetGrid.Listener {
     /** Widgets recréés (Annuler, modèle) : leurs données tout de suite, sans attendre la minute suivante. */
     private fun refreshAll() {
         scope.launch {
-            if (!noComputer && showsCalendar()) {
+            refreshFromComputer(due = true)
+            for (widget in shownWidgets()) widget.load()
+        }
+    }
+
+    /** Fonctions offertes par l'ordinateur (catalogue des widgets), et l'agenda si un widget l'affiche ([HomeRefresh]). */
+    private suspend fun refreshFromComputer(due: Boolean) {
+        when (HomeRefresh.plan(!noComputer, due, showsCalendar())) {
+            HomeRefresh.Fetch.NONE -> Unit
+            HomeRefresh.Fetch.FEATURES -> fetchFeatures()
+            HomeRefresh.Fetch.FEATURES_AND_CALENDAR -> {
                 fetchCalendar()
                 renderCalendar()
             }
-            for (widget in shownWidgets()) widget.load()
         }
+    }
+
+    private suspend fun fetchFeatures() {
+        runCatching { features = BackendClient(requireContext()).deck.homeFeatures() }
+        if (features.linked) waitingLink = false
     }
 
     /** Les widgets du profil affiché : les autres ne relisent pas l'ordinateur (tablette lente). */
@@ -284,8 +296,7 @@ class HomeFragment : Fragment(), HomeHost, WidgetGrid.Listener {
 
     private suspend fun fetchCalendar() {
         val client = BackendClient(requireContext())
-        runCatching { features = client.deck.homeFeatures() }
-        if (features.linked) waitingLink = false
+        fetchFeatures()
         try {
             val days = client.calendar.days(AGENDA_DAYS)
             events = days.events
