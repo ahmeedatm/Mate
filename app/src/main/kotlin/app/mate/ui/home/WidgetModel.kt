@@ -128,7 +128,7 @@ enum class WidgetType(
     MAIL("mail", R.string.widget_mail, R.string.widget_mail_desc, R.drawable.ic_mail, listOf(WidgetSize.M, WidgetSize.S, WidgetSize.L), true),
     METRICS("metrics", R.string.widget_metrics, R.string.widget_metrics_desc, R.drawable.ic_tile_bar_chart, listOf(WidgetSize.L, WidgetSize.XL), true),
     MEALS("meals", R.string.widget_meals, R.string.widget_meals_desc, R.drawable.ic_tile_restaurant, listOf(WidgetSize.L, WidgetSize.XL, WidgetSize.T), true),
-    VALORANT("valorant", R.string.widget_valorant, R.string.widget_valorant_desc, R.drawable.ic_gamepad, listOf(WidgetSize.XL, WidgetSize.L, WidgetSize.T), true),
+    VALORANT("valorant", R.string.widget_valorant, R.string.widget_valorant_desc, R.drawable.ic_gamepad, listOf(WidgetSize.XL, WidgetSize.L, WidgetSize.T).let { it + (WidgetSize.entries - it) }, true),
     SCREEN("screen", R.string.widget_screen, R.string.widget_screen_desc, R.drawable.ic_display, listOf(WidgetSize.L, WidgetSize.XL, WidgetSize.M), true);
 
     /** Taille de l'exemplaire agrandi (widget maintenu, [WidgetZoom]) : la plus grande, la plus large à surface égale. */
