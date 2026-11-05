@@ -163,6 +163,13 @@ class YtMusicView @JvmOverloads constructor(context: Context, attrs: AttributeSe
         this.scope = scope
     }
 
+    /** Aperçu du catalogue : un état d'exemple et sa pochette, sans ordinateur ni relecture. */
+    fun showSample(sample: YtMusicState, art: Bitmap) {
+        state = sample
+        render()
+        cover.setImageBitmap(art)
+    }
+
     /** Écran affiché ou non : on ne relit que s'il est visible. */
     fun setActive(active: Boolean) {
         if (this.active == active) return
