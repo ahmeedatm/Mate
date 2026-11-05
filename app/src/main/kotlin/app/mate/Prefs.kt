@@ -80,6 +80,7 @@ object Prefs {
     private const val KEY_AWAY_SINCE = "away_since"
     private const val KEY_AWAY_MIC = "away_mic_by_us"
     private const val KEY_AWAY_FOCUS = "away_focus_by_us"
+    private const val KEY_AWAY_WINDOWS = "away_windows"
     private const val KEY_SPEAK_ACTIONS = "speak_actions"
     private const val KEY_TOP_BAR = "top_bar"
     private const val KEY_TOP_BELL = "top_bar_bell"
@@ -476,13 +477,13 @@ object Prefs {
     /** Absence en cours (widget « Je m'absente ») : survit à la recréation de l'activité ; null si aucune. */
     fun away(context: Context): AwayState? = prefs(context).let {
         val since = it.getLong(KEY_AWAY_SINCE, 0L)
-        if (since <= 0L) null else AwayState(since, it.getBoolean(KEY_AWAY_MIC, false), it.getBoolean(KEY_AWAY_FOCUS, false))
+        if (since <= 0L) null else AwayState(since, it.getBoolean(KEY_AWAY_MIC, false), it.getBoolean(KEY_AWAY_FOCUS, false), it.getInt(KEY_AWAY_WINDOWS, 0))
     }
 
     fun setAway(context: Context, state: AwayState?) {
         prefs(context).edit().apply {
-            if (state == null) remove(KEY_AWAY_SINCE).remove(KEY_AWAY_MIC).remove(KEY_AWAY_FOCUS)
-            else putLong(KEY_AWAY_SINCE, state.sinceMs).putBoolean(KEY_AWAY_MIC, state.micMutedByUs).putBoolean(KEY_AWAY_FOCUS, state.focusPausedByUs)
+            if (state == null) remove(KEY_AWAY_SINCE).remove(KEY_AWAY_MIC).remove(KEY_AWAY_FOCUS).remove(KEY_AWAY_WINDOWS)
+            else putLong(KEY_AWAY_SINCE, state.sinceMs).putBoolean(KEY_AWAY_MIC, state.micMutedByUs).putBoolean(KEY_AWAY_FOCUS, state.focusPausedByUs).putInt(KEY_AWAY_WINDOWS, state.windows)
         }.apply()
     }
 }

@@ -66,8 +66,8 @@ object WidgetSamples {
         // #186 Perso, maison et jeux
         WidgetType.FOCUS -> FocusSample(FocusTimer.State(FocusTimer.Phase.FOCUS, 25 * MINUTE, 18 * MINUTE + 42_000, running = true, completed = 2), NoisePlayer.Kind.FOREST)
         WidgetType.WATER -> WaterSample(Water.State(glasses = 5, goal = 8, reminder = true, intervalMinutes = 60), todayAt(15))
-        WidgetType.AWAY -> null
-        WidgetType.HA -> null
+        WidgetType.AWAY -> AwaySample(state = null, minutes = 0)
+        WidgetType.HA -> HaSample.DEFAULT
         WidgetType.VALORANT -> ValorantWidget.SAMPLE
     }
 

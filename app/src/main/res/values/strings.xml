@@ -1423,6 +1423,14 @@
     <string name="ha_off">Éteint</string>
     <string name="ha_scene">Scène</string>
     <string name="ha_unavailable">Injoignable</string>
+    <string name="ha_scenes">Scènes</string>
+    <string name="ha_pick_title">Entité à montrer</string>
+    <string name="ha_entity_state">%1$s, %2$s</string>
+    <string name="ha_sample_salon">Salon</string>
+    <string name="ha_sample_bureau">Bureau</string>
+    <string name="ha_sample_cafe">Cafetière</string>
+    <string name="ha_sample_chambre">Chambre</string>
+    <string name="ha_sample_film">Soirée film</string>
     <string name="ha_unavailable_hint">%1$s : Home Assistant ne la joint pas pour le moment</string>
     <string name="ha_empty">Aucune lumière, prise ou scène à afficher : ajoute-les dans HA_ENTITIES, dans le fichier .env de l\'ordinateur</string>
     <string name="widget_away">Je m\'absente</string>
@@ -1433,6 +1441,18 @@
     <string name="away_since_now">Absence à l\'instant</string>
     <string name="away_since_min">Absence depuis %1$d min</string>
     <string name="away_since_hour">Absence depuis %1$d h %2$02d</string>
+    <string name="away_does_mic">Micro de l\'ordi coupé</string>
+    <string name="away_does_focus">Focus en pause</string>
+    <string name="away_does_windows">Fenêtres gardées</string>
+    <string name="away_will_label">En partant</string>
+    <string name="away_done_label">Pendant l\'absence</string>
+    <plurals name="away_does_windows_n">
+        <item quantity="one">%1$d fenêtre gardée</item>
+        <item quantity="other">%1$d fenêtres gardées</item>
+    </plurals>
+    <string name="away_duration_min">%1$d min</string>
+    <string name="away_duration_hour">%1$d h %2$02d</string>
+    <string name="away_nothing_done">Rien n\'a été coupé</string>
     <string name="pad_unsupported">Le pavé marche avec un Mac ou un PC Windows</string>
     <string name="call_idle">Pas d\'appel</string>
     <string name="call_lobby">Avant la réunion</string>
