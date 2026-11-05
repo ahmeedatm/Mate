@@ -251,11 +251,16 @@ class WidgetModelTest {
 
     @Test
     fun `widget maintenu, agrandi dans sa plus grande taille, la plus large a surface egale`() {
-        assertEquals(WidgetSize.L, WidgetType.MEDIA.zoomSize)
-        assertEquals(WidgetSize.XL, WidgetType.KEYS.zoomSize)
-        // Tâches : Grand, Haut (2 × 4), Vertical, Moyen : Haut a la plus grande surface.
-        assertEquals(WidgetSize.T, WidgetType.TASKS.zoomSize)
-        assertEquals(WidgetSize.M, WidgetType.WATER.zoomSize)
+        // Règle seulement : les formes de chaque widget changent avec les familles (#180 à #186).
+        for (type in WidgetType.entries) {
+            val zoom = type.zoomSize
+            assertTrue("$type", zoom in type.sizes)
+            for (size in type.sizes) {
+                val area = size.w * size.h
+                assertTrue("$type : $size plus grand que $zoom", area <= zoom.w * zoom.h)
+                if (area == zoom.w * zoom.h) assertTrue("$type : $size plus large que $zoom", size.w <= zoom.w)
+            }
+        }
         assertTrue(WidgetType.MEDIA.zoomable)
         assertFalse(WidgetType.HERO.zoomable)
     }
