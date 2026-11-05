@@ -1,6 +1,7 @@
 package app.mate.ui.home
 
 import app.mate.R
+import app.mate.github.Forge
 
 /**
  * Données d'exemple d'un widget, pour son aperçu dans le catalogue ([HomeWidget.showPreview]) : écrites en dur, sans
@@ -51,13 +52,13 @@ object WidgetSamples {
         WidgetType.PRESENT -> null
 
         // #185 Dev
-        WidgetType.AGENTS -> null
-        WidgetType.JIRA -> null
-        WidgetType.GITLAB -> null
-        WidgetType.PIPELINES -> null
-        WidgetType.GITHUB -> null
-        WidgetType.ACTIONS -> null
-        WidgetType.METRICS -> null
+        WidgetType.AGENTS -> AgentsSample(sampleAgents())
+        WidgetType.JIRA -> JiraSample(sampleJira())
+        WidgetType.GITLAB -> MrsSample(sampleMrs())
+        WidgetType.PIPELINES -> PipelinesSample(samplePipelines(Forge.GITLAB))
+        WidgetType.GITHUB -> MrsSample(sampleMrs())
+        WidgetType.ACTIONS -> PipelinesSample(samplePipelines(Forge.GITHUB))
+        WidgetType.METRICS -> MetricsSample(sampleMetrics())
 
         // #186 Perso, maison et jeux
         WidgetType.FOCUS -> null

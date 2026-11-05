@@ -190,6 +190,14 @@ class GitLabView @JvmOverloads constructor(
         }
     }
 
+    /** Aperçu du catalogue : l'exemple, sans réseau ni boucle. */
+    fun showSample(mrs: GitLabMrs) {
+        visibility = VISIBLE
+        status.visibility = GONE
+        showConnected(true)
+        render(mrs)
+    }
+
     private suspend fun refresh() {
         val id = ++lastRead
         try {

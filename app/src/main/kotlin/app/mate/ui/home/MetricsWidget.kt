@@ -14,6 +14,8 @@ import kotlinx.coroutines.launch
 /**
  * Des chiffres calculés par l'ordinateur (taille d'un dossier, état d'un build, compteur). Les commandes sont écrites
  * à la main dans metrics.json sur l'ordinateur, qui les lance : la tablette lit seulement le résultat, chaque minute.
+ * Pastille : le premier chiffre ; Ligne : côte à côte ; Colonne et 2 cases de large : empilés ; dès 3 × 2 : en grille
+ * de 2 colonnes, plus grands en Grand et en Plein écran.
  */
 class MetricsWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidget(context, host, placed) {
     private val title = cardTitle(R.string.widget_metrics)
@@ -29,6 +31,12 @@ class MetricsWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidg
 
     private var metrics: List<Metric>? = null
     private var error: String? = null
+
+    override fun showPreview(sample: WidgetSample) {
+        metrics = (sample as? MetricsSample)?.metrics ?: return
+        error = null
+        render(null)
+    }
 
     override fun applySize() {
         // Ligne (une case de haut) : les chiffres côte à côte ; sinon empilés.
@@ -55,17 +63,27 @@ class MetricsWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidg
         status.text = note
         status.visibility = if (note == null) View.GONE else View.VISIBLE
         val side = rows.orientation == LinearLayout.HORIZONTAL
-        val shown = metricsShown(placed.size.w, placed.size.h)?.let { current?.take(it) } ?: current
-        shown?.forEach {
-            rows.addView(row(it), if (side) LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.MATCH_PARENT, 1f) else LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, 0, 1f))
+        val shown = metricsShown(placed.size.w, placed.size.h)?.let { current?.take(it) } ?: current ?: return
+        // Dès 3 cases de large sur 2 de haut : deux chiffres par rangée.
+        val perRow = if (side) shown.size else if (placed.size.w >= 3) 2 else 1
+        for (group in shown.chunked(perRow.coerceAtLeast(1))) {
+            val line = LinearLayout(context)
+            group.forEach { line.addView(row(it), LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.MATCH_PARENT, 1f)) }
+            rows.addView(line, if (side) LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.MATCH_PARENT, group.size.toFloat()) else LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, 0, 1f))
         }
+    }
+
+    private fun valueSize() = when (family) {
+        ShapeFamily.FULL -> 40f
+        ShapeFamily.PILL, ShapeFamily.LARGE -> 30f
+        else -> 22f
     }
 
     private fun row(metric: Metric) = LinearLayout(context).apply {
         orientation = LinearLayout.VERTICAL
         gravity = android.view.Gravity.CENTER_VERTICAL
         if (metric.value == null) contentDescription = context.getString(R.string.widget_metrics_unavailable, metric.label)
-        addView(label(if (placed.size == WidgetSize.XL || placed.size == WidgetSize.S) 30f else 22f).apply {
+        addView(label(valueSize()).apply {
             text = metric.value ?: context.getString(R.string.widget_metrics_none)
             maxLines = 1
             ellipsize = android.text.TextUtils.TruncateAt.END

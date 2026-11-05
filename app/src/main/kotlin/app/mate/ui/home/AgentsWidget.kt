@@ -21,10 +21,11 @@ import app.mate.ui.stateLabel
 import java.util.Locale
 
 /**
- * Agents Claude : les compteurs (travaillent, surveillent, attendent, finis) et, en L, la liste courte des sessions qui
- * comptent ; toucher ouvre le tableau en plein écran. À partir de 3 cases de large (3 × 2, Très grand, 3 × 4, plein
- * écran), le tableau lui-même ([AgentsView]) : ses colonnes défilent, le widget garde l'appui long et le balayage ; sur
- * 2 lignes seulement il se resserre (`compact`). Relu tant que la page de l'Accueil est à l'écran.
+ * Agents Claude. Pastille : le nombre de sessions qui attendent. Ligne : les compteurs (travaillent, surveillent,
+ * attendent, finis) côte à côte ; Colonne : empilés, puis dès 1 × 3 la liste courte des sessions qui comptent ; 2 cases
+ * de large (2 × 2, 2 × 3, 2 × 4) : compteurs et liste. Toucher ouvre le tableau en plein écran. À partir de 3 cases de
+ * large et 2 de haut, le tableau lui-même ([AgentsView]) : ses colonnes défilent, le widget garde l'appui long et le
+ * balayage ; sur 2 lignes seulement il se resserre (`compact`). Relu tant que la page de l'Accueil est à l'écran.
  */
 class AgentsWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidget(context, host, placed) {
     private val counters = LinearLayout(context)
@@ -50,8 +51,18 @@ class AgentsWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidge
     /** Pastille (1 × 1) : le nombre de sessions qui attendent, comme les autres widgets Dev ([DevGlanceView]). */
     private val pill = DevGlanceView(context, R.string.agents_title)
 
-    private val full get() = placed.size.w >= 3
-    private val small get() = placed.size == WidgetSize.S
+    private val full get() = placed.size.w >= 3 && family != ShapeFamily.ROW
+    private val small get() = family == ShapeFamily.PILL
+
+    /** Sessions listées sous les compteurs : aucune en Ligne et en 1 × 2, plus la forme est haute plus il y en a. */
+    private val listRows get() = when {
+        family == ShapeFamily.COLUMN -> 2 * (placed.size.h - 2)
+        placed.size.w == 2 && placed.size.h >= 2 -> 2 * placed.size.h
+        else -> 0
+    }
+
+    /** Aperçu du catalogue : l'exemple reste, sans abonnement. */
+    private var previewing = false
 
     override val view = object : OwnerFrameLayout(context) {
         // Seul le tableau garde les gestes de la grille ; les compteurs laissent l'appui long au mode Modifier.
@@ -74,9 +85,17 @@ class AgentsWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidge
             view.setOnClickListener { host.overlays.agentsBoard(host.owner) }
         }
         board.compact = placed.size.h < 3
-        counters.orientation = if (placed.size == WidgetSize.V) LinearLayout.VERTICAL else LinearLayout.HORIZONTAL
+        counters.orientation = if (family == ShapeFamily.COLUMN) LinearLayout.VERTICAL else LinearLayout.HORIZONTAL
         last?.let(::render)
-        follow()
+        if (previewing) board.visibility = if (full) View.VISIBLE else View.GONE else follow()
+    }
+
+    override fun showPreview(sample: WidgetSample) {
+        val state = (sample as? AgentsSample)?.state ?: return
+        previewing = true
+        last = AgentsFeed.Snapshot(state, null, System.currentTimeMillis())
+        board.showSample(state)
+        applySize()
     }
 
     override fun setActive(active: Boolean) {
@@ -117,8 +136,8 @@ class AgentsWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidge
         counter(AgentState.WORKING, true, state.counts.monitoring, R.plurals.agent_count_monitoring)
         counter(AgentState.WAITING, false, waiting, R.plurals.agent_count_waiting)
         counter(AgentState.DONE, false, state.counts.done + state.counts.idle, R.plurals.agent_count_done)
-        if (placed.size != WidgetSize.L) return
-        val shown = shortList(state.sessions, MAX_ROWS)
+        if (listRows == 0) return
+        val shown = shortList(state.sessions, listRows)
         if (shown.isEmpty()) {
             note.text = context.getString(R.string.agents_empty)
             note.visibility = View.VISIBLE
@@ -149,7 +168,7 @@ class AgentsWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidge
 
     /** Un compteur : icône de l'état (la roue tourne, l'écran pulse), nombre, libellé. */
     private fun counter(kind: AgentState, monitoring: Boolean, n: Int, text: Int) {
-        val vertical = placed.size == WidgetSize.V
+        val vertical = family == ShapeFamily.COLUMN
         val color = when {
             n == 0 -> color(R.attr.c_text_faint)
             monitoring -> color(R.attr.c_agent_monitor)
@@ -163,7 +182,7 @@ class AgentsWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidge
                 addView(
                     TextView(context).apply {
                         this.text = String.format(Locale.getDefault(), "%d", n)
-                        textSize = if (placed.size == WidgetSize.L) 26f else 20f
+                        textSize = if (listRows > 0 && !vertical) 26f else 20f
                         setTextColor(color)
                     },
                     LinearLayout.LayoutParams(-2, -2).apply { marginStart = dp(6) },
@@ -177,9 +196,5 @@ class AgentsWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidge
             },
             LinearLayout.LayoutParams(if (vertical) ViewGroup.LayoutParams.MATCH_PARENT else 0, ViewGroup.LayoutParams.WRAP_CONTENT, if (vertical) 0f else 1f),
         )
-    }
-
-    private companion object {
-        const val MAX_ROWS = 4
     }
 }

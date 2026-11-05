@@ -283,7 +283,8 @@ class WidgetModelTest {
     @Test
     fun `les tailles 3 x 2, 3 x 4 et plein ecran sont reservees aux tableaux`() {
         assertEquals(listOf(3 to 2, 3 to 4, 4 to 4), listOf(WidgetSize.L3, WidgetSize.T3, WidgetSize.FULL).map { it.w to it.h })
-        for (type in WidgetType.entries) {
+        // Un widget qui a les 16 formes (#178) n'est plus concerné.
+        for (type in WidgetType.entries.filter { it.sizes.size < WidgetSize.entries.size }) {
             val big = type.sizes.filter { it == WidgetSize.L3 || it == WidgetSize.T3 || it == WidgetSize.FULL }
             if (type in boards) {
                 assertEquals("$type", listOf(WidgetSize.L3, WidgetSize.T3, WidgetSize.FULL), big)
@@ -303,7 +304,7 @@ class WidgetModelTest {
     fun `le mixeur a une taille 4 x 3 posee en bas, les autres tableaux non`() {
         assertEquals(4 to 3, WidgetSize.XL3.w to WidgetSize.XL3.h)
         assertEquals(WidgetSize.XL3, WidgetType.MIXER.sizes.single { it.w == 4 && it.h == 3 })
-        for (type in boards - WidgetType.MIXER) assertFalse("$type", WidgetSize.XL3 in type.sizes)
+        for (type in boards - WidgetType.MIXER) assertFalse("$type", WidgetSize.XL3 in type.sizes && type.sizes.size < WidgetSize.entries.size)
         val mixer = Placed(WidgetType.MIXER, WidgetSize.XL, 0, 0, 1)
         val layout = HomeLayout(mutableListOf(mixer), 1)
         assertEquals(WidgetSize.XL3, layout.pick(mixer, 4f, 3f))
@@ -329,7 +330,7 @@ class WidgetModelTest {
         assertEquals(WidgetSize.L3, layout.pick(jira, 3f, 2f))
         assertEquals(WidgetSize.FULL, layout.pick(jira, 4f, 4f))
         assertEquals(WidgetSize.T3, layout.pick(jira, 3.1f, 3.7f))
-        assertEquals(WidgetSize.XL, layout.pick(jira, 3.6f, 1.2f))
+        assertEquals(WidgetSize.W, layout.pick(jira, 3.6f, 1.2f))
         assertEquals(WidgetSize.S, layout.pick(jira, 0.5f, 0.5f))
         // Taille refusée par le widget : jamais choisie (une horloge n'a pas de plein écran).
         val clock = Placed(WidgetType.CLOCK, WidgetSize.L, 0, 0, 2)

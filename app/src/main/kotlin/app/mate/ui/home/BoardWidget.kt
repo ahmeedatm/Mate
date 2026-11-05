@@ -9,6 +9,9 @@ import app.mate.gitlab.pipelineTitle
 import app.mate.gitlab.shortProject
 import app.mate.gitlab.timeOf
 import app.mate.net.BackendClient
+import app.mate.net.GitLabMrs
+import app.mate.net.GitLabPipelines
+import app.mate.net.JiraIssues
 import app.mate.net.Pipeline
 import app.mate.net.runCatchingCancellable
 import app.mate.ui.GitLabView
@@ -24,7 +27,8 @@ import kotlinx.coroutines.launch
 /**
  * Jira, GitLab, Pipelines, GitHub et Actions sur un profil (anciens onglets du Deck, Deck V2) : les vues autonomes [JiraView], [GitLabView] et [PipelinesView] dans
  * une carte. Leurs colonnes défilent : le widget garde l'appui long et le balayage. Relues seulement tant que le profil
- * est à l'écran ; proposées au catalogue seulement si l'ordinateur les offre ([WidgetType.offered]).
+ * est à l'écran ; proposées au catalogue seulement si l'ordinateur les offre ([WidgetType.offered]). Pastille, Ligne et
+ * Colonne : le résumé ([DevGlanceView]) ; Bloc, Grand et Plein écran : le tableau.
  */
 class BoardWidget(
     context: Context,
@@ -33,13 +37,16 @@ class BoardWidget(
     private val board: View,
     private val activate: (Boolean) -> Unit,
     private val settings: (() -> Unit)? = null,
-    /** Petites formes (Pastille, Ligne, Colonne) : de quoi remplir [DevGlanceView] ; null : le tableau dans toutes les formes. */
-    private val glance: Glancer? = null,
+    /** Petites formes (Pastille, Ligne, Colonne) et aperçu : de quoi remplir [DevGlanceView] et le tableau. */
+    private val glance: Glancer<*>,
 ) : HomeWidget(context, host, placed) {
-    private val small get() = glance != null && (placed.size.w == 1 || placed.size.h == 1)
-    private val compact = glance?.let { DevGlanceView(context, it.title) }
+    private val small get() = family == ShapeFamily.PILL || family == ShapeFamily.ROW || family == ShapeFamily.COLUMN
+    private val compact = DevGlanceView(context, glance.title)
     private var active = false
     private var last: Pair<GlanceContent?, String?>? = null
+
+    /** Aperçu du catalogue : l'exemple reste, ni lecture ni boucle. */
+    private var previewing = false
 
     override val view = object : OwnerFrameLayout(context) {
         // Le tableau défile : il garde l'appui long et le balayage ; une petite forme les laisse à la grille.
@@ -47,14 +54,20 @@ class BoardWidget(
         override val ownsSwipe get() = !small
     }.asCard(12).apply {
         addView(board, ViewGroup.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT))
-        compact?.let { addView(it, ViewGroup.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT)) }
+        addView(compact, ViewGroup.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT))
     }
 
     override fun applySize() {
         view.asCard(if (small) 16 else 12)
-        compact?.visibility = if (small) View.VISIBLE else View.GONE
-        setActive(active)
-        last?.let { (content, note) -> compact?.show(content, placed.size.w, placed.size.h, note) }
+        compact.visibility = if (small) View.VISIBLE else View.GONE
+        if (previewing) board.visibility = if (small) View.GONE else View.VISIBLE else setActive(active)
+        last?.let { (content, note) -> compact.show(content, placed.size.w, placed.size.h, note) }
+    }
+
+    override fun showPreview(sample: WidgetSample) {
+        last = glance.preview(sample) ?: return
+        previewing = true
+        applySize()
     }
 
     override fun setActive(active: Boolean) {
@@ -64,11 +77,10 @@ class BoardWidget(
     }
 
     override suspend fun load() {
-        val source = glance ?: return
         if (!active || !small) return
-        val shown = runCatchingCancellable { source.load() }.fold({ it }, { null to context.errorText(it) })
+        val shown = runCatchingCancellable { glance.load() }.fold({ it }, { null to context.errorText(it) })
         last = shown
-        compact?.show(shown.first, placed.size.w, placed.size.h, shown.second)
+        compact.show(shown.first, placed.size.w, placed.size.h, shown.second)
     }
 
     override val hasSettings get() = settings != null
@@ -78,18 +90,35 @@ class BoardWidget(
     }
 }
 
-/** Ce qu'une petite forme d'un tableau montre : son titre, et sa lecture (contenu, ou phrase à la place : à connecter, vide). */
-class Glancer(val title: Int, val load: suspend () -> Pair<GlanceContent?, String?>)
+/**
+ * Ce qu'un tableau montre hors de sa forme pleine : son titre, la lecture de ses données (réseau), leur résumé pour
+ * [DevGlanceView] (contenu, ou phrase à la place : à connecter, vide) et, pour l'aperçu, l'exemple à mettre dans le tableau.
+ */
+class Glancer<T>(
+    val title: Int,
+    private val fetch: suspend () -> T,
+    private val summary: (T) -> Pair<GlanceContent?, String?>,
+    private val sampleOf: (WidgetSample) -> T?,
+    private val showInBoard: (T) -> Unit,
+) {
+    suspend fun load() = summary(fetch())
+
+    /** Aperçu : l'exemple dans le tableau, et son résumé ; null si l'exemple n'est pas celui de ce tableau. */
+    fun preview(sample: WidgetSample): Pair<GlanceContent?, String?>? = sampleOf(sample)?.let {
+        showInBoard(it)
+        summary(it)
+    }
+}
 
 fun jiraWidget(context: Context, host: HomeHost, placed: Placed): BoardWidget {
     val board = JiraView(context).apply { attach(host.owner) }
+    val glance = Glancer(R.string.widget_jira, { BackendClient(context).jira.issues() }, { jiraSummary(context, host, it) }, { (it as? JiraSample)?.issues }, board::showSample)
     // ⚙ : colonnes affichées et « tous les tickets » ; la vue se relit dès qu'il est enregistré.
-    return BoardWidget(context, host, placed, board, board::setActive, board::openColumns, Glancer(R.string.widget_jira) { jiraIssuesGlance(context, host) })
+    return BoardWidget(context, host, placed, board, board::setActive, board::openColumns, glance)
 }
 
 /** Jira en petite forme : mes tickets ouverts en compteur et en lignes, chacun avec sa clé et sa colonne. */
-private suspend fun jiraIssuesGlance(context: Context, host: HomeHost): Pair<GlanceContent?, String?> {
-    val issues = if (glanceDemo(context)) sampleJira() else BackendClient(context).jira.issues()
+private fun jiraSummary(context: Context, host: HomeHost, issues: JiraIssues): Pair<GlanceContent?, String?> {
     if (!issues.connected) return null to context.getString(R.string.jira_connect)
     val glance = jiraGlance(issues)
     if (glance.rows.isEmpty()) return null to context.getString(R.string.jira_empty)
@@ -106,13 +135,13 @@ private suspend fun jiraIssuesGlance(context: Context, host: HomeHost): Pair<Gla
 fun gitLabWidget(context: Context, host: HomeHost, placed: Placed, forge: Forge = Forge.GITLAB): BoardWidget {
     val board = GitLabView(context, forge = forge).apply { attach(host.scope) }
     val title = if (forge == Forge.GITHUB) R.string.widget_github else R.string.widget_gitlab
-    return BoardWidget(context, host, placed, board, board::setActive, glance = Glancer(title) { mrsGlance(context, host, forge) })
+    val glance = Glancer(title, { BackendClient(context).forge(forge).mrs() }, { mrsSummary(context, host, forge, it) }, { (it as? MrsSample)?.mrs }, board::showSample)
+    return BoardWidget(context, host, placed, board, board::setActive, glance = glance)
 }
 
 /** MR (ou PR) en petite forme : à relire en compteur, toutes en lignes, chacune avec l'état de son pipeline et sa colonne. */
-private suspend fun mrsGlance(context: Context, host: HomeHost, forge: Forge): Pair<GlanceContent?, String?> {
+private fun mrsSummary(context: Context, host: HomeHost, forge: Forge, mrs: GitLabMrs): Pair<GlanceContent?, String?> {
     val texts = forgeTexts(forge)
-    val mrs = if (glanceDemo(context)) sampleMrs() else BackendClient(context).forge(forge).mrs()
     if (!mrs.connected) return null to context.getString(texts.connect)
     val glance = mrGlance(mrs)
     if (glance.rows.isEmpty()) return null to context.getString(texts.empty)
@@ -124,14 +153,11 @@ private suspend fun mrsGlance(context: Context, host: HomeHost, forge: Forge): P
     return GlanceContent(glance.count, context.getString(R.string.glance_to_review), lines) to null
 }
 
-/** shortcut: données d'exemple forcées pour les captures des variantes (#185) ; remplacé par l'aperçu de la règle (#178). */
-private fun glanceDemo(context: Context) = context.getSharedPreferences("companion", Context.MODE_PRIVATE).getBoolean("glance_demo", false)
-
 /** Pipelines GitLab (⚙ : planifications), ou runs GitHub Actions (`forge`) : même vue. */
 fun pipelinesWidget(context: Context, host: HomeHost, placed: Placed, forge: Forge = Forge.GITLAB): BoardWidget {
     val board = PipelinesView(context, forge = forge).apply { attach(host.scope) }
     val title = if (forge == Forge.GITHUB) R.string.widget_actions else R.string.widget_pipelines
-    val glance = Glancer(title) { pipelinesGlance(context, host, forge) }
+    val glance = Glancer(title, { BackendClient(context).forge(forge).pipelines() }, { pipelinesSummary(context, host, forge, it) }, { (it as? PipelinesSample)?.pipelines }, board::showSample)
     if (forge == Forge.GITHUB) return BoardWidget(context, host, placed, board, board::setActive, glance = glance)
     // ⚙ : choix des planifications ; la vue les relit dès qu'il est enregistré.
     val choices = ScheduleChoicesDialog(context, host.scope, board::reload)
@@ -148,9 +174,8 @@ fun pipelinesWidget(context: Context, host: HomeHost, placed: Placed, forge: For
 }
 
 /** Pipelines (ou runs Actions) en petite forme : les échecs en compteur, les derniers runs en lignes, le plus récent en tête. */
-private suspend fun pipelinesGlance(context: Context, host: HomeHost, forge: Forge): Pair<GlanceContent?, String?> {
+private fun pipelinesSummary(context: Context, host: HomeHost, forge: Forge, pipelines: GitLabPipelines): Pair<GlanceContent?, String?> {
     val texts = forgeTexts(forge)
-    val pipelines = if (glanceDemo(context)) samplePipelines(forge) else BackendClient(context).forge(forge).pipelines()
     if (!pipelines.connected) return null to context.getString(texts.connect)
     val glance = pipelineGlance(pipelines)
     if (glance.rows.isEmpty()) return null to context.getString(texts.boardEmpty)

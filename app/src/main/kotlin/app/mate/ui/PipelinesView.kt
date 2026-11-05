@@ -130,6 +130,14 @@ class PipelinesView @JvmOverloads constructor(
         scope.launch { refresh() }
     }
 
+    /** Aperçu du catalogue : l'exemple, sans réseau ni boucle. */
+    fun showSample(answer: GitLabPipelines) {
+        visibility = VISIBLE
+        status.visibility = GONE
+        showConnected(true)
+        render(answer)
+    }
+
     private suspend fun refresh() {
         val id = ++lastRead
         try {
