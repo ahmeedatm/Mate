@@ -4,9 +4,7 @@ package app.mate.ui.home
 val GAPS_ORDINATEUR = listOf(
     WidgetGap(WidgetType.KEYS, shapes = true, preview = true, reason = "formes et aperçu à faire (#183)"),
     WidgetGap(WidgetType.APPS, shapes = true, preview = true, reason = "formes et aperçu à faire (#183)"),
-    WidgetGap(WidgetType.OPEN, shapes = true, preview = true, reason = "formes et aperçu à faire (#183)"),
     WidgetGap(WidgetType.PAD, shapes = true, preview = true, reason = "formes et aperçu à faire (#183)"),
-    WidgetGap(WidgetType.SCREEN, shapes = true, preview = true, reason = "formes et aperçu à faire (#183)"),
     WidgetGap(WidgetType.PERF, shapes = true, preview = true, reason = "formes et aperçu à faire (#183)"),
     WidgetGap(WidgetType.WEB, shapes = true, preview = true, reason = "formes et aperçu à faire (#183)"),
 )

@@ -1395,6 +1395,23 @@
     <string name="widget_mixer_desc">Sortie, micro et chaque appli, avec leurs scènes</string>
     <string name="widget_open">Fenêtres ouvertes</string>
     <string name="widget_open_desc">Les fenêtres de l\'ordi par écran, à déplacer ou fermer</string>
+    <plurals name="widget_open_count">
+        <item quantity="one">%1$d fenêtre</item>
+        <item quantity="other">%1$d fenêtres</item>
+    </plurals>
+    <string name="widget_open_front">Devant : %1$s</string>
+    <string name="widget_open_none_short">Aucune fenêtre</string>
+    <string name="widget_open_focus">Mettre %1$s devant</string>
+    <string name="widget_open_sample_browser">Navigateur</string>
+    <string name="widget_open_sample_browser_title">Météo de la semaine</string>
+    <string name="widget_open_sample_mail">Mail</string>
+    <string name="widget_open_sample_mail_title">Boîte de réception</string>
+    <string name="widget_open_sample_mail_title2">Réponse à Eliot</string>
+    <string name="widget_open_sample_notes">Notes</string>
+    <string name="widget_open_sample_notes_title">Courses du samedi</string>
+    <string name="widget_open_sample_music">Musique</string>
+    <string name="widget_open_sample_music_title">Lecture en cours</string>
+    <string name="widget_open_sample_display">Écran principal</string>
     <string name="widget_apps">Applis</string>
     <string name="widget_apps_desc">Les applis de l\'ordinateur : lancer, ajouter, retirer, voir leurs fenêtres</string>
     <string name="widget_discord">Discord</string>

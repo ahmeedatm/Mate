@@ -42,9 +42,9 @@ object WidgetSamples {
         // #183 Piloter l'ordinateur
         WidgetType.KEYS -> null
         WidgetType.APPS -> null
-        WidgetType.OPEN -> null
+        WidgetType.OPEN -> OpenWindowsSample
         WidgetType.PAD -> null
-        WidgetType.SCREEN -> null
+        WidgetType.SCREEN -> ScreenSample
         WidgetType.PERF -> null
         WidgetType.WEB -> null
 

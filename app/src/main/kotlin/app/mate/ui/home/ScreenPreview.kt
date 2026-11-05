@@ -1,5 +1,6 @@
 package app.mate.ui.home
 
+import kotlin.math.max
 import kotlin.math.min
 
 /** Logique pure du widget Écran ([ScreenWidget]) : cadence des images et réduction au décodage. */
@@ -19,15 +20,21 @@ object ScreenPreview {
 
     /**
      * `inSampleSize` du décodage : la plus grande puissance de deux qui laisse l'image au moins aussi grande que celle
-     * montrée (calée dans la vue, sans l'agrandir). Vue pas encore mesurée : 1. Moins de pixels en mémoire (tas de 128 Mo).
+     * montrée (calée dans la vue, ou qui la remplit si [crop], sans l'agrandir). Vue pas encore mesurée : 1. Moins de pixels en mémoire (tas de 128 Mo).
      */
-    fun sampleSize(imageWidth: Int, imageHeight: Int, viewWidth: Int, viewHeight: Int): Int {
+    fun sampleSize(imageWidth: Int, imageHeight: Int, viewWidth: Int, viewHeight: Int, crop: Boolean = false): Int {
         if (imageWidth <= 0 || imageHeight <= 0 || viewWidth <= 0 || viewHeight <= 0) return 1
-        val scale = min(1f, min(viewWidth / imageWidth.toFloat(), viewHeight / imageHeight.toFloat()))
+        val ratioW = viewWidth / imageWidth.toFloat()
+        val ratioH = viewHeight / imageHeight.toFloat()
+        // Recadrée, l'image remplit la vue : c'est le plus grand des deux rapports qui compte.
+        val scale = min(1f, if (crop) max(ratioW, ratioH) else min(ratioW, ratioH))
         val targetWidth = imageWidth * scale
         val targetHeight = imageHeight * scale
         var sample = 1
         while (imageWidth / (sample * 2) >= targetWidth && imageHeight / (sample * 2) >= targetHeight) sample *= 2
         return sample
     }
+
+    /** Pastille, Ligne et Colonne recadrent l'écran au centre (il remplit la case) ; les autres formes le montrent entier. */
+    fun crops(family: ShapeFamily) = family == ShapeFamily.PILL || family == ShapeFamily.ROW || family == ShapeFamily.COLUMN
 }
