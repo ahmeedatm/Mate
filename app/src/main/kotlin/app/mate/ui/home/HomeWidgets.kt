@@ -49,6 +49,7 @@ import app.mate.ui.WaterCard
 import app.mate.ui.dp
 import app.mate.ui.errorText
 import app.mate.ui.label
+import app.mate.ui.mixer.AudioOutputChooser
 import app.mate.ui.showForTyping
 import app.mate.ui.showImmersive
 import app.mate.ui.themeBool
@@ -62,7 +63,6 @@ import java.text.SimpleDateFormat
 import java.util.Calendar
 import java.util.Date
 import java.util.Locale
-import app.mate.ui.mixer.AudioOutputChooser
 
 /** Ce que l'Accueil partage avec ses widgets : agenda chargé une fois pour tous, actions de l'écran. */
 interface HomeHost {

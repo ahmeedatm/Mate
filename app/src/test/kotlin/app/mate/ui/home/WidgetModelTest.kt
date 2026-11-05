@@ -281,6 +281,8 @@ class WidgetModelTest {
     fun `les tailles 3 x 2, 3 x 4 et plein ecran sont reservees aux tableaux`() {
         assertEquals(listOf(3 to 2, 3 to 4, 4 to 4), listOf(WidgetSize.L3, WidgetSize.T3, WidgetSize.FULL).map { it.w to it.h })
         for (type in WidgetType.entries) {
+            // Widget qui a ses 16 formes : la règle des 16 formes (WidgetRulesTest, #178) remplace celle-ci.
+            if (type.sizes.toSet().size == WidgetSize.entries.size) continue
             val big = type.sizes.filter { it == WidgetSize.L3 || it == WidgetSize.T3 || it == WidgetSize.FULL }
             if (type in boards) {
                 assertEquals("$type", listOf(WidgetSize.L3, WidgetSize.T3, WidgetSize.FULL), big)

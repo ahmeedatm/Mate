@@ -53,6 +53,9 @@ class AudioLink(private val context: Context, private val scope: CoroutineScope,
 
     companion object {
         const val MAX = 100
+
+        /** Pas des actions d'accessibilité de [VolumeFill], comme les boutons de volume de la tablette. */
+        const val STEP = 6
         private const val POLL_MS = 1_000L
     }
 }
