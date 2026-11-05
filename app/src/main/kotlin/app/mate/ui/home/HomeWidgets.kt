@@ -27,9 +27,6 @@ import androidx.core.widget.ImageViewCompat
 import androidx.lifecycle.LifecycleOwner
 import app.mate.MainActivity
 import app.mate.R
-import app.mate.focus.FocusTicks
-import app.mate.focus.FocusTimer
-import app.mate.focus.NoisePlayer
 import app.mate.github.Forge
 import app.mate.net.BackendClient
 import app.mate.net.CalendarEvent
@@ -38,9 +35,7 @@ import app.mate.net.DeckTile
 import app.mate.net.HomeFeatures
 import app.mate.net.runCatchingCancellable
 import app.mate.ui.ComputerAudioView
-import app.mate.ui.FocusDial
 import app.mate.ui.IconCache
-import app.mate.ui.Look
 import app.mate.ui.NowPlayingView
 import app.mate.ui.ShoppingCard
 import app.mate.ui.TasksCard
