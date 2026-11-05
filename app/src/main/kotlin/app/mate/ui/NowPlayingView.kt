@@ -1,6 +1,7 @@
 package app.mate.ui
 
 import android.content.Context
+import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.util.AttributeSet
 import android.view.Gravity
@@ -160,6 +161,16 @@ class NowPlayingView @JvmOverloads constructor(
             timeline.visibility = GONE
             sessionsBar.visibility = GONE
         }
+    }
+
+    /** Aperçu du catalogue : une lecture d'exemple et sa pochette, sans ordinateur ni relecture. */
+    fun showSample(session: MediaSession, art: Bitmap) {
+        sessions = listOf(session)
+        // Clé déjà tenue : render ne demande pas la vignette à l'ordinateur.
+        thumbKey = session.thumb
+        render()
+        thumb.setImageBitmap(art)
+        fitThumb(mode != Layout.SMALL)
     }
 
     /** Deck à l'écran ou non : on ne relit que s'il est visible. */

@@ -12,7 +12,7 @@ import java.io.File
 class ThemePalettesTest {
     private val xml = File("src/main/res/values/palettes.xml").readText()
 
-    private val sober = listOf("CadranClair", "CadranSombre")
+    private val sober = listOf("Chaleur", "CadranClair", "CadranSombre")
     private val retro = listOf("Cadran", "CadranNuit", "Retro")
     private val ambiances = listOf("Registre", "Studio", "Maison", "Tableau", "Terminal")
     private val imported = sober + retro + ambiances

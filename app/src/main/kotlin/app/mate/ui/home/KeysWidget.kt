@@ -24,7 +24,6 @@ import app.mate.ui.TitleView
 import app.mate.ui.errorText
 import app.mate.ui.showImmersive
 import app.mate.ui.themeBool
-import app.mate.ui.themeRes
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -33,11 +32,14 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 
+/** Exemple des Touches pour le catalogue : libellé et symbole de chaque touche, sans ordinateur ni icône à charger. */
+class KeysSample(val keys: List<Pair<Int, String>>) : WidgetSample
+
 /**
- * Touches du deck choisies : lancer Discord, une macro, couper le micro… sans passer par le Deck. S, M et V gardent
- * leurs rangées de grandes touches (1, 2 ou 6) ; L et XL montrent toutes les touches choisies dans une grille qui
- * défile, avec une case « + ». Appui long : la seconde action de la touche si elle en a une, sinon la retirer du
- * widget. L'éditeur d'une touche perso s'ouvre seulement en mode Modifier (réglages du widget, bouton « Modifier »).
+ * Touches du deck choisies : lancer Discord, une macro, couper le micro… sans passer par le Deck. Pastille, Ligne et
+ * Colonne montrent les premières touches, autant que la place en tient ([TileStrip]) ; Bloc, Grand et Plein écran
+ * montrent toutes les touches choisies dans une grille qui défile, avec une case « + ». Appui long : la seconde action
+ * de la touche si elle en a une, sinon la retirer du widget. L'éditeur d'une touche perso s'ouvre seulement en mode Modifier (réglages du widget, bouton « Modifier »).
  * Les touches sont gardées avec leur nom et leur emoji : elles s'affichent même ordinateur éteint.
  */
 class KeysWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidget(context, host, placed) {
@@ -46,7 +48,17 @@ class KeysWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidget(
 
     override val hasSettings get() = true
 
-    private val capacity get() = when (placed.size) { WidgetSize.S -> 1; WidgetSize.M -> 2; WidgetSize.V -> 6; else -> MAX_KEYS }
+    /** Aperçu du catalogue : ses touches remplacent celles de l'ordinateur, même si [applySize] repasse. */
+    private var preview: List<KeyRef>? = null
+
+    /** Touches dessinées en Ligne ou Colonne : la vue se redessine quand sa taille en fait tenir un autre nombre. */
+    private var drawnFit = 0
+
+    init {
+        view.addOnLayoutChangeListener { _, left, top, right, bottom, _, _, _, _ ->
+            if (!inGrid && fitFor(right - left, bottom - top) != drawnFit) view.post { render() }
+        }
+    }
 
     private val grid by lazy {
         TileGridView(context, host.scope).apply {
@@ -69,9 +81,15 @@ class KeysWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidget(
     /** Hors du scope de la vue : un relâchement ne doit jamais être annulé avec elle. */
     private val pushScope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
 
-    private val inGrid get() = placed.size == WidgetSize.L || placed.size == WidgetSize.XL
+    private val inGrid get() = TileShapes.usesGrid(placed.size)
 
     override fun applySize() = render()
+
+    override fun showPreview(sample: WidgetSample) {
+        val keys = (sample as? KeysSample)?.keys ?: return
+        preview = keys.mapIndexed { i, (label, symbol) -> KeyRef("$SAMPLE_ID$i", context.getString(label), symbol = symbol) }
+        render()
+    }
 
     /** Relit le deck : une touche modifiée ou vidée dans l'éditeur se met à jour ici. */
     override suspend fun load() {
@@ -99,7 +117,7 @@ class KeysWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidget(
     /** Les touches sont rangées par ordinateur : leurs ids (`k-N`, pages fixes) n'ont de sens que sur le sien. */
     private val computerId get() = Computers.active(context)?.id
 
-    private fun keys() = KeyRef.listFor(placed.config, computerId)
+    private fun keys() = preview ?: KeyRef.listFor(placed.config, computerId)
 
     private fun store(keys: List<KeyRef>) {
         if (!KeyRef.putFor(placed.config, computerId, keys)) return
@@ -111,8 +129,11 @@ class KeysWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidget(
         view.removeAllViews()
         view.background = null
         view.setPadding(0, 0, 0, 0)
+        view.orientation = LinearLayout.VERTICAL
+        // Avant toute sortie, état vide compris : sinon le listener de layout redessinerait à chaque passe.
+        drawnFit = fitFor(view.width, view.height)
         val keys = keys()
-        // Grille vide (Grand, Très grand) : la même invitation au milieu que les petites tailles, pas un « + » perdu dans un coin.
+        // Grille vide (Bloc, Grand, Plein écran) : la même invitation au milieu que les petites formes, pas un « + » perdu dans un coin.
         if (inGrid && keys.isNotEmpty()) return renderGrid(keys)
         if (keys.isEmpty()) {
             view.addView(LinearLayout(context).apply {
@@ -125,30 +146,20 @@ class KeysWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidget(
             }, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, 0, 1f))
             return
         }
-        // Vertical : les touches dans une tuile titrée, comme les autres cartes de l'Accueil.
-        if (placed.size == WidgetSize.V) {
-            view.setBackgroundResource(themeRes(context, R.attr.c_home_card_bg))
-            view.setPadding(dp(24), dp(24), dp(24), dp(20))
-            view.addView(
-                cardTitle(R.string.widget_keys_title),
-                LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT).apply { bottomMargin = dp(12) },
-            )
-        }
-        // Vertical : 2 × 3 ; sinon une rangée.
-        val perRow = if (capacity >= 4) 2 else capacity
-        val gap = dp(12)
-        keys.take(capacity).chunked(perRow).forEachIndexed { r, rowKeys ->
-            val row = LinearLayout(context).apply { orientation = LinearLayout.HORIZONTAL }
-            for ((i, key) in rowKeys.withIndex()) {
-                row.addView(rowTile(key), LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.MATCH_PARENT, 1f).apply { if (i > 0) marginStart = gap })
-            }
-            // Rangée incomplète : la place vide garde la largeur des touches.
-            repeat(perRow - rowKeys.size) { row.addView(View(context), LinearLayout.LayoutParams(0, 0, 1f).apply { marginStart = gap }) }
-            view.addView(row, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, 0, 1f).apply { if (r > 0) topMargin = dp(ROW_GAP_DP) })
-        }
+        renderStrip(keys)
     }
 
+    private fun fitFor(width: Int, height: Int) = TileStrip.fit(context, family, width, height)
+
+    /** Pastille, Ligne, Colonne : les premières touches, autant que la forme en tient ([TileStrip]). */
+    private fun renderStrip(keys: List<KeyRef>) {
+        view.orientation = TileStrip.orientation(family)
+        for ((i, key) in keys.take(drawnFit).withIndex()) view.addView(rowTile(key, TileStrip.look(family)), TileStrip.params(context, family, i))
+    }
+
+    /** Bloc, Grand, Plein écran : toutes les touches dans une grille qui défile, la case « + » en dernier. */
     private fun renderGrid(keys: List<KeyRef>) {
+        view.orientation = LinearLayout.VERTICAL
         view.asCard(12)
         grid.cells = keys.map { TileGridView.Cell(it) } + TileGridView.Cell(KeyRef(ADD_ID, context.getString(R.string.widget_keys_add)), add = true)
         (grid.parent as? ViewGroup)?.removeView(grid)
@@ -156,9 +167,10 @@ class KeysWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidget(
     }
 
     /** Touche des rangées : la même case que la grille, cliquable seule, dans un cadre qui garde son appui long. */
-    private fun rowTile(key: KeyRef): View {
+    private fun rowTile(key: KeyRef, look: TileLook = TileLook.TILE): View {
         val tile = TileGridView.newCell(context)
         TileGridView.bind(tile, TileGridView.Cell(key), host.scope)
+        look.apply(tile)
         // Allumée ou éteinte côté ordinateur : la touche se redessine si son état a changé, tant qu'elle est à l'écran.
         var stopListening: (() -> Unit)? = null
         var drawnLit = TileStates.isLit(key.id)
@@ -170,6 +182,7 @@ class KeysWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidget(
                         if (v.isAttachedToWindow && lit != drawnLit) {
                             drawnLit = lit
                             TileGridView.bind(v, TileGridView.Cell(key), host.scope)
+                            look.apply(v)
                         }
                     }
                 }
@@ -383,8 +396,6 @@ class KeysWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidget(
 
         const val MAX_KEYS = 30
         const val ADD_ID = "+"
-
-        /** Entre deux rangées du widget vertical : 3 rangées de touches (52 dp + libellé) tiennent à peine. */
-        const val ROW_GAP_DP = 4
+        const val SAMPLE_ID = "exemple-"
     }
 }

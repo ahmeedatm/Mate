@@ -492,6 +492,103 @@
         <item name="c_pattern_color">#00000000</item>
     </style>
 
+    <!-- Chaleur (par défaut, 05/11/2026) : la DA de claude.ai et anthropic.com relevée sur les sites (crème, terre cuite,
+         serif de livre), choisie par Ahmed. Terre cuite foncée #A34A2B pour tenir 4,5:1 (tuile appuyée comprise) (le #D97757 du site ne fait que 3:1 sur
+         le crème). Titres et grands chiffres en Source Serif 4, textes en Hanken Grotesk (OFL). Tuiles blanches à filet crème. -->
+    <style name="Palette.Chaleur" parent="">
+        <item name="c_card_bg">@drawable/chaleur_tile_bg</item>
+        <item name="c_tile_bg">@drawable/chaleur_tile_bg</item>
+        <item name="c_home_card_bg">@drawable/chaleur_tile_bg</item>
+        <item name="c_card_pad">24dp</item>
+        <item name="c_talk">?attr/c_accent</item>
+        <item name="c_talk_live">?attr/c_text</item>
+        <item name="c_wallpaper">@null</item>
+        <item name="c_spine">0dp</item>
+        <item name="c_label">?attr/c_text_dim</item>
+        <item name="c_slider_thumb">?attr/c_accent</item>
+        <item name="c_slider_track">?attr/c_text_faint</item>
+        <item name="c_key_plate">@drawable/round_bg</item>
+        <item name="c_primary">?attr/c_accent</item>
+        <item name="c_on_primary">?attr/c_on_accent</item>
+        <item name="c_primary_pressed">#FF8F4127</item>
+        <item name="c_font_medium">@font/hanken_grotesk_500</item>
+        <item name="c_font_light">@font/hanken_grotesk_400</item>
+        <item name="c_font_regular">@font/hanken_grotesk_400</item>
+        <item name="c_font_title">@font/source_serif_500</item>
+        <item name="c_font_display">@font/source_serif_300</item>
+        <item name="c_font_label">@font/source_serif_500</item>
+        <item name="c_label_caps">false</item>
+        <item name="c_text_shadow">#00000000</item>
+        <item name="android:fontFamily">@font/hanken_grotesk_400</item>
+        <item name="c_bg">#FFFAF9F5</item>
+        <item name="c_rail">#FFF0EEE6</item>
+        <item name="c_surface">#FFFFFFFF</item>
+        <item name="c_surface_raised">#FFF5F4ED</item>
+        <item name="c_surface_pressed">#FFE8E6DC</item>
+        <item name="c_stroke">#FFE8E6DC</item>
+        <item name="c_accent">#FFA34A2B</item>
+        <item name="c_accent_soft">#FFFBEDE6</item>
+        <item name="c_on_accent">#FFFFFFFF</item>
+        <item name="c_text">#FF141413</item>
+        <item name="c_frame_bg">#FF000000</item>
+        <item name="c_frame_text">#FFFFFFFF</item>
+        <item name="c_frame_shadow">#99000000</item>
+        <item name="c_text_dim">#FF3D3D3A</item>
+        <item name="c_text_faint">#FF5E5D59</item>
+        <item name="c_graphic">#FF87867F</item>
+        <item name="c_ok">#FF4A6A2E</item>
+        <item name="c_ok_soft">#FFE3EAD6</item>
+        <item name="c_ko">#FFB23A2E</item>
+        <item name="c_ko_soft">#24B23A2E</item>
+        <item name="c_on_ko">#FFFFFFFF</item>
+        <item name="c_warn">#FF8A5A00</item>
+        <item name="c_agent_wait">#FFB23A2E</item>
+        <item name="c_agent_done">#FF4A6A2E</item>
+        <item name="c_agent_limit">#FF2F5F8F</item>
+        <item name="c_agent_work">#FFA34A2B</item>
+        <item name="c_agent_monitor">#FF7A5B00</item>
+        <item name="c_paper">#FFFFFFFF</item>
+        <item name="c_scrim">#52000000</item>
+        <item name="c_hue_orange">#FFA34A2B</item>
+        <item name="c_hue_cyan">#FF2F6F78</item>
+        <item name="c_hue_violet">#FF6A5596</item>
+        <item name="c_hue_pink">#FF9E4566</item>
+        <item name="c_hue_yellow">#FF7A5B00</item>
+        <item name="c_hue_blue">#FF3A6A9A</item>
+        <item name="c_hue_red">#FFB23A2E</item>
+        <item name="c_hue_green">#FF4A6A2E</item>
+        <item name="c_mx_plate">?attr/c_bg</item>
+        <item name="c_mx_lcd_bg">?attr/c_text</item>
+        <item name="c_mx_lcd_text">#FFF2C9B4</item>
+        <item name="c_mx_text">?attr/c_text</item>
+        <item name="c_mx_slot">?attr/c_text</item>
+        <item name="c_mx_cap_top">?attr/c_text_dim</item>
+        <item name="c_mx_cap_bottom">?attr/c_text</item>
+        <item name="c_mx_cap_line">?attr/c_surface</item>
+        <item name="c_mx_led_off">?attr/c_text_dim</item>
+        <item name="c_mx_led_low">#FF9CC08A</item>
+        <item name="c_mx_led_mid">#FFF2C46B</item>
+        <item name="c_mx_led_high">#FFE07A5F</item>
+        <item name="c_mx_engrave">?attr/c_text_faint</item>
+        <item name="c_mx_shadow">#24000000</item>
+        <item name="c_mx_highlight">#FFFFFFFF</item>
+        <item name="c_mx_key_top">?attr/c_surface</item>
+        <item name="c_mx_key_bottom">?attr/c_surface_raised</item>
+        <item name="c_big_keys">false</item>
+        <item name="c_title_size">17sp</item>
+        <item name="c_backdrop">false</item>
+        <item name="c_mx_bare">false</item>
+        <item name="c_flow">false</item>
+        <item name="c_flow_dark">#00000000</item>
+        <item name="c_flow_red">#00000000</item>
+        <item name="c_flow_orange">#00000000</item>
+        <item name="c_flow_cream">#00000000</item>
+        <item name="c_grain_light">#00000000</item>
+        <item name="c_grain_dark">#00000000</item>
+        <item name="c_pattern">none</item>
+        <item name="c_pattern_color">#00000000</item>
+    </style>
+
     <!-- Clair et Sombre : la DA Cadran sans texture (blanc et noir francs, sans grain ni tubes), rouge Unowhy en accent, Outfit.
          Venus d'UnoMate (palettes Cadran clair et Cadran sombre). Textes au moins 4,5:1 sur le fond, la tuile et le relief (ThemePalettesTest). -->
     <style name="Palette.CadranClair" parent="">
