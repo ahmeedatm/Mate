@@ -12,7 +12,7 @@ import app.mate.R
 import app.mate.ui.home.WidgetSize
 
 /**
- * Vues du gabarit `view_tasks_cadran`, partagées par [TasksCard] et [ShoppingCard], rangées selon la forme posée
+ * Vues du gabarit `view_tasks_cadran`, partagées par [TasksCard], [ShoppingCard] et l'Échéance ([app.mate.ui.home.ChecklistWidget]), rangées selon la forme posée
  * ([ListShape]) : la tête (anneau faits / total, nombre restant, légende), le filet, la liste en une ou plusieurs colonnes.
  */
 class ListCardViews(private val card: LinearLayout) {
@@ -70,10 +70,11 @@ class ListCardViews(private val card: LinearLayout) {
         return true
     }
 
-    /** `number` vide : rien de lu encore (la légende dit le titre ou l'erreur). */
-    fun showHead(number: String, caption: String, done: Int, total: Int) {
+    /** `number` vide : rien de lu encore (la légende dit le titre ou l'erreur) ; `urgent` : le chiffre en rouge (Échéance). */
+    fun showHead(number: String, caption: String, done: Int, total: Int, urgent: Boolean = false) {
         this.number.text = number
         this.number.isVisible = number.isNotEmpty()
+        this.number.setTextColor(themeColor(context, if (urgent) R.attr.c_ko else R.attr.c_text))
         this.caption.text = caption
         ring.progress = if (total == 0) 0f else done.toFloat() / total
         ringText.text = if (total == 0) "" else context.getString(R.string.list_ring_progress, done, total)

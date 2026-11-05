@@ -16,108 +16,94 @@ import android.widget.EditText
 import android.widget.ImageButton
 import android.widget.LinearLayout
 import android.widget.ScrollView
+import android.widget.TextView
+import androidx.annotation.ArrayRes
+import androidx.annotation.StringRes
 import androidx.appcompat.app.AlertDialog
+import androidx.core.view.isVisible
 import androidx.core.widget.ImageViewCompat
 import app.mate.R
+import app.mate.ui.ListCardViews
+import app.mate.ui.ListShape
 import app.mate.ui.Look
 import app.mate.ui.StrikeText
 import app.mate.ui.TaskCheck
-import app.mate.ui.TitleView
 import app.mate.ui.showForTyping
 import app.mate.ui.showImmersive
-import app.mate.ui.themeFont
 import java.text.SimpleDateFormat
 import java.util.Calendar
 import java.util.Locale
 
+/** Exemple de l'Échéance pour le catalogue : un titre, des étapes dont les [done] premières sont faites, l'échéance dans [days] jours. */
+class ChecklistSample(@StringRes val title: Int, @ArrayRes val steps: Int, val done: Int, val days: Int) : WidgetSample
+
 /**
- * Clôture : une checklist d'échéance (titre, date limite, étapes à cocher), gardée dans la config du widget
- * ([Checklist]). Un toucher coche ou décoche une étape et l'enregistre tout de suite ; le compte à rebours et la
- * progression suivent à la minute. Titre, échéance et étapes se règlent par le ⚙ du mode Modifier (aucun champ dans la
- * carte : une saisie passe par une boîte).
+ * Échéance : une checklist (titre, date limite, étapes à cocher), gardée dans la config du widget ([Checklist]). Même
+ * carte que Tâches et Courses ([ListCardViews], [ListShape]) : l'anneau des étapes faites, le temps qui reste en chiffre
+ * (rouge à moins de 24 h), le titre, puis les étapes. Un toucher coche ou décoche une étape et l'enregistre tout de suite ;
+ * le compte à rebours suit à la minute. Titre, échéance et étapes se règlent par le ⚙ du mode Modifier (aucun champ dans
+ * la carte : une saisie passe par une boîte) ; en Pastille, sans liste, un toucher ouvre ces réglages.
  */
 class ChecklistWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidget(context, host, placed) {
-    private val title = TitleView(context).apply {
-        isSingleLine = true
-        ellipsize = TextUtils.TruncateAt.END
-    }
-    private val countdown = label(26f, light = true).apply { isSingleLine = true }
-    private val header = LinearLayout(context).apply {
-        gravity = Gravity.CENTER_VERTICAL
-        addView(title, LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f))
-        addView(countdown, LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT).apply { marginStart = dp(12) })
-    }
-
-    private val fill = View(context).apply { setBackgroundResource(R.drawable.bar) }
-    private val rest = View(context).apply { setBackgroundResource(R.drawable.bar) }
-    private val bar = LinearLayout(context).apply {
-        addView(fill, LinearLayout.LayoutParams(0, MATCH, 0f))
-        addView(rest, LinearLayout.LayoutParams(0, MATCH, 1f))
-    }
-    private val count = label(14f, R.attr.c_text_dim).apply { isSingleLine = true }
-    private val progress = LinearLayout(context).apply {
-        gravity = Gravity.CENTER_VERTICAL
-        addView(bar, LinearLayout.LayoutParams(0, dp(6), 1f))
-        addView(count, LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT).apply { marginStart = dp(12) })
-    }
-
-    private val steps = LinearLayout(context).apply { orientation = LinearLayout.VERTICAL }
-    private val scroll = ScrollView(context).apply {
-        isVerticalScrollBarEnabled = false
-        isFillViewport = true
-        addView(steps, ViewGroup.LayoutParams(MATCH, ViewGroup.LayoutParams.WRAP_CONTENT))
-    }
-
-    override val view = LinearLayout(context).asCard(20).apply {
+    private val card = LinearLayout(context).apply {
         orientation = LinearLayout.VERTICAL
-        addView(header, LinearLayout.LayoutParams(MATCH, ViewGroup.LayoutParams.WRAP_CONTENT))
-        addView(progress, LinearLayout.LayoutParams(MATCH, ViewGroup.LayoutParams.WRAP_CONTENT).apply { topMargin = dp(12) })
-        addView(scroll, LinearLayout.LayoutParams(MATCH, 0, 1f).apply { topMargin = dp(8) })
+        LayoutInflater.from(context).inflate(R.layout.view_tasks_cadran, this, true)
     }
+    private val views = ListCardViews(card).apply {
+        (addRow as TextView).setText(R.string.checklist_add)
+        addRow.setOnClickListener { askText(R.string.checklist_add, R.string.checklist_step_hint, "") { text -> commit(model().add(text)); render() } }
+        ringBox.isClickable = false
+    }
+
+    override val view: View = card.asCard()
 
     override val hasSettings get() = true
 
-    private fun model() = Checklist.read(placed.config)
+    /** Aperçu du catalogue : ses étapes remplacent la config, et rien ne s'enregistre. */
+    private var preview: Checklist? = null
+
+    private fun model() = preview ?: Checklist.read(placed.config)
 
     /** Enregistre `next` dans la config du widget, sur la tablette, tout de suite. */
     private fun commit(next: Checklist) {
+        if (preview != null) return
         next.writeTo(placed.config)
         host.save()
     }
 
-    override fun applySize() = render()
+    override fun applySize() {
+        val shape = ListShape.of(placed.size)
+        views.apply(shape)
+        card.setOnClickListener(if (shape.list) null else View.OnClickListener { showSettings() })
+        render()
+    }
+
+    override fun showPreview(sample: WidgetSample) {
+        val example = sample as? ChecklistSample ?: return
+        val steps = context.resources.getStringArray(example.steps).mapIndexed { i, text -> ChecklistStep(text, done = i < example.done) }
+        val due = System.currentTimeMillis() + example.days * DAY_MS + HOUR_MS
+        preview = Checklist(context.getString(example.title), due, steps)
+        render()
+    }
 
     /** Chaque minute : le compte à rebours bouge, les étapes non. */
-    override fun onMinute() = renderHeader(model())
+    override fun onMinute() = renderHead(model())
 
     private fun render() {
         val list = model()
-        renderHeader(list)
-        steps.removeAllViews()
-        steps.gravity = if (list.steps.isEmpty()) Gravity.CENTER else Gravity.TOP
-        if (list.steps.isEmpty()) return renderEmpty()
-        list.steps.forEachIndexed { i, step -> steps.addView(stepRow(i, step), LinearLayout.LayoutParams(MATCH, dp(ROW_DP)).apply { if (i > 0) topMargin = dp(4) }) }
+        renderHead(list)
+        views.status.setText(R.string.checklist_empty)
+        views.status.isVisible = list.steps.isEmpty()
+        views.fill(list.steps.mapIndexed { i, step -> stepRow(i, step) })
+        views.addRow.isVisible = views.shape.addRow && list.total < Checklist.MAX_STEPS
     }
 
-    private fun renderHeader(list: Checklist) {
+    /** Le temps qui reste en chiffre (rien sans échéance), le titre en légende, l'anneau des étapes faites. */
+    private fun renderHead(list: Checklist) {
         val now = System.currentTimeMillis()
-        title.text = list.title.ifBlank { context.getString(R.string.checklist_default_title) }
-        val text = countdownText(list.countdown(now))
-        countdown.visibility = if (text == null) View.GONE else View.VISIBLE
-        countdown.text = text
-        countdown.contentDescription = text?.let { context.getString(R.string.checklist_countdown_cd, it) }
-        countdown.setTextColor(color(if (list.urgent(now)) R.attr.c_ko else R.attr.c_text))
-
-        progress.visibility = if (list.total == 0) View.GONE else View.VISIBLE
-        (fill.layoutParams as LinearLayout.LayoutParams).weight = list.doneCount.toFloat()
-        (rest.layoutParams as LinearLayout.LayoutParams).weight = (list.total - list.doneCount).toFloat()
-        bar.requestLayout()
-        fill.background.mutate().setTint(color(R.attr.c_ok))
-        rest.background.mutate().setTint(color(R.attr.c_stroke))
-        count.text = context.getString(R.string.checklist_progress, list.doneCount, list.total)
-        progress.contentDescription = context.getString(R.string.checklist_progress_cd, list.doneCount, list.total)
-        bar.importantForAccessibility = View.IMPORTANT_FOR_ACCESSIBILITY_NO
-        count.importantForAccessibility = View.IMPORTANT_FOR_ACCESSIBILITY_NO
+        val title = list.title.ifBlank { context.getString(R.string.checklist_default_title) }
+        views.showHead(countdownText(list.countdown(now)).orEmpty(), title, list.doneCount, list.total, urgent = list.urgent(now))
+        views.ringBox.contentDescription = context.getString(R.string.checklist_progress_cd, list.doneCount, list.total)
     }
 
     private fun countdownText(c: Countdown): String? = when (c) {
@@ -128,51 +114,33 @@ class ChecklistWidget(context: Context, host: HomeHost, placed: Placed) : HomeWi
         Countdown.Passed -> context.getString(R.string.checklist_passed)
     }
 
-    /** Aucune étape : l'invitation au milieu de la carte, le bouton ouvre la boîte de saisie. */
-    private fun renderEmpty() {
-        steps.addView(label(16f, R.attr.c_text_dim).apply {
-            setText(R.string.checklist_empty)
-            gravity = Gravity.CENTER
-            setPadding(0, 0, 0, dp(8))
-        }, LinearLayout.LayoutParams(MATCH, ViewGroup.LayoutParams.WRAP_CONTENT))
-        steps.addView(Button(context, null, 0, R.style.PrimaryButton).apply {
-            setText(R.string.checklist_add)
-            setOnClickListener { askText(R.string.checklist_add, R.string.checklist_step_hint, "") { text -> commit(model().add(text)); render() } }
-        }, LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT).apply { gravity = Gravity.CENTER_HORIZONTAL })
-    }
-
-    /** Une étape : case ronde et libellé (barré quand elle est faite) ; toucher la ligne la coche ou la décoche. */
+    /** Une étape : case ronde et libellé (barré quand elle est faite) ; toucher la case ou la ligne la coche ou la décoche. */
     private fun stepRow(index: Int, step: ChecklistStep): View {
-        val check = TaskCheck(context).apply { setDone(step.done, animate = false) }
-        val label = StrikeText(context).apply {
-            text = step.text
-            textSize = 17f
-            maxLines = 2
-            ellipsize = TextUtils.TruncateAt.END
-            typeface = themeFont(context, R.attr.c_font_regular)
-            setStruck(step.done, animate = false)
-        }
-        val row = LinearLayout(context).apply {
-            gravity = Gravity.CENTER_VERTICAL
-            addView(check, LinearLayout.LayoutParams(dp(48), dp(48)).apply { marginEnd = -dp(12) })
-            addView(label, LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f))
-        }
-        fun style(done: Boolean) {
+        val row = LayoutInflater.from(context).inflate(R.layout.item_task_cadran, views.list, false)
+        val check = row.findViewById<TaskCheck>(R.id.task_check)
+        val label = row.findViewById<StrikeText>(R.id.task_label)
+        row.findViewById<View>(R.id.task_open).visibility = View.GONE
+        label.text = step.text
+        fun style(done: Boolean, animate: Boolean) {
+            check.setDone(done, animate)
+            label.setStruck(done, animate)
             label.setTextColor(color(if (done) R.attr.c_text_faint else R.attr.c_text))
-            row.contentDescription = context.getString(if (done) R.string.checklist_step_done else R.string.checklist_step_todo, step.text)
+            val description = context.getString(if (done) R.string.checklist_step_done else R.string.checklist_step_todo, step.text)
+            row.contentDescription = description
+            check.contentDescription = description
         }
-        style(step.done)
-        Look.pressSpring(row)
-        row.setOnClickListener {
+        style(step.done, animate = false)
+        val toggle = View.OnClickListener {
             row.performHapticFeedback(HapticFeedbackConstants.VIRTUAL_KEY)
             val next = model().toggle(index)
-            val done = next.steps.getOrNull(index)?.done ?: return@setOnClickListener
-            commit(next)
-            check.setDone(done, animate = true)
-            label.setStruck(done, animate = true)
-            style(done)
-            renderHeader(next)
+            val done = next.steps.getOrNull(index)?.done ?: return@OnClickListener
+            if (preview != null) preview = next else commit(next)
+            style(done, animate = true)
+            renderHead(next)
         }
+        check.setOnClickListener(toggle)
+        row.setOnClickListener(toggle)
+        Look.pressSpring(row)
         return row
     }
 
@@ -300,7 +268,7 @@ class ChecklistWidget(context: Context, host: HomeHost, placed: Placed) : HomeWi
     private companion object {
         const val MATCH = ViewGroup.LayoutParams.MATCH_PARENT
 
-        /** Ligne d'étape : cible tactile de 48 dp. */
-        const val ROW_DP = 48
+        const val HOUR_MS = 3_600_000L
+        const val DAY_MS = 24 * HOUR_MS
     }
 }

@@ -59,8 +59,10 @@ class LayoutConfigTest {
 
     @Test
     fun `une taille non permise pour le type est refusee`() {
-        // shortcut: la Checklist n'a pas encore ses 16 formes (#187) ; quand tous les widgets les auront, ce refus disparaît avec ce test.
-        assertTrue(refused(json("[${w("checklist", "XL", 0, 0, 0)}]")).contains("pas permise"))
+        // shortcut: un widget qui n'a pas encore ses 16 formes (#187) ; quand tous les widgets les auront, ce refus disparaît avec ce test.
+        val type = WidgetType.entries.firstOrNull { it.sizes.size < WidgetSize.entries.size } ?: return
+        val size = (WidgetSize.entries - type.sizes.toSet()).first()
+        assertTrue(refused(json("[${w(type.key, size.name, 0, 0, 0)}]")).contains("pas permise"))
     }
 
     @Test

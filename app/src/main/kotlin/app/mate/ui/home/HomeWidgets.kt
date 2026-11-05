@@ -499,65 +499,6 @@ class ShoppingWidget(context: Context, host: HomeHost, placed: Placed) : HomeWid
     }
 }
 
-/** Exemple de la Note pour le catalogue : un texte. */
-class NoteSample(@StringRes val text: Int) : WidgetSample
-
-/** Note libre, écrite depuis la tablette (« Penser au pain », un code de salle…). */
-class NoteWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidget(context, host, placed) {
-    private val text = label(22f).apply { gravity = Gravity.CENTER_VERTICAL }
-    override val view = LinearLayout(context).asCard().apply {
-        orientation = LinearLayout.VERTICAL
-        setPadding(dp(20), dp(16), dp(20), dp(16))
-        addView(cardTitle(R.string.widget_note))
-        addView(text, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, 0, 1f).apply { topMargin = dp(6) })
-        setOnClickListener { showSettings() }
-    }
-
-    override val hasSettings get() = true
-
-    override fun applySize() {
-        text.textSize = when (placed.size) { WidgetSize.S -> 17f; WidgetSize.M -> 21f; else -> 26f }
-        render()
-    }
-
-    /** Aperçu du catalogue : son texte reste affiché, même si [applySize] repasse. */
-    private var preview: NoteSample? = null
-
-    override fun showPreview(sample: WidgetSample) {
-        preview = sample as? NoteSample ?: return
-        render()
-    }
-
-    private fun render() {
-        val note = preview?.let { context.getString(it.text) } ?: placed.config.optString("text")
-        text.text = note.ifBlank { context.getString(R.string.widget_note_empty) }
-        text.setTextColor(color(if (note.isBlank()) R.attr.c_text_faint else R.attr.c_text))
-    }
-
-    override fun showSettings() {
-        val input = LayoutInflater.from(context).inflate(R.layout.item_input, null) as EditText
-        input.inputType = InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_FLAG_CAP_SENTENCES or InputType.TYPE_TEXT_FLAG_MULTI_LINE
-        input.setText(placed.config.optString("text"))
-        input.setSelection(input.text.length)
-        input.setHint(R.string.widget_note_hint)
-        val box = LinearLayout(context).apply {
-            setPadding(dp(24), dp(8), dp(24), 0)
-            addView(input, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT))
-        }
-        AlertDialog.Builder(context)
-            .setTitle(R.string.widget_note)
-            .setView(box)
-            .setNegativeButton(R.string.cancel, null)
-            .setPositiveButton(R.string.save) { _, _ ->
-                placed.config.put("text", input.text.toString().trim().take(200))
-                host.save()
-                render()
-            }
-            .create()
-            .showForTyping(input)
-    }
-}
-
 /** À la place d'un widget qui a besoin de l'ordinateur, tant qu'aucun n'est appairé. */
 class ConnectWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidget(context, host, placed) {
     override val view = LinearLayout(context).asCard().apply {

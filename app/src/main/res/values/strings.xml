@@ -1722,6 +1722,16 @@
     <string name="checklist_step_hint">Nom de l\'étape</string>
     <string name="checklist_step_rename">Renommer l\'étape %1$s</string>
     <string name="checklist_step_remove">Retirer l\'étape %1$s</string>
+    <string name="checklist_sample_title">Impôts</string>
+    <string-array name="checklist_sample_steps">
+        <item>Fiches de paie</item>
+        <item>Relevé bancaire</item>
+        <item>Frais réels</item>
+        <item>Dons</item>
+        <item>Vérifier le montant</item>
+        <item>Signer</item>
+        <item>Envoyer</item>
+    </string-array>
     <string name="media_opened_app">Ouvert dans l\'appli %1$s</string>
 
     <!-- Commandes vocales (bouton Parler de la barre latérale) -->

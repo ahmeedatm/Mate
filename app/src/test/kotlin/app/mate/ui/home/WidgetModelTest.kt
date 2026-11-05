@@ -268,10 +268,12 @@ class WidgetModelTest {
     @Test
     fun `widget Cloture, en L et Haut, tout sur la tablette, config gardee avec la disposition`() {
         assertEquals(WidgetType.CHECKLIST, WidgetType.of("checklist"))
-        assertEquals(listOf(WidgetSize.L, WidgetSize.T), WidgetType.CHECKLIST.sizes)
+        // Les 16 formes (#181) ; l'ajout reste en 2 × 2, puis 2 × 4.
+        assertEquals(listOf(WidgetSize.L, WidgetSize.T), WidgetType.CHECKLIST.sizes.take(2))
+        assertEquals(WidgetSize.entries.size, WidgetType.CHECKLIST.sizes.size)
         assertFalse(WidgetType.CHECKLIST.computer)
         assertTrue(WidgetType.CHECKLIST.offered(HomeFeatures()))
-        assertEquals(WidgetSize.T, WidgetType.CHECKLIST.zoomSize)
+        assertEquals(WidgetSize.FULL, WidgetType.CHECKLIST.zoomSize)
         val config = Checklist.config("Bilan", 1_800_000_000_000L, listOf(ChecklistStep("Balance", true), ChecklistStep("TVA")))
         val context = app.mate.FakeContext()
         HomeLayout.save(context, HomeLayout(mutableListOf(Placed(WidgetType.CHECKLIST, WidgetSize.T, 0, 0, 0, config)), 1))
