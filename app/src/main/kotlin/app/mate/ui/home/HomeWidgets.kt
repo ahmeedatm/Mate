@@ -18,6 +18,7 @@ import android.widget.ScrollView
 import android.widget.TextClock
 import android.widget.TextView
 import android.widget.Toast
+import androidx.annotation.ArrayRes
 import androidx.annotation.StringRes
 import androidx.appcompat.app.AlertDialog
 import androidx.core.content.ContextCompat
@@ -36,10 +37,13 @@ import app.mate.net.CalendarEvent
 import app.mate.net.DeckPage
 import app.mate.net.DeckTile
 import app.mate.net.HomeFeatures
+import app.mate.net.ShoppingItem
+import app.mate.net.TaskItem
 import app.mate.net.runCatchingCancellable
 import app.mate.ui.ComputerAudioView
 import app.mate.ui.FocusDial
 import app.mate.ui.IconCache
+import app.mate.ui.ListShape
 import app.mate.ui.Look
 import app.mate.ui.NowPlayingView
 import app.mate.ui.ShoppingCard
@@ -599,10 +603,25 @@ class MediaWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidget
     }
 }
 
+/** Exemple des Tâches pour le catalogue : les libellés, dont les [done] derniers sont faits. */
+class TasksSample(@ArrayRes val labels: Int, val done: Int) : WidgetSample
+
 /** Tâches du jour, stockées sur l'ordinateur ; le nombre restant va sur la pastille de la barre latérale. */
 class TasksWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidget(context, host, placed) {
     private val tasks = TasksCard(context).apply { attach(host.scope) { pending -> host.main?.setPendingTasks(pending) } }
     override val view: View = tasks.asCard()
+
+    override fun applySize() = tasks.setShape(ListShape.of(placed.size))
+
+    override fun showPreview(sample: WidgetSample) {
+        val example = sample as? TasksSample ?: return
+        val labels = context.resources.getStringArray(example.labels)
+        tasks.showPreview(
+            labels.mapIndexed { i, label ->
+                TaskItem("sample-$i", label, daily = false, done = i >= labels.size - example.done, auto = false, detail = null, hasUrl = false)
+            },
+        )
+    }
 
     override suspend fun load() = tasks.load()
 
@@ -612,10 +631,21 @@ class TasksWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidget
     }
 }
 
+/** Exemple des Courses pour le catalogue : les articles, dont les [done] derniers sont pris. */
+class ShoppingSample(@ArrayRes val labels: Int, val done: Int) : WidgetSample
+
 /** Liste de courses, stockée sur l'ordinateur ; l'ajout à la voix la remplit (« ajoute du lait à la liste de courses »). */
 class ShoppingWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidget(context, host, placed) {
     private val shopping = ShoppingCard(context).apply { attach(host.scope) }
     override val view: View = shopping.asCard()
+
+    override fun applySize() = shopping.setShape(ListShape.of(placed.size))
+
+    override fun showPreview(sample: WidgetSample) {
+        val example = sample as? ShoppingSample ?: return
+        val labels = context.resources.getStringArray(example.labels)
+        shopping.showPreview(labels.mapIndexed { i, label -> ShoppingItem("sample-$i", label, done = i >= labels.size - example.done) })
+    }
 
     override suspend fun load() = shopping.load()
 

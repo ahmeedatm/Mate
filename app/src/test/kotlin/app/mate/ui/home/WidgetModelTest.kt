@@ -253,8 +253,8 @@ class WidgetModelTest {
     fun `widget maintenu, agrandi dans sa plus grande taille, la plus large a surface egale`() {
         assertEquals(WidgetSize.L, WidgetType.MEDIA.zoomSize)
         assertEquals(WidgetSize.XL, WidgetType.KEYS.zoomSize)
-        // Tâches : Grand, Haut (2 × 4), Vertical, Moyen : Haut a la plus grande surface.
-        assertEquals(WidgetSize.T, WidgetType.TASKS.zoomSize)
+        // Tâches : les 16 formes (#181), le plein écran a la plus grande surface.
+        assertEquals(WidgetSize.FULL, WidgetType.TASKS.zoomSize)
         assertEquals(WidgetSize.M, WidgetType.WATER.zoomSize)
         assertTrue(WidgetType.MEDIA.zoomable)
         assertFalse(WidgetType.HERO.zoomable)
@@ -290,7 +290,8 @@ class WidgetModelTest {
             } else if (type == WidgetType.YTMUSIC) {
                 // Exception : YouTube Music en 3 x 2 montre la file d'attente à côté du lecteur (branche Gen2).
                 assertEquals("$type", listOf(WidgetSize.L3), big)
-            } else {
+            } else if (type.sizes.size < WidgetSize.entries.size) {
+                // Un widget qui a les 16 formes suit WidgetRulesTest (#187).
                 assertTrue("$type", big.isEmpty())
             }
         }

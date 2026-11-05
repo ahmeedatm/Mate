@@ -26,19 +26,20 @@ import kotlinx.coroutines.launch
  * Carte « Tâches du jour » de l'Accueil, stockées sur l'ordinateur : récurrentes (créées ici avec ⏰, ou dans
  * config/tasks.json comme le worklog Jira, cochée toute seule quand la journée est saisie) et ponctuelles (ici ou
  * par Claude), avec rappel parlé. 🔁 : toutes les récurrentes, même celles qui ne tombent pas aujourd'hui.
- * Console : en-tête « Tâches / N restantes », cases rondes, pas de croix par ligne (toucher la ligne ouvre la
- * suppression ; l'appui long est pris par le mode Modifier de l'Accueil), toucher « Tâches » ouvre les récurrentes,
- * toucher le compteur relit les tâches, « + Nouvelle tâche » en dernière ligne.
+ * Tête : anneau faites / total et nombre restant ([ListCardViews], rangée selon la forme par [setShape]) ; cases
+ * rondes, pas de croix par ligne (toucher la ligne ouvre la suppression ; l'appui long est pris par le mode Modifier de
+ * l'Accueil), toucher le nombre ouvre les récurrentes, toucher l'anneau relit les tâches, « + Nouvelle tâche » en
+ * dernière ligne.
  */
 class TasksCard @JvmOverloads constructor(
     context: Context,
     attrs: AttributeSet? = null,
 ) : LinearLayout(context, attrs) {
 
+    private val views: ListCardViews
     private val list: LinearLayout
-    private val count: TextView
-    private val status: TextView
     private var pending = 0
+    private var total = 0
 
     private lateinit var scope: CoroutineScope
     private var onPending: (Int) -> Unit = {}
@@ -46,14 +47,32 @@ class TasksCard @JvmOverloads constructor(
     init {
         orientation = VERTICAL
         LayoutInflater.from(context).inflate(R.layout.view_tasks_cadran, this, true)
-        list = findViewById(R.id.tasks_list)
-        count = findViewById(R.id.tasks_count)
-        status = findViewById(R.id.tasks_status)
+        views = ListCardViews(this)
+        list = views.list
         // Champ et + : fenêtre de tâche en haut de l'écran, au-dessus du clavier (texte, puis répétition et rappel).
         val newTask = View.OnClickListener { TaskDialog(context) { label, remindAt, days -> add(label, remindAt, days) }.show("") }
-        findViewById<View>(R.id.tasks_add_row).setOnClickListener(newTask)
-        findViewById<View>(R.id.tasks_title).setOnClickListener { showRecurring() }
-        count.setOnClickListener { launch { load(refresh = true) } }
+        views.addRow.setOnClickListener(newTask)
+        views.title.setOnClickListener { showRecurring() }
+        views.ringBox.contentDescription = context.getString(R.string.tasks_reload)
+        views.ringBox.setOnClickListener { launch { load(refresh = true) } }
+        views.showHead("", context.getString(R.string.widget_tasks), 0, 0)
+    }
+
+    /** Dernière liste affichée, rangée de nouveau quand la forme change. */
+    private var shown: List<TaskItem>? = null
+
+    /** Aperçu du catalogue : ni réseau, ni pastille de la barre latérale. */
+    private var preview = false
+
+    fun setShape(shape: ListShape) {
+        views.apply(shape)
+        shown?.let { render(it) }
+    }
+
+    /** Aperçu du catalogue : les tâches d'exemple, sans toucher à l'ordinateur ni à la pastille de la barre latérale. */
+    fun showPreview(tasks: List<TaskItem>) {
+        preview = true
+        render(tasks)
     }
 
     /** [onPending] reçoit le nombre de tâches non faites (badge de la barre latérale). */
@@ -72,10 +91,11 @@ class TasksCard @JvmOverloads constructor(
     var quiet = false
         set(value) {
             field = value
-            if (value && failed) showStatus(if (hasRead) null else context.getString(R.string.tasks_unavailable))
+            if (value && failed) showStatus(if (hasRead) null else unavailable())
         }
 
     suspend fun load(refresh: Boolean = false) {
+        if (preview) return
         try {
             val tasks = client().tasks.list(refresh)
             Computers.active(context)?.let { lastRead[it.id] = tasks }
@@ -85,9 +105,12 @@ class TasksCard @JvmOverloads constructor(
             failed = true
             // Les tâches déjà lues restent affichées (écran recréé : la dernière lecture de cet ordinateur).
             if (!hasRead) Computers.active(context)?.let { lastRead[it.id] }?.let { render(it) }
-            if (!hasRead) showStatus(context.getString(R.string.tasks_unavailable)) else if (!quiet) showStatus(context.errorText(e))
+            if (!hasRead) showStatus(unavailable()) else if (!quiet) showStatus(context.errorText(e))
         }
     }
+
+    /** Rien de lu : la tête le dit aussi (la Pastille n'a pas de ligne d'état). */
+    private fun unavailable(): String = context.getString(R.string.tasks_unavailable).also { views.showHead("", it, 0, 0) }
 
     private fun client() = BackendClient(context)
 
@@ -147,22 +170,24 @@ class TasksCard @JvmOverloads constructor(
 
     private fun render(tasks: List<TaskItem>) {
         hasRead = true
+        shown = tasks
         pending = tasks.count { !it.done }
-        onPending(pending)
-        showCount(tasks.isNotEmpty())
+        total = tasks.size
+        if (!preview) onPending(pending)
+        showCount()
         showStatus(if (tasks.isEmpty()) context.getString(R.string.tasks_empty) else null)
 
-        list.removeAllViews()
         if (tasks.isNotEmpty()) Look.revealOnce(list)
-        tasks.sortedBy { it.done }.forEach { list.addView(taskRow(it)) }
+        views.fill(tasks.sortedBy { it.done }.map { taskRow(it) })
     }
 
-    private fun showCount(hasTasks: Boolean) {
-        count.text = when {
-            !hasTasks -> ""
-            pending == 0 -> context.getString(R.string.tasks_all_done)
-            else -> context.resources.getQuantityString(R.plurals.tasks_remaining, pending, pending)
+    private fun showCount() {
+        val caption = if (total > 0 && pending == 0) {
+            context.getString(R.string.tasks_all_done)
+        } else {
+            context.resources.getQuantityString(R.plurals.tasks_left_caption, pending)
         }
+        views.showHead(pending.toString(), caption, total - pending, total)
     }
 
     /** Une ligne : cocher dessine la coche et la barre, puis la tâche descend sous les autres. */
@@ -178,7 +203,7 @@ class TasksCard @JvmOverloads constructor(
         }
         var done = task.done
         paint(done, animate = false)
-        if (!task.auto) check.setOnClickListener {
+        if (!task.auto && !preview) check.setOnClickListener {
             done = !done
             paint(done, animate = true)
             toggle(task, row, done)
@@ -204,7 +229,7 @@ class TasksCard @JvmOverloads constructor(
                 }
             }
         }
-        if (task.deletable) row.setOnClickListener {
+        if (task.deletable && !preview) row.setOnClickListener {
             AlertDialog.Builder(context)
                 .setTitle(task.label)
                 .setNegativeButton(R.string.cancel, null)
@@ -224,7 +249,8 @@ class TasksCard @JvmOverloads constructor(
     private fun toggle(task: TaskItem, row: View, done: Boolean) {
         pending += if (done) -1 else 1
         onPending(pending)
-        showCount(hasTasks = true)
+        shown = shown?.map { if (it.id == task.id) it.copy(done = done) else it }
+        showCount()
         launch {
             try {
                 client().tasks.setDone(task.id, done)
@@ -232,7 +258,12 @@ class TasksCard @JvmOverloads constructor(
                 load()
                 throw e
             }
-            if (!done) load() else row.postDelayed({ if (row.parent === list) sinkToBottom(row) }, SINK_DELAY_MS)
+            // Plusieurs colonnes : la liste est relue, la tâche faite repasse à la fin.
+            if (!done) {
+                load()
+            } else {
+                row.postDelayed({ if (row.parent === list) sinkToBottom(row) else if (row.parent != null) scope.launch { load() } }, SINK_DELAY_MS)
+            }
         }
     }
 
@@ -260,8 +291,8 @@ class TasksCard @JvmOverloads constructor(
     }
 
     private fun showStatus(message: String?) {
-        status.text = message
-        status.visibility = if (message == null) View.GONE else View.VISIBLE
+        views.status.text = message
+        views.status.visibility = if (message == null) View.GONE else View.VISIBLE
     }
 
     private companion object {
