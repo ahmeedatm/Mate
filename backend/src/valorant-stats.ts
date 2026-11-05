@@ -26,8 +26,8 @@ export type HistoryEntry = {
 };
 
 type Entry<T> = { until: number; value: T | null };
-/** Rang et saisons gardés 10 min (rien ne change pendant une partie, et pd limite les appels). */
-const PROFILE_TTL = 10 * 60_000;
+/** Rang et saisons gardés 10 min (rien ne change pendant une partie, et pd limite les appels) ; `VALORANT_PROFILE_MS` pour les tests. */
+const profileTtl = () => Number(process.env.VALORANT_PROFILE_MS) || 10 * 60_000;
 /** K/D récent : une fois par partie (l'historique ne bouge pas pendant qu'on joue). */
 const RECENT_TTL = 30 * 60_000;
 /** Mes 5 dernières : relues au plus toutes les 2 min, et à la fin de chaque partie. */
@@ -38,15 +38,19 @@ const FAIL_TTL = 30_000;
 const profiles = new Map<string, Entry<Profile>>();
 const recents = new Map<string, Entry<Recent> & { pending?: boolean }>();
 
-function prune<T>(map: Map<string, Entry<T>>, now: number) {
-  for (const [id, entry] of map) if (now >= entry.until) map.delete(id);
+/** Retire les entrées expirées depuis plus de `grace` (un profil expiré sert encore de secours si Riot refuse). */
+function prune<T>(map: Map<string, Entry<T>>, now: number, grace = 0) {
+  for (const [id, entry] of map) if (now >= entry.until + grace) map.delete(id);
 }
+
+/** Un profil expiré reste 30 min de secours : un refus de Riot ne fait jamais disparaître le rang déjà affiché. */
+const PROFILE_GRACE = 30 * 60_000;
 
 export async function profileOf(r: Remote, puuid: string): Promise<Profile | null> {
   const now = Date.now();
   const known = profiles.get(puuid);
   if (known && now < known.until) return known.value;
-  prune(profiles, now);
+  prune(profiles, now, PROFILE_GRACE);
   try {
     const mmr = await remote(r, `${r.pd}/mmr/v1/players/${puuid}`);
     const latest = mmr?.LatestCompetitiveUpdate ?? {};
@@ -58,11 +62,13 @@ export async function profileOf(r: Remote, puuid: string): Promise<Profile | nul
       seasons[id] = { wins: Number(s?.NumberOfWinsWithPlacements) || 0, games: Number(s?.NumberOfGames) || 0, best: Math.max(0, ...tiers) };
     }
     const profile = { tier: Number(latest.TierAfterUpdate) || 0, rr: Number(latest.RankedRatingAfterUpdate) || 0, seasons };
-    profiles.set(puuid, { until: Date.now() + PROFILE_TTL, value: profile });
+    profiles.set(puuid, { until: Date.now() + profileTtl(), value: profile });
     return profile;
   } catch {
-    profiles.set(puuid, { until: Date.now() + FAIL_TTL, value: null });
-    return null;
+    // Riot refuse (429, 5xx) : le profil déjà connu reste affiché ; nouvel essai dans 30 s.
+    const value = known?.value ?? null;
+    profiles.set(puuid, { until: Date.now() + FAIL_TTL, value });
+    return value;
   }
 }
 
@@ -128,9 +134,10 @@ export function historyOf(r: Remote, puuid: string): HistoryEntry[] {
   return (history.value ?? []).map((u) => entryOf(r, puuid, u));
 }
 
-/** Fin de partie : l'historique se relit (la partie qui vient de finir y entre). */
-export function forgetHistory() {
+/** Fin de partie : mon historique et mon rang se relisent (la partie qui vient de finir y entre). */
+export function forgetMine(puuid: string) {
   history = null;
+  profiles.delete(puuid);
 }
 
 async function loadUpdates(r: Remote, puuid: string): Promise<Update[]> {

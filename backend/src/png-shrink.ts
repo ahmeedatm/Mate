@@ -59,13 +59,14 @@ function readPng(data: Buffer): { width: number; height: number; rgba: Buffer } 
     if (data.toString("ascii", at + 4, at + 8) === "IDAT") parts.push(data.subarray(at + 8, at + 8 + len));
     at += 12 + len;
   }
+  const stride = width * channels;
   let raw: Buffer;
   try {
-    raw = zlib.inflateSync(Buffer.concat(parts));
+    // Plafond : la taille annoncée par l'en-tête, jamais plus (un PNG piégé ne gonfle pas en mémoire).
+    raw = zlib.inflateSync(Buffer.concat(parts), { maxOutputLength: height * (stride + 1) });
   } catch {
     return null;
   }
-  const stride = width * channels;
   if (raw.length < height * (stride + 1)) return null;
   const pixels = unfilter(raw, height, stride, channels);
   if (!pixels) return null;

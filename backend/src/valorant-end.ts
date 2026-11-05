@@ -1,6 +1,6 @@
 import { boardOf, matchDetails, type Board } from "./valorant-match.ts";
 import type { Remote } from "./valorant-riot.ts";
-import { forgetHistory } from "./valorant-stats.ts";
+import { forgetMine } from "./valorant-stats.ts";
 
 /**
  * Tableau des scores de fin de partie : quand la partie suivie passe au menu, le compagnon lit son détail (Riot ne l'a
@@ -41,14 +41,15 @@ export function endOfMatch(state: string, r: Remote | null): EndView | null {
 }
 
 function start(match: Watched, r: Remote) {
-  forgetHistory();
+  forgetMine(match.me);
   const since = Date.now();
   const mine: End = { status: "loading", until: Infinity, board: null };
   end = mine;
   void (async () => {
     for (let i = 0; i < TRIES && end === mine; i++) {
       try {
-        const parsed = await matchDetails(r, match.matchId);
+        // Hors de la file des stats : le tableau de fin ne passe pas derrière quarante appels de K/D.
+        const parsed = await matchDetails(r, match.matchId, { direct: true });
         if (end === mine) end = { status: "ready", until: Date.now() + showMs(), board: boardOf(parsed, match.me, match.incognito) };
         return;
       } catch {

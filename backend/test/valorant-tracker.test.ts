@@ -110,6 +110,25 @@ describe("Valorant : stats de tracker en partie", () => {
     assert.equal(riot.count("/match-history/v1/history/ennemi?"), 1);
   });
 
+  it("mmr refusé par Riot (429) une fois le profil connu : rang, RR et meilleur rang restent, pas redemandé tout de suite", async () => {
+    await server.stop();
+    server = await startServer({ os: "windows", env: { ...riot.env, VALORANT_PROFILE_MS: "50" } });
+    server.setOs({ riotLockfile: riot.lockfile });
+    riot.scene.loop = "INGAME";
+    await until(server, (j) => byName(j, "Adversaire#1")?.peakTier != null);
+    riot.scene.mmrRefused = true;
+    await new Promise((r) => setTimeout(r, 100));
+    riot.reset();
+    riot.scene.loop = "INGAME";
+    riot.scene.mmrRefused = true;
+    const json = (await server.call("GET", "/valorant")).json;
+    const foe = byName(json, "Adversaire#1");
+    assert.deepEqual([foe.rank, foe.rr, foe.peakTier], ["Diamant 1", 60, 20]);
+    assert.equal(json.me.rr, 42);
+    await server.call("GET", "/valorant");
+    assert.equal(riot.count("/mmr/v1/players/ennemi"), 1);
+  });
+
   it("combat à mort : rang et agent seulement, pas d'historique demandé", async () => {
     riot.scene.loop = "INGAME";
     riot.scene.queueId = "deathmatch";
@@ -148,6 +167,14 @@ describe("Valorant : tableau des scores en fin de partie", () => {
     assert.equal(end.players[1].agentId, SAGE);
     // Retenté jusqu'à ce que Riot ait le détail.
     assert.equal(riot.count("/match-details/v1/matches/jeu-1"), 3);
+  });
+
+  it("après la partie, mes RR sont relus (la partie finie compte)", async () => {
+    riot.scene.loop = "INGAME";
+    assert.equal((await server.call("GET", "/valorant")).json.me.rr, 42);
+    riot.scene.myRr = 60;
+    riot.scene.loop = "MENUS";
+    await until(server, (j) => j.me?.rr === 60);
   });
 
   it("détail jamais prêt : « missing », puis plus rien après la durée d'affichage", async () => {
@@ -244,6 +271,14 @@ describe("Valorant : images servies par l'ordinateur", () => {
     const before = riot.count("/agents/");
     await image(server, `/valorant/agent?id=${SOVA}`);
     assert.equal(riot.count("/agents/"), before);
+  });
+
+  it("deux demandes de la même icône en même temps : une seule téléchargée, les deux servies", async () => {
+    await server.call("GET", "/valorant");
+    const [a, b] = await Promise.all([image(server, `/valorant/agent?id=${SAGE}`), image(server, `/valorant/agent?id=${SAGE}`)]);
+    assert.deepEqual([a.status, b.status], [200, 200]);
+    assert.deepEqual(pngSize(b.data), [128, 128]);
+    assert.equal(riot.count(`/agents/${SAGE}/`), 1);
   });
 
   it("agent inconnu : 404 ; identifiant ou rang invalide : 400 ; sans jeton : 401", async () => {

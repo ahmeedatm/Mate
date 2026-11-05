@@ -1,3 +1,4 @@
+import { randomUUID } from "node:crypto";
 import fs from "node:fs/promises";
 import { cachedIcon } from "./deck.ts";
 import { readCapped } from "./net-guard.ts";
@@ -117,8 +118,25 @@ function trusted(url: string): boolean {
   }
 }
 
-function image(url: string): Promise<string | undefined> {
-  return trusted(url) ? cachedIcon(`valorant:${url}`, (out) => download(url, out)) : Promise.resolve(undefined);
+/** Téléchargements en cours (dix joueurs du même rang : une seule fois) et images en échec, pas redemandées avant 5 min. */
+const downloads = new Map<string, Promise<string | undefined>>();
+const failedImages = new Map<string, number>();
+
+async function image(url: string): Promise<string | undefined> {
+  if (!trusted(url) || (failedImages.get(url) ?? 0) > Date.now()) return undefined;
+  const running = downloads.get(url);
+  if (running) return running;
+  const run = cachedIcon(`valorant:${url}`, (out) => download(url, out)).then((file) => {
+    if (file) failedImages.delete(url);
+    else failedImages.set(url, Date.now() + FAIL_PAUSE);
+    return file;
+  });
+  downloads.set(url, run);
+  try {
+    return await run;
+  } finally {
+    downloads.delete(url);
+  }
 }
 
 async function download(url: string, out: string): Promise<boolean> {
@@ -129,7 +147,7 @@ async function download(url: string, out: string): Promise<boolean> {
   const png = truncated ? null : (shrinkPng(data, IMAGE_SIDE) ?? (data.subarray(1, 4).toString("ascii") === "PNG" ? data : null));
   if (!png) return false;
   // Écrit à côté puis renommé : une lecture en même temps ne sert jamais une image à moitié écrite.
-  const tmp = `${out}.${process.pid}.tmp`;
+  const tmp = `${out}.${randomUUID()}.tmp`;
   await fs.writeFile(tmp, png);
   await fs.rename(tmp, out);
   return true;

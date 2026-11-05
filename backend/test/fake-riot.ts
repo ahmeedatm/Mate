@@ -34,6 +34,10 @@ export type Scene = {
   endNotReady: number;
   /** Historique de l'adversaire refusé (429). */
   historyRefused: boolean;
+  /** Tous les appels mmr refusés (429). */
+  mmrRefused: boolean;
+  /** Mes RR, s'ils changent (fin de partie). */
+  myRr: number | null;
 };
 
 const freshScene = (): Scene => ({
@@ -44,6 +48,8 @@ const freshScene = (): Scene => ({
   withNewcomer: false,
   endNotReady: 0,
   historyRefused: false,
+  mmrRefused: false,
+  myRr: null,
 });
 
 export type Seen = { url: string; auth?: string; entitlements?: string; version?: string };
@@ -441,7 +447,12 @@ export async function startFakeRiot(roster: Roster = TEST_ROSTER): Promise<FakeR
               : [],
         });
       const mmr = url.match(/^\/mmr\/v1\/players\/([^/?]+)$/);
-      if (mmr) return mmr[1] === "nouveau" ? send(res, { message: "trop d'appels" }, 503) : send(res, mmrOf(roster, mmr[1]));
+      if (mmr) {
+        if (mmr[1] === "nouveau" || s.mmrRefused) return send(res, { message: "trop d'appels" }, mmr[1] === "nouveau" ? 503 : 429);
+        const body = mmrOf(roster, mmr[1]);
+        if (mmr[1] === ME && s.myRr !== null) body.LatestCompetitiveUpdate.RankedRatingAfterUpdate = s.myRr;
+        return send(res, body);
+      }
       const history = url.match(/^\/match-history\/v1\/history\/([^/?]+)\?/);
       if (history) {
         if (history[1] === "ennemi" && s.historyRefused) return send(res, { message: "trop d'appels" }, 429);

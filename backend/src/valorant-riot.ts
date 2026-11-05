@@ -76,7 +76,13 @@ export function local(lock: Lock, route: string): Promise<any> {
 export type Remote = { glz: string; pd: string; headers: Record<string, string> };
 
 export async function remote(r: Remote, url: string, init: RequestInit = {}): Promise<any> {
-  const res = await fetch(url, { ...init, headers: { ...r.headers, ...init.headers }, signal: AbortSignal.timeout(5000) });
+  // Pas de redirection suivie : les jetons ne partent que vers les serveurs Riot (ou la boucle locale des tests).
+  const res = await fetch(url, {
+    ...init,
+    headers: { ...r.headers, ...init.headers },
+    redirect: "error",
+    signal: AbortSignal.timeout(5000),
+  });
   if (!res.ok) throw new RiotError(res.status);
   return res.json();
 }

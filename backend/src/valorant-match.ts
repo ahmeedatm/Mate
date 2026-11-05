@@ -163,13 +163,14 @@ const inflight = new Map<string, Promise<ParsedMatch>>();
 
 export const knownMatch = (id: string) => matches.get(id);
 
-/** Détail d'une partie, lu une seule fois (file au débit limité) ; une erreur n'est pas gardée. */
-export function matchDetails(r: Remote, id: string): Promise<ParsedMatch> {
+/** Détail d'une partie, lu une seule fois (file au débit limité, sauf `direct`) ; une erreur n'est pas gardée. */
+export function matchDetails(r: Remote, id: string, { direct = false } = {}): Promise<ParsedMatch> {
   const known = matches.get(id);
   if (known) return Promise.resolve(known);
   const running = inflight.get(id);
   if (running) return running;
-  const run = paced(() => remote(r, `${r.pd}/match-details/v1/matches/${encodeURIComponent(id)}`))
+  const read = () => remote(r, `${r.pd}/match-details/v1/matches/${encodeURIComponent(id)}`);
+  const run = (direct ? read() : paced(read))
     .then((raw) => {
       const parsed = parseMatch(raw);
       if (matches.size >= MATCHES_MAX) matches.delete(matches.keys().next().value!);
