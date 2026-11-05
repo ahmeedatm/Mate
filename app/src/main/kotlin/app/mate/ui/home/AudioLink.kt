@@ -4,6 +4,7 @@ import android.content.Context
 import app.mate.net.AudioState
 import app.mate.net.BackendClient
 import app.mate.net.SystemApi
+import app.mate.net.runCatchingCancellable
 import app.mate.ui.LatestSender
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
@@ -13,7 +14,7 @@ import kotlinx.coroutines.launch
 
 /**
  * Son de l'ordinateur pour les formes du widget Son qui ne passent pas par [app.mate.ui.ComputerAudioView] (anneau,
- * remplissage, tranche) : relu chaque seconde tant que le widget est à l'écran, le volume part pendant le glisser.
+ * remplissage) : relu chaque seconde tant que le widget est à l'écran, le volume part pendant le glisser.
  * [holding] : doigt posé, l'état relu ne fait pas sauter l'affichage.
  */
 class AudioLink(private val context: Context, private val scope: CoroutineScope, private val onState: (AudioState?) -> Unit) {
@@ -29,7 +30,7 @@ class AudioLink(private val context: Context, private val scope: CoroutineScope,
         if (!active) return
         poll = scope.launch {
             while (isActive) {
-                if (!holding) runCatching { api().audio() }.getOrNull()?.let(::show)
+                if (!holding) runCatchingCancellable { api().audio() }.getOrNull()?.let(::show)
                 delay(POLL_MS)
             }
         }
@@ -39,13 +40,8 @@ class AudioLink(private val context: Context, private val scope: CoroutineScope,
 
     fun toggleMute() = change { setAudio(muted = !(state?.muted ?: false)) }
 
-    fun toggleMic() = change { setAudio(micMuted = !(state?.micMuted ?: false)) }
-
-    /** Comme les boutons de volume de la tablette. */
-    fun nudge(up: Boolean) = change { setAudio(outputDelta = if (up) STEP else -STEP) }
-
     private fun change(call: suspend SystemApi.() -> AudioState) {
-        scope.launch { show(runCatching { api().call() }.getOrNull()) }
+        scope.launch { show(runCatchingCancellable { api().call() }.getOrNull()) }
     }
 
     private fun show(audio: AudioState?) {
@@ -57,7 +53,6 @@ class AudioLink(private val context: Context, private val scope: CoroutineScope,
 
     companion object {
         const val MAX = 100
-        const val STEP = 6
         private const val POLL_MS = 1_000L
     }
 }

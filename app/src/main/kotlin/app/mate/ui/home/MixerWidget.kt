@@ -12,7 +12,6 @@ import android.view.View
 import android.view.ViewGroup
 import android.widget.Button
 import android.widget.CheckBox
-import android.widget.FrameLayout
 import android.widget.ImageView
 import android.widget.LinearLayout
 import android.widget.ScrollView
@@ -57,33 +56,19 @@ class MixerWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidget
         addView(mixer, ViewGroup.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT))
     }
 
-    private var link: AudioLink? = null
-
+    /**
+     * Une mise en page par famille de formes : Pastille, la tranche Sortie seule ; Ligne, les scènes seules ; Colonne,
+     * les scènes au-dessus de la tranche Sortie ; Bloc et plus grand, la table entière.
+     */
     override fun applySize() {
-        val look = placed.config.optString("look")
-        if (look.isEmpty()) return
-        val small = placed.size == WidgetSize.S
-        if ((small && look == "a") || (!small && look == "c")) {
-            var shape: AudioShapes.Shape? = null
-            val audioLink = AudioLink(context, host.scope) { state -> shape?.render?.invoke(state) }
-            shape = if (small) AudioShapes(context, audioLink).ring() else AudioShapes(context, audioLink).fill()
-            link = audioLink
-            view.removeAllViews()
-            view.addView(
-                FrameLayout(context).asCard(if (small) 16 else 0).apply {
-                    clipToOutline = true
-                    addView(shape.view, FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT))
-                },
-                ViewGroup.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT),
-            )
-            shape.render(null)
-            return
-        }
-        val scenesOnly = small && look == "c"
-        mixer.channelFilter = if (scenesOnly) null else { all -> all.filter { it.id == "master" } }
-        mixer.scenesShown = !small || scenesOnly
-        mixer.stripsShown = !scenesOnly
-        if (!small && look == "a") mixer.scenesShown = false
+        val all = family == ShapeFamily.BLOCK || family == ShapeFamily.LARGE || family == ShapeFamily.FULL
+        mixer.channelFilter = if (all) null else { channels -> channels.filter { it.id == "master" } }
+        mixer.stripsShown = family != ShapeFamily.ROW
+        mixer.scenesShown = family != ShapeFamily.PILL
+    }
+
+    override fun showPreview(sample: WidgetSample) {
+        if (sample is MixerSample) mixer.showSample(SoundSamples.mixer(context), SoundSamples.scenes(context))
     }
 
     override fun setActive(active: Boolean) {
@@ -93,7 +78,6 @@ class MixerWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidget
             hidden = null
         }
         mixer.setActive(active)
-        link?.setActive(active)
     }
 
     private val computerId get() = Computers.active(context)?.id

@@ -124,6 +124,9 @@ class ComputerAudioView @JvmOverloads constructor(
         value.layoutParams = LayoutParams(0, LayoutParams.WRAP_CONTENT, 1f)
     }
 
+    /** Aperçu du catalogue : un état d'exemple, sans réseau. */
+    fun showSample(audio: AudioState) = render(audio)
+
     /** Relit l'état : le son a pu changer depuis le Mac. */
     fun refresh() = change { audio() }
 

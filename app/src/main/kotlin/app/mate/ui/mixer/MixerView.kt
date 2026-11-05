@@ -29,13 +29,11 @@ import androidx.core.view.ViewCompat
 import androidx.core.widget.ImageViewCompat
 import androidx.core.widget.doAfterTextChanged
 import app.mate.R
-import app.mate.net.AudioOutput
 import app.mate.net.BackendClient
 import app.mate.net.HttpException
 import app.mate.net.MixerChannel
 import app.mate.net.MixerScene
 import app.mate.net.MixerState
-import app.mate.net.currentOutputIndex
 import app.mate.ui.IconCache
 import app.mate.ui.LatestSender
 import app.mate.ui.dp
@@ -146,6 +144,10 @@ class MixerView @JvmOverloads constructor(
         this.scope = scope
     }
 
+    private val outputs by lazy {
+        AudioOutputChooser(context, scope, onError = { showStatus(it, ERROR) }, onSwitched = { refresh { mixer() } })
+    }
+
     /** Onglet affiché et deck à l'écran : on relit la console ; sinon rien ne tourne. */
     fun setActive(active: Boolean) {
         if (this.active == active) return
@@ -223,6 +225,13 @@ class MixerView @JvmOverloads constructor(
 
     /** Un état a été lu (sinon : pas encore, ou ordinateur injoignable ; `liveApps` null ne veut alors pas dire Mac). */
     val hasState: Boolean get() = state != null
+
+    /** Aperçu du catalogue : une table et des scènes d'exemple, sans relecture ni réseau. */
+    fun showSample(sample: MixerState, sampleScenes: List<MixerScene>) {
+        scenes = sampleScenes
+        renderScenes()
+        render(sample)
+    }
 
     /** Choix d'applis changé (⚙ du widget) : les voies suivent tout de suite, sans attendre la relecture. */
     fun refreshApps() {
@@ -303,7 +312,7 @@ class MixerView @JvmOverloads constructor(
                 scope.launch { runCatching { IconCache.loadApp(BackendClient(context), c.name) }.getOrNull()?.let { icon = it } }
             }
         }
-        if (c.id == "master") onTitle = { chooseOutput() }
+        if (c.id == "master") onTitle = { outputs.show() }
         onValue = { askVolume(this) }
         if (onHide != null && MixerApps.canHide(c.id)) onLongPress = { confirmHide(MixerApps.App(c.id, titleOf(c))) }
         onVolume = { volume, final ->
@@ -359,42 +368,6 @@ class MixerView @JvmOverloads constructor(
             .setNegativeButton(R.string.cancel, null)
             .setPositiveButton(R.string.mixer_hide_ok) { _, _ -> onHide?.invoke(app) }
             .showImmersive()
-    }
-
-    /** Liste les sorties audio de l'ordinateur (enceinte, casque, carte son) et passe sur celle qu'on touche. */
-    private fun chooseOutput() {
-        // Un seul choix à la fois : un second toucher pendant la lecture de la liste ne doit pas empiler une 2e boîte.
-        if (choosing?.isActive == true) return
-        choosing = scope.launch {
-            val outputs = try {
-                BackendClient(context).system.audioOutputs()
-            } catch (e: Exception) {
-                return@launch showStatus(context.errorText(e), ERROR)
-            }
-            if (outputs.isEmpty()) return@launch showStatus(context.getString(R.string.mixer_output_none), ERROR)
-            AlertDialog.Builder(context)
-                .setTitle(R.string.mixer_output_title)
-                .setSingleChoiceItems(outputs.map { it.name }.toTypedArray(), currentOutputIndex(outputs)) { dialog, which ->
-                    dialog.dismiss()
-                    if (!outputs[which].current) switchOutput(outputs[which])
-                }
-                .setNegativeButton(R.string.cancel, null)
-                .showImmersive()
-        }
-    }
-
-    private var choosing: Job? = null
-
-    private fun switchOutput(output: AudioOutput) {
-        scope.launch {
-            try {
-                BackendClient(context).system.setAudioOutput(output.id)
-                // Le volume et le Muet sont ceux de la nouvelle sortie : relire tout de suite.
-                refresh { mixer() }
-            } catch (e: Exception) {
-                showStatus(context.errorText(e), ERROR)
-            }
-        }
     }
 
     private fun hold(id: String) {
