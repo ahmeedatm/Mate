@@ -26,6 +26,18 @@ Hors périmètre : Compose, Material You dynamique (Android 10), outillage web d
 
 À faire pour toute création ou modification, avec ou sans commande.
 
+0. **Regarder l'écran tel qu'il est**, avant d'écrire une ligne. Capturer l'écran **entier** où la
+   nouveauté va vivre (l'Accueil pour un widget, la fenêtre entière pour un bouton) :
+   `adb exec-out screencap -p > captures/<écran>-avant.png` (sans appareil : voir « Captures par
+   thème »). Le regarder comme l'utilisateur, en 4 questions : où va l'œil en premier ? qu'est-ce
+   qui est dit deux fois ? qu'est-ce qu'il faut deviner (icône sans texte, couleur seule) ? où est
+   le vide qui ne sert à rien ? Dire à l'humain ce qu'on voit, en mots simples, avec la capture,
+   avant de proposer quoi que ce soit : la nouveauté se place dans l'écran entier, pas toute seule.
+   - Changement visible (nouvel écran, nouveau widget, refonte) : 2 ou 3 variantes vraiment
+     différentes par la mise en page et la densité (pas par la palette ni la police : le périmètre
+     tient), chacune en capture avec une ligne « quand elle gagne / ce qu'elle coûte ». Puis
+     s'arrêter : l'humain choisit.
+   - Retouche de cohérence (alignement, style manquant, texte) : pas de variantes.
 1. Lire la direction artistique : `DESIGN.md` pour les pages web, `docs/ui-ux/da/README.md` et ses
    captures pour l'appli.
 2. Lire l'écran voisin le plus proche (même package `ui/`, mêmes styles) : le dépôt fait foi,
@@ -176,6 +188,9 @@ ne dit rien des performances) et avec les animations désactivées.
 
 ## Fin de passe
 
+- Capture de l'écran entier après le changement, au même endroit que celle de l'étape 0, et les
+  deux côte à côte (`captures/<écran>-avant.png`, `captures/<écran>-apres.png`), en plus des
+  captures par thème : montrées à l'humain et jointes à la PR.
 - Relecture finale par `relecteur-design` (jamais par l'auteur du code) : il reçoit le diff, une
   capture par thème et la demande, et rend une liste ordonnée de remarques ou « Rien d'autre ».
   Corriger tout `bloquant` avant de dire « fini » ; présenter les `important` à l'humain, qui tranche.

@@ -59,7 +59,8 @@ class LayoutConfigTest {
 
     @Test
     fun `une taille non permise pour le type est refusee`() {
-        assertTrue(refused(json("[${w("water", "XL", 0, 0, 0)}]")).contains("pas permise"))
+        // shortcut: la Checklist n'a pas encore ses 16 formes (#187) ; quand tous les widgets les auront, ce refus disparaît avec ce test.
+        assertTrue(refused(json("[${w("checklist", "XL", 0, 0, 0)}]")).contains("pas permise"))
     }
 
     @Test
