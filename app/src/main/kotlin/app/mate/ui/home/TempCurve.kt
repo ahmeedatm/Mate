@@ -15,15 +15,18 @@ import kotlin.math.roundToInt
 /**
  * Courbe des prochaines heures de la Météo (direction Cadran, #180) : un point par heure, relié, la température écrite
  * à côté. [across] : de gauche à droite (l'heure dessous si [withHours]) ; sinon de haut en bas, l'heure à gauche.
- * Autant d'heures que la place en laisse, une étiquette sur deux si elles se touchent. Redessinée seulement quand les
- * données changent ([show]).
+ * Autant d'heures que la place en laisse, une étiquette sur deux si elles se touchent. Tout se calcule quand les données
+ * ou la taille changent ([plan]) ; le dessin ne fait que tracer ce qui est prêt.
  */
 class TempCurve(context: Context) : View(context) {
     var across = true
+        set(value) { if (field != value) { field = value; replan() } }
     var withHours = true
+        set(value) { if (field != value) { field = value; replan() } }
 
     /** Nombre d'heures au plus (la Pastille en garde 5, comme sur la maquette). */
     var maxPoints = Weather.HOURS
+        set(value) { if (field != value) { field = value; replan() } }
     private var hours: List<Weather.Hour> = emptyList()
     private val line = Paint(Paint.ANTI_ALIAS_FLAG).apply {
         style = Paint.Style.STROKE
@@ -37,65 +40,97 @@ class TempCurve(context: Context) : View(context) {
     private val path = Path()
     private val radius = context.dp(3).toFloat()
 
+    /** Ce que [onDraw] trace, calculé par [plan] : points, textes et leur place. Vide : rien à dessiner. */
+    private var xs = FloatArray(0)
+    private var ys = FloatArray(0)
+    private var temps = emptyArray<String>()
+    private var hourTexts = emptyArray<String>()
+    private var labeled = BooleanArray(0)
+
     fun show(list: List<Weather.Hour>) {
+        if (sameHours(list)) return
         hours = list
         contentDescription = list.take(maxPoints).joinToString(", ") { context.getString(R.string.widget_weather_hour, it.hour, it.temperature.roundToInt()) }
+        replan()
+    }
+
+    /** Mêmes heures, mêmes températures : rien à recalculer (la Météo repasse chaque minute). */
+    private fun sameHours(list: List<Weather.Hour>) =
+        list.size == hours.size && list.indices.all { list[it].at == hours[it].at && list[it].temperature == hours[it].temperature }
+
+    override fun onSizeChanged(w: Int, h: Int, oldw: Int, oldh: Int) {
+        super.onSizeChanged(w, h, oldw, oldh)
+        plan()
+    }
+
+    private fun replan() {
+        plan()
         invalidate()
     }
 
-    override fun onDraw(canvas: Canvas) {
+    private fun plan() {
+        xs = FloatArray(0)
         // Trop petite (Pastille d'une rangée fine) : rien plutôt qu'un trait illisible.
         val room = if (across) height else width
-        if (hours.size < 2 || width == 0 || room < context.dp(MIN_ROOM_DP)) return
+        if (hours.size < 2 || width == 0 || height == 0 || room < context.dp(MIN_ROOM_DP)) return
         // Étiquettes à la taille de la courbe : lisibles de loin en grand, discrètes en Pastille.
         temp.textSize = (room * LABEL_PART).coerceIn(sp(TEMP_SP), sp(TEMP_MAX_SP))
         hour.textSize = temp.textSize * HOUR_PART
-        if (across) drawAcross(canvas) else drawDown(canvas)
+        if (across) planAcross() else planDown()
     }
 
-    private fun drawAcross(canvas: Canvas) {
+    private fun planAcross() {
         val labelW = temp.measureText("-88°")
         val n = CurvePlan.count(width - labelW, context.dp(MIN_STEP_DP).toFloat(), minOf(hours.size, maxPoints))
         if (n == 0) return
         val list = hours.take(n)
         val top = temp.textSize * LABEL_ROOM
         val bottom = height - if (withHours) hour.textSize * LABEL_ROOM else radius * 2
-        val left = labelW / 2
         val step = (width - labelW) / (n - 1)
         val every = CurvePlan.every(labelW * LABEL_GAP, step)
-        val ys = CurvePlan.place(list.map { it.temperature }, bottom, top)
-        path.reset()
-        list.indices.forEach { i -> if (i == 0) path.moveTo(left, ys[0]) else path.lineTo(left + i * step, ys[i]) }
-        canvas.drawPath(path, line)
-        list.forEachIndexed { i, h ->
-            val x = left + i * step
-            canvas.drawCircle(x, ys[i], radius, dot)
-            if (i % every != 0 && i != n - 1) return@forEachIndexed
-            canvas.drawText(degrees(h), x, ys[i] - radius * 2, temp.centered())
-            if (withHours) canvas.drawText(context.getString(R.string.widget_weather_hour_short, h.hour), x, height - hour.descent(), hour.centered())
-        }
+        temp.textAlign = Paint.Align.CENTER
+        hour.textAlign = Paint.Align.CENTER
+        fill(list, FloatArray(n) { labelW / 2 + it * step }, CurvePlan.place(list.map { it.temperature }, bottom, top)) { CurvePlan.labeled(it, n, every) }
     }
 
-    private fun drawDown(canvas: Canvas) {
+    private fun planDown() {
+        val hourW = hour.measureText("88h") + context.dp(8)
+        val labelW = temp.measureText("-88°") + context.dp(8)
+        // Trop étroite : la courbe s'inverserait et les étiquettes se chevaucheraient.
+        if (width - labelW <= hourW + radius) return
         val n = CurvePlan.count(height - hour.textSize * 2, context.dp(MIN_ROW_DP).toFloat(), minOf(hours.size, maxPoints))
         if (n == 0) return
         val list = hours.take(n)
-        val hourW = hour.measureText("88h") + context.dp(8)
-        val labelW = temp.measureText("-88°") + context.dp(8)
         val step = (height - hour.textSize * 2) / (n - 1)
-        val xs = CurvePlan.place(list.map { it.temperature }, hourW + radius, width - labelW)
-        path.reset()
-        list.indices.forEach { i -> if (i == 0) path.moveTo(xs[0], hour.textSize) else path.lineTo(xs[i], hour.textSize + i * step) }
-        canvas.drawPath(path, line)
-        list.forEachIndexed { i, h ->
-            val y = hour.textSize + i * step
-            canvas.drawCircle(xs[i], y, radius, dot)
-            canvas.drawText(context.getString(R.string.widget_weather_hour_short, h.hour), 0f, y + hour.textSize / 3, hour.start())
-            canvas.drawText(degrees(h), xs[i] + radius * 3, y + temp.textSize / 3, temp.start())
-        }
+        temp.textAlign = Paint.Align.LEFT
+        hour.textAlign = Paint.Align.LEFT
+        fill(list, CurvePlan.place(list.map { it.temperature }, hourW + radius, width - labelW), FloatArray(n) { hour.textSize + it * step }) { true }
     }
 
-    private fun degrees(h: Weather.Hour) = context.getString(R.string.widget_weather_temp, h.temperature.roundToInt())
+    private fun fill(list: List<Weather.Hour>, x: FloatArray, y: FloatArray, label: (Int) -> Boolean) {
+        temps = Array(list.size) { context.getString(R.string.widget_weather_temp, list[it].temperature.roundToInt()) }
+        hourTexts = Array(list.size) { context.getString(R.string.widget_weather_hour_short, list[it].hour) }
+        labeled = BooleanArray(list.size) { label(it) }
+        path.reset()
+        for (i in list.indices) if (i == 0) path.moveTo(x[0], y[0]) else path.lineTo(x[i], y[i])
+        ys = y
+        xs = x
+    }
+
+    override fun onDraw(canvas: Canvas) {
+        if (xs.isEmpty()) return
+        canvas.drawPath(path, line)
+        for (i in xs.indices) {
+            canvas.drawCircle(xs[i], ys[i], radius, dot)
+            if (!across) {
+                canvas.drawText(hourTexts[i], 0f, ys[i] + hour.textSize / 3, hour)
+                canvas.drawText(temps[i], xs[i] + radius * 3, ys[i] + temp.textSize / 3, temp)
+            } else if (labeled[i]) {
+                canvas.drawText(temps[i], xs[i], ys[i] - radius * 2, temp)
+                if (withHours) canvas.drawText(hourTexts[i], xs[i], height - hour.descent(), hour)
+            }
+        }
+    }
 
     private fun text(colorAttr: Int, fontAttr: Int, sp: Float) = Paint(Paint.ANTI_ALIAS_FLAG).apply {
         color = themeColor(context, colorAttr)
@@ -104,9 +139,6 @@ class TempCurve(context: Context) : View(context) {
     }
 
     private fun sp(value: Float) = TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_SP, value, context.resources.displayMetrics)
-
-    private fun Paint.centered() = apply { textAlign = Paint.Align.CENTER }
-    private fun Paint.start() = apply { textAlign = Paint.Align.LEFT }
 
     private companion object {
         const val TEMP_SP = 14f

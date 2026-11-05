@@ -22,4 +22,7 @@ object CurvePlan {
 
     /** Une étiquette toutes les combien d'heures pour qu'elles ne se touchent pas ([labelWidth] avec sa marge, [step] entre deux heures). */
     fun every(labelWidth: Float, step: Float): Int = if (step <= 0f) 1 else ceil(labelWidth / step).toInt().coerceAtLeast(1)
+
+    /** L'heure [i] sur [count] a son étiquette : une toutes les [every], la dernière toujours, la précédente lâchée si elle la colle. */
+    fun labeled(i: Int, count: Int, every: Int): Boolean = i == count - 1 || (i % every == 0 && count - 1 - i >= every)
 }

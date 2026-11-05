@@ -1,6 +1,7 @@
 package app.mate.ui.home
 
 import android.content.Context
+import android.graphics.Paint
 import android.os.SystemClock
 import android.text.TextUtils
 import android.util.TypedValue
@@ -50,7 +51,7 @@ class WeatherSample(val city: Int, val forecast: Weather.Forecast, val air: Int)
  */
 class WeatherWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidget(context, host, placed) {
     private val emoji = label(44f)
-    private val temp = label(40f, light = true)
+    private val temp = label(40f, light = true).apply { isSingleLine = true }
     private val sky = label(17f).apply { oneLine() }
     private val range = label(15f, R.attr.c_text_dim).apply { oneLine() }
     private val city = label(14f, R.attr.c_text_faint).apply { oneLine() }
@@ -165,11 +166,38 @@ class WeatherWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidg
             ShapeFamily.ROW -> ROW_TEMP_PART
             else -> STACK_TEMP_PART
         }
-        val px = (h * part).coerceIn(sp(TEMP_MIN_SP), sp(TEMP_MAX_SP))
+        val w = view.width - view.paddingLeft - view.paddingRight
+        // Bornée aussi par la largeur : une police plus large que Figtree (Terminal, Spider-Verse) coupait « 9° » en deux.
+        val px = minOf((h * part).coerceIn(sp(TEMP_MIN_SP), sp(TEMP_MAX_SP)), nowFits(w.toFloat()))
         temp.setTextSize(TypedValue.COMPLEX_UNIT_PX, px)
         emoji.setTextSize(TypedValue.COMPLEX_UNIT_PX, px * EMOJI_PART)
         sky.setTextSize(TypedValue.COMPLEX_UNIT_PX, (px * SKY_PART).coerceIn(sp(DETAIL_MIN_SP), sp(DETAIL_MAX_SP)))
         for (line in listOf(range, city, smallCity, air)) line.setTextSize(TypedValue.COMPLEX_UNIT_PX, (px * DETAIL_PART).coerceIn(sp(DETAIL_MIN_SP), sp(DETAIL_MAX_SP)))
+        if (family == ShapeFamily.ROW) fitDetails(w, h)
+    }
+
+    /** Taille (px) de la température pour que l'emoji et « -88° » tiennent côte à côte dans [width]. */
+    private fun nowFits(width: Float): Float {
+        val probe = Paint(temp.paint).apply { textSize = MEASURE_PX }
+        val tempW = probe.measureText(WIDEST_TEMP)
+        probe.typeface = emoji.typeface
+        val emojiW = probe.measureText(emoji.text.toString().ifEmpty { "🌤" }) * EMOJI_PART
+        return (width - dp(8)) / (tempW + emojiW) * MEASURE_PX
+    }
+
+    /** Ligne basse ou police agrandie : les détails ne doivent pas déborder ; la ville part d'abord, puis le min / max. */
+    private fun fitDetails(w: Int, h: Int) {
+        for (line in listOf(range, city)) line.visibility = View.VISIBLE
+        for (line in listOf(city, range)) {
+            details.measure(View.MeasureSpec.makeMeasureSpec(w, View.MeasureSpec.AT_MOST), View.MeasureSpec.makeMeasureSpec(0, View.MeasureSpec.UNSPECIFIED))
+            if (details.measuredHeight <= h) return
+            line.visibility = View.GONE
+        }
+    }
+
+    /** Chaque minute, la courbe lâche l'heure passée, sans attendre la prochaine lecture (30 min). */
+    override fun onMinute() {
+        current?.let { curve.show(Weather.upcoming(it.hours, System.currentTimeMillis())) }
     }
 
     override fun showPreview(sample: WidgetSample) {
@@ -288,6 +316,10 @@ class WeatherWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidg
         const val STACK_TEMP_PART = 0.16f
         const val TEMP_MIN_SP = 26f
         const val TEMP_MAX_SP = 110f
+
+        /** Mesure de largeur : taille d'essai et température la plus large qu'on écrive. */
+        const val MEASURE_PX = 100f
+        const val WIDEST_TEMP = "-88°"
 
         /** Heures de la petite courbe de la Pastille. */
         const val PILL_POINTS = 5

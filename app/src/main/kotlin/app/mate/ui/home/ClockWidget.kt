@@ -122,22 +122,29 @@ class ClockWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidget
     }
 
     private fun fitDial(w: Float, h: Float) {
-        val below = if (face.dateInDial) 0f else sp(DATE_BELOW_SP).coerceAtMost(w * DATE_BELOW_PART)
+        val below = if (face.dateInDial) 0f else sp(DATE_BELOW_SP).coerceAtMost(w * DATE_BELOW_PART).coerceAtLeast(sp(MIN_SP))
         if (!face.dateInDial) date.setTextSize(TypedValue.COMPLEX_UNIT_PX, below)
         val reserve = if (face.dateInDial) 0f else below * LINE * 2 + dp(GAP_DP)
         val size = minOf(w, h - reserve).toInt().coerceAtLeast(0)
         // Rangée fine : un cadran de cette taille ne se lit plus, l'heure seule prend la place.
         val bare = size < dp(MIN_DIAL_DP)
         dial.visibility = if (bare) View.GONE else View.VISIBLE
-        if (face.dateInDial) date.visibility = if (bare) View.GONE else View.VISIBLE
         ring.layoutParams = (ring.layoutParams as LinearLayout.LayoutParams).apply {
             width = if (bare) w.toInt() else size
             height = if (bare) (h - reserve).toInt().coerceAtLeast(0) else size
         }
         val text = if (bare) minOf(byWidth(clock, SAMPLE, w), (h - reserve) / LINE) else byWidth(clock, SAMPLE, size * DIAL_TEXT_PART)
         clock.setTextSize(TypedValue.COMPLEX_UNIT_PX, text)
-        if (face.dateInDial) date.setTextSize(TypedValue.COMPLEX_UNIT_PX, size * DIAL_DATE_PART)
+        if (face.dateInDial) fitDialDate(size, bare)
         ring.requestLayout()
+    }
+
+    /** Date dans le cadran : jamais sous [MIN_SP] (illisible de loin) ; si elle n'y tient pas, pas de date. */
+    private fun fitDialDate(size: Int, bare: Boolean) {
+        val px = (size * DIAL_DATE_PART).coerceAtLeast(sp(MIN_SP))
+        date.setTextSize(TypedValue.COMPLEX_UNIT_PX, px)
+        val fits = date.paint.measureText(date.text.toString()) <= size * DIAL_TEXT_PART
+        date.visibility = if (bare || !fits) View.GONE else View.VISIBLE
     }
 
     private fun fitRow(w: Float, h: Float) {
@@ -173,17 +180,24 @@ class ClockWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidget
     private fun setStackSizes(px: Float) {
         for (part in listOf(clock, hours, minutes)) part.setTextSize(TypedValue.COMPLEX_UNIT_PX, px)
         seconds.setTextSize(TypedValue.COMPLEX_UNIT_PX, px * SECONDS_PART)
+        // Taille fixe : chaque seconde, le texte change sans remesurer tout l'Accueil (seulement la vue redessinée).
+        seconds.layoutParams?.let { lp ->
+            lp.width = kotlin.math.ceil(seconds.paint.measureText(SECONDS_SAMPLE)).toInt() + seconds.paddingLeft + seconds.paddingRight
+            lp.height = seconds.lineHeight
+            seconds.layoutParams = lp
+        }
         greeting.setTextSize(TypedValue.COMPLEX_UNIT_PX, (px * GREETING_PART).coerceIn(sp(MIN_SP), sp(GREETING_MAX_SP)))
         date.setTextSize(TypedValue.COMPLEX_UNIT_PX, (px * DATE_PART).coerceIn(sp(MIN_SP), sp(DATE_MAX_SP)))
     }
 
     override fun onMinute() {
         val now = Calendar.getInstance()
-        greeting.setText(when (now.get(Calendar.HOUR_OF_DAY)) {
+        val hello = context.getString(when (now.get(Calendar.HOUR_OF_DAY)) {
             in 5..11 -> R.string.greeting_morning
             in 12..17 -> R.string.greeting_afternoon
             else -> R.string.greeting_evening
         })
+        if (greeting.text.toString() != hello) greeting.text = hello
         // Dans le cadran de la Pastille, date courte (« Mer. 5 ») ; ailleurs, la date entière.
         val pattern = if (face.dateInDial) "EEE d" else "EEEE d MMMM"
         val text = SimpleDateFormat(pattern, Locale.FRANCE).format(Date()).replaceFirstChar { it.uppercase() }
@@ -229,6 +243,7 @@ class ClockWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidget
 
         /** Heure de référence pour mesurer la largeur : tous les chiffres de Figtree ont la même chasse. */
         const val SAMPLE = "00:00"
+        const val SECONDS_SAMPLE = "00"
         const val MEASURE_PX = 100f
 
         /** Hauteur d'une ligne de texte, en tailles de texte (chiffres sans marge de police). */

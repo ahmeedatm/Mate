@@ -35,4 +35,12 @@ class CurvePlanTest {
         assertEquals(2, CurvePlan.every(labelWidth = 30f, step = 20f))
         assertEquals(1, CurvePlan.every(labelWidth = 30f, step = 0f))
     }
+
+    @Test
+    fun `la derniere heure a son etiquette, sans coller a la precedente`() {
+        // Une sur deux, 4 heures : 0 et 3 ; la 2 serait collée à la 3.
+        assertEquals(listOf(0, 3), (0 until 4).filter { CurvePlan.labeled(it, count = 4, every = 2) })
+        assertEquals(listOf(0, 2, 4), (0 until 5).filter { CurvePlan.labeled(it, count = 5, every = 2) })
+        assertEquals(listOf(0, 1, 2), (0 until 3).filter { CurvePlan.labeled(it, count = 3, every = 1) })
+    }
 }
