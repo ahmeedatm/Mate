@@ -17,9 +17,10 @@ const val COLS = 4
 const val ROWS = 4
 
 /**
- * Les 16 formes de la grille, en cases (largeur × hauteur), de 1 × 1 à 4 × 4. Chaque widget doit toutes les accepter
- * (règle gardée par `WidgetRulesTest`, #178) ; il dessine une mise en page par [family], pas une par forme. Les noms
- * sont enregistrés dans les dispositions : ne jamais en renommer un.
+ * Les 16 formes de la grille, en cases (largeur × hauteur), de 1 × 1 à 4 × 4. But : chaque widget les accepte toutes
+ * (règle gardée par `WidgetRulesTest`, #178) et dessine une mise en page par [family], pas une par forme. En attendant,
+ * `WidgetType.sizes` dit ce que chacun accepte (`L3`, `T3`, `FULL` aux tableaux, `XL3` au mixeur…) et les listes
+ * d'exceptions `WidgetGaps*.kt` ce qui manque. Les noms sont enregistrés dans les dispositions : ne jamais en renommer un.
  */
 enum class WidgetSize(val w: Int, val h: Int, @StringRes val label: Int) {
     S(1, 1, R.string.widget_size_s),

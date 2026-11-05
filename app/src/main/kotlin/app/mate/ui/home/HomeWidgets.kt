@@ -109,8 +109,9 @@ abstract class HomeWidget(val context: Context, val host: HomeHost, val placed: 
     protected val family get() = placed.size.family
 
     /**
-     * Aperçu du catalogue : remplit le widget avec son exemple ([WidgetSamples]), après [applySize]. Le catalogue n'appelle
-     * ni [load] ni [setActive] : rien ne doit partir sur le réseau ni tourner en boucle, constructeur compris.
+     * Aperçu du catalogue : remplit le widget avec son exemple ([WidgetSamples]), après [applySize] ; l'exemple tient si
+     * [applySize] repasse. Le catalogue n'appelle ni [load] ni [setActive] et garde les touchers pour lui : rien ne doit
+     * partir sur le réseau, tourner en boucle ni écrire dans `placed.config`, constructeur compris.
      */
     open fun showPreview(sample: WidgetSample) = Unit
     open fun onMinute() = Unit
@@ -645,14 +646,16 @@ class NoteWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidget(
         render()
     }
 
+    /** Aperçu du catalogue : son texte reste affiché, même si [applySize] repasse. */
+    private var preview: NoteSample? = null
+
     override fun showPreview(sample: WidgetSample) {
-        if (sample !is NoteSample) return
-        text.setText(sample.text)
-        text.setTextColor(color(R.attr.c_text))
+        preview = sample as? NoteSample ?: return
+        render()
     }
 
     private fun render() {
-        val note = placed.config.optString("text")
+        val note = preview?.let { context.getString(it.text) } ?: placed.config.optString("text")
         text.text = note.ifBlank { context.getString(R.string.widget_note_empty) }
         text.setTextColor(color(if (note.isBlank()) R.attr.c_text_faint else R.attr.c_text))
     }

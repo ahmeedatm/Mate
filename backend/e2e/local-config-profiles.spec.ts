@@ -227,7 +227,10 @@ test.describe("page locale : profils et barres", () => {
     }
   });
 
-  test("les nouvelles formes (3 × 1, 1 × 3, 1 × 4, 2 × 3, 3 × 3) se choisissent et partent à la tablette", async ({ page, server }) => {
+  test("les nouvelles formes (3 × 1, 1 × 3, 1 × 4, 2 × 3, 3 × 3) s'affichent, celles sans place sont grisées, 3 × 1 part à la tablette", async ({
+    page,
+    server,
+  }) => {
     const tablet = connected(server);
     {
       await page.goto("/");
@@ -244,8 +247,10 @@ test.describe("page locale : profils et barres", () => {
         "2 × 3 (2 × 3)",
         "3 × 3 (3 × 3)",
       ]);
-      // Travail : Note et Horloge occupent les deux rangées du bas, une colonne de 4 n'a pas la place.
-      await expect(page.getByRole("button", { name: "1 × 4 (1 × 4)" })).toBeDisabled();
+      // Travail : Note et Horloge occupent les deux rangées du bas, seule la ligne du haut est libre.
+      for (const name of ["1 × 3 (1 × 3)", "1 × 4 (1 × 4)", "2 × 3 (2 × 3)", "3 × 3 (3 × 3)"]) {
+        await expect(page.getByRole("button", { name })).toBeDisabled();
+      }
       await page.getByRole("button", { name: "3 × 1 (3 × 1)" }).click();
       await closeDialog(page);
       await expect(page.getByRole("button", { name: "Météo, 3 × 1" })).toBeVisible();

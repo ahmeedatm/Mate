@@ -75,10 +75,17 @@ Sinon, pour chaque `NOM` d'`AppTheme` :
 
 Pour les pages web : une capture clair et une sombre (Playwright, `references/web.md`).
 
-Widget de l'Accueil : en plus, une capture de chaque famille de formes (Pastille 1 × 1, Ligne, Colonne, Bloc,
-Grand, Plein écran ; `ShapeFamily`), au moins dans le thème par défaut, et son aperçu à données d'exemple
-(`showPreview`). Plus grand, il montre plus de choses ; plus petit, il garde l'essentiel : jamais un simple
-étirement (`docs/architecture.md`, « Widgets : les 16 formes »).
+Widget de l'Accueil (`docs/architecture.md`, « Widgets : les 16 formes ») : plus grand, il montre plus de
+choses ; plus petit, il garde l'essentiel, jamais un simple étirement. En plus des captures par thème :
+
+- les 16 formes une fois chacune, dans le premier thème d'`AppTheme` ;
+- dans chaque thème, la plus petite et la plus grande forme de chaque famille (`ShapeFamily`) : Pastille 1 × 1 ;
+  Ligne 2 × 1 et 4 × 1 ; Colonne 1 × 2 et 1 × 4 ; Bloc 2 × 2, 3 × 2, 2 × 3 et 3 × 3 ; Grand 4 × 2 et 2 × 4 ;
+  Plein écran 4 × 4 ;
+- Pastille et Ligne aussi au profil de rangées le plus serré (`RowProfile`) et à `font_scale 1.3` ;
+- l'aperçu à données d'exemple (`showPreview`) dans chaque thème.
+
+Nommer `captures/<widget>-<L>x<H>-<thème>.png` pour que `relecteur-design` repère la forme qui se décale.
 
 Regarder chaque image : texte coupé, chevauchement, contraste faible, hiérarchie plate, élément qui
 se décale d'un thème à l'autre. Les captures partent avec la demande à `relecteur-design`.

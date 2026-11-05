@@ -22,6 +22,14 @@ class WidgetRulesTest {
     }
 
     @Test
+    fun `les noms des formes ne changent pas, ils sont enregistres dans les dispositions`() {
+        assertEquals(
+            listOf("S", "M", "L", "T", "W", "XL", "V", "L3", "T3", "XL3", "FULL", "M3", "V3", "V4", "L23", "L33"),
+            WidgetSize.entries.map { it.name },
+        )
+    }
+
+    @Test
     fun `chaque forme a sa famille`() {
         fun family(w: Int, h: Int) = WidgetSize.entries.single { it.w == w && it.h == h }.family
         assertEquals(ShapeFamily.PILL, family(1, 1))
