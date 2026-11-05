@@ -20,6 +20,7 @@ import android.widget.LinearLayout
 import android.widget.ProgressBar
 import android.widget.TextView
 import androidx.annotation.StringRes
+import androidx.core.graphics.ColorUtils
 import androidx.core.widget.ImageViewCompat
 import app.mate.R
 import app.mate.ui.dp
@@ -67,7 +68,24 @@ class PlayingShapes(
         importantForAccessibility = View.IMPORTANT_FOR_ACCESSIBILITY_NO
     }
 
-    /** Vrai : une pochette est posée. */
+    /** Grande note de musique en haut de la carte, montrée sans pochette, au-dessus du titre. */
+    private fun note() = ImageView(context).apply {
+        setImageResource(R.drawable.ic_music_note)
+        scaleType = ImageView.ScaleType.FIT_CENTER
+        ImageViewCompat.setImageTintList(this, ColorStateList.valueOf(color(R.attr.c_text_faint)))
+        importantForAccessibility = View.IMPORTANT_FOR_ACCESSIBILITY_NO
+    }
+
+    private fun noteParams() = FrameLayout.LayoutParams(dp(NOTE_DP), dp(NOTE_DP), Gravity.TOP or Gravity.CENTER_HORIZONTAL).apply { topMargin = dp(NOTE_TOP_DP) }
+
+    /** Pochette plein cadre : vrai si elle est posée, sinon l'image se vide et [note] la remplace. */
+    private fun ImageView.fill(art: Bitmap?, note: View): Boolean {
+        setImageBitmap(art)
+        note.visibility = if (art == null) View.VISIBLE else View.GONE
+        return art != null
+    }
+
+    /** Vignette : la pochette, ou une petite note centrée. Vrai : une pochette est posée. */
     private fun ImageView.show(art: Bitmap?): Boolean {
         if (art != null) {
             scaleType = ImageView.ScaleType.CENTER_CROP
@@ -110,13 +128,10 @@ class PlayingShapes(
         setOnClickListener { action(op) }
     }
 
-    /** Lecture / pause rond, plein, dans la couleur d'accent. */
-    private fun playButton() = ImageButton(context, null, 0, R.style.IconButton).apply {
-        background = GradientDrawable().apply {
-            shape = GradientDrawable.OVAL
-            setColor(color(R.attr.c_accent))
-        }
-        ImageViewCompat.setImageTintList(this, ColorStateList.valueOf(color(R.attr.c_on_accent)))
+    /** Lecture / pause rond et plein, le même que la Ligne et le lecteur (`IconButton.Primary`). */
+    private fun playButton() = ImageButton(context, null, 0, R.style.IconButton_Primary).apply {
+        // Le tint du style n'est pas appliqué à un bouton créé en code.
+        ImageViewCompat.setImageTintList(this, ColorStateList.valueOf(color(R.attr.c_on_primary)))
         contentDescription = context.getString(R.string.media_play_pause)
         setOnClickListener { action(PLAY_PAUSE) }
     }
@@ -141,7 +156,9 @@ class PlayingShapes(
 
     /** Voile du bas, pour lire le texte posé sur la pochette. */
     private fun scrim() = View(context).apply {
-        background = GradientDrawable(GradientDrawable.Orientation.TOP_BOTTOM, intArrayOf(Color.TRANSPARENT, color(R.attr.c_scrim)))
+        // Le noir du cadre photo, dense quel que soit le thème : le voile des thèmes clairs laisserait le blanc illisible.
+        val dark = ColorUtils.setAlphaComponent(color(R.attr.c_frame_bg), SCRIM_ALPHA)
+        background = GradientDrawable(GradientDrawable.Orientation.TOP_BOTTOM, intArrayOf(Color.TRANSPARENT, dark))
     }
 
     private fun describe(view: View, p: Playing?) {
@@ -154,8 +171,10 @@ class PlayingShapes(
         val title = text(15f, R.attr.c_text, medium = true).apply { maxLines = 2 }
         val play = playButton()
         val veil = scrim()
+        val missing = note()
         val view = FrameLayout(context).apply {
             addView(art, match())
+            addView(missing, noteParams())
             addView(veil, match())
             addView(title, FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT, Gravity.BOTTOM).apply {
                 setMargins(dp(16), 0, dp(76), dp(16))
@@ -163,7 +182,7 @@ class PlayingShapes(
             addView(play, FrameLayout.LayoutParams(dp(52), dp(52), Gravity.BOTTOM or Gravity.END).apply { setMargins(0, 0, dp(12), dp(12)) })
         }
         return Shape(view) { p ->
-            paint(art.show(p?.cover), veil, listOf(title), emptyList())
+            paint(art.fill(p?.cover, missing), veil, listOf(title), emptyList())
             title.text = p?.title ?: context.getString(empty)
             play.showPlaying(p)
             describe(view, p)
@@ -178,8 +197,10 @@ class PlayingShapes(
         val play = playButton()
         val veil = scrim()
         val row = controls(play, onImage = true)
+        val missing = note()
         val view = FrameLayout(context).apply {
             addView(art, match())
+            addView(missing, noteParams())
             addView(veil, match())
             addView(LinearLayout(context).apply {
                 orientation = LinearLayout.VERTICAL
@@ -191,7 +212,7 @@ class PlayingShapes(
         }
         val sides = (0 until row.childCount).map { row.getChildAt(it) }.filterIsInstance<ImageButton>().filter { it !== play }
         return Shape(view) { p ->
-            paint(art.show(p?.cover), veil, listOf(title, artist), sides)
+            paint(art.fill(p?.cover, missing), veil, listOf(title, artist), sides)
             title.text = p?.title ?: context.getString(empty)
             artist.text = p?.artist.orEmpty()
             play.showPlaying(p)
@@ -239,6 +260,9 @@ class PlayingShapes(
         const val NEXT = "next"
         private const val PROGRESS_MAX = 1000
         private const val PLAY_DP = 56
+        private const val NOTE_DP = 64
+        private const val NOTE_TOP_DP = 24
+        private const val SCRIM_ALPHA = 0xB3
         private const val DISABLED_ALPHA = 0.4f
 
         /** Pochette d'exemple (catalogue) : des disques dans les teintes du thème, dessinés une fois, sans image à embarquer. */
