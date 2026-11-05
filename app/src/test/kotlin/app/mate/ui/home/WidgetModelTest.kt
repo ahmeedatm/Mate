@@ -255,7 +255,8 @@ class WidgetModelTest {
         assertEquals(WidgetSize.XL, WidgetType.KEYS.zoomSize)
         // Tâches : Grand, Haut (2 × 4), Vertical, Moyen : Haut a la plus grande surface.
         assertEquals(WidgetSize.T, WidgetType.TASKS.zoomSize)
-        assertEquals(WidgetSize.M, WidgetType.WATER.zoomSize)
+        // Eau : les 16 formes (#186), agrandie en plein écran.
+        assertEquals(WidgetSize.FULL, WidgetType.WATER.zoomSize)
         assertTrue(WidgetType.MEDIA.zoomable)
         assertFalse(WidgetType.HERO.zoomable)
     }
@@ -286,6 +287,9 @@ class WidgetModelTest {
                 assertEquals("$type", listOf(WidgetSize.L3, WidgetSize.T3, WidgetSize.FULL), big)
                 assertFalse("$type : l'ajout ne commence pas en plein ecran", type.sizes.first() == WidgetSize.FULL)
                 // Maintenu, le tableau s'agrandit en plein écran.
+                assertEquals("$type", WidgetSize.FULL, type.zoomSize)
+            } else if (type.sizes.size == WidgetSize.entries.size) {
+                // La règle des 16 formes (#178) : ce widget les a toutes, plein écran compris.
                 assertEquals("$type", WidgetSize.FULL, type.zoomSize)
             } else if (type == WidgetType.YTMUSIC) {
                 // Exception : YouTube Music en 3 x 2 montre la file d'attente à côté du lecteur (branche Gen2).
