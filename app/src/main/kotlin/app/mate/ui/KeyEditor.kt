@@ -31,7 +31,9 @@ import app.mate.net.DeckCatalog
 import app.mate.net.PointerGesture
 import app.mate.ui.home.MAX_SPAN
 import app.mate.ui.home.duplicateTargets
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
 import org.json.JSONObject
 
@@ -315,6 +317,8 @@ class KeyEditor @JvmOverloads constructor(
 
     private fun selectType(key: String) {
         type = key
+        // Une lecture des sorties encore en cours ne doit rien écrire sur le formulaire d'un autre type.
+        loadingOutputs?.cancel()
         for (i in 0 until types.childCount) types.getChildAt(i).let { it.isSelected = it.tag == key }
         form.removeAllViews()
         when (key) {
@@ -327,6 +331,7 @@ class KeyEditor @JvmOverloads constructor(
             "media" -> chipRow(MEDIA.map { (cmd, text) -> context.getString(text) to { addStep(JSONObject().put("type", "media").put("command", cmd)) } })
             "system" -> chipRow(SYSTEM.map { (cmd, text) -> context.getString(text) to { addStep(JSONObject().put("type", "system").put("command", cmd)) } })
             "wait" -> chipRow(WAITS.map { ms -> seconds(ms) to { addStep(JSONObject().put("type", "wait").put("ms", ms)) } })
+            "output" -> outputList()
         }
     }
 
@@ -419,6 +424,26 @@ class KeyEditor @JvmOverloads constructor(
             else -> shortcuts.forEach { name -> form.addView(row(name, false) { addStep(JSONObject().put("type", "shortcut").put("name", name)) }) }
         }
     }
+
+    /** Sorties son de l'ordinateur, relues à chaque ouverture (un casque branché entre-temps apparaît). */
+    private fun outputList() {
+        note(R.string.loading)
+        loadingOutputs = scope.launch {
+            val outputs = try {
+                BackendClient(context).system.audioOutputs()
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                form.removeAllViews()
+                return@launch showError(e)
+            }
+            form.removeAllViews()
+            if (outputs.isEmpty()) return@launch note(R.string.mixer_output_none)
+            outputs.forEach { output -> form.addView(row(output.name, false) { addStep(outputStep(output)) }) }
+        }
+    }
+
+    private var loadingOutputs: Job? = null
 
     // --- Petits éléments d'interface
 
@@ -541,6 +566,7 @@ class KeyEditor @JvmOverloads constructor(
         "media" -> MEDIA.firstOrNull { it.first == step.optString("command") }?.let { context.getString(it.second) } ?: step.optString("command")
         "system" -> SYSTEM.firstOrNull { it.first == step.optString("command") }?.let { context.getString(it.second) } ?: step.optString("command")
         "wait" -> context.getString(R.string.sum_wait, seconds(step.optInt("ms")))
+        "output" -> context.getString(R.string.sum_output, step.optString("name"))
         "gesture" -> context.getString(R.string.sum_gesture, PointerGesture.entries.firstOrNull { it.wire == step.optString("name") }?.let { context.getString(it.label) } ?: step.optString("name"))
         "window" -> {
             val layout = LAYOUTS.firstOrNull { it.first == step.optString("layout", "keep") }?.let { context.getString(it.second) }.orEmpty()
@@ -561,7 +587,8 @@ class KeyEditor @JvmOverloads constructor(
         val TYPES = listOf(
             "app" to R.string.step_app, "keys" to R.string.step_keys, "text" to R.string.step_text,
             "window" to R.string.step_window, "url" to R.string.step_url, "shortcut" to R.string.step_shortcut,
-            "media" to R.string.step_media, "system" to R.string.step_system, "wait" to R.string.step_wait,
+            "media" to R.string.step_media, "system" to R.string.step_system, "output" to R.string.step_output,
+            "wait" to R.string.step_wait,
         )
         val MEDIA = listOf("play-pause" to R.string.media_play_pause, "next" to R.string.media_next, "previous" to R.string.media_previous)
         val SYSTEM = listOf(

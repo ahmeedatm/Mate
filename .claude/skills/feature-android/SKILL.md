@@ -26,6 +26,9 @@ réseau ; ne pas les recopier, les appliquer. Liste de ce qu'on contrôle :
 - couleurs et polices par attributs du thème (le contrôle `.claude/hooks/controle.mjs` bloque le reste) ;
 - aucune dépendance nouvelle sans l'accord de l'équipe (si accordée, `assets/licences.txt` régénéré) ;
 - réseau par le client de son domaine dans `net/` ;
+- widget de l'Accueil créé ou changé : les 16 formes, une mise en page par famille (`applySize`), un aperçu
+  (`WidgetSamples`, `showPreview`), sa ligne retirée de la liste d'exceptions de `WidgetRulesTest`
+  (`docs/architecture.md`, « Widgets : les 16 formes ») ;
 - nouvel ordre venu de l'ordinateur : tous les maillons de `CLAUDE.md` (charger aussi `feature-backend`).
 
 ## Tests
