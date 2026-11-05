@@ -1399,6 +1399,12 @@
     <string name="widget_open_desc">Les fenêtres de l\'ordi par écran, à déplacer ou fermer</string>
     <string name="widget_apps">Applis</string>
     <string name="widget_apps_desc">Les applis de l\'ordinateur : lancer, ajouter, retirer, voir leurs fenêtres</string>
+    <string name="widget_apps_sample_music" translatable="false">Spotify</string>
+    <string name="widget_apps_sample_chat" translatable="false">Discord</string>
+    <string name="widget_apps_sample_browser" translatable="false">Firefox</string>
+    <string name="widget_apps_sample_notes">Notes</string>
+    <string name="widget_apps_sample_terminal">Terminal</string>
+    <string name="widget_apps_sample_mail">Mail</string>
     <string name="widget_discord">Discord</string>
     <string name="widget_discord_desc">L\'appel Discord : micro, sourdine, quitter l\'appel</string>
     <string name="widget_meeting">Réunion</string>
@@ -1499,7 +1505,7 @@
     <string name="widget_keys_title">Touches</string>
     <string name="widget_keys_desc">Tes touches, à créer et à modifier sur place</string>
     <string name="widget_keys_choose">Choisir les touches</string>
-    <string name="widget_keys_hint">%1$d touche(s) choisie(s) sur %2$d au plus. Un petit widget montre la première, un moyen les deux premières, un vertical les six premières, un grand toutes (il défile).</string>
+    <string name="widget_keys_hint">%1$d touche(s) choisie(s) sur %2$d au plus. Une petite forme montre les premières, autant qu\'elle en tient ; à partir de 2 × 2, le widget les montre toutes (il défile).</string>
     <string name="widget_keys_add">Ajouter</string>
     <string name="widget_keys_new">Nouvelle touche</string>
     <string name="widget_keys_existing">Choisir parmi les touches existantes</string>
@@ -1510,6 +1516,14 @@
     <string name="widget_keys_remove_yes">Retirer du widget</string>
     <string name="widget_keys_edit">Modifier</string>
     <string name="widget_keys_edit_named">Modifier %1$s</string>
+    <string name="widget_keys_sample_mute">Couper le micro</string>
+    <string name="widget_keys_sample_screenshot">Capture</string>
+    <string name="widget_keys_sample_play">Lecture</string>
+    <string name="widget_keys_sample_next">Suivant</string>
+    <string name="widget_keys_sample_dnd">Ne pas déranger</string>
+    <string name="widget_keys_sample_lock">Verrouiller</string>
+    <string name="widget_keys_sample_dark">Mode sombre</string>
+    <string name="widget_keys_sample_volume_off">Son coupé</string>
     <string name="widget_weather">Météo</string>
     <string name="widget_weather_desc">Le temps qu\'il fait dans ta ville</string>
     <string name="widget_weather_choose">Choisir ma ville</string>

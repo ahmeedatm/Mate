@@ -40,8 +40,28 @@ object WidgetSamples {
         WidgetType.YTMUSIC -> null
 
         // #183 Piloter l'ordinateur
-        WidgetType.KEYS -> null
-        WidgetType.APPS -> null
+        WidgetType.KEYS -> KeysSample(
+            listOf(
+                R.string.widget_keys_sample_mute to "mic_off",
+                R.string.widget_keys_sample_screenshot to "screenshot",
+                R.string.widget_keys_sample_play to "play_pause",
+                R.string.widget_keys_sample_next to "skip_next",
+                R.string.widget_keys_sample_dnd to "dnd",
+                R.string.widget_keys_sample_lock to "lock",
+                R.string.widget_keys_sample_dark to "dark_mode",
+                R.string.widget_keys_sample_volume_off to "volume_off",
+            ),
+        )
+        WidgetType.APPS -> AppsSample(
+            listOf(
+                R.string.widget_apps_sample_music,
+                R.string.widget_apps_sample_chat,
+                R.string.widget_apps_sample_browser,
+                R.string.widget_apps_sample_notes,
+                R.string.widget_apps_sample_terminal,
+                R.string.widget_apps_sample_mail,
+            ),
+        )
         WidgetType.OPEN -> null
         WidgetType.PAD -> null
         WidgetType.SCREEN -> null
