@@ -1423,6 +1423,8 @@
     <string name="ha_off">Éteint</string>
     <string name="ha_scene">Scène</string>
     <string name="ha_unavailable">Injoignable</string>
+    <string name="ha_unavailable_hint">%1$s : Home Assistant ne la joint pas pour le moment</string>
+    <string name="ha_empty">Aucune lumière, prise ou scène à afficher : ajoute-les dans HA_ENTITIES, dans le fichier .env de l\'ordinateur</string>
     <string name="ha_scenes">Scènes</string>
     <string name="ha_pick_title">Entité à montrer</string>
     <string name="ha_entity_state">%1$s, %2$s</string>
@@ -1431,8 +1433,6 @@
     <string name="ha_sample_cafe">Cafetière</string>
     <string name="ha_sample_chambre">Chambre</string>
     <string name="ha_sample_film">Soirée film</string>
-    <string name="ha_unavailable_hint">%1$s : Home Assistant ne la joint pas pour le moment</string>
-    <string name="ha_empty">Aucune lumière, prise ou scène à afficher : ajoute-les dans HA_ENTITIES, dans le fichier .env de l\'ordinateur</string>
     <string name="widget_away">Je m\'absente</string>
     <string name="widget_away_desc">Un geste pour partir : micro coupé, Focus en pause, fenêtres gardées, puis tout est remis</string>
     <string name="away_leave">Je m\'absente</string>

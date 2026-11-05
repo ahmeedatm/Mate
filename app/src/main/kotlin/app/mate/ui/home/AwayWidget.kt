@@ -59,11 +59,15 @@ class AwayWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidget(
     /** La liste de ce que fait le bouton est montrée dans cette forme (pas en pastille ni en ligne). */
     private var listed = false
 
+    /** Dernière liste dessinée : rien n'est refait chaque minute tant qu'elle ne change pas. */
+    private var drawnList: Pair<AwayState?, Boolean>? = null
+
     override fun applySize() {
         for (v in listOf(title, status, duration, listLabel, list, leave, back)) (v.parent as? ViewGroup)?.removeView(v)
         view.removeAllViews()
         view.orientation = LinearLayout.VERTICAL
         listed = family != ShapeFamily.PILL && family != ShapeFamily.ROW
+        drawnList = null
         when (family) {
             ShapeFamily.PILL -> pill()
             ShapeFamily.ROW -> row()
@@ -84,8 +88,10 @@ class AwayWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidget(
     private fun pill() {
         view.setPadding(dp(10), dp(10), dp(10), dp(10))
         status.textSize = 14f
-        status.maxLines = 2
+        // Une ligne et un bouton bas : la case tient dans la rangée basse de l'Accueil (92 dp), même absent.
+        status.maxLines = 1
         buttons(textSp = 14f, icon = false)
+        for (b in listOf(leave, back)) b.minHeight = dp(44)
         view.addView(status, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT))
         for (b in listOf(leave, back)) view.addView(b, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, 0, 1f))
     }
@@ -147,6 +153,7 @@ class AwayWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidget(
 
     private fun buttons(textSp: Float, icon: Boolean) {
         for (b in listOf(leave, back)) {
+            b.minHeight = dp(56)
             b.textSize = textSp
             // Une case est trop étroite pour l'icône et les marges d'un bouton ordinaire.
             b.setPadding(dp(if (icon) 20 else 4), 0, dp(if (icon) 20 else 4), 0)
@@ -189,11 +196,13 @@ class AwayWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidget(
 
     /** « En partant » et tout ce que fera le bouton ; pendant l'absence, ce qui a vraiment été fait. */
     private fun renderList(away: AwayState?) {
+        // Deux cases de haut, empilé, pendant l'absence : la durée et Reprendre prennent la place de la liste.
+        val room = !(placed.size.h == 2 && placed.size.w <= placed.size.h && away != null)
+        if (drawnList == away?.copy(sinceMs = 0) to room) return
+        drawnList = away?.copy(sinceMs = 0) to room
         listLabel.setText(if (away == null) R.string.away_will_label else R.string.away_done_label)
         list.removeAllViews()
         val effects = AwayLogic.effects(away)
-        // Colonne de deux cases pendant l'absence : la durée et Reprendre prennent la place de la liste.
-        val room = !(family == ShapeFamily.COLUMN && placed.size.h == 2 && away != null)
         listLabel.visibility = if (room) View.VISIBLE else View.GONE
         if (!room) return
         if (effects.isEmpty()) list.addView(effectRow(0, context.getString(R.string.away_nothing_done), away != null))
@@ -289,6 +298,6 @@ class AwayWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidget(
     }
 
     private companion object {
-        const val EFFECT_ROW_DP = 40
+        const val EFFECT_ROW_DP = 36
     }
 }

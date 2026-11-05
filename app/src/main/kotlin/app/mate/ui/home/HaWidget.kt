@@ -85,14 +85,19 @@ class HaWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidget(co
         view.removeAllViews()
         val match = ViewGroup.LayoutParams.MATCH_PARENT
         val wrap = ViewGroup.LayoutParams.WRAP_CONTENT
+        // Erreur ou liste vide : deux lignes au plus, la place reste aux entités.
+        status.maxLines = if (family == ShapeFamily.PILL || family == ShapeFamily.ROW) 2 else 4
+        status.ellipsize = TextUtils.TruncateAt.END
         if (family == ShapeFamily.PILL) {
-            view.setPadding(dp(8), dp(8), dp(8), dp(8))
+            view.setPadding(dp(6), dp(6), dp(6), dp(6))
             body = LinearLayout(context)
             view.addView(status, LinearLayout.LayoutParams(match, wrap))
             view.addView(body, LinearLayout.LayoutParams(match, 0, 1f))
         } else {
-            view.setPadding(dp(16), dp(12), dp(16), dp(12))
-            view.addView(title, LinearLayout.LayoutParams(match, wrap))
+            // Ligne : sans le titre, pour tenir dans la rangée basse de l'Accueil (92 dp) ; les icônes disent ce que c'est.
+            val row = family == ShapeFamily.ROW
+            view.setPadding(dp(16), dp(if (row) 8 else 12), dp(16), dp(if (row) 8 else 12))
+            if (!row) view.addView(title, LinearLayout.LayoutParams(match, wrap))
             view.addView(status, LinearLayout.LayoutParams(match, wrap))
             body = when (family) {
                 ShapeFamily.ROW -> LinearLayout(context)
@@ -103,7 +108,7 @@ class HaWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidget(co
             } else {
                 ScrollView(context).apply { isVerticalScrollBarEnabled = false; addView(body, ViewGroup.LayoutParams(match, wrap)) }
             }
-            view.addView(scroll, LinearLayout.LayoutParams(match, 0, 1f).apply { topMargin = dp(8) })
+            view.addView(scroll, LinearLayout.LayoutParams(match, 0, 1f).apply { if (!row) topMargin = dp(8) })
         }
         drawn = null
         render()
@@ -219,21 +224,29 @@ class HaWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidget(co
         }
     }
 
-    /** Pastille : la case entière est l'entité ; allumée, elle prend l'accent (l'état est aussi écrit). */
+    /**
+     * Pastille : la case entière est l'entité ; allumée, elle prend l'accent (l'état est aussi écrit). Dans la rangée basse
+     * de l'Accueil (92 dp), l'état laisse la place : l'icône et la couleur le disent, et la description le lit.
+     */
     private fun pill(e: HaEntity): View {
         val on = e.on && !e.isScene
+        val state = text(stateText(e), 13f, if (on) R.attr.c_on_accent else R.attr.c_text_dim)
         return LinearLayout(context).apply {
             orientation = LinearLayout.VERTICAL
             background = GradientDrawable().apply {
                 setColor(color(if (on) R.attr.c_accent else R.attr.c_surface_raised))
                 cornerRadius = dp(20).toFloat()
             }
-            setPadding(dp(14), dp(12), dp(14), dp(12))
-            addView(icon(e, 36, if (on) R.attr.c_on_accent else R.attr.c_text))
+            setPadding(dp(14), dp(10), dp(14), dp(10))
+            addView(icon(e, 28, if (on) R.attr.c_on_accent else R.attr.c_text))
             addView(View(context), LinearLayout.LayoutParams(0, 0, 1f))
-            addView(text(e.name, 18f, if (on) R.attr.c_on_accent else R.attr.c_text))
-            addView(text(stateText(e), 14f, if (on) R.attr.c_on_accent else R.attr.c_text_dim))
+            addView(text(e.name, 16f, if (on) R.attr.c_on_accent else R.attr.c_text))
+            addView(state)
             touchable(e)
+            addOnLayoutChangeListener { _, _, top, _, bottom, _, _, _, _ ->
+                val shown = bottom - top >= dp(PILL_STATE_DP)
+                if (shown != (state.visibility == View.VISIBLE)) post { state.visibility = if (shown) View.VISIBLE else View.GONE }
+            }
         }
     }
 
@@ -289,6 +302,9 @@ class HaWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidget(co
 
     private companion object {
         const val ROW_ITEM_DP = 220
+
+        /** Hauteur sous laquelle la Pastille ne montre plus l'état (rangée basse de l'Accueil). */
+        const val PILL_STATE_DP = 104
         const val UNAVAILABLE_ALPHA = 0.6f
         const val PENDING_ALPHA = 0.7f
     }
