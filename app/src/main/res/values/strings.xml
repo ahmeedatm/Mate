@@ -98,6 +98,7 @@
     <string name="step_media">Média</string>
     <string name="step_system">Système</string>
     <string name="step_wait">Pause</string>
+    <string name="step_output">Sortie son</string>
     <string name="step_app_filter">Chercher une appli</string>
     <string name="step_key_push">Maintenir pour parler</string>
     <string name="sum_push">Maintenu : </string>
@@ -124,6 +125,7 @@
     <string name="sum_shortcut">Raccourci « %1$s »</string>
     <string name="sum_wait">Attendre %1$s</string>
     <string name="sum_gesture">Geste du Pavé : %1$s</string>
+    <string name="sum_output">Son sur %1$s</string>
     <string name="sum_window">%1$s → %2$s, %3$s</string>
     <string name="apps_all_title">Toutes les applis</string>
     <string name="apps_all">Toutes les applis de l\'ordinateur</string>
