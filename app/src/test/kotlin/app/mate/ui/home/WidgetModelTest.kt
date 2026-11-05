@@ -287,6 +287,8 @@ class WidgetModelTest {
                 assertFalse("$type : l'ajout ne commence pas en plein ecran", type.sizes.first() == WidgetSize.FULL)
                 // Maintenu, le tableau s'agrandit en plein écran.
                 assertEquals("$type", WidgetSize.FULL, type.zoomSize)
+            } else if (type.sizes.size == WidgetSize.entries.size) {
+                // Les 16 formes (#178) : la règle de WidgetRulesTest remplace celle-ci.
             } else if (type == WidgetType.YTMUSIC) {
                 // Exception : YouTube Music en 3 x 2 montre la file d'attente à côté du lecteur (branche Gen2).
                 assertEquals("$type", listOf(WidgetSize.L3), big)
@@ -311,12 +313,14 @@ class WidgetModelTest {
     @Test
     fun `une taille inconnue relue retombe sur la premiere taille du widget`() {
         val context = app.mate.FakeContext()
-        val json = """{"v":2,"pages":1,"widgets":[{"t":"jira","s":"GEANT","p":0,"c":0,"r":0,"cfg":{}},{"t":"clock","s":"FULL","p":0,"c":0,"r":2,"cfg":{}}]}"""
+        // Une taille connue mais refusée par ce widget : la première aussi (tant qu'un widget n'a pas les 16 formes, #178).
+        val narrow = WidgetType.entries.firstOrNull { WidgetSize.FULL !in it.sizes && it.sizes.first().h <= 2 }
+        val second = narrow?.let { """,{"t":"${it.key}","s":"FULL","p":0,"c":0,"r":2,"cfg":{}}""" }.orEmpty()
+        val json = """{"v":2,"pages":1,"widgets":[{"t":"jira","s":"GEANT","p":0,"c":0,"r":0,"cfg":{}}$second]}"""
         context.getSharedPreferences("companion", 0).edit().putString(HomeLayout.KEY, json).apply()
         val widgets = HomeLayout.load(context).widgets
         assertEquals(WidgetType.JIRA.sizes.first(), widgets.single { it.type == WidgetType.JIRA }.size)
-        // Une taille connue mais refusée par ce widget : la première aussi.
-        assertEquals(WidgetType.CLOCK.sizes.first(), widgets.single { it.type == WidgetType.CLOCK }.size)
+        if (narrow != null) assertEquals(narrow.sizes.first(), widgets.single { it.type == narrow }.size)
     }
 
     @Test

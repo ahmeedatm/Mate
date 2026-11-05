@@ -16,7 +16,7 @@ object WidgetSamples {
         WidgetType.HERO -> null
         WidgetType.DAY -> null
         WidgetType.DAYLINE -> null
-        WidgetType.WEATHER -> null
+        WidgetType.WEATHER -> WeatherSample.paris()
         WidgetType.NEXT -> null
         WidgetType.AGENDA -> null
 
