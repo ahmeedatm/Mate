@@ -589,6 +589,10 @@
     <string name="focus_phase_work">Concentration</string>
     <string name="focus_phase_break">Pause</string>
     <string name="focus_ready">Prêt</string>
+    <plurals name="focus_sessions_done">
+        <item quantity="one">%1$d séance finie</item>
+        <item quantity="other">%1$d séances finies</item>
+    </plurals>
     <string name="focus_paused">En pause</string>
     <string name="ambiance">Ambiance</string>
     <string name="focus_mode_pomodoro">Pomodoro</string>
@@ -912,8 +916,10 @@
     <string name="water_title">Eau</string>
     <string name="water_count">%1$d / %2$d verres</string>
     <string name="water_count_short">%1$d / %2$d</string>
-    <string name="water_done_short">%1$d / %2$d ✓</string>
-    <string name="water_done">%1$d / %2$d verres ✓</string>
+    <string name="water_glasses_label">verres</string>
+    <string name="water_glass_full">Verre %1$d sur %2$d, bu</string>
+    <string name="water_glass_empty">Verre %1$d sur %2$d, pas bu</string>
+    <string name="water_next_reminder">Prochain rappel à %1$s</string>
     <string name="water_plus">J\'ai bu un verre</string>
     <string name="water_minus">Enlever un verre</string>
     <string name="water_settings">Eau</string>
@@ -1579,7 +1585,7 @@
     <string name="widget_mail_empty">Connecte tes mails sur la page de l\'ordinateur</string>
     <string name="widget_mail_a11y">Mails : %1$d non lus. Toucher pour ouvrir la boîte sur l\'ordinateur</string>
     <string name="widget_valorant">Valorant</string>
-    <string name="widget_valorant_desc">Pendant une partie, le rang et l\'agent de chaque joueur, ton équipe et en face ; hors partie, ton rang</string>
+    <string name="widget_valorant_desc">Pendant une partie, l\'agent, le rang et les stats de chaque joueur ; après, le tableau des scores ; hors partie, ton rang et tes dernières classées</string>
     <string name="valorant_off">Fermé</string>
     <string name="valorant_off_hint">Lance Valorant sur l\'ordinateur</string>
     <string name="valorant_menu">Au menu</string>
@@ -1591,10 +1597,51 @@
     <string name="valorant_enemies_later">Visible au début de la partie</string>
     <string name="valorant_hidden">Joueur masqué</string>
     <string name="valorant_you">toi</string>
-    <string name="valorant_no_agent">Pas encore choisi</string>
     <string name="valorant_rr">%1$d RR</string>
     <string name="valorant_level">niveau %1$d</string>
     <string name="valorant_score">%1$d – %2$d</string>
+    <string name="valorant_col_rank">Rang</string>
+    <string name="valorant_col_peak">Pic</string>
+    <string name="valorant_col_kd">K/D</string>
+    <string name="valorant_col_hs">Tête</string>
+    <string name="valorant_col_wr">Vict.</string>
+    <string name="valorant_col_acs">ACS</string>
+    <string name="valorant_col_kda">K / D / A</string>
+    <string name="valorant_col_adr">ADR</string>
+    <string name="valorant_col_fk">1ers</string>
+    <string name="valorant_level_short">niv. %1$d</string>
+    <string name="valorant_win">Victoire</string>
+    <string name="valorant_loss">Défaite</string>
+    <string name="valorant_draw">Égalité</string>
+    <string name="valorant_end_loading">Tableau des scores en préparation…</string>
+    <string name="valorant_end_missing">Tableau des scores indisponible</string>
+    <string name="valorant_last_matches">Dernières classées</string>
+    <string name="valorant_no_history">Pas de classée récente</string>
+    <string name="valorant_kda">%1$d / %2$d / %3$d</string>
+    <string name="valorant_party">groupe %1$d</string>
+    <string name="valorant_mvp">MVP</string>
+    <string name="valorant_peak">meilleur rang %1$s</string>
+    <string name="valorant_kd_value">K/D %1$s</string>
+    <string name="valorant_hs_value">%1$d %% tête</string>
+    <string name="valorant_wr_value">%1$d %% de victoires</string>
+    <string name="valorant_adr_value">%1$d ADR</string>
+    <string name="valorant_fk_value">%1$d premiers kills</string>
+    <string name="valorant_acs_value">%1$d ACS</string>
+    <string name="valorant_rr_change">%1$s RR</string>
+    <string name="valorant_ffa">Chacun pour soi</string>
+    <string name="valorant_hovered">%1$s, pas encore verrouillé</string>
+    <string name="valorant_unranked">Non classé</string>
+    <string name="valorant_radiant">Radiant</string>
+    <string-array name="valorant_divisions">
+        <item>Fer</item>
+        <item>Bronze</item>
+        <item>Argent</item>
+        <item>Or</item>
+        <item>Platine</item>
+        <item>Diamant</item>
+        <item>Ascendant</item>
+        <item>Immortel</item>
+    </string-array>
     <plurals name="widget_mail_unread">
         <item quantity="one">non lu</item>
         <item quantity="other">non lus</item>
