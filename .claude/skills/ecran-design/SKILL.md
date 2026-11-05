@@ -75,6 +75,11 @@ Sinon, pour chaque `NOM` d'`AppTheme` :
 
 Pour les pages web : une capture clair et une sombre (Playwright, `references/web.md`).
 
+Widget de l'Accueil : en plus, une capture de chaque famille de formes (Pastille 1 × 1, Ligne, Colonne, Bloc,
+Grand, Plein écran ; `ShapeFamily`), au moins dans le thème par défaut, et son aperçu à données d'exemple
+(`showPreview`). Plus grand, il montre plus de choses ; plus petit, il garde l'essentiel : jamais un simple
+étirement (`docs/architecture.md`, « Widgets : les 16 formes »).
+
 Regarder chaque image : texte coupé, chevauchement, contraste faible, hiérarchie plate, élément qui
 se décale d'un thème à l'autre. Les captures partent avec la demande à `relecteur-design`.
 
