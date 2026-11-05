@@ -170,6 +170,8 @@ Fait et testé sur la Gen2 (APK debug, compagnon lancé depuis le dépôt) :
 
 **Widgets en 16 formes** (suivi #187) : la règle est posée (#178 : 16 formes, familles `ShapeFamily`, aperçu `WidgetSamples`, `WidgetRulesTest`). Reste à vider les listes d'exceptions `app/src/test/.../ui/home/WidgetGaps*.kt`, une par famille de widgets (#180 à #186), et le catalogue d'ajout (#179).
 
+**Heure et journée en 16 formes** (#180) : Horloge (cadran des minutes) et Météo (courbe des prochaines heures) ont leurs 16 formes et leur aperçu (PR #195). Vu sur l'émulateur, pas sur la tablette 4.2 (vitesse du dessin à mesurer). Restent Prochain rendez-vous, Agenda, Héros, Journée, Ligne du jour (`WidgetGapsHeure.kt`).
+
 **Page par appli** (#23 puis #61) : la tablette passe sur la page dont une appli est au premier plan de l'ordinateur (ordre `foreground`), change de page d'une appli à l'autre, et revient 8 s après. Vérifié par tests JVM, tests backend et e2e. Non testé : émulateur, tablette réelle, Windows (`frontApp` par l'exe), une appli en plein écran.
 
 **Deck V2** : lot 1 (Profils) fait ; le 29/10, branche `feat/deck-v2-barre` (Momo, pas encore fusionnée) : barre fixe à gauche à la place du menu caché, profils Accueil / Deck / Réunion, Réunion automatique pendant un appel (ordre `meeting`), widget d'appel générique, symboles des touches, touches de départ bureau, réglage de la barre, lecture en cours dans le header, mode Deck retiré (le lot 2 d'Ahmed). Vérifié sur la tablette (barre, profils, alignement) et sur l'émulateur (installation neuve, appel Teams simulé). À vérifier : vrai appel Teams et Discord, fluidité du profil Deck (P90 ~30 ms, ses widgets redessinent en continu, ce n'est pas la transition), kiosque.
