@@ -13,6 +13,7 @@ class AppThemeTest {
     fun `les themes, dans l'ordre des groupes`() {
         assertEquals(
             listOf(
+                AppTheme.CHALEUR,
                 AppTheme.CONSOLE, AppTheme.CONSOLE_JOUR,
                 AppTheme.CLAIR, AppTheme.SOMBRE,
                 AppTheme.CADRAN, AppTheme.CADRAN_NUIT, AppTheme.RETRO,
@@ -24,14 +25,15 @@ class AppThemeTest {
     }
 
     @Test
-    fun `cinq groupes, Console d'abord, Accessibilite en dernier`() {
+    fun `six groupes, Chaleur d'abord, Accessibilite en dernier`() {
         assertEquals(
-            listOf(ThemeGroup.CONSOLE, ThemeGroup.SOBRE, ThemeGroup.RETRO, ThemeGroup.AMBIANCES, ThemeGroup.ACCESSIBILITE),
+            listOf(ThemeGroup.CHALEUR, ThemeGroup.CONSOLE, ThemeGroup.SOBRE, ThemeGroup.RETRO, ThemeGroup.AMBIANCES, ThemeGroup.ACCESSIBILITE),
             ThemeGroup.entries,
         )
         assertEquals(ThemeGroup.entries, AppTheme.entries.map { it.group }.distinct())
         assertEquals(
             mapOf(
+                ThemeGroup.CHALEUR to listOf(AppTheme.CHALEUR),
                 ThemeGroup.CONSOLE to listOf(AppTheme.CONSOLE, AppTheme.CONSOLE_JOUR),
                 ThemeGroup.SOBRE to listOf(AppTheme.CLAIR, AppTheme.SOMBRE),
                 ThemeGroup.RETRO to listOf(AppTheme.CADRAN, AppTheme.CADRAN_NUIT, AppTheme.RETRO),
@@ -47,6 +49,7 @@ class AppThemeTest {
     @Test
     fun `Clair, Sombre, Cadran, Retro et les ambiances d'UnoMate ont leur base et leur palette`() {
         val expected = mapOf(
+            AppTheme.CHALEUR to (R.style.Theme_CompanionLight to R.style.Palette_Chaleur),
             AppTheme.CLAIR to (R.style.Theme_CompanionLight to R.style.Palette_CadranClair),
             AppTheme.SOMBRE to (R.style.Theme_Companion to R.style.Palette_CadranSombre),
             AppTheme.CADRAN to (R.style.Theme_CompanionLight to R.style.Palette_Cadran),
@@ -65,8 +68,8 @@ class AppThemeTest {
     }
 
     @Test
-    fun `sans choix enregistre, Console`() {
-        assertEquals(AppTheme.CONSOLE, AppTheme.current(context))
+    fun `sans choix enregistre, Chaleur`() {
+        assertEquals(AppTheme.CHALEUR, AppTheme.current(context))
     }
 
     @Test
@@ -85,11 +88,17 @@ class AppThemeTest {
     }
 
     @Test
-    fun `un theme enregistre qui n'existe plus retombe sur Console`() {
+    fun `un theme enregistre qui n'existe plus retombe sur Chaleur`() {
         for (old in listOf("NUIT", "NEON", "CHAUD", "DEMO")) {
             Prefs.setTheme(context, old)
-            assertEquals(old, AppTheme.CONSOLE, AppTheme.current(context))
+            assertEquals(old, AppTheme.CHALEUR, AppTheme.current(context))
         }
+    }
+
+    @Test
+    fun `Console enregistre est garde`() {
+        Prefs.setTheme(context, "CONSOLE")
+        assertEquals(AppTheme.CONSOLE, AppTheme.current(context))
     }
 
     @Test
@@ -125,8 +134,8 @@ class AppThemeTest {
     }
 
     @Test
-    fun `un nom de theme inconnu retombe sur Console`() {
+    fun `un nom de theme inconnu retombe sur Chaleur`() {
         Prefs.setTheme(context, "CONTRASTE_ELEVE")
-        assertEquals(AppTheme.CONSOLE, AppTheme.current(context))
+        assertEquals(AppTheme.CHALEUR, AppTheme.current(context))
     }
 }
