@@ -66,11 +66,10 @@ class CallSample(val meeting: Boolean) : WidgetSample {
         id: String,
         label: String,
         symbol: String? = null,
-        glyph: String? = null,
         whenState: String? = null,
         lit: String? = null,
         color: String? = null,
-    ) = DeckTile("sample-$id", label, "keys", glyph = glyph, color = color, whenState = whenState, lit = lit, symbol = symbol)
+    ) = DeckTile("sample-$id", label, "keys", glyph = null, color = color, whenState = whenState, lit = lit, symbol = symbol)
 
     private companion object {
         /** Rouge de « Quitter l'appel » de la page Réunion d'exemple (`backend/config/deck.example.json`). */

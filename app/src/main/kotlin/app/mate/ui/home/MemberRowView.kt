@@ -20,7 +20,8 @@ import app.mate.ui.themeFont
  * Rangée de photos rondes d'un appel Discord : photo, ou initiales sans photo, puis « +N » quand la largeur manque
  * (ordre : `planMembers`). Un anneau de la couleur d'accent entoure qui parle : il apparaît en 120 ms et s'éteint en
  * 300 ms, sans boucle (écran à 55 Hz, GPU modeste : docs/tablette-4.2.md). Dessin seul, aucune vue par personne.
- * [photoDp] : diamètre d'une photo ; [vertical] : les photos en colonne (Colonne de l'îlot Discord).
+ * [photoDp] : diamètre d'une photo ; [vertical] : les photos en colonne (Colonne de l'îlot Discord), où une seule place
+ * montre un visage plutôt qu'un « +N ».
  */
 class MemberRowView(context: Context, photoDp: Int = PHOTO_DP, private val vertical: Boolean = false) : View(context) {
     /** Rangée centrée dans sa largeur (Plein écran de l'îlot Discord) ; sinon calée à gauche. */
@@ -106,8 +107,7 @@ class MemberRowView(context: Context, photoDp: Int = PHOTO_DP, private val verti
     private fun replan() {
         val length = if (vertical) height else width
         val fits = if (length == 0) 0 else ((length + spacing) / (cell + spacing)).toInt()
-        // Une seule place : un visage (le dernier à avoir parlé), jamais un « +N » tout seul.
-        plan = if (fits == 1) planMembers(members, lastSpoke, 2).let { MemberRowPlan(it.shown.take(1), 0) } else planMembers(members, lastSpoke, fits)
+        plan = planMembers(members, lastSpoke, fits, faceFirst = vertical)
         labels = plan.shown.associate { it.id to initials(it.name) }
         moreLabel = if (plan.more > 0) "+${plan.more}" else ""
         val speaking = members.filter { it.speaking }.map { it.id }.toSet()

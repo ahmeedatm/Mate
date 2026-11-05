@@ -163,6 +163,9 @@ abstract class CallWidget(
         view.gravity = Gravity.NO_GRAVITY
         featured.centered = false
         bigRow.centered = false
+        // Place utile relevée à nouveau : pas de touches dessinées aux cotes de la forme d'avant.
+        innerW = 0
+        innerH = 0
         plan = planCall(family, island, shownTiles())
         when {
             family == ShapeFamily.PILL -> pillLayout()
@@ -219,13 +222,14 @@ abstract class CallWidget(
         val match = ViewGroup.LayoutParams.MATCH_PARENT
         view.addView(header, LinearLayout.LayoutParams(match, wrap))
         view.addView(people, LinearLayout.LayoutParams(match, wrap).apply { topMargin = dp(4) })
-        when (family) {
-            ShapeFamily.COLUMN -> {
+        val star = family == ShapeFamily.FULL || (family == ShapeFamily.LARGE && placed.size.h >= FEATURED_MIN_ROWS)
+        when {
+            family == ShapeFamily.COLUMN -> {
                 view.addView(memberColumn, LinearLayout.LayoutParams(match, 0, 1f).apply { topMargin = dp(8); bottomMargin = dp(8) })
                 rows = listOf(memberColumn)
             }
             // Plein écran, et Grand assez haut : celui qui parle en grand, les autres en rangée dessous.
-            ShapeFamily.FULL, ShapeFamily.LARGE.takeIf { placed.size.h >= FEATURED_MIN_ROWS } -> {
+            star -> {
                 val center = LinearLayout(context).apply { orientation = LinearLayout.VERTICAL; gravity = Gravity.CENTER }
                 center.addView(featured, LinearLayout.LayoutParams(match, wrap))
                 center.addView(featuredName, LinearLayout.LayoutParams(match, wrap).apply { topMargin = dp(8) })
@@ -339,7 +343,7 @@ abstract class CallWidget(
             return
         }
         if (innerH == 0) return
-        val sizes = keySizes()
+        val sizes = callKeySizes(family, island, innerW, innerH, labelLineDp, plan.keys.size)
         val main = plan.main?.let(lit)
         val small = fitKeys(plan.keys, sizes.count).map(lit)
         val next = listOf(main, small, sizes)
@@ -348,11 +352,11 @@ abstract class CallWidget(
         mainFrame.removeAllViews()
         keyRow.removeAllViews()
         if (main != null) {
-            val ring = sizes.main + 2 * (HALO_GAP_DP + HALO_RING_DP)
+            val ring = sizes.main + 2 * (CallKeyMetrics.HALO_GAP_DP + CallKeyMetrics.HALO_RING_DP)
             if (island) {
                 halo.background = GradientDrawable().apply {
                     shape = GradientDrawable.OVAL
-                    setStroke(dp(HALO_RING_DP), color(R.attr.c_accent))
+                    setStroke(dp(CallKeyMetrics.HALO_RING_DP), color(R.attr.c_accent))
                 }
                 mainFrame.addView(halo, FrameLayout.LayoutParams(dp(ring), dp(ring), Gravity.CENTER))
             }
@@ -371,39 +375,12 @@ abstract class CallWidget(
     }
 
     private fun keyParams(width: Int = 0) = LinearLayout.LayoutParams(if (width > 0) dp(width) else ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT).apply {
-        marginStart = dp(KEY_GAP_DP / 2)
-        marginEnd = dp(KEY_GAP_DP / 2)
+        marginStart = dp(CallKeyMetrics.KEY_GAP_DP / 2)
+        marginEnd = dp(CallKeyMetrics.KEY_GAP_DP / 2)
     }
 
-    /** Cotes des touches une à une, en dp. [count] : petites touches qui tiennent ; [width] : largeur d'une touche de Ligne. */
-    private data class KeySizes(val main: Int, val mainLabel: Boolean, val small: Int, val smallLabel: Boolean, val count: Int, val width: Int)
-
-    private fun keySizes(): KeySizes {
-        val labelRoom = TileMetrics.LABEL_GAP_DP + 2 * labelLineDp()
-        if (family == ShapeFamily.PILL) {
-            if (island) return KeySizes((minOf(innerH - CAPTION_DP, innerW)).coerceIn(MIN_KEY_DP, PILL_ROUND_DP), false, 0, false, 0, 0)
-            val withLabel = innerH >= MIN_KEY_DP + labelRoom
-            return KeySizes((if (withLabel) innerH - labelRoom else innerH).coerceIn(MIN_KEY_DP, PILL_KEY_DP), withLabel, 0, false, 0, 0)
-        }
-        if (family == ShapeFamily.ROW && !island) {
-            val withLabel = innerH >= MIN_KEY_DP + labelRoom
-            val plate = (if (withLabel) innerH - labelRoom else innerH).coerceIn(MIN_KEY_DP, ROW_KEY_DP)
-            val width = maxOf(plate, if (withLabel) ROW_LABEL_WIDTH_DP else plate) + KEY_GAP_DP
-            val count = ((innerW * ROW_KEYS_SHARE) / width).toInt().coerceAtLeast(1)
-            return KeySizes(0, false, plate, withLabel, count, width - KEY_GAP_DP)
-        }
-        val main = when (family) {
-            ShapeFamily.ROW -> (innerH - 2 * (HALO_GAP_DP + HALO_RING_DP)).coerceIn(MIN_KEY_DP, ROW_ROUND_DP)
-            ShapeFamily.COLUMN -> (innerW / 2).coerceIn(MIN_KEY_DP, COLUMN_ROUND_DP)
-            ShapeFamily.LARGE -> LARGE_ROUND_DP
-            ShapeFamily.FULL -> FULL_ROUND_DP
-            else -> BLOCK_ROUND_DP
-        }
-        val small = (main * SMALL_SHARE).roundToInt().coerceAtLeast(MIN_KEY_DP)
-        return KeySizes(main, false, small, false, plan.keys.size, 0)
-    }
-
-    private fun labelLineDp() = (TextView(context).apply { textSize = KEY_LABEL_SP }.lineHeight / context.resources.displayMetrics.density).roundToInt()
+    /** Hauteur d'une ligne de libellé, en dp : relue une fois (elle suit la taille du texte des Réglages). */
+    private val labelLineDp by lazy { (TextView(context).apply { textSize = KEY_LABEL_SP }.lineHeight / context.resources.displayMetrics.density).roundToInt() }
 
     /** Une touche de la page, au dessin de la grille (`TileGridView.bind`) : ronde dans l'îlot, libellé si la place le permet. */
     private fun keyView(entry: Pair<DeckTile, Boolean>, plateDp: Int, withLabel: Boolean): View {
@@ -421,7 +398,7 @@ abstract class CallWidget(
     /** Halo de l'îlot : quelqu'un parle dans l'appel. Allumé en 120 ms, éteint en 300 ms, sans boucle. */
     private fun renderHalo() {
         val on = island && voice?.connected == true && speaking.isNotEmpty()
-        if (on == haloOn && halo.alpha == if (on) 1f else 0f) return
+        if (on == haloOn) return
         haloOn = on
         halo.animate().cancel()
         halo.animate().alpha(if (on) 1f else 0f).setDuration(if (on) HALO_IN_MS else HALO_OUT_MS).start()
@@ -588,29 +565,8 @@ abstract class CallWidget(
         const val MAX_SPEAKING_FAILURES = 3
         const val VOICE_AFTER_MS = 700L
 
-        // Cotes des touches une à une, en dp : plafonds par famille, plancher de 48 (cible tactile).
-        const val MIN_KEY_DP = 48
-        const val PILL_KEY_DP = 80
-        const val PILL_ROUND_DP = 96
-        const val ROW_KEY_DP = 64
-        const val ROW_ROUND_DP = 80
-        const val COLUMN_ROUND_DP = 96
-        const val BLOCK_ROUND_DP = 88
-        const val LARGE_ROUND_DP = 104
-        const val FULL_ROUND_DP = 120
-        const val SMALL_SHARE = 0.62
         const val INITIAL_SHARE = 0.45f
         const val KEY_LABEL_SP = 13f
-        const val KEY_GAP_DP = 12
-
-        /** Ligne de la télécommande : les touches prennent jusqu'à 65 % de la largeur, une touche au moins 84 dp (libellé). */
-        const val ROW_KEYS_SHARE = 0.65
-        const val ROW_LABEL_WIDTH_DP = 84
-
-        /** Légende sous le gros rond de la Pastille de l'îlot (texte de 14 sp et sa marge). */
-        const val CAPTION_DP = 28
-        const val HALO_RING_DP = 3
-        const val HALO_GAP_DP = 3
         const val HALO_IN_MS = 120L
         const val HALO_OUT_MS = 300L
         const val BIG_PHOTO_DP = 56

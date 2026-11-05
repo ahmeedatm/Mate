@@ -97,6 +97,52 @@ class CallLayoutTest {
         assertEquals(listOf(leave), fitKeys(inCall, 1))
     }
 
+    /** Ligne de libellé de 17 dp (13 sp à l'échelle 1) : il faut 6 + 2 × 17 = 40 dp sous la plaque. */
+    private val line = 17
+
+    @Test
+    fun `pastille de la telecommande, libelle sous la touche s'il tient, sinon la touche seule`() {
+        val roomy = callKeySizes(ShapeFamily.PILL, island = false, innerW = 270, innerH = 150, lineDp = line, keyCount = 0)
+        assertTrue(roomy.mainLabel)
+        assertEquals(80, roomy.main)
+        val tight = callKeySizes(ShapeFamily.PILL, island = false, innerW = 270, innerH = 68, lineDp = line, keyCount = 0)
+        assertFalse("68 dp : pas la place d'une plaque de 48 et de deux lignes", tight.mainLabel)
+        assertEquals(68, tight.main)
+    }
+
+    @Test
+    fun `pastille de l'ilot, le rond laisse la place a la legende`() {
+        assertEquals(96, callKeySizes(ShapeFamily.PILL, island = true, innerW = 270, innerH = 150, lineDp = line, keyCount = 0).main)
+        assertEquals(60, callKeySizes(ShapeFamily.PILL, island = true, innerW = 270, innerH = 88, lineDp = line, keyCount = 0).main)
+    }
+
+    @Test
+    fun `jamais sous 48 dp, la cible tactile`() {
+        for (family in ShapeFamily.entries) {
+            for (island in listOf(false, true)) {
+                val sizes = callKeySizes(family, island, innerW = 40, innerH = 30, lineDp = line, keyCount = 3)
+                if (sizes.main > 0) assertTrue("$family $island", sizes.main >= 48)
+                if (sizes.small > 0) assertTrue("$family $island", sizes.small >= 48)
+            }
+        }
+    }
+
+    @Test
+    fun `ligne de la telecommande, autant de touches que la largeur en tient, une au moins`() {
+        val wide = callKeySizes(ShapeFamily.ROW, island = false, innerW = 1180, innerH = 150, lineDp = line, keyCount = 5)
+        assertEquals(7, wide.count)
+        assertTrue(wide.smallLabel)
+        assertEquals(1, callKeySizes(ShapeFamily.ROW, island = false, innerW = 60, innerH = 150, lineDp = line, keyCount = 5).count)
+    }
+
+    @Test
+    fun `ilot, les petits ronds plus petits que le gros, tous montres`() {
+        val sizes = callKeySizes(ShapeFamily.LARGE, island = true, innerW = 580, innerH = 340, lineDp = line, keyCount = 3)
+        assertEquals(104, sizes.main)
+        assertEquals(64, sizes.small)
+        assertEquals(3, sizes.count)
+    }
+
     @Test
     fun `en avant, qui parle, sinon le dernier a avoir parle, sinon le premier`() {
         val a = member("a")
