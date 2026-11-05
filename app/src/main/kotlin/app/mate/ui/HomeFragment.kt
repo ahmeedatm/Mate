@@ -24,6 +24,7 @@ import app.mate.R
 import app.mate.net.BackendClient
 import app.mate.net.CalendarEvent
 import app.mate.net.HomeFeatures
+import app.mate.net.runCatchingCancellable
 import app.mate.ui.home.COLS
 import app.mate.ui.home.DayLineWidget
 import app.mate.ui.home.DeckOverlays
@@ -248,7 +249,8 @@ class HomeFragment : Fragment(), HomeHost, WidgetGrid.Listener {
             while (true) {
                 // Le battement d'abord : les chiffres basculent à hh:mm:00, avant les échanges réseau.
                 widgets.values.forEach { it.onMinute() }
-                refreshFromComputer(HomeRefresh.due(tick, waitingLink))
+                // L'attente d'un agenda relié (chaque minute) ne vaut que s'il est affiché.
+                refreshFromComputer(HomeRefresh.due(tick, waitingLink && showsCalendar()))
                 for (widget in shownWidgets()) widget.load()
                 zoomView?.current()?.let {
                     it.onMinute()
@@ -274,7 +276,8 @@ class HomeFragment : Fragment(), HomeHost, WidgetGrid.Listener {
     private suspend fun refreshFromComputer(due: Boolean) {
         when (HomeRefresh.plan(!noComputer, due, showsCalendar())) {
             HomeRefresh.Fetch.NONE -> Unit
-            HomeRefresh.Fetch.FEATURES -> fetchFeatures()
+            // À part : les widgets ne l'attendent pas quand l'ordinateur ne répond pas.
+            HomeRefresh.Fetch.FEATURES -> scope.launch { fetchFeatures(BackendClient(requireContext())) }
             HomeRefresh.Fetch.FEATURES_AND_CALENDAR -> {
                 fetchCalendar()
                 renderCalendar()
@@ -282,8 +285,8 @@ class HomeFragment : Fragment(), HomeHost, WidgetGrid.Listener {
         }
     }
 
-    private suspend fun fetchFeatures() {
-        runCatching { features = BackendClient(requireContext()).deck.homeFeatures() }
+    private suspend fun fetchFeatures(client: BackendClient) {
+        runCatchingCancellable { features = client.deck.homeFeatures() }
         if (features.linked) waitingLink = false
     }
 
@@ -296,7 +299,7 @@ class HomeFragment : Fragment(), HomeHost, WidgetGrid.Listener {
 
     private suspend fun fetchCalendar() {
         val client = BackendClient(requireContext())
-        fetchFeatures()
+        fetchFeatures(client)
         try {
             val days = client.calendar.days(AGENDA_DAYS)
             events = days.events
