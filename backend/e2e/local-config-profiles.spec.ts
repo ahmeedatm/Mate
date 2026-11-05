@@ -13,6 +13,12 @@ const SIZES = [
   { key: "V", w: 1, h: 2, label: "Vertical" },
   { key: "W", w: 4, h: 1, label: "Bandeau" },
   { key: "XL", w: 4, h: 2, label: "Très grand" },
+  // Formes ajoutées par la règle des 16 formes (#178) : la page les lit dans `sizes`, sans liste en dur.
+  { key: "M3", w: 3, h: 1, label: "3 × 1" },
+  { key: "V3", w: 1, h: 3, label: "1 × 3" },
+  { key: "V4", w: 1, h: 4, label: "1 × 4" },
+  { key: "L23", w: 2, h: 3, label: "2 × 3" },
+  { key: "L33", w: 3, h: 3, label: "3 × 3" },
 ];
 const by = (...keys: string[]) => keys.map((k) => SIZES.find((s) => s.key === k)!);
 const CATALOG = [
@@ -20,6 +26,7 @@ const CATALOG = [
   { key: "note", title: "Note", computer: false, offered: true, sizes: by("M", "S", "L") },
   { key: "keys", title: "Touches", computer: true, offered: true, sizes: by("M", "S", "L", "V", "XL") },
   { key: "agents", title: "Agents", computer: true, offered: false, sizes: by("M", "L") },
+  { key: "weather", title: "Météo", computer: false, offered: true, sizes: by("M", "M3", "V3", "V4", "L23", "L33") },
 ];
 const TOP: Record<string, string> = { music: "Lecture en cours", clock: "Heure", date: "Date", wifi: "WiFi" };
 const TOOLS: Record<string, string> = { focus: "Focus", docs: "Ordi" };
@@ -164,7 +171,7 @@ test.describe("page locale : profils et barres", () => {
       await expect(page.locator("#pf-chips .cx").nth(2)).toContainText("Travail");
 
       // « Agents » n'est pas proposé par cet ordinateur : absent du catalogue.
-      await expect(page.locator("#pf-add option")).toHaveText(["Horloge", "Note", "Touches"]);
+      await expect(page.locator("#pf-add option")).toHaveText(["Horloge", "Note", "Touches", "Météo"]);
       await page.locator("#pf-add").selectOption("note");
       await page.locator("#pf-add-go").click();
       const note = page.getByRole("button", { name: "Note, Moyen" });
@@ -217,6 +224,42 @@ test.describe("page locale : profils et barres", () => {
       await expect(page.getByRole("button", { name: "Note, Grand" })).toHaveCount(0);
       await page.locator("#pf-reset").click();
       await expect(page.getByRole("button", { name: "Note, Grand" })).toBeVisible();
+    }
+  });
+
+  test("les nouvelles formes (3 × 1, 1 × 3, 1 × 4, 2 × 3, 3 × 3) se choisissent et partent à la tablette", async ({ page, server }) => {
+    const tablet = connected(server);
+    {
+      await page.goto("/");
+      await page.locator("#pf-chips .cx").nth(2).click();
+      await page.locator("#pf-add").selectOption("weather");
+      await page.locator("#pf-add-go").click();
+      await expect(page.getByRole("button", { name: "Météo, Moyen" })).toBeVisible();
+      await openWidget(page);
+      await expect(page.locator("#pf-widget .pf-size")).toHaveText([
+        "Moyen (2 × 1)",
+        "3 × 1 (3 × 1)",
+        "1 × 3 (1 × 3)",
+        "1 × 4 (1 × 4)",
+        "2 × 3 (2 × 3)",
+        "3 × 3 (3 × 3)",
+      ]);
+      // Travail : Note et Horloge occupent les deux rangées du bas, une colonne de 4 n'a pas la place.
+      await expect(page.getByRole("button", { name: "1 × 4 (1 × 4)" })).toBeDisabled();
+      await page.getByRole("button", { name: "3 × 1 (3 × 1)" }).click();
+      await closeDialog(page);
+      await expect(page.getByRole("button", { name: "Météo, 3 × 1" })).toBeVisible();
+      await page.locator("#pf-send").click();
+      await expect(page.locator("#pf-msg")).toHaveText("Envoyé à la tablette.");
+      const sent = tablet.sets.at(-1).layout.widgets.find((w: any) => w.t === "weather");
+      expect([sent.s, sent.c, sent.r]).toEqual(["M3", 0, 0]);
+
+      // Retirée pour ne pas gêner les tests suivants.
+      await page.getByRole("button", { name: "Météo, 3 × 1" }).click();
+      await openWidget(page);
+      await page.getByRole("button", { name: "Retirer le widget" }).click();
+      await page.locator("#pf-send").click();
+      await expect(page.locator("#pf-msg")).toHaveText("Envoyé à la tablette.");
     }
   });
 
