@@ -54,6 +54,40 @@ class WeatherTest {
     }
 
     @Test
+    fun `les prochaines heures, a l'heure de la tablette, jusqu'au premier trou`() {
+        val json = forecast(
+            step("2026-11-05T14:00:00Z", 12.4, "partlycloudy_day"),
+            step("2026-11-05T15:00:00Z", 11.6, "cloudy"),
+            step("2026-11-05T16:00:00Z", 10.2, "lightrain"),
+            // Après l'heure par heure, MET Norway passe aux 6 h : ce n'est plus une « prochaine heure ».
+            step("2026-11-05T22:00:00Z", 8.0, "cloudy", "next_6_hours"),
+        )
+        val hours = Weather.parse(json, paris).hours
+        assertEquals(listOf(15, 16, 17), hours.map { it.hour })
+        assertEquals(listOf(12.4, 11.6, 10.2), hours.map { it.temperature })
+        assertEquals(listOf(2, 3, 61), hours.map { it.code })
+    }
+
+    @Test
+    fun `une prevision gardee faute de reseau ne montre plus les heures passees`() {
+        val json = forecast(
+            step("2026-11-05T14:00:00Z", 12.0, "cloudy"),
+            step("2026-11-05T15:00:00Z", 11.0, "cloudy"),
+            step("2026-11-05T16:00:00Z", 10.0, "cloudy"),
+        )
+        val hours = Weather.parse(json, paris).hours
+        val at1530 = hours[1].at + 30 * 60_000L
+        // 15 h 30 UTC : l'heure de 15 h est encore en cours, celle de 14 h est passée.
+        assertEquals(listOf(16, 17), Weather.upcoming(hours, at1530).map { it.hour })
+    }
+
+    @Test
+    fun `au plus 12 prochaines heures`() {
+        val steps = (0 until 20).map { step("2026-11-05T%02d:00:00Z".format(it), 10.0, "cloudy") }
+        assertEquals(Weather.HOURS, Weather.parse(forecast(*steps.toTypedArray()), paris).hours.size)
+    }
+
+    @Test
     fun `au plus 4 jours suivants`() {
         val steps = (0 until 9).map { step("2026-11-%02dT12:00:00Z".format(it + 1), 10.0, "cloudy", "next_6_hours") }
         assertEquals(4, Weather.parse(forecast(*steps.toTypedArray()), paris).days.size)

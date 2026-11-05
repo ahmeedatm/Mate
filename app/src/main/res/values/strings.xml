@@ -1542,6 +1542,10 @@
     <string name="widget_weather_temp">%1$d°</string>
     <string name="widget_weather_range">min %1$d° · max %2$d°</string>
     <string name="widget_weather_day">%1$d° / %2$d°</string>
+    <string name="widget_weather_hour">%1$d h : %2$d°</string>
+    <string name="widget_weather_hour_short">%1$dh</string>
+    <string name="widget_weather_city_range">%1$s · %2$d° / %3$d°</string>
+    <string name="widget_weather_sample_city">Paris</string>
     <string name="widget_weather_city_hint">Ville (ex. Paris)</string>
     <string name="widget_weather_search">Chercher</string>
     <string name="widget_weather_locate">Ma position</string>
