@@ -34,9 +34,9 @@ object WidgetSamples {
         WidgetType.MAIL -> null
 
         // #182 Son et musique
-        WidgetType.AUDIO -> null
+        WidgetType.AUDIO -> AudioSample
         WidgetType.MEDIA -> null
-        WidgetType.MIXER -> null
+        WidgetType.MIXER -> MixerSample
         WidgetType.YTMUSIC -> null
 
         // #183 Piloter l'ordinateur
@@ -68,7 +68,7 @@ object WidgetSamples {
         WidgetType.WATER -> WaterSample(Water.State(glasses = 5, goal = 8, reminder = true, intervalMinutes = 60), todayAt(15))
         WidgetType.AWAY -> null
         WidgetType.HA -> null
-        WidgetType.VALORANT -> null
+        WidgetType.VALORANT -> ValorantWidget.SAMPLE
     }
 
     private const val MINUTE = 60_000L

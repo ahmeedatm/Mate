@@ -96,7 +96,7 @@ enum class WidgetType(
     SHOPPING("shopping", R.string.widget_shopping, R.string.widget_shopping_desc, R.drawable.ic_cart, listOf(WidgetSize.L, WidgetSize.T, WidgetSize.V, WidgetSize.M), true),
     FOCUS("focus", R.string.widget_focus, R.string.widget_focus_desc, R.drawable.ic_timer, listOf(WidgetSize.S, WidgetSize.V, WidgetSize.L).let { it + (WidgetSize.entries - it) }, false),
     WATER("water", R.string.widget_water, R.string.widget_water_desc, R.drawable.ic_water, listOf(WidgetSize.S, WidgetSize.M).let { it + (WidgetSize.entries - it) }, false),
-    AUDIO("audio", R.string.widget_audio, R.string.widget_audio_desc, R.drawable.ic_volume, listOf(WidgetSize.M, WidgetSize.L, WidgetSize.S, WidgetSize.W), true),
+    AUDIO("audio", R.string.widget_audio, R.string.widget_audio_desc, R.drawable.ic_volume, listOf(WidgetSize.M, WidgetSize.L, WidgetSize.S, WidgetSize.W).let { it + (WidgetSize.entries - it) }, true),
     MEDIA("media", R.string.widget_media, R.string.widget_media_desc, R.drawable.ic_play, listOf(WidgetSize.M, WidgetSize.L, WidgetSize.S), true),
     PERF("perf", R.string.widget_perf, R.string.widget_perf_desc, R.drawable.ic_speed, listOf(WidgetSize.M, WidgetSize.L, WidgetSize.W), true),
     KEYS("keys", R.string.widget_keys, R.string.widget_keys_desc, R.drawable.ic_deck, listOf(WidgetSize.M, WidgetSize.S, WidgetSize.L, WidgetSize.V, WidgetSize.XL), true),
@@ -106,7 +106,7 @@ enum class WidgetType(
     DAY("day", R.string.widget_day, R.string.widget_day_desc, R.drawable.ic_event, listOf(WidgetSize.W), false),
     DAYLINE("dayline", R.string.widget_dayline, R.string.widget_dayline_desc, R.drawable.ic_alarm, listOf(WidgetSize.W), false),
     AGENTS("agents", R.string.widget_agents, R.string.widget_agents_desc, R.drawable.ic_agents, listOf(WidgetSize.M, WidgetSize.L, WidgetSize.V, WidgetSize.XL, WidgetSize.L3, WidgetSize.T3, WidgetSize.FULL), true),
-    MIXER("mixer", R.string.widget_mixer, R.string.widget_mixer_desc, R.drawable.ic_wave, listOf(WidgetSize.XL, WidgetSize.L3, WidgetSize.XL3, WidgetSize.T3, WidgetSize.FULL), true),
+    MIXER("mixer", R.string.widget_mixer, R.string.widget_mixer_desc, R.drawable.ic_wave, listOf(WidgetSize.XL, WidgetSize.L3, WidgetSize.XL3, WidgetSize.T3, WidgetSize.FULL, WidgetSize.S, WidgetSize.V, WidgetSize.M, WidgetSize.M3, WidgetSize.W, WidgetSize.V3, WidgetSize.V4, WidgetSize.L, WidgetSize.L23, WidgetSize.L33, WidgetSize.T), true),
     OPEN("open", R.string.widget_open, R.string.widget_open_desc, R.drawable.ic_display, listOf(WidgetSize.XL, WidgetSize.L, WidgetSize.L3, WidgetSize.T3, WidgetSize.FULL), true),
     APPS("apps", R.string.widget_apps, R.string.widget_apps_desc, R.drawable.ic_tabs, listOf(WidgetSize.L, WidgetSize.M, WidgetSize.XL, WidgetSize.W, WidgetSize.V), true),
     DISCORD("discord", R.string.widget_discord, R.string.widget_discord_desc, R.drawable.ic_call, listOf(WidgetSize.M, WidgetSize.L, WidgetSize.S), true),
@@ -128,7 +128,7 @@ enum class WidgetType(
     MAIL("mail", R.string.widget_mail, R.string.widget_mail_desc, R.drawable.ic_mail, listOf(WidgetSize.M, WidgetSize.S, WidgetSize.L), true),
     METRICS("metrics", R.string.widget_metrics, R.string.widget_metrics_desc, R.drawable.ic_tile_bar_chart, listOf(WidgetSize.L, WidgetSize.XL), true),
     MEALS("meals", R.string.widget_meals, R.string.widget_meals_desc, R.drawable.ic_tile_restaurant, listOf(WidgetSize.L, WidgetSize.XL, WidgetSize.T), true),
-    VALORANT("valorant", R.string.widget_valorant, R.string.widget_valorant_desc, R.drawable.ic_gamepad, listOf(WidgetSize.XL, WidgetSize.L, WidgetSize.T), true),
+    VALORANT("valorant", R.string.widget_valorant, R.string.widget_valorant_desc, R.drawable.ic_gamepad, listOf(WidgetSize.XL, WidgetSize.L, WidgetSize.T).let { it + (WidgetSize.entries - it) }, true),
     SCREEN("screen", R.string.widget_screen, R.string.widget_screen_desc, R.drawable.ic_display, listOf(WidgetSize.L, WidgetSize.XL, WidgetSize.M), true);
 
     /** Taille de l'exemplaire agrandi (widget maintenu, [WidgetZoom]) : la plus grande, la plus large à surface égale. */
