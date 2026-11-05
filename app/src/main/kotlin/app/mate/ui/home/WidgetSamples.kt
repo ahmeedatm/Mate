@@ -35,9 +35,9 @@ object WidgetSamples {
 
         // #182 Son et musique
         WidgetType.AUDIO -> AudioSample
-        WidgetType.MEDIA -> null
+        WidgetType.MEDIA -> MediaSample
         WidgetType.MIXER -> MixerSample
-        WidgetType.YTMUSIC -> null
+        WidgetType.YTMUSIC -> YtMusicSample
 
         // #183 Piloter l'ordinateur
         WidgetType.KEYS -> KeysSample(
