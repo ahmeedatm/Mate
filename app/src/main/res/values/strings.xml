@@ -1587,6 +1587,52 @@
     <string name="valorant_rr">%1$d RR</string>
     <string name="valorant_level">niveau %1$d</string>
     <string name="valorant_score">%1$d – %2$d</string>
+    <string name="valorant_col_rank">Rang</string>
+    <string name="valorant_col_peak">Pic</string>
+    <string name="valorant_col_kd">K/D</string>
+    <string name="valorant_col_hs">Tête</string>
+    <string name="valorant_col_wr">Vict.</string>
+    <string name="valorant_col_acs">ACS</string>
+    <string name="valorant_col_kda">K / D / A</string>
+    <string name="valorant_col_adr">ADR</string>
+    <string name="valorant_col_fk">1ers</string>
+    <string name="valorant_level_short">niv. %1$d</string>
+    <string name="valorant_win">Victoire</string>
+    <string name="valorant_loss">Défaite</string>
+    <string name="valorant_draw">Égalité</string>
+    <string name="valorant_end_loading">Tableau des scores en préparation…</string>
+    <string name="valorant_end_missing">Tableau des scores indisponible</string>
+    <string name="valorant_last_matches">Dernières classées</string>
+    <string name="valorant_no_history">Pas de classée récente</string>
+    <string name="valorant_kda">%1$d / %2$d / %3$d</string>
+    <string name="valorant_pct">%1$d %%</string>
+    <string name="valorant_party">groupe %1$d</string>
+    <string name="valorant_mvp">MVP</string>
+    <string name="valorant_peak">meilleur rang %1$s</string>
+    <string name="valorant_kd_value">K/D %1$s</string>
+    <string name="valorant_hs_value">%1$d %% tête</string>
+    <string name="valorant_wr_value">%1$d %% de victoires</string>
+    <string name="valorant_adr_value">%1$d ADR</string>
+    <string name="valorant_fk_value">%1$d premiers kills</string>
+    <string name="valorant_acs_value">%1$d ACS</string>
+    <string name="valorant_rr_progress">%1$d / 100 RR</string>
+    <string name="valorant_rr_change">%1$s RR</string>
+    <string name="valorant_team_avg">moyenne %1$s</string>
+    <string name="valorant_ffa">Chacun pour soi</string>
+    <string name="valorant_hovered">%1$s, pas encore verrouillé</string>
+    <string name="valorant_no_stat">pas encore lu</string>
+    <string name="valorant_unranked">Non classé</string>
+    <string name="valorant_radiant">Radiant</string>
+    <string-array name="valorant_divisions">
+        <item>Fer</item>
+        <item>Bronze</item>
+        <item>Argent</item>
+        <item>Or</item>
+        <item>Platine</item>
+        <item>Diamant</item>
+        <item>Ascendant</item>
+        <item>Immortel</item>
+    </string-array>
     <plurals name="widget_mail_unread">
         <item quantity="one">non lu</item>
         <item quantity="other">non lus</item>

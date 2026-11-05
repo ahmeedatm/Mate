@@ -56,4 +56,74 @@ class ValorantApiTest {
         assertFalse(v.allies.single().locked)
         assertEquals("Jett", v.allies.single().agent)
     }
+
+    @Test
+    fun readsTrackerStatsWhenTheComputerSendsThem() {
+        val v = ValorantApi.parse(
+            """{"state":"ingame","players":[{"name":"Nox#7781","agent":"Jett","agentId":"add6443a-41bd-e414-f6ad-e58d267f4e95",
+                "locked":true,"tier":19,"rank":"Diamant 2","rr":12,"ally":true,"me":false,"level":36,"peakTier":24,"winRate":82,
+                "kd":1.62,"hs":31,"party":1}],"history":[],"end":null}""",
+        )
+        val p = v.allies.single()
+        assertEquals("add6443a-41bd-e414-f6ad-e58d267f4e95", p.agentId)
+        assertEquals(36, p.level)
+        assertEquals(24, p.peakTier)
+        assertEquals(82, p.winRate)
+        assertEquals(1.62, p.kd!!, 0.001)
+        assertEquals(31, p.hs)
+        assertEquals(1, p.party)
+        assertNull(v.end)
+    }
+
+    @Test
+    fun anOlderComputerWithoutStatsLeavesThemEmpty() {
+        val p = ValorantApi.parse(
+            """{"state":"ingame","players":[{"name":"Kinj#EUW","agent":"Sage","locked":true,"tier":12,"rank":"Or 1","rr":15,"ally":true,"me":false}]}""",
+        ).allies.single()
+        assertNull(p.agentId)
+        assertNull(p.kd)
+        assertNull(p.party)
+        assertNull(p.level)
+    }
+
+    @Test
+    fun readsMyLastMatchesAndTheEndScoreboard() {
+        val v = ValorantApi.parse(
+            """{"state":"menu","players":[],"me":{"name":"Eliot#EUW","tier":14,"rank":"Or 3","rr":42,"level":214,"peakTier":17},
+                "history":[{"won":true,"score":{"ally":13,"enemy":9},"map":"Ascent","agent":"Sova","agentId":"a","kills":19,"deaths":15,
+                  "assists":6,"acs":231,"rr":21},
+                  {"won":null,"score":null,"map":"Bind","agent":null,"agentId":null,"kills":null,"deaths":null,"assists":null,"acs":null,"rr":-17}],
+                "end":{"status":"ready","map":"Ascent","queue":"Compétition","mode":"teams","won":true,"score":{"ally":13,"enemy":9},
+                  "players":[{"name":"Nox#7781","agent":"Jett","agentId":"b","tier":19,"rank":"Diamant 2","ally":true,"me":false,
+                  "acs":312,"kills":26,"deaths":12,"assists":4,"hs":33,"adr":197,"firstKills":6,"mvp":true}]}}""",
+        )
+        assertEquals(17, v.me?.peakTier)
+        assertEquals(2, v.history.size)
+        val first = v.history[0]
+        assertEquals(true, first.won)
+        assertEquals(13, first.score?.ally)
+        assertEquals(21, first.rr)
+        assertEquals(231, first.acs)
+        assertNull(v.history[1].won)
+        assertNull(v.history[1].kills)
+        assertEquals(-17, v.history[1].rr)
+        val end = v.end!!
+        assertEquals(ValorantEndStatus.READY, end.status)
+        assertFalse(end.ffa)
+        assertEquals(true, end.won)
+        val mvp = end.players.single()
+        assertTrue(mvp.mvp)
+        assertEquals(312, mvp.acs)
+        assertEquals(197, mvp.adr)
+        assertEquals(6, mvp.firstKills)
+        assertEquals(33, mvp.hs)
+    }
+
+    @Test
+    fun scoreboardStillLoadingOrMissing() {
+        val loading = ValorantApi.parse("""{"state":"menu","players":[],"end":{"status":"loading","players":[]}}""").end
+        assertEquals(ValorantEndStatus.LOADING, loading?.status)
+        val missing = ValorantApi.parse("""{"state":"menu","players":[],"end":{"status":"missing","players":[]}}""").end
+        assertEquals(ValorantEndStatus.MISSING, missing?.status)
+    }
 }
