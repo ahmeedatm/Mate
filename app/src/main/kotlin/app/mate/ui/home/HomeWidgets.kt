@@ -27,9 +27,6 @@ import androidx.core.widget.ImageViewCompat
 import androidx.lifecycle.LifecycleOwner
 import app.mate.MainActivity
 import app.mate.R
-import app.mate.focus.FocusTicks
-import app.mate.focus.FocusTimer
-import app.mate.focus.NoisePlayer
 import app.mate.github.Forge
 import app.mate.net.BackendClient
 import app.mate.net.CalendarEvent
@@ -38,14 +35,11 @@ import app.mate.net.DeckTile
 import app.mate.net.HomeFeatures
 import app.mate.net.runCatchingCancellable
 import app.mate.ui.ComputerAudioView
-import app.mate.ui.FocusDial
 import app.mate.ui.IconCache
-import app.mate.ui.Look
 import app.mate.ui.NowPlayingView
 import app.mate.ui.ShoppingCard
 import app.mate.ui.TasksCard
 import app.mate.ui.TitleView
-import app.mate.ui.WaterCard
 import app.mate.ui.dp
 import app.mate.ui.errorText
 import app.mate.ui.label
@@ -302,156 +296,6 @@ class ClockWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidget
         /** Hauteur d'une ligne de chiffres, en tailles de texte. */
         const val CLOCK_LINE = 1.15f
     }
-}
-
-/**
- * Minuteur Focus (DA Console douce) : cadran de 25 graduations, une par minute, allumées pendant le chrono et éteintes en
- * cascade à la pause. Toucher = mode Focus, bouton = démarrer / pause. Grand : cadran plus grand et ambiances à
- * choisir dessous. Rien ne bouge en dehors des changements.
- */
-class FocusWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidget(context, host, placed) {
-    /** Conteneur stable : la vue interne est refaite quand la taille change (vertical, grand = autre mise en page). */
-    override val view = FrameLayout(context)
-    private lateinit var dial: FocusDial
-    private lateinit var time: TextView
-    private lateinit var phase: TextView
-    private lateinit var detail: TextView
-    private lateinit var toggle: View
-    private lateinit var toggleIcon: ImageView
-    private val noiseChips = LinkedHashMap<NoisePlayer.Kind, Button>()
-    private val focusListener: (FocusTimer.State) -> Unit = { render() }
-    private val noiseListener: () -> Unit = { render() }
-    private var shown = false
-    private var tall = false
-    private var big = false
-    private var small = false
-
-    init {
-        bind()
-    }
-
-    override fun applySize() {
-        if ((placed.size == WidgetSize.V) == tall && (placed.size == WidgetSize.L) == big && (placed.size == WidgetSize.S) == small) return
-        bind()
-        render()
-    }
-
-    private fun bind() {
-        tall = placed.size == WidgetSize.V
-        big = placed.size == WidgetSize.L
-        small = placed.size == WidgetSize.S
-        view.removeAllViews()
-        noiseChips.clear()
-        val inner = LayoutInflater.from(context).inflate(if (tall) R.layout.widget_focus_tall else R.layout.widget_focus, view, false)
-        if (big) view.addView(withNoises(inner)) else view.addView(inner)
-        dial = inner.findViewById(R.id.widget_focus_dial)
-        time = inner.findViewById(R.id.widget_focus_time)
-        phase = inner.findViewById(R.id.widget_focus_phase)
-        detail = inner.findViewById(R.id.widget_focus_detail)
-        toggleIcon = inner.findViewById(R.id.widget_focus_toggle_icon)
-        toggle = inner.findViewById(R.id.widget_focus_toggle)
-        if (small) shrink(inner)
-        capToDial(time, if (tall || big) 40f else if (small) 26f else 30f)
-        capToDial(phase, if (tall || big) 13f else if (small) 11f else 12f)
-        inner.setOnClickListener { host.main?.showMode("focus") }
-        toggle.setOnClickListener { FocusTimer.toggle() }
-        Look.pressSpring(inner)
-        Look.pressSpring(toggle)
-        shown = false
-    }
-
-    /** Une case : cadran réduit et bouton seulement (le titre « Focus » et l'ambiance ne tiennent pas à côté). */
-    private fun shrink(inner: View) {
-        inner.setPadding(dp(14), dp(14), dp(14), dp(14))
-        inner.findViewById<View>(R.id.widget_focus_ring_box).layoutParams.apply { width = dp(104); height = dp(104) }
-        (detail.parent as View).visibility = View.GONE
-        ((toggle.parent as View).layoutParams as LinearLayout.LayoutParams).marginStart = dp(8)
-    }
-
-    /** Grand : la tuile passe autour du cadran agrandi et d'une rangée d'ambiances (toucher celle qui joue l'arrête). */
-    private fun withNoises(inner: View): View {
-        val tile = LinearLayout(context).apply {
-            orientation = LinearLayout.VERTICAL
-            background = inner.background
-            setPadding(inner.paddingLeft, inner.paddingTop, inner.paddingRight, inner.paddingBottom)
-        }
-        inner.background = null
-        inner.setPadding(0, 0, 0, 0)
-        inner.findViewById<View>(R.id.widget_focus_ring_box).layoutParams.apply { width = dp(176); height = dp(176) }
-        tile.addView(inner, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, 0, 1f))
-        val row = LinearLayout(context).apply { gravity = Gravity.CENTER }
-        for (kind in NoisePlayer.Kind.entries) {
-            val chip = Button(context, null, 0, R.style.Chip).apply {
-                setText(kind.label)
-                // Largeurs égales imposées par la rangée : peu de marge, une ligne (colonnes étroites de Spider-Verse).
-                setPaddingRelative(dp(4), 0, dp(4), 0)
-                maxLines = 1
-                setOnClickListener { if (NoisePlayer.kind == kind) NoisePlayer.stop() else NoisePlayer.play(kind) }
-            }
-            row.addView(chip, LinearLayout.LayoutParams(0, dp(48), 1f).apply { marginStart = dp(4); marginEnd = dp(4) })
-            noiseChips[kind] = chip
-        }
-        tile.addView(row, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT).apply { topMargin = dp(12) })
-        return tile
-    }
-
-    /** Police agrandie : le texte ne dépasse pas sa taille à 1,0 ([maxSp]), celle qui tient dans le cadran. Réduite, il suit. */
-    private fun capToDial(text: TextView, maxSp: Float) {
-        text.setTextSize(TypedValue.COMPLEX_UNIT_PX, minOf(text.textSize, maxSp * context.resources.displayMetrics.density))
-    }
-
-    override fun setActive(active: Boolean) {
-        if (active) {
-            FocusTimer.observe(focusListener)
-            NoisePlayer.observe(noiseListener)
-        } else {
-            FocusTimer.unobserve(focusListener)
-            NoisePlayer.unobserve(noiseListener)
-        }
-        shown = false
-        render()
-    }
-
-    override fun onMinute() = render()
-
-    private fun render() {
-        val state = FocusTimer.state
-        val focus = state.phase == FocusTimer.Phase.FOCUS
-        val started = state.running || state.remainingMs < state.durationMs
-        time.text = FocusTimer.format(state.remainingMs)
-        Look.countdown(time, state.remainingMs, state.running)
-        phase.setText(when {
-            !started -> R.string.focus_ready
-            !state.running -> R.string.focus_paused
-            focus -> R.string.focus_phase_work
-            else -> R.string.focus_phase_break
-        })
-        dial.color = color(if (focus) R.attr.c_accent else R.attr.c_ok)
-        // Première image sans cascade : l'écran arrive déjà dans le bon état.
-        dial.show(FocusTicks.lit(state.remainingMs, state.durationMs, state.running), animate = shown)
-        shown = true
-        detail.text = NoisePlayer.kind?.takeIf { NoisePlayer.playing }?.let { context.getString(R.string.noise_playing, context.getString(it.label)) } ?: ""
-        // Vertical : l'ambiance est à côté du bouton, qui reste centré tant qu'il n'y en a pas.
-        if (tall) detail.visibility = if (detail.text.isEmpty()) View.GONE else View.VISIBLE
-        for ((kind, chip) in noiseChips) chip.isSelected = NoisePlayer.kind == kind
-        Look.swapIcon(toggleIcon, if (state.running) R.drawable.ic_pause else R.drawable.ic_play)
-        toggle.contentDescription = context.getString(if (state.running) R.string.focus_pause else R.string.focus_start)
-    }
-}
-
-/** Jauge d'eau (sur la tablette, sans l'ordinateur) ; petite : sans le bouton −. */
-class WaterWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidget(context, host, placed) {
-    private val card = WaterCard(context)
-    override val view = LinearLayout(context).asCard(16).apply {
-        gravity = Gravity.CENTER_VERTICAL
-        addView(card, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT))
-    }
-
-    override fun applySize() {
-        card.compact = placed.size == WidgetSize.S
-    }
-
-    override fun onMinute() = card.refresh()
 }
 
 /**
