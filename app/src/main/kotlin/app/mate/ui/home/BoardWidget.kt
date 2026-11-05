@@ -152,7 +152,7 @@ private fun jiraSummary(context: Context, host: HomeHost, issues: JiraIssues): P
     if (glance.rows.isEmpty()) return null to context.getString(R.string.jira_empty)
     val lines = glance.rows.map { issue ->
         val column = issues.columns.first { c -> c.issues.any { it.key == issue.key } }.title
-        GlanceLine(issue.summary, "${issue.key} · $column", Pipeline.NONE) {
+        GlanceLine(issue.summary, "${issue.key} · $column", Pipeline.NONE, mark = false) {
             openOnComputer(context, host) { BackendClient(context).jira.openOnComputer(issue.key) }
         }
     }

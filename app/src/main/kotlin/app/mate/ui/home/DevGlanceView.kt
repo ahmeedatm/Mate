@@ -21,8 +21,8 @@ import app.mate.ui.pipelineMarkIcon
 import app.mate.ui.themeColor
 import app.mate.ui.themeFont
 
-/** Une ligne d'une petite forme : titre, détail (dépôt, colonne, durée), état ; `open` : toucher la ligne. */
-data class GlanceLine(val title: String, val detail: String, val state: Pipeline, val open: (() -> Unit)? = null)
+/** Une ligne d'une petite forme : titre, détail (dépôt, colonne, durée), état ; `mark` : l'icône de l'état (pas pour un ticket Jira, qui n'en a pas) ; `open` : toucher la ligne. */
+data class GlanceLine(val title: String, val detail: String, val state: Pipeline, val mark: Boolean = true, val open: (() -> Unit)? = null)
 
 /** Ce qu'une petite forme montre : le compteur et ce qu'il compte, puis les lignes du plus urgent au moins urgent. */
 data class GlanceContent(val count: Int, val countLabel: String, val lines: List<GlanceLine>)
@@ -38,12 +38,12 @@ class DevGlanceView(context: Context, private val title: Int) : LinearLayout(con
     /** Dernier affichage demandé : refait quand la hauteur réelle change de classe (rangées de hauteur variable). */
     private var shown: (() -> Unit)? = null
 
-    /** Comment la Pastille tient dans la hauteur réelle (rangées de hauteur variable, polices de chaque thème). */
+    /** Comment le titre et le nombre tiennent dans la hauteur réelle (rangées de hauteur variable, polices de chaque thème) : Pastille et Ligne. */
     private enum class PillFit { TALL, LOW, FLAT }
 
     private var fit = PillFit.TALL
 
-    /** Hauteur disponible, gardée pour la Pastille à plat (nombre réduit à la hauteur de la ligne). */
+    /** Hauteur disponible, gardée pour la mise à plat (nombre réduit à la hauteur de la ligne). */
     private var room = 0
 
     override fun onSizeChanged(w: Int, h: Int, oldw: Int, oldh: Int) {
@@ -80,7 +80,7 @@ class DevGlanceView(context: Context, private val title: Int) : LinearLayout(con
                 orientation = HORIZONTAL
                 gravity = Gravity.CENTER_VERTICAL
                 addView(titleView(), LayoutParams(0, -2, 1f))
-                addView(countLine(content).apply { (getChildAt(0) as TextView).setTextSize(TypedValue.COMPLEX_UNIT_PX, minOf((getChildAt(0) as TextView).textSize, room / LINE_SPACING)) })
+                addView(countLine(content, flat = true))
             }
             w == 1 && h == 1 && fit == PillFit.LOW -> {
                 addView(titleView())
@@ -92,6 +92,18 @@ class DevGlanceView(context: Context, private val title: Int) : LinearLayout(con
                 addView(View(context), fill())
                 addView(count(content, PILL_SIZE))
                 addView(text(content.countLabel, 13f, R.attr.c_text_dim))
+            }
+            h == 1 && fit == PillFit.FLAT -> {
+                // Rangée très basse : le titre à côté du nombre, plutôt que dessus.
+                addView(
+                    LinearLayout(context).apply {
+                        gravity = Gravity.CENTER_VERTICAL
+                        addView(titleView())
+                        addView(countLine(content, flat = true), LayoutParams(-2, -2).apply { marginStart = dp(10) })
+                    },
+                    LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.MATCH_PARENT),
+                )
+                addView(lines(content.lines, Gravity.CENTER_VERTICAL), LayoutParams(0, ViewGroup.LayoutParams.MATCH_PARENT, 1f).apply { marginStart = dp(16) })
             }
             h == 1 -> {
                 addView(
@@ -107,7 +119,7 @@ class DevGlanceView(context: Context, private val title: Int) : LinearLayout(con
             }
             else -> {
                 addView(titleView())
-                addView(count(content, COLUMN_SIZE))
+                addView(count(content, COLUMN_SIZE), wrap(top = 6))
                 addView(text(content.countLabel, 13f, R.attr.c_text_dim))
                 addView(lines(content.lines, Gravity.TOP), fill().apply { topMargin = dp(8) })
             }
@@ -120,10 +132,13 @@ class DevGlanceView(context: Context, private val title: Int) : LinearLayout(con
         ellipsize = TextUtils.TruncateAt.END
     }
 
-    /** Le nombre et son libellé côte à côte (« 3 ouverts ») : la Ligne, et la Pastille d'une rangée basse. */
-    private fun countLine(c: GlanceContent) = LinearLayout(context).apply {
+    /**
+     * Le nombre et son libellé côte à côte (« 3 ouverts ») : la Ligne, et la Pastille d'une rangée basse. `flat` : le
+     * nombre ne dépasse pas la hauteur disponible (rangée très basse).
+     */
+    private fun countLine(c: GlanceContent, flat: Boolean = false) = LinearLayout(context).apply {
         gravity = Gravity.BOTTOM
-        addView(count(c, ROW_SIZE))
+        addView(count(c, ROW_SIZE).apply { if (flat) setTextSize(TypedValue.COMPLEX_UNIT_PX, minOf(textSize, room / LINE_SPACING)) })
         addView(text(c.countLabel, 13f, R.attr.c_text_dim), LayoutParams(-2, -2).apply { marginStart = dp(6); bottomMargin = dp(4) })
     }
 
@@ -139,14 +154,16 @@ class DevGlanceView(context: Context, private val title: Int) : LinearLayout(con
     // shortcut: ligne touchable de 26 dp (moins que les 48 dp conseillés) et sans retour d'appui, pour que la Ligne en tienne deux ; à revoir après l'essai sur la tablette.
     private fun line(l: GlanceLine) = LinearLayout(context).apply {
         gravity = Gravity.CENTER_VERTICAL
-        addView(
-            ImageView(context).apply {
-                setImageResource(pipelineMarkIcon(markOf(l.state)))
-                ImageViewCompat.setImageTintList(this, ColorStateList.valueOf(themeColor(context, pipelineColorAttr(l.state))))
-            },
-            LayoutParams(dp(16), dp(16)),
-        )
-        addView(text(l.title, 14f, R.attr.c_text), LayoutParams(0, -2, 1f).apply { marginStart = dp(8) })
+        if (l.mark) {
+            addView(
+                ImageView(context).apply {
+                    setImageResource(pipelineMarkIcon(markOf(l.state)))
+                    ImageViewCompat.setImageTintList(this, ColorStateList.valueOf(themeColor(context, pipelineColorAttr(l.state))))
+                },
+                LayoutParams(dp(16), dp(16)),
+            )
+        }
+        addView(text(l.title, 14f, R.attr.c_text), LayoutParams(0, -2, 1f).apply { marginStart = if (l.mark) dp(8) else 0 })
         contentDescription = "${l.title}, ${l.detail}"
         l.open?.let { open -> setOnClickListener { open() } }
     }
@@ -161,6 +178,8 @@ class DevGlanceView(context: Context, private val title: Int) : LinearLayout(con
     }
 
     private fun dp(value: Int) = context.dp(value)
+
+    private fun wrap(top: Int = 0) = LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT).apply { topMargin = dp(top) }
 
     private fun fill() = LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, 0, 1f)
 
