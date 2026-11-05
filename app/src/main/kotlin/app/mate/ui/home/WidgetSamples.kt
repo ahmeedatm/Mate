@@ -48,7 +48,16 @@ object WidgetSamples {
                 R.string.widget_keys_sample_volume_off to "volume_off",
             ),
         )
-        WidgetType.APPS -> null
+        WidgetType.APPS -> AppsSample(
+            listOf(
+                R.string.widget_apps_sample_music,
+                R.string.widget_apps_sample_chat,
+                R.string.widget_apps_sample_browser,
+                R.string.widget_apps_sample_notes,
+                R.string.widget_apps_sample_terminal,
+                R.string.widget_apps_sample_mail,
+            ),
+        )
         WidgetType.OPEN -> null
         WidgetType.PAD -> null
         WidgetType.SCREEN -> null
