@@ -1,6 +1,9 @@
 package app.mate.ui.home
 
+import android.graphics.Typeface
+import android.graphics.drawable.Drawable
 import android.graphics.drawable.GradientDrawable
+import android.graphics.drawable.LayerDrawable
 import android.view.Gravity
 import android.view.View
 import android.view.ViewGroup
@@ -59,17 +62,28 @@ object ValorantArt {
         else -> Tone.MID
     }
 
-    /** Pastille au fond teinté selon la valeur, chiffre en gros ; `tight` : moins haute (petites formes, dix lignes). */
+    /**
+     * Pastille au fond teinté selon la valeur, chiffre en gros ; `tight` : moins haute (petites formes, dix lignes). Fond
+     * opaque sous la teinte : la même couleur sur ma ligne et ailleurs. Second signe que la couleur : bon en gras, faible
+     * en maigre (daltoniens, thèmes où vert et jaune se ressemblent).
+     */
     fun chip(kit: ValorantKit, value: String, tone: Tone, width: Int, size: Float = 16f, tight: Boolean = false): View =
-        kit.text(value, size, if (tone == Tone.NONE) R.attr.c_text_faint else R.attr.c_text, R.attr.c_font_medium).apply {
+        kit.text(value, size, if (tone == Tone.NONE) R.attr.c_text_faint else R.attr.c_text, if (tone == Tone.LOW) R.attr.c_font_light else R.attr.c_font_medium).apply {
             gravity = Gravity.CENTER
-            background = GradientDrawable().apply {
-                cornerRadius = kit.dp(6).toFloat()
-                setColor(ColorUtils.setAlphaComponent(kit.color(tone.hue), if (tone == Tone.NONE) TINT / 3 else TINT))
-            }
+            if (tone == Tone.GOOD) setTypeface(typeface, Typeface.BOLD)
+            background = tinted(kit, tone.hue, if (tone == Tone.NONE) TINT / 3 else TINT)
             setPadding(0, kit.dp(if (tight) 2 else 6), 0, kit.dp(if (tight) 2 else 6))
             layoutParams = LinearLayout.LayoutParams(kit.dp(width), ViewGroup.LayoutParams.WRAP_CONTENT).apply { marginStart = kit.dp(GAP) }
         }
+
+    /** Fond arrondi : la surface opaque, puis la teinte par-dessus. */
+    fun tinted(kit: ValorantKit, hue: Int, alpha: Int): Drawable {
+        fun layer(color: Int) = GradientDrawable().apply {
+            cornerRadius = kit.dp(6).toFloat()
+            setColor(color)
+        }
+        return LayerDrawable(arrayOf(layer(kit.color(R.attr.c_surface_raised)), layer(ColorUtils.setAlphaComponent(kit.color(hue), alpha))))
+    }
 
     /** Icône d'agent avec le logo du rang posé dans son coin bas. */
     fun face(kit: ValorantKit, agentId: String?, agent: String?, tier: Int?, size: Int, dim: Boolean = false): View = FrameLayout(kit.context).apply {
@@ -79,23 +93,38 @@ object ValorantArt {
         layoutParams = LinearLayout.LayoutParams(kit.dp(size + badge / 3), kit.dp(size + badge / 4))
     }
 
-    /** Pastille ronde de la couleur du groupe (deux joueurs venus ensemble ont la même) ; null pour un joueur seul. */
+    /**
+     * Pastille ronde du groupe, avec son numéro (deux joueurs venus ensemble ont le même) : le chiffre suffit là où les
+     * teintes du thème se ressemblent. Null pour un joueur seul.
+     */
     fun partyDot(kit: ValorantKit, party: Int?): View? = ValorantKit.partyHue(party)?.let { hue ->
-        View(kit.context).apply {
+        // Chiffre de la couleur du fond : les teintes du thème sont faites pour contraster avec lui.
+        kit.text(party.toString(), 12f, R.attr.c_bg, R.attr.c_font_title).apply {
+            gravity = Gravity.CENTER
             background = GradientDrawable().apply {
                 shape = GradientDrawable.OVAL
                 setColor(kit.color(hue))
             }
             importantForAccessibility = View.IMPORTANT_FOR_ACCESSIBILITY_NO
-            layoutParams = LinearLayout.LayoutParams(kit.dp(10), kit.dp(10)).apply { marginStart = kit.dp(6) }
+            layoutParams = LinearLayout.LayoutParams(kit.dp(18), kit.dp(18)).apply { marginStart = kit.dp(6) }
         }
     }
 
-    /** Titre d'équipe en capitales espacées, de la couleur de l'équipe. */
-    fun teamTitle(kit: ValorantKit, title: Int, ally: Boolean) = kit.caption(title).apply {
-        setTextColor(kit.color(teamHue(ally)))
-        typeface = themeFont(kit.context, R.attr.c_font_title)
-        letterSpacing = 0.14f
-        textSize = 13f
+    /** Titre d'équipe en capitales espacées, précédé d'une barre de la couleur de l'équipe (le texte garde son contraste). */
+    fun teamTitle(kit: ValorantKit, title: Int, ally: Boolean): View {
+        val bar = View(kit.context).apply {
+            background = GradientDrawable().apply {
+                cornerRadius = kit.dp(2).toFloat()
+                setColor(kit.color(teamHue(ally)))
+            }
+            importantForAccessibility = View.IMPORTANT_FOR_ACCESSIBILITY_NO
+        }
+        val text = kit.caption(title).apply {
+            setTextColor(kit.color(R.attr.c_text))
+            typeface = themeFont(kit.context, R.attr.c_font_title)
+            letterSpacing = 0.14f
+            textSize = 13f
+        }
+        return kit.row(bar, text).apply { bar.layoutParams = LinearLayout.LayoutParams(kit.dp(4), kit.dp(14)).apply { marginEnd = kit.dp(6) } }
     }
 }

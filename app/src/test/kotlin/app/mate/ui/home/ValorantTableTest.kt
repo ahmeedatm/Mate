@@ -64,9 +64,11 @@ class ValorantTableTest {
     @Test
     fun eachPartyHasItsHueAndASoloPlayerNone() {
         assertNull(ValorantKit.partyHue(null))
-        assertEquals(R.attr.c_hue_cyan, ValorantKit.partyHue(1))
-        assertEquals(R.attr.c_hue_orange, ValorantKit.partyHue(2))
-        assertEquals(R.attr.c_hue_cyan, ValorantKit.partyHue(5))
+        // Jamais les couleurs d'équipe (turquoise, rouge) : un groupe n'est pas une équipe.
+        val teams = listOf(R.attr.c_hue_cyan, R.attr.c_hue_red)
+        for (n in 1..8) assertFalse("groupe $n", ValorantKit.partyHue(n) in teams)
+        assertEquals(R.attr.c_hue_violet, ValorantKit.partyHue(1))
+        assertEquals(R.attr.c_hue_violet, ValorantKit.partyHue(5))
         assertTrue(ValorantKit.partyHue(1) != ValorantKit.partyHue(2))
         assertFalse(ValorantKit.partyHue(3) == null)
     }

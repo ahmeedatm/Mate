@@ -26,7 +26,7 @@ object ValorantTable {
     /** Largeurs en dp des pastilles et colonnes (une pastille garde sa taille, le texte grossi a l'air qu'il faut). */
     private const val CHIP = 52
     private const val ACS = 60
-    private const val KDA = 92
+    private const val KDA = 84
     private const val FIRST = 40
     private const val PEAK = 30
 
@@ -39,6 +39,8 @@ object ValorantTable {
     fun match(v: Valorant, kit: ValorantKit, shape: ValorantShape): View {
         val later = if (v.state == ValorantState.PREGAME) R.string.valorant_enemies_later else null
         val allies = team(kit, R.string.valorant_allies, true, v.allies, null, shape)
+        // Petites formes empilées et texte grossi : dix lignes ne tiennent pas, ton équipe seulement (l'autre en plus grand).
+        if (!shape.side && !shape.detail && shape.stretch && largeText(kit)) return allies
         val enemies = team(kit, R.string.valorant_enemies, false, v.enemies, later, shape)
         return sides(kit, allies, enemies, shape.side)
     }
@@ -77,19 +79,21 @@ object ValorantTable {
         for (p in players) addView(player(kit, p, shape.detail), rowLp(kit, shape.stretch))
     }
 
-    /** Nom en capitales (le mien en gras). */
-    private fun name(kit: ValorantKit, text: String?, me: Boolean, size: Float) =
-        kit.text((text ?: kit.string(R.string.valorant_hidden)).uppercase(), size, if (text == null) R.attr.c_text_faint else R.attr.c_text, if (me) R.attr.c_font_title else R.attr.c_font_medium).apply {
-            letterSpacing = 0.04f
+    /** Nom en capitales (le mien en gras, quelle que soit la police du thème) ; `spacing` faux : plus de place pour le tag. */
+    private fun name(kit: ValorantKit, text: String?, me: Boolean, size: Float, spacing: Boolean = true) =
+        kit.text((text ?: kit.string(R.string.valorant_hidden)).uppercase(), size, if (text == null) R.attr.c_text_faint else R.attr.c_text, R.attr.c_font_medium).apply {
+            if (me) setTypeface(typeface, android.graphics.Typeface.BOLD)
+            letterSpacing = if (spacing) 0.04f else 0f
         }
 
     /** Nom, pastille du groupe à côté (même couleur pour les joueurs venus ensemble), niveau dessous. */
     private fun who(kit: ValorantKit, p: ValorantPlayer, detail: Boolean): View {
-        val top = kit.row(name(kit, p.name, p.me, if (detail) 14f else 13f))
+        // Le nom se coupe avant la pastille du groupe (un nom long ne la pousse jamais hors du champ).
+        val top = kit.row(name(kit, p.name, p.me, if (detail) 14f else 13f).apply { layoutParams = kit.lp(0, WRAP_CONTENT, 1f) })
         ValorantArt.partyDot(kit, p.party)?.let { top.addView(it) }
         // Texte grossi : le niveau tombe, pour que les cinq lignes tiennent.
         if (!detail || p.level == null || largeText(kit)) return top
-        return kit.column(top, kit.text(kit.string(R.string.valorant_level_short, p.level).uppercase(), 12f, R.attr.c_text_faint).apply { letterSpacing = 0.06f })
+        return kit.column(top.apply { layoutParams = kit.lp(MATCH_PARENT) }, kit.text(kit.string(R.string.valorant_level_short, p.level).uppercase(), 12f, R.attr.c_text_faint).apply { letterSpacing = 0.06f })
     }
 
     private fun player(kit: ValorantKit, p: ValorantPlayer, detail: Boolean): View {
@@ -152,7 +156,7 @@ object ValorantTable {
 
     private fun scoreLine(kit: ValorantKit, p: ValorantEndPlayer, places: Places, full: Boolean): View {
         val line = kit.row(ValorantArt.face(kit, p.agentId, p.agent, p.tier, if (full) 32 else 20), kit.space(10))
-        val top = kit.row(name(kit, p.name, p.me, if (full) 14f else 13f))
+        val top = kit.row(name(kit, p.name, p.me, if (full) 14f else 13f, spacing = false).apply { layoutParams = kit.lp(0, WRAP_CONTENT, 1f) })
         if (p.mvp) top.addView(mvp(kit), kit.lp(WRAP_CONTENT).apply { marginStart = kit.dp(6) })
         line.addView(top, kit.lp(0, WRAP_CONTENT, 1f))
         line.addView(if (full) ValorantArt.chip(kit, p.acs.toString(), places.acs(p), ACS, 17f) else ValorantArt.chip(kit, p.acs.toString(), places.acs(p), ACS, 13f, tight = true))
@@ -195,7 +199,11 @@ object ValorantTable {
             if (v.history.isEmpty()) addView(kit.text(kit.string(R.string.valorant_no_history), 14f, R.attr.c_text_faint))
             v.history.take(count).forEachIndexed { i, m -> addView(game(kit, m), kit.lp(0, WRAP_CONTENT, 1f).apply { if (i > 0) marginStart = kit.dp(6) }) }
         }
-        val right = kit.column(kit.caption(R.string.valorant_last_matches)).apply { addView(games, kit.lp(MATCH_PARENT, 0, 1f).apply { topMargin = kit.dp(4) }) }
+        // Libellé collé aux cases, le bloc centré en hauteur.
+        val right = kit.column(kit.caption(R.string.valorant_last_matches)).apply {
+            gravity = Gravity.CENTER_VERTICAL
+            addView(games, kit.lp(MATCH_PARENT, WRAP_CONTENT).apply { topMargin = kit.dp(4) })
+        }
         return LinearLayout(kit.context).apply {
             orientation = if (shape.side) LinearLayout.HORIZONTAL else LinearLayout.VERTICAL
             gravity = Gravity.CENTER_VERTICAL
@@ -214,7 +222,8 @@ object ValorantTable {
         addView(kit.agent(m.agentId, 36, name = m.agent), kit.lp(kit.dp(36), kit.dp(36)))
         val score = m.score?.let { kit.string(R.string.valorant_score, it.ally, it.enemy) } ?: kit.string(resultText(m.won))
         val lines = listOf(
-            kit.text(kit.string(R.string.valorant_rr_change, ValorantKit.signed(m.rr)), 18f, rrHue(m.rr), R.attr.c_font_title),
+            // Sur la case teintée du résultat : texte du thème (le signe et la case disent déjà gagné ou perdu).
+            kit.text(kit.string(R.string.valorant_rr_change, ValorantKit.signed(m.rr)), 18f, R.attr.c_text, R.attr.c_font_title).apply { setTypeface(typeface, android.graphics.Typeface.BOLD) },
             kit.text(score, 13f, R.attr.c_text),
             kit.text((m.map ?: ValorantKit.DASH).uppercase(), 12f, R.attr.c_text_dim).apply { letterSpacing = 0.06f },
         )

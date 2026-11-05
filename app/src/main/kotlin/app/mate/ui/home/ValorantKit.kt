@@ -147,8 +147,8 @@ class ValorantKit(val context: Context, private val scope: CoroutineScope, priva
         const val DIM_ALPHA = 0.4f
         private const val RADIANT = 27
 
-        /** Teintes de groupe, dans l'ordre des numéros ; au-delà de 4 groupes, elles recommencent. */
-        private val PARTY_HUES = listOf(R.attr.c_hue_cyan, R.attr.c_hue_orange, R.attr.c_hue_violet, R.attr.c_hue_yellow)
+        /** Teintes de groupe, dans l'ordre des numéros (jamais celles des équipes) ; au-delà de 4 groupes, elles recommencent. */
+        private val PARTY_HUES = listOf(R.attr.c_hue_violet, R.attr.c_hue_orange, R.attr.c_hue_yellow, R.attr.c_hue_pink)
 
         fun partyHue(party: Int?): Int? = party?.takeIf { it > 0 }?.let { PARTY_HUES[(it - 1) % PARTY_HUES.size] }
 
