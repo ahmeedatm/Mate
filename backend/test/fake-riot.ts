@@ -18,9 +18,9 @@ export const SOVA = "320b2a48-4d9b-a075-30f1-1f93a9b638fa";
 export const SAGE = "569fdd95-4d10-43ab-ca70-79becc718b46";
 export const JETT = "add6443a-41bd-e414-f6ad-e58d267f4e95";
 export const TIERS_UUID = "03621f52-342b-cf4e-4f86-9350a49c6d04";
-const ACT_NOW = "acte-en-cours";
+export const ACT_NOW = "acte-en-cours";
 /** Acte d'avant Ascendant (avant juin 2022) : ses rangs au-dessus de Diamant 3 se décalent de 3. */
-const ACT_OLD = "acte-2021";
+export const ACT_OLD = "acte-2021";
 
 export type Scene = {
   loop: string;
@@ -77,24 +77,24 @@ export function pngOf(size: number, rgba = [200, 30, 60, 255]): Buffer {
 }
 
 /** Présence Valorant d'un joueur, telle que le client la donne (`private` en base64). */
-function presence(puuid: string, scene: Scene, partyId: string) {
+function presence(puuid: string, scene: Scene, partyId: string, roster: Roster) {
   return {
     puuid,
     product: "valorant",
     private: Buffer.from(
       JSON.stringify({
-        matchPresenceData: { sessionLoopState: scene.loop, matchMap: "/Game/Maps/Plummet/Plummet", queueId: scene.queueId },
+        matchPresenceData: { sessionLoopState: scene.loop, matchMap: roster.map, queueId: scene.queueId },
         partyPresenceData: { partyState: scene.partyState, partyId, partyClientVersion: "release-13.09-shipping-18-5804228" },
-        playerPresenceData: { competitiveTier: 10, accountLevel: 90 },
-        partyOwnerMatchScoreAllyTeam: 2,
-        partyOwnerMatchScoreEnemyTeam: 0,
+        playerPresenceData: { competitiveTier: roster.ranks[ME]?.[0] ?? 0, accountLevel: 90 },
+        partyOwnerMatchScoreAllyTeam: roster.score[0],
+        partyOwnerMatchScoreEnemyTeam: roster.score[1],
         queueId: scene.queueId,
       }),
     ).toString("base64"),
   };
 }
 
-type Line = {
+export type Line = {
   puuid: string;
   team: string;
   agent: string;
@@ -109,7 +109,7 @@ type Line = {
   fk: number;
 };
 
-const NAMES: Record<string, [string, string]> = {
+const TEST_NAMES: Record<string, [string, string]> = {
   [ME]: ["Eliot", "EUW"],
   ami: ["Kinj", "EUW"],
   cache: ["Secret", "000"],
@@ -117,7 +117,16 @@ const NAMES: Record<string, [string, string]> = {
 };
 
 /** Détail d'une partie terminée, au format de match-details : premiers kills répartis dans les premières manches. */
-function matchOf(id: string, queueID: string, rounds: number, won: string | null, scoreBlue: number, lines: Line[]) {
+export function matchOf(
+  id: string,
+  queueID: string,
+  rounds: number,
+  won: string | null,
+  scoreBlue: number,
+  lines: Line[],
+  names = TEST_NAMES,
+  mapId = "/Game/Maps/Plummet/Plummet",
+) {
   let next = 0;
   const roundResults = Array.from({ length: rounds }, (_, i) => ({ roundNum: i, playerStats: [] as any[] }));
   for (const l of lines) {
@@ -134,11 +143,11 @@ function matchOf(id: string, queueID: string, rounds: number, won: string | null
     }
   }
   return {
-    matchInfo: { matchId: id, mapId: "/Game/Maps/Plummet/Plummet", queueID },
+    matchInfo: { matchId: id, mapId, queueID },
     players: lines.map((l) => ({
       subject: l.puuid,
-      gameName: NAMES[l.puuid]?.[0] ?? "",
-      tagLine: NAMES[l.puuid]?.[1] ?? "",
+      gameName: names[l.puuid]?.[0] ?? "",
+      tagLine: names[l.puuid]?.[1] ?? "",
       teamId: l.team,
       characterId: l.agent.toUpperCase(),
       competitiveTier: l.tier,
@@ -155,7 +164,7 @@ function matchOf(id: string, queueID: string, rounds: number, won: string | null
   };
 }
 
-const line = (puuid: string, team: string, agent: string, tier: number, o: Partial<Line>): Line => ({
+export const line = (puuid: string, team: string, agent: string, tier: number, o: Partial<Line>): Line => ({
   puuid,
   team,
   agent,
@@ -175,7 +184,7 @@ const line = (puuid: string, team: string, agent: string, tier: number, o: Parti
  * Parties : m1 à m3 (historique récent de chacun), m4 et m5 (mes 5 dernières), jeu-1 (la partie suivie, 13 à 7).
  * Mes 3 dernières : 30 kills, 25 morts (K/D 1,2), 15 têtes sur 60 tirs touchés (25 %).
  */
-const MATCHES: Record<string, () => unknown> = {
+const TEST_MATCHES: Record<string, () => unknown> = {
   m1: () =>
     matchOf("m1", "competitive", 20, "Blue", 13, [
       line(ME, "Blue", SOVA, 10, { k: 20, d: 10, a: 4, score: 5000, head: 10, body: 30 }),
@@ -201,10 +210,10 @@ const MATCHES: Record<string, () => unknown> = {
 };
 
 /** Détail d'une partie du faux pd, pour tester la lecture sans serveur. */
-export const matchFixture = (id: string) => MATCHES[id]();
+export const matchFixture = (id: string) => TEST_MATCHES[id]();
 
-const HISTORY: Record<string, string[]> = { [ME]: ["m1", "m2", "m3"], ennemi: ["m1"], ami: [], cache: ["m2"] };
-const UPDATES = [
+const TEST_HISTORY: Record<string, string[]> = { [ME]: ["m1", "m2", "m3"], ennemi: ["m1"], ami: [], cache: ["m2"] };
+const TEST_UPDATES = [
   ["m1", 18],
   ["m2", -15],
   ["m3", 2],
@@ -212,9 +221,9 @@ const UPDATES = [
   ["m5", -19],
 ] as const;
 
-const tierOf: Record<string, [number, number]> = { [ME]: [10, 42], ami: [12, 15], cache: [9, 97], ennemi: [18, 60] };
+const TEST_RANKS: Record<string, [number, number]> = { [ME]: [10, 42], ami: [12, 15], cache: [9, 97], ennemi: [18, 60] };
 /** Saisons classées par joueur : [acte, victoires, parties, rangs gagnés]. */
-const SEASONS: Record<string, [string, number, number, Record<string, number>][]> = {
+const TEST_SEASONS: Record<string, SeasonRow[]> = {
   [ME]: [
     [ACT_NOW, 6, 10, { "10": 4, "11": 2 }],
     [ACT_OLD, 1, 2, { "21": 1 }],
@@ -222,19 +231,82 @@ const SEASONS: Record<string, [string, number, number, Record<string, number>][]
   ennemi: [[ACT_NOW, 1, 4, { "18": 1, "20": 3 }]],
 };
 
-function mmrOf(puuid: string) {
-  const [tier, rr] = tierOf[puuid] ?? [0, 0];
+/** Saison classée d'un joueur : [acte, victoires, parties, victoires par rang]. */
+export type SeasonRow = [string, number, number, Record<string, number>];
+
+/** Joueurs et parties servis par les faux serveurs : celle des tests, ou une plus fournie pour les captures. */
+export type Roster = {
+  names: Record<string, [string, string]>;
+  ranks: Record<string, [number, number]>;
+  seasons: Record<string, SeasonRow[]>;
+  history: Record<string, string[]>;
+  matches: Record<string, () => unknown>;
+  updates: readonly (readonly [string, number])[];
+  map: string;
+  /** Score de la partie en cours (mon équipe, l'autre). */
+  score: [number, number];
+  /** Joueurs de core-game (partie en cours) et de pregame (mon équipe pendant la sélection). */
+  ingame: unknown[];
+  pregame: unknown[];
+  /** Groupe de chaque joueur dont le client voit la présence. */
+  parties: Record<string, string>;
+  /** Partie suivie (identifiant core-game, puis match-details). */
+  matchId: string;
+};
+
+function mmrOf(roster: Roster, puuid: string) {
+  const [tier, rr] = roster.ranks[puuid] ?? [0, 0];
   const seasonal = Object.fromEntries(
-    (SEASONS[puuid] ?? []).map(([id, wins, games, byTier]) => [
+    (roster.seasons[puuid] ?? []).map(([id, wins, games, byTier]) => [
       id,
       { SeasonID: id, NumberOfWinsWithPlacements: wins, NumberOfGames: games, WinsByTier: byTier },
     ]),
   );
   return {
     LatestCompetitiveUpdate: { TierAfterUpdate: tier, RankedRatingAfterUpdate: rr },
-    ...(SEASONS[puuid] ? { QueueSkills: { competitive: { SeasonalInfoBySeasonID: seasonal } } } : {}),
+    ...(roster.seasons[puuid] ? { QueueSkills: { competitive: { SeasonalInfoBySeasonID: seasonal } } } : {}),
   };
 }
+
+const TEST_ROSTER: Roster = {
+  names: TEST_NAMES,
+  ranks: TEST_RANKS,
+  seasons: TEST_SEASONS,
+  history: TEST_HISTORY,
+  matches: TEST_MATCHES,
+  updates: TEST_UPDATES,
+  map: "/Game/Maps/Plummet/Plummet",
+  score: [2, 0],
+  matchId: "jeu-1",
+  parties: { [ME]: "groupe-1", ami: "groupe-1", ennemi: "groupe-2" },
+  pregame: [
+    {
+      Subject: ME,
+      CharacterID: SOVA,
+      CharacterSelectionState: "locked",
+      CompetitiveTier: 10,
+      PlayerIdentity: { Incognito: false, AccountLevel: 90 },
+    },
+    {
+      Subject: "ami",
+      CharacterID: "",
+      CharacterSelectionState: "",
+      CompetitiveTier: 12,
+      PlayerIdentity: { Incognito: false, AccountLevel: 120 },
+    },
+  ],
+  ingame: [
+    { Subject: "ennemi", TeamID: "Red", CharacterID: JETT, PlayerIdentity: { Incognito: false, AccountLevel: 15 } },
+    { Subject: ME, TeamID: "Blue", CharacterID: SOVA, PlayerIdentity: { Incognito: false, AccountLevel: 90 } },
+    {
+      Subject: "cache",
+      TeamID: "Red",
+      CharacterID: "inconnu",
+      PlayerIdentity: { Incognito: true, AccountLevel: 200, HideAccountLevel: true },
+    },
+    { Subject: "ami", TeamID: "Blue", CharacterID: SAGE, PlayerIdentity: { Incognito: false, AccountLevel: 120 } },
+  ],
+};
 
 const send = (res: http.ServerResponse, body: unknown, status = 200) => {
   res.statusCode = status;
@@ -257,7 +329,7 @@ export type FakeRiot = {
   close: () => void;
 };
 
-export async function startFakeRiot(): Promise<FakeRiot> {
+export async function startFakeRiot(roster: Roster = TEST_ROSTER): Promise<FakeRiot> {
   const fake = { scene: freshScene(), seen: [] as Seen[], localAuth: [] as string[] };
   let endCalls = 0;
   const scene = () => fake.scene;
@@ -270,9 +342,7 @@ export async function startFakeRiot(): Promise<FakeRiot> {
       return send(res, {
         presences: [
           { puuid: "un-ami", product: "league_of_legends", private: "" },
-          presence(ME, s, "groupe-1"),
-          presence("ami", s, "groupe-1"),
-          presence("ennemi", s, "groupe-2"),
+          ...Object.entries(roster.parties).map(([puuid, party]) => presence(puuid, s, party, roster)),
         ],
       });
     if (req.url === "/entitlements/v1/token") return send(res, s.signedIn ? { accessToken: ACCESS, token: ENTITLEMENT, subject: ME } : {});
@@ -341,42 +411,13 @@ export async function startFakeRiot(): Promise<FakeRiot> {
 
       // glz
       if (url === `/pregame/v1/players/${ME}`) return s.loop === "PREGAME" ? send(res, { MatchID: "pre-1" }) : send(res, {}, 404);
-      if (url === "/pregame/v1/matches/pre-1")
+      if (url === "/pregame/v1/matches/pre-1") return send(res, { MapID: roster.map, AllyTeam: { Players: roster.pregame } });
+      if (url === `/core-game/v1/players/${ME}`) return s.loop === "INGAME" ? send(res, { MatchID: roster.matchId }) : send(res, {}, 404);
+      if (url === `/core-game/v1/matches/${roster.matchId}`)
         return send(res, {
-          MapID: "/Game/Maps/Plummet/Plummet",
-          AllyTeam: {
-            Players: [
-              {
-                Subject: ME,
-                CharacterID: SOVA,
-                CharacterSelectionState: "locked",
-                CompetitiveTier: 10,
-                PlayerIdentity: { Incognito: false, AccountLevel: 90 },
-              },
-              {
-                Subject: "ami",
-                CharacterID: "",
-                CharacterSelectionState: "",
-                CompetitiveTier: 12,
-                PlayerIdentity: { Incognito: false, AccountLevel: 120 },
-              },
-            ],
-          },
-        });
-      if (url === `/core-game/v1/players/${ME}`) return s.loop === "INGAME" ? send(res, { MatchID: "jeu-1" }) : send(res, {}, 404);
-      if (url === "/core-game/v1/matches/jeu-1")
-        return send(res, {
-          MapID: "/Game/Maps/Plummet/Plummet",
+          MapID: roster.map,
           Players: [
-            { Subject: "ennemi", TeamID: "Red", CharacterID: JETT, PlayerIdentity: { Incognito: false, AccountLevel: 15 } },
-            { Subject: ME, TeamID: "Blue", CharacterID: SOVA, PlayerIdentity: { Incognito: false, AccountLevel: 90 } },
-            {
-              Subject: "cache",
-              TeamID: "Red",
-              CharacterID: "inconnu",
-              PlayerIdentity: { Incognito: true, AccountLevel: 200, HideAccountLevel: true },
-            },
-            { Subject: "ami", TeamID: "Blue", CharacterID: SAGE, PlayerIdentity: { Incognito: false, AccountLevel: 120 } },
+            ...roster.ingame,
             ...(s.withNewcomer ? [{ Subject: "nouveau", TeamID: "Red", CharacterID: JETT, PlayerIdentity: { Incognito: false } }] : []),
           ],
         });
@@ -385,27 +426,31 @@ export async function startFakeRiot(): Promise<FakeRiot> {
       if (url === "/name-service/v2/players" && req.method === "PUT")
         return send(
           res,
-          (JSON.parse(raw) as string[]).map((p) => ({ Subject: p, GameName: NAMES[p]?.[0] ?? "", TagLine: NAMES[p]?.[1] ?? "" })),
+          (JSON.parse(raw) as string[]).map((p) => ({
+            Subject: p,
+            GameName: roster.names[p]?.[0] ?? "",
+            TagLine: roster.names[p]?.[1] ?? "",
+          })),
         );
       const updates = url.match(/^\/mmr\/v1\/players\/([^/?]+)\/competitiveupdates\?/);
       if (updates)
         return send(res, {
           Matches:
             updates[1] === ME
-              ? UPDATES.map(([MatchID, RankedRatingEarned]) => ({ MatchID, MapID: "/Game/Maps/Plummet/Plummet", RankedRatingEarned }))
+              ? roster.updates.map(([MatchID, RankedRatingEarned]) => ({ MatchID, MapID: roster.map, RankedRatingEarned }))
               : [],
         });
       const mmr = url.match(/^\/mmr\/v1\/players\/([^/?]+)$/);
-      if (mmr) return mmr[1] === "nouveau" ? send(res, { message: "trop d'appels" }, 503) : send(res, mmrOf(mmr[1]));
+      if (mmr) return mmr[1] === "nouveau" ? send(res, { message: "trop d'appels" }, 503) : send(res, mmrOf(roster, mmr[1]));
       const history = url.match(/^\/match-history\/v1\/history\/([^/?]+)\?/);
       if (history) {
         if (history[1] === "ennemi" && s.historyRefused) return send(res, { message: "trop d'appels" }, 429);
-        return send(res, { History: (HISTORY[history[1]] ?? []).map((MatchID) => ({ MatchID })) });
+        return send(res, { History: (roster.history[history[1]] ?? []).map((MatchID) => ({ MatchID })) });
       }
       const details = url.match(/^\/match-details\/v1\/matches\/([^/?]+)$/);
-      if (details && MATCHES[details[1]]) {
-        if (details[1] === "jeu-1" && (s.endNotReady < 0 || endCalls++ < s.endNotReady)) return send(res, {}, 404);
-        return send(res, MATCHES[details[1]]());
+      if (details && roster.matches[details[1]]) {
+        if (details[1] === roster.matchId && (s.endNotReady < 0 || endCalls++ < s.endNotReady)) return send(res, {}, 404);
+        return send(res, roster.matches[details[1]]());
       }
       send(res, { message: "inconnu" }, 404);
     });
