@@ -24,16 +24,32 @@ object ValorantTable {
     private const val STAT = 46
     private const val RANK = 76
 
+    private const val KDA = 92
+    private const val FIRST = 44
+
     /** Colonne du logo du meilleur rang, en dp (une image ne grandit pas avec le texte). */
     private const val PEAK = 34
+
+    /** Hauteur d'une ligne quand elles ne s'étirent pas (grands widgets). */
+    private const val ROW_DP = 52
+
+    /** Air entre deux colonnes de chiffres. */
+    private const val GAP = 8
+
+    /** Taille de texte (réglage d'Accessibilité) au-delà de laquelle le tableau de fin perd ses trois dernières colonnes. */
+    private const val LARGE_TEXT = 1.15f
 
     fun match(v: Valorant, kit: ValorantKit, shape: ValorantShape): View {
         val full = shape.detail
         val later = if (v.state == ValorantState.PREGAME) R.string.valorant_enemies_later else null
-        val allies = team(kit, R.string.valorant_allies, v.allies, null, full)
-        val enemies = team(kit, R.string.valorant_enemies, v.enemies, later, full)
+        val allies = team(kit, R.string.valorant_allies, v.allies, null, full, shape.stretch)
+        val enemies = team(kit, R.string.valorant_enemies, v.enemies, later, full, shape.stretch)
         return sides(kit, allies, enemies, shape.side)
     }
+
+    /** Ligne d'un tableau : se partage la hauteur, ou garde la sienne (le tableau se centre alors). */
+    private fun rowLp(kit: ValorantKit, stretch: Boolean) =
+        if (stretch) kit.lp(MATCH_PARENT, 0, 1f) else kit.lp(MATCH_PARENT, kit.dp(ROW_DP))
 
     private fun sides(kit: ValorantKit, left: View, right: View, side: Boolean) = LinearLayout(kit.context).apply {
         orientation = if (side) LinearLayout.HORIZONTAL else LinearLayout.VERTICAL
@@ -49,20 +65,21 @@ object ValorantTable {
 
     private fun divider(kit: ValorantKit) = View(kit.context).apply { setBackgroundColor(kit.color(R.attr.c_stroke)) }
 
-    private fun team(kit: ValorantKit, title: Int, players: List<ValorantPlayer>, empty: Int?, full: Boolean) = LinearLayout(kit.context).apply {
+    private fun team(kit: ValorantKit, title: Int, players: List<ValorantPlayer>, empty: Int?, full: Boolean, stretch: Boolean) = LinearLayout(kit.context).apply {
         orientation = LinearLayout.VERTICAL
+        gravity = Gravity.CENTER_VERTICAL
         val head = kit.row(kit.caption(title))
         head.getChildAt(0).layoutParams = kit.lp(0, WRAP_CONTENT, 1f)
         if (full) {
             head.addView(kit.caption(R.string.valorant_col_rank, Gravity.START), kit.lp(kit.sp(RANK)))
             head.addView(kit.caption(R.string.valorant_col_peak, Gravity.CENTER), kit.lp(kit.dp(PEAK)))
-            for (c in listOf(R.string.valorant_col_kd, R.string.valorant_col_hs, R.string.valorant_col_wr)) head.addView(kit.caption(c, Gravity.END), kit.lp(kit.sp(STAT)))
+            for (c in listOf(R.string.valorant_col_kd, R.string.valorant_col_hs, R.string.valorant_col_wr)) head.addView(kit.caption(c, Gravity.END), statLp(kit, STAT))
         } else {
-            head.addView(kit.caption(R.string.valorant_col_kd, Gravity.END), kit.lp(kit.sp(STAT)))
+            head.addView(kit.caption(R.string.valorant_col_kd, Gravity.END), statLp(kit, STAT))
         }
         addView(head, kit.lp(MATCH_PARENT).apply { bottomMargin = kit.dp(2) })
         if (players.isEmpty() && empty != null) addView(kit.text(kit.string(empty), 14f, R.attr.c_text_faint))
-        for (p in players) addView(player(kit, p, full), kit.lp(MATCH_PARENT, 0, 1f))
+        for (p in players) addView(player(kit, p, full), rowLp(kit, stretch))
     }
 
     private fun player(kit: ValorantKit, p: ValorantPlayer, full: Boolean): View {
@@ -70,7 +87,7 @@ object ValorantTable {
         val line = kit.row(
             kit.partyBar(p.party),
             kit.space(6),
-            kit.agent(p.agentId, icon, dim = !p.locked),
+            kit.agent(p.agentId, icon, dim = !p.locked, name = p.agent),
             kit.space(8),
         )
         val name = kit.text(p.name ?: kit.string(R.string.valorant_hidden), if (full) 15f else 13f, if (p.name == null) R.attr.c_text_faint else R.attr.c_text, if (p.me) R.attr.c_font_medium else R.attr.c_font_regular)
@@ -79,14 +96,15 @@ object ValorantTable {
         if (full) {
             val rank = kit.row(kit.rank(p.tier, 26), kit.space(4), kit.text(ValorantKit.number(p.rr), 13f, R.attr.c_text_dim))
             line.addView(rank, kit.lp(kit.sp(RANK)))
-            val peak = kit.rank(p.peakTier, 22).apply { alpha = if (p.peakTier == null) 0f else 1f }
-            line.addView(kit.row(peak, gravity = Gravity.CENTER), kit.lp(kit.dp(PEAK)))
-            line.addView(stat(kit, ValorantKit.kd(p.kd), p.kd), kit.lp(kit.sp(STAT)))
-            line.addView(stat(kit, ValorantKit.pct(p.hs), p.hs), kit.lp(kit.sp(STAT)))
-            line.addView(stat(kit, ValorantKit.pct(p.winRate), p.winRate), kit.lp(kit.sp(STAT)))
+            // Meilleur rang pas encore lu : la place reste vide (pas de logo « Non classé » trompeur, rien à lire à voix haute).
+            val peak = if (p.peakTier == null) View(kit.context) else kit.rank(p.peakTier, 22)
+            line.addView(peak, kit.lp(kit.dp(PEAK), kit.dp(22)).apply { gravity = Gravity.CENTER })
+            line.addView(stat(kit, ValorantKit.kd(p.kd), p.kd), statLp(kit, STAT))
+            line.addView(stat(kit, ValorantKit.pct(p.hs), p.hs), statLp(kit, STAT))
+            line.addView(stat(kit, ValorantKit.pct(p.winRate), p.winRate), statLp(kit, STAT))
         } else {
             line.addView(kit.rank(p.tier, 22))
-            line.addView(stat(kit, ValorantKit.kd(p.kd), p.kd), kit.lp(kit.sp(STAT)))
+            line.addView(stat(kit, ValorantKit.kd(p.kd), p.kd), statLp(kit, STAT))
         }
         line.setPadding(0, 0, kit.dp(6), 0)
         if (p.me) kit.mine(line)
@@ -94,39 +112,47 @@ object ValorantTable {
         return line
     }
 
+    /** Colonne de chiffres : largeur en sp, et de l'air avant (deux colonnes ne se touchent jamais). */
+    private fun statLp(kit: ValorantKit, width: Int) = kit.lp(kit.sp(width) + kit.dp(GAP))
+
     private fun stat(kit: ValorantKit, text: String, value: Any?) =
         kit.text(text, 14f, if (value == null) R.attr.c_text_faint else R.attr.c_text).apply { gravity = Gravity.END }
 
     fun end(end: ValorantEnd, kit: ValorantKit, shape: ValorantShape): View {
-        val full = shape.detail
-        return sides(kit, board(kit, R.string.valorant_allies, end.allies, full), board(kit, R.string.valorant_enemies, end.enemies, full), shape.side)
+        // Texte grossi (Accessibilité) : sans % tête, ADR et premiers kills, pour que les noms restent lisibles.
+        val full = shape.detail && kit.context.resources.configuration.fontScale <= LARGE_TEXT
+        // Combat à mort : chacun pour soi, une seule liste classée par kills (ordre du compagnon).
+        if (end.ffa) return board(kit, R.string.valorant_ffa, end.players, full, shape.stretch)
+        return sides(kit, board(kit, R.string.valorant_allies, end.allies, full, shape.stretch), board(kit, R.string.valorant_enemies, end.enemies, full, shape.stretch), shape.side)
     }
 
-    private fun board(kit: ValorantKit, title: Int, players: List<ValorantEndPlayer>, full: Boolean) = LinearLayout(kit.context).apply {
+    private fun board(kit: ValorantKit, title: Int, players: List<ValorantEndPlayer>, full: Boolean, stretch: Boolean) = LinearLayout(kit.context).apply {
         orientation = LinearLayout.VERTICAL
+        gravity = Gravity.CENTER_VERTICAL
         val head = kit.row(kit.caption(title))
         head.getChildAt(0).layoutParams = kit.lp(0, WRAP_CONTENT, 1f)
         val cols = if (full) {
-            listOf(R.string.valorant_col_acs to STAT, R.string.valorant_col_kda to 84, R.string.valorant_col_hs to STAT, R.string.valorant_col_adr to STAT, R.string.valorant_col_fk to 38)
+            listOf(R.string.valorant_col_acs to STAT, R.string.valorant_col_kda to KDA, R.string.valorant_col_hs to STAT, R.string.valorant_col_adr to STAT, R.string.valorant_col_fk to FIRST)
         } else {
-            listOf(R.string.valorant_col_acs to STAT, R.string.valorant_col_kda to 84)
+            listOf(R.string.valorant_col_acs to STAT, R.string.valorant_col_kda to KDA)
         }
-        for ((c, w) in cols) head.addView(kit.caption(c, Gravity.END), kit.lp(kit.sp(w)))
+        for ((c, w) in cols) head.addView(kit.caption(c, Gravity.END), statLp(kit, w))
         addView(head, kit.lp(MATCH_PARENT).apply { bottomMargin = kit.dp(2) })
-        for (p in players) addView(scoreLine(kit, p, full), kit.lp(MATCH_PARENT, 0, 1f))
+        for (p in players) addView(scoreLine(kit, p, full), rowLp(kit, stretch))
     }
 
     private fun scoreLine(kit: ValorantKit, p: ValorantEndPlayer, full: Boolean): View {
-        val line = kit.row(kit.agent(p.agentId, if (full) 28 else 22), kit.space(8))
+        val icon = if (full) 28 else 22
+        val line = kit.row(kit.agent(p.agentId, icon, name = p.agent), kit.space(6), kit.rank(p.tier, icon - 4), kit.space(8))
         val name = kit.text(p.name ?: kit.string(R.string.valorant_hidden), if (full) 15f else 13f, if (p.name == null) R.attr.c_text_faint else R.attr.c_text, if (p.me) R.attr.c_font_medium else R.attr.c_font_regular)
         line.addView(name, kit.lp(0, WRAP_CONTENT, 1f))
         if (p.mvp) line.addView(mvp(kit), kit.lp(WRAP_CONTENT).apply { marginStart = kit.dp(6) })
-        line.addView(kit.text(p.acs.toString(), 15f, R.attr.c_text, R.attr.c_font_medium).apply { gravity = Gravity.END }, kit.lp(kit.sp(STAT)))
-        line.addView(kit.text(kit.string(R.string.valorant_kda, p.kills, p.deaths, p.assists), 14f, R.attr.c_text_dim).apply { gravity = Gravity.END }, kit.lp(kit.sp(84)))
+        line.addView(kit.text(p.acs.toString(), 15f, R.attr.c_text, R.attr.c_font_medium).apply { gravity = Gravity.END }, statLp(kit, STAT))
+        line.addView(kit.text(kit.string(R.string.valorant_kda, p.kills, p.deaths, p.assists), 14f, R.attr.c_text_dim).apply { gravity = Gravity.END }, statLp(kit, KDA))
         if (full) {
-            line.addView(stat(kit, ValorantKit.pct(p.hs), p.hs), kit.lp(kit.sp(STAT)))
-            line.addView(stat(kit, p.adr.toString(), p.adr), kit.lp(kit.sp(STAT)))
-            line.addView(stat(kit, p.firstKills.toString(), p.firstKills), kit.lp(kit.sp(38)))
+            line.addView(stat(kit, ValorantKit.pct(p.hs), p.hs), statLp(kit, STAT))
+            line.addView(stat(kit, p.adr.toString(), p.adr), statLp(kit, STAT))
+            line.addView(stat(kit, p.firstKills.toString(), p.firstKills), statLp(kit, FIRST))
         }
         line.setPadding(0, 0, kit.dp(6), 0)
         if (p.me) kit.mine(line)
@@ -219,7 +245,7 @@ object ValorantTable {
         band.layoutParams = kit.lp(kit.dp(4), MATCH_PARENT)
         val score = m.score?.let { kit.string(R.string.valorant_score, it.ally, it.enemy) } ?: kit.string(resultText(m.won))
         line.addView(kit.text(score, 14f, R.attr.c_text, R.attr.c_font_medium), kit.lp(kit.sp(64)))
-        line.addView(kit.agent(m.agentId, 24))
+        line.addView(kit.agent(m.agentId, 24, name = m.agent))
         line.addView(kit.text(m.map ?: ValorantKit.DASH, 14f, R.attr.c_text_dim), kit.lp(0, WRAP_CONTENT, 1f).apply { marginStart = kit.dp(8) })
         if (full) {
             val kda = if (m.kills != null && m.deaths != null && m.assists != null) kit.string(R.string.valorant_kda, m.kills, m.deaths, m.assists) else ValorantKit.DASH

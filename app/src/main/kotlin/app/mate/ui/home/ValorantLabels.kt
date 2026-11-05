@@ -13,14 +13,17 @@ import app.mate.net.ValorantPlayer
  * Mise en page du widget selon sa forme : `summary` (pastille, ligne, colonne) ne montre que mon rang et le score ;
  * `side` met les équipes côte à côte (4 cases de large, ou 3 × 2, trop bas pour dix lignes l'une sous l'autre) ;
  * `detail` a toutes les colonnes de stats (4 de large, ou 3 de large et 3 de haut), sinon l'essentiel (agent, nom,
- * rang, K/D).
+ * rang, K/D) ; `stretch` : les lignes se partagent la hauteur (sinon elles gardent la leur, tableau centré).
  */
-data class ValorantShape(val summary: Boolean, val detail: Boolean, val side: Boolean) {
+data class ValorantShape(val summary: Boolean, val detail: Boolean, val side: Boolean, val stretch: Boolean = true) {
     companion object {
         fun of(size: WidgetSize) = ValorantShape(
             summary = size.family == ShapeFamily.PILL || size.family == ShapeFamily.ROW || size.family == ShapeFamily.COLUMN,
             detail = size.w >= 4 || (size.w == 3 && size.h >= 3),
             side = size.w >= 4 || (size.w == 3 && size.h <= 2),
+            // Cinq lignes par colonne côte à côte en 3 ou 4 de haut, dix l'une sous l'autre en 4 de haut : trop de place,
+            // les lignes gardent leur hauteur et le tableau se centre.
+            stretch = size.h <= 2 || (size.w < 4 && size.h == 3),
         )
     }
 }

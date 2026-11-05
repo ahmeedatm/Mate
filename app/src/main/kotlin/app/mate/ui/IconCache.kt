@@ -2,8 +2,11 @@ package app.mate.ui
 
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
+import android.os.SystemClock
 import android.util.LruCache
 import app.mate.net.BackendClient
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.CompletableDeferred
 
 /**
  * Icônes des tuiles, gardées en mémoire (96 à 128 px chacune, 64 Ko au plus) : quelques dizaines pour le Deck, et jusqu'à
@@ -11,7 +14,11 @@ import app.mate.net.BackendClient
  */
 object IconCache {
     private val bitmaps = LruCache<String, Bitmap>(96)
-    private val missing = HashSet<String>()
+    /** Absentes (404) jusqu'à l'instant noté : pour toujours pour le Deck, 5 min pour Valorant (compagnon pas encore à jour). */
+    private val missing = HashMap<String, Long>()
+
+    /** Chargements en cours : dix joueurs du même rang ne demandent le logo qu'une fois. */
+    private val loading = HashMap<String, CompletableDeferred<Bitmap?>>()
 
     fun peek(id: String): Bitmap? = bitmaps.get(id)
 
@@ -28,11 +35,11 @@ object IconCache {
     fun peekDiscord(id: String): Bitmap? = peek(discordKey(id))
 
     /** Icône carrée d'un agent Valorant et logo d'un rang (128 px, servis par l'ordinateur depuis valorant-api.com). */
-    suspend fun loadAgent(client: BackendClient, id: String): Bitmap? = load(agentKey(id)) { client.valorant.agentIcon(id) }
+    suspend fun loadAgent(client: BackendClient, id: String): Bitmap? = load(agentKey(id), VALORANT_MISS_MS) { client.valorant.agentIcon(id) }
 
     fun peekAgent(id: String): Bitmap? = peek(agentKey(id))
 
-    suspend fun loadRank(client: BackendClient, tier: Int): Bitmap? = load(rankKey(tier)) { client.valorant.rankIcon(tier) }
+    suspend fun loadRank(client: BackendClient, tier: Int): Bitmap? = load(rankKey(tier), VALORANT_MISS_MS) { client.valorant.rankIcon(tier) }
 
     fun peekRank(tier: Int): Bitmap? = peek(rankKey(tier))
 
@@ -44,15 +51,29 @@ object IconCache {
 
     private fun appKey(name: String) = "app:$name"
 
-    private suspend fun load(id: String, fetch: suspend () -> ByteArray?): Bitmap? {
+    /** Appelé depuis le fil principal (les tables ne sont pas partagées entre fils) ; `fetch` passe par `Http.io`. */
+    private suspend fun load(id: String, missFor: Long = Long.MAX_VALUE, fetch: suspend () -> ByteArray?): Bitmap? {
         bitmaps.get(id)?.let { return it }
-        if (id in missing) return null
-        // Erreur réseau : on réessaiera plus tard. 404 : l'appli n'a pas d'icône, inutile de redemander.
-        val bytes = try { fetch() } catch (e: Exception) { return null }
-        if (bytes == null) { missing += id; return null }
-        val bitmap = BitmapFactory.decodeByteArray(bytes, 0, bytes.size) ?: return null
-        bitmaps.put(id, bitmap)
-        return bitmap
+        if ((missing[id] ?: 0L) > SystemClock.elapsedRealtime()) return null
+        loading[id]?.let { return it.await() }
+        val result = CompletableDeferred<Bitmap?>()
+        loading[id] = result
+        try {
+            // Erreur réseau : on réessaiera plus tard. 404 : pas d'icône, inutile de redemander (pendant `missFor`).
+            val bytes = try { fetch() } catch (e: CancellationException) { throw e } catch (e: Exception) { return null }
+            if (bytes == null) {
+                missing[id] = if (missFor == Long.MAX_VALUE) Long.MAX_VALUE else SystemClock.elapsedRealtime() + missFor
+                return null
+            }
+            val bitmap = BitmapFactory.decodeByteArray(bytes, 0, bytes.size)
+            if (bitmap != null) bitmaps.put(id, bitmap)
+            result.complete(bitmap)
+            return bitmap
+        } finally {
+            // Échec, 404 ou annulation : ceux qui attendaient reçoivent null (sans effet si déjà complété).
+            result.complete(null)
+            loading.remove(id)
+        }
     }
 
     /** Une touche perso reprogrammée change d'icône sans changer d'identifiant. */
@@ -66,4 +87,6 @@ object IconCache {
         bitmaps.evictAll()
         missing.clear()
     }
+
+    private const val VALORANT_MISS_MS = 5 * 60_000L
 }

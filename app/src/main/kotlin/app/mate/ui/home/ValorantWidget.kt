@@ -54,7 +54,8 @@ class ValorantWidget(context: Context, host: HomeHost, placed: Placed) : HomeWid
         addView(scroll, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, 0, 1f).apply { topMargin = dp(8) })
     }
 
-    private var kit = ValorantKit(context, host.scope)
+    /** Aperçu du catalogue : aucune image demandée à l'ordinateur. */
+    private var preview = false
     private var last: Valorant? = null
     private var error: String? = null
     private var job: Job? = null
@@ -73,7 +74,8 @@ class ValorantWidget(context: Context, host: HomeHost, placed: Placed) : HomeWid
 
     override fun showPreview(sample: WidgetSample) {
         val example = (sample as? ValorantSample)?.valorant ?: return
-        kit = ValorantKit(context, host.scope, online = false)
+        preview = true
+        val kit = ValorantKit(context, host.scope, online = false)
         last = example.copy(me = example.me?.copy(rank = kit.rankName(example.me.tier)), players = example.players.map { it.copy(rank = kit.rankName(it.tier)) })
         error = null
         drawn = null
@@ -112,6 +114,8 @@ class ValorantWidget(context: Context, host: HomeHost, placed: Placed) : HomeWid
         drawn = v to placed.size
         body.removeAllViews()
         val shape = ValorantShape.of(placed.size)
+        // Un kit par rendu : ses images partent vers l'ordinateur actif du moment, avec un seul client.
+        val kit = ValorantKit(context, host.scope, online = !preview)
         val fill = LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT)
         val end = v?.end?.takeIf { it.status == ValorantEndStatus.READY }
         body.addView(
@@ -133,8 +137,8 @@ class ValorantWidget(context: Context, host: HomeHost, placed: Placed) : HomeWid
                 ValorantEndStatus.READY -> listOfNotNull(
                     context.getString(if (end.ffa) R.string.valorant_ffa else resultText(end.won)),
                     end.score?.let { context.getString(R.string.valorant_score, it.ally, it.enemy) },
-                    end.queue,
-                    end.map,
+                    end.queue.takeIf { placed.size.w >= 3 },
+                    end.map.takeIf { placed.size.w >= 3 },
                 ).joinToString(" · ")
                 ValorantEndStatus.LOADING -> context.getString(R.string.valorant_end_loading)
                 ValorantEndStatus.MISSING -> context.getString(R.string.valorant_end_missing)
@@ -149,6 +153,8 @@ class ValorantWidget(context: Context, host: HomeHost, placed: Placed) : HomeWid
             },
         )
         val score = v.score?.let { context.getString(R.string.valorant_score, it.ally, it.enemy) }
+        // Moins de 3 cases de large : l'état et le score seulement, pour que le score ne soit pas coupé.
+        if (placed.size.w < 3) return listOfNotNull(state, score).joinToString(" · ")
         return listOfNotNull(state, v.queue, v.map, score).joinToString(" · ")
     }
 

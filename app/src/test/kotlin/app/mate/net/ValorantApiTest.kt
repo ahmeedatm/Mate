@@ -126,4 +126,14 @@ class ValorantApiTest {
         val missing = ValorantApi.parse("""{"state":"menu","players":[],"end":{"status":"missing","players":[]}}""").end
         assertEquals(ValorantEndStatus.MISSING, missing?.status)
     }
+
+    @Test
+    fun aMalformedItemIsSkippedNotTheWholeWidget() {
+        val v = ValorantApi.parse(
+            """{"state":"menu","players":[null,{"name":"Kinj#EUW","agent":"Sage","locked":true,"tier":12,"rank":"Or 1","rr":15,"ally":true,"me":false}],
+                "history":[1,{"won":true,"rr":12}]}""",
+        )
+        assertEquals(listOf("Kinj#EUW"), v.players.map { it.name })
+        assertEquals(listOf(12), v.history.map { it.rr })
+    }
 }

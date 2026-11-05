@@ -23,9 +23,13 @@ import java.util.Locale
 /**
  * Morceaux communs du widget Valorant : icône d'agent et logo de rang (servis par l'ordinateur, gardés par [IconCache]),
  * textes à chiffres alignés, chiffres au format français, couleur du trait de groupe. `online` faux (aperçu du
- * catalogue) : aucune image n'est demandée, celles déjà en mémoire s'affichent, les autres gardent leur case.
+ * catalogue) : aucune image n'est demandée, celles déjà en mémoire s'affichent, les autres gardent leur case. Un kit
+ * par rendu : un seul client (ordinateur actif du moment) pour toutes ses images.
  */
 class ValorantKit(val context: Context, private val scope: CoroutineScope, private val online: Boolean = true) {
+    private val client by lazy { BackendClient(context) }
+    private val divisions by lazy { context.resources.getStringArray(R.array.valorant_divisions).toList() }
+
     fun dp(value: Int) = context.dp(value)
 
     /** Largeur en sp : une colonne de chiffres suit la taille du texte. */
@@ -56,23 +60,33 @@ class ValorantKit(val context: Context, private val scope: CoroutineScope, priva
     }
 
     /**
-     * Icône carrée de l'agent ; `id` null : case vide (pas encore choisi). `dim` : survolé mais pas verrouillé, estompé.
-     * Pendant le téléchargement, un carré de la couleur du relief tient la place.
+     * Icône carrée de l'agent ([face]) : l'image ; l'initiale du nom si le compagnon ne donne pas l'identifiant (version
+     * d'avant la refonte) ; case vide si pas encore choisi. `dim` : survolé mais pas verrouillé, estompé. Pendant le
+     * téléchargement, un carré de la couleur du relief tient la place. Le nom de l'agent est lu avec la ligne entière.
      */
-    fun agent(id: String?, size: Int, dim: Boolean = false, label: String? = null): View = ImageView(context).apply {
-        scaleType = ImageView.ScaleType.CENTER_CROP
-        clipToOutline = true
-        background = GradientDrawable().apply {
+    fun agent(id: String?, size: Int, dim: Boolean = false, name: String? = null): View {
+        val face = face(id, name)
+        val box = GradientDrawable().apply {
             cornerRadius = dp(size / 6).toFloat()
-            if (id == null) setStroke(dp(1), color(R.attr.c_stroke)) else setColor(color(R.attr.c_surface_raised))
+            if (face == Face.EMPTY) setStroke(dp(1), color(R.attr.c_stroke)) else setColor(color(R.attr.c_surface_raised))
         }
-        alpha = if (dim) DIM_ALPHA else 1f
-        contentDescription = label
-        importantForAccessibility = if (label == null) View.IMPORTANT_FOR_ACCESSIBILITY_NO else View.IMPORTANT_FOR_ACCESSIBILITY_YES
-        layoutParams = ViewGroup.LayoutParams(dp(size), dp(size))
-        if (id != null) {
-            val cached = IconCache.peekAgent(id)
-            if (cached != null) setImageBitmap(cached) else if (online) scope.launch { IconCache.loadAgent(BackendClient(context), id)?.let(::setImageBitmap) }
+        val view = if (face == Face.NAME) {
+            text(initials(name!!), size * 0.4f, R.attr.c_text_dim, R.attr.c_font_medium).apply { gravity = Gravity.CENTER }
+        } else {
+            ImageView(context).apply {
+                scaleType = ImageView.ScaleType.CENTER_CROP
+                clipToOutline = true
+                if (id != null) {
+                    val cached = IconCache.peekAgent(id)
+                    if (cached != null) setImageBitmap(cached) else if (online) scope.launch { IconCache.loadAgent(client, id)?.let(::setImageBitmap) }
+                }
+            }
+        }
+        return view.apply {
+            background = box
+            alpha = if (dim) DIM_ALPHA else 1f
+            importantForAccessibility = View.IMPORTANT_FOR_ACCESSIBILITY_NO
+            layoutParams = ViewGroup.LayoutParams(dp(size), dp(size))
         }
     }
 
@@ -83,13 +97,13 @@ class ValorantKit(val context: Context, private val scope: CoroutineScope, priva
         layoutParams = ViewGroup.LayoutParams(dp(size), dp(size))
         val t = tier ?: 0
         val cached = IconCache.peekRank(t)
-        if (cached != null) setImageBitmap(cached) else if (online) scope.launch { IconCache.loadRank(BackendClient(context), t)?.let(::setImageBitmap) }
+        if (cached != null) setImageBitmap(cached) else if (online) scope.launch { IconCache.loadRank(client, t)?.let(::setImageBitmap) }
     }
 
     /** Nom du rang d'un tier Riot (0 à 2 non classé, 3 à 26 par trois, 27 Radiant), comme `rankName` du compagnon. */
     fun rankName(tier: Int?): String = when {
         (tier ?: 0) >= RADIANT -> string(R.string.valorant_radiant)
-        else -> valorantRankName(context.resources.getStringArray(R.array.valorant_divisions).toList(), tier) ?: string(R.string.valorant_unranked)
+        else -> valorantRankName(divisions, tier) ?: string(R.string.valorant_unranked)
     }
 
     /** Trait vertical de la couleur du groupe (deux joueurs venus ensemble ont le même) ; rien pour un joueur seul. */
@@ -117,7 +131,7 @@ class ValorantKit(val context: Context, private val scope: CoroutineScope, priva
 
     fun lp(width: Int, height: Int = ViewGroup.LayoutParams.WRAP_CONTENT, weight: Float = 0f) = LinearLayout.LayoutParams(width, height, weight)
 
-    /** Fond de « ma » ligne : la teinte douce de l'accent, et l'accent lui-même au bord (repère qui ne tient pas qu'à la couleur). */
+    /** Fond de « ma » ligne : la teinte douce de l'accent (mon nom est aussi en gras, repère qui ne tient pas qu'à la couleur). */
     fun mine(view: View) {
         view.background = GradientDrawable().apply {
             cornerRadius = dp(8).toFloat()
@@ -125,7 +139,19 @@ class ValorantKit(val context: Context, private val scope: CoroutineScope, priva
         }
     }
 
+    /** Ce que montre la case de l'agent. */
+    enum class Face { IMAGE, NAME, EMPTY }
+
     companion object {
+        fun face(agentId: String?, agent: String?): Face = when {
+            agentId != null -> Face.IMAGE
+            agent != null -> Face.NAME
+            else -> Face.EMPTY
+        }
+
+        /** Deux premières lettres du nom (« Je » pour Jett), sans les signes (« KA » pour KAY/O). */
+        fun initials(name: String): String = name.filter { it.isLetter() }.take(2)
+
         const val DIM_ALPHA = 0.4f
         const val PARTY_BAR_DP = 3
         private const val RADIANT = 27

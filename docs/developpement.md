@@ -68,6 +68,8 @@ adb -s <série> install -r app/build/outputs/apk/debug/app-debug.apk   # un appa
 
 **Émulateur** `companion_api29` (Android 10, 1280×800, sans services Google) : on y joint l'ordinateur comme en USB : `adb reverse tcp:3000 tcp:3000`, puis « Saisir l'adresse » `127.0.0.1` (l'appli n'envoie pas son jeton en clair à `10.0.2.2`, voir [securite-appairage.md](securite-appairage.md)). La recherche WiFi ne traverse pas l'émulateur, son DNS peut être en panne (météo) et sa caméra plante. On teste sur la vraie tablette dès que possible : l'émulateur ne reflète pas les performances.
 
+**Widget Valorant sans PC ni partie** : `cd backend && node --import tsx test/valorant-demo.ts` lance un compagnon de démo (port 3930, jeton `jeton-de-test`) branché sur de faux serveurs Riot, avec une partie figée de 10 joueurs et les vraies images de valorant-api.com. `adb reverse tcp:3000 tcp:3930`, ordinateur `http://127.0.0.1:3000` ; `curl localhost:3931/scene/ingame` (ou `pregame`, `end`, `menu`) change l'état montré.
+
 **Captures de la tablette** : `adb exec-out screencap -p > capture.png`. Une capture noire veut dire que l'écran est éteint : l'appli est alors en pause et n'écoute plus l'ordinateur.
 
 ## Branches, PR et CI

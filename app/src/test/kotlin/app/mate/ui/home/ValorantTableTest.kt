@@ -19,14 +19,14 @@ class ValorantTableTest {
     @Test
     fun statColumnsAndSidesFollowWidthAndHeight() {
         assertEquals(ValorantShape(summary = false, detail = true, side = true), ValorantShape.of(WidgetSize.XL))
-        assertEquals(ValorantShape(summary = false, detail = true, side = true), ValorantShape.of(WidgetSize.FULL))
+        assertEquals(ValorantShape(summary = false, detail = true, side = true, stretch = false), ValorantShape.of(WidgetSize.FULL))
         // 3 × 2 : trop bas pour dix lignes l'une sous l'autre, les équipes côte à côte avec l'essentiel.
         assertEquals(ValorantShape(summary = false, detail = false, side = true), ValorantShape.of(WidgetSize.L3))
         assertEquals(ValorantShape(summary = false, detail = true, side = false), ValorantShape.of(WidgetSize.L33))
-        assertEquals(ValorantShape(summary = false, detail = true, side = false), ValorantShape.of(WidgetSize.T3))
+        assertEquals(ValorantShape(summary = false, detail = true, side = false, stretch = false), ValorantShape.of(WidgetSize.T3))
         assertEquals(ValorantShape(summary = false, detail = false, side = false), ValorantShape.of(WidgetSize.L))
         // Haut et étroit (2 × 4) : l'essentiel, les équipes l'une sous l'autre.
-        assertEquals(ValorantShape(summary = false, detail = false, side = false), ValorantShape.of(WidgetSize.T))
+        assertEquals(ValorantShape(summary = false, detail = false, side = false, stretch = false), ValorantShape.of(WidgetSize.T))
     }
 
     @Test
@@ -69,5 +69,22 @@ class ValorantTableTest {
         assertEquals(R.attr.c_hue_cyan, ValorantKit.partyHue(5))
         assertTrue(ValorantKit.partyHue(1) != ValorantKit.partyHue(2))
         assertFalse(ValorantKit.partyHue(3) == null)
+    }
+
+    @Test
+    fun rowsStretchOnlyWhileTheyStayCompact() {
+        // Cinq lignes dans 4 × 3 ou 4 × 4, dix dans 2 × 4 : étirées, elles feraient plus de 100 px de haut pour une icône de 30.
+        for (size in listOf(WidgetSize.XL3, WidgetSize.FULL, WidgetSize.T, WidgetSize.T3)) assertFalse(size.name, ValorantShape.of(size).stretch)
+        for (size in listOf(WidgetSize.XL, WidgetSize.L, WidgetSize.L3, WidgetSize.L23, WidgetSize.L33)) assertTrue(size.name, ValorantShape.of(size).stretch)
+    }
+
+    @Test
+    fun agentFaceFromIdOrNameOrEmpty() {
+        assertEquals(ValorantKit.Face.IMAGE, ValorantKit.face("add6443a-41bd-e414-f6ad-e58d267f4e95", "Jett"))
+        // Compagnon d'avant la refonte : le nom sans l'identifiant, l'initiale à la place de l'icône.
+        assertEquals(ValorantKit.Face.NAME, ValorantKit.face(null, "Jett"))
+        assertEquals(ValorantKit.Face.EMPTY, ValorantKit.face(null, null))
+        assertEquals("Je", ValorantKit.initials("Jett"))
+        assertEquals("KA", ValorantKit.initials("KAY/O"))
     }
 }

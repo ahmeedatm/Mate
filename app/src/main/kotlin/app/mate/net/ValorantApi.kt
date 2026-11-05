@@ -110,7 +110,8 @@ class ValorantApi(private val http: Http) {
         private fun JSONObject.double(key: String) = if (isNull(key) || !has(key)) null else optDouble(key).takeIf { !it.isNaN() }
         private fun JSONObject.bool(key: String) = if (isNull(key) || !has(key)) null else optBoolean(key)
         private fun JSONObject.score(key: String) = optJSONObject(key)?.let { ValorantScore(it.optInt("ally"), it.optInt("enemy")) }
-        private fun <T> JSONArray?.items(read: (JSONObject) -> T) = (0 until (this?.length() ?: 0)).map { read(this!!.getJSONObject(it)) }
+        /** Éléments d'une liste ; un élément qui n'est pas un objet est sauté (le reste du widget s'affiche). */
+        private fun <T> JSONArray?.items(read: (JSONObject) -> T) = (0 until (this?.length() ?: 0)).mapNotNull { this!!.optJSONObject(it)?.let(read) }
 
         fun parse(json: String): Valorant {
             val o = JSONObject(json)

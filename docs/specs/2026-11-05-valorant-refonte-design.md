@@ -82,6 +82,9 @@ fermé ou compagnon redémarré : le tableau est perdu, pas gardé sur disque.
 - **L** : icône d'agent, nom, logo du rang, K/D. Fin de partie : agent, nom, ACS, K/D/A. Menu : logo, RR, barre,
   3 dernières parties.
 - **T** (bandeau) : ton rang (logo) et le score de la partie.
+- Livré (05/11) : le « bandeau » est la famille Ligne (2 × 1 à 4 × 1), avec Pastille et Colonne : ton rang et le score.
+  La forme T (2 × 4) montre l'essentiel des deux équipes, comme L. Toutes les colonnes en 4 de large et en 3 × 3 / 3 × 4 ;
+  3 × 2 : équipes côte à côte avec l'essentiel. Le MVP est une pastille « MVP » (un mot se lit, une étoile seule non).
 
 ## Non-objectifs
 - Kills ou score par joueur en direct (Riot ne les donne pas).
