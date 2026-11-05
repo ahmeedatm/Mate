@@ -16,8 +16,9 @@ pas connecté (`gh auth status`), les étapes GitHub deviennent : afficher le ti
 
 ## 1. Cadrer la demande
 
-Lire d'abord le code concerné (`docs/architecture.md`, § Détail par fonction, pour la zone). Puis
-écrire, en deux lignes :
+Lire d'abord le code concerné (`docs/architecture.md`, § Détail par fonction, pour la zone). Une
+demande qui touche un écran charge `ecran-design` dès ici : sa capture d'avant (étape 0) sert à cadrer.
+Puis écrire, en deux lignes :
 
 - **La phrase** : ce qui change pour la personne qui utilise la tablette ou l'ordinateur.
 - **N'inclut pas** : ce que la demande ne couvre pas, y compris le voisin tentant (refonte,
