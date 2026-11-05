@@ -72,7 +72,7 @@ enum class WidgetType(
     PAD("pad", R.string.widget_pad, R.string.widget_pad_desc, R.drawable.ic_tablet, listOf(WidgetSize.XL, WidgetSize.L), true),
     CALL("call", R.string.widget_call, R.string.widget_call_desc, R.drawable.ic_videocam, listOf(WidgetSize.XL, WidgetSize.L), true),
     PRESENT("present", R.string.widget_present, R.string.widget_present_desc, R.drawable.ic_tile_slideshow, listOf(WidgetSize.XL, WidgetSize.L), true),
-    JIRA("jira", R.string.widget_jira, R.string.widget_jira_desc, R.drawable.ic_dashboard, listOf(WidgetSize.XL, WidgetSize.L, WidgetSize.L3, WidgetSize.T3, WidgetSize.FULL), true),
+    JIRA("jira", R.string.widget_jira, R.string.widget_jira_desc, R.drawable.ic_dashboard, listOf(WidgetSize.XL, WidgetSize.L, WidgetSize.L3, WidgetSize.T3, WidgetSize.FULL, WidgetSize.S, WidgetSize.M, WidgetSize.V), true),
     GITLAB("gitlab", R.string.widget_gitlab, R.string.widget_gitlab_desc, R.drawable.ic_merge, listOf(WidgetSize.XL, WidgetSize.L, WidgetSize.L3, WidgetSize.T3, WidgetSize.FULL, WidgetSize.S, WidgetSize.M, WidgetSize.V), true),
     HA("ha", R.string.widget_ha, R.string.widget_ha_desc, R.drawable.ic_lightbulb, listOf(WidgetSize.L, WidgetSize.XL, WidgetSize.M), true),
     CHECKLIST("checklist", R.string.widget_checklist, R.string.widget_checklist_desc, R.drawable.ic_tile_check_circle, listOf(WidgetSize.L, WidgetSize.T), false),

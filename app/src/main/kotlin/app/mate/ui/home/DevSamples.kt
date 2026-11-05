@@ -5,6 +5,9 @@ import app.mate.net.GitLabMr
 import app.mate.net.GitLabMrs
 import app.mate.net.GitLabPipeline
 import app.mate.net.GitLabPipelines
+import app.mate.net.JiraColumn
+import app.mate.net.JiraIssue
+import app.mate.net.JiraIssues
 import app.mate.net.MrColumn
 import app.mate.net.Pipeline
 
@@ -37,4 +40,17 @@ fun samplePipelines(forge: Forge): GitLabPipelines {
     )
     return if (forge == Forge.GITHUB) GitLabPipelines(pipelines = runs.map { it.copy(mrIid = null) })
     else GitLabPipelines(schedules = runs.filter { it.mrIid == null }, mrs = runs.filter { it.mrIid != null })
+}
+
+/** Tableau Jira d'exemple : trois colonnes, un ticket d'un collègue et un ticket terminé que la petite forme ne compte pas. */
+fun sampleJira(): JiraIssues {
+    fun issue(key: String, summary: String, done: Boolean = false, assignee: String? = null) = JiraIssue(key, summary, "Tâche", null, done, assignee)
+    return JiraIssues(
+        boardsChosen = true,
+        columns = listOf(
+            JiraColumn("En cours", listOf(issue("FAC-212", "Pagination des factures par curseur"), issue("FAC-219", "Relance des impayés", assignee = "Léa"))),
+            JiraColumn("À faire", listOf(issue("FAC-224", "Export comptable au format FEC"), issue("API-88", "Limiter les appels du webhook Stripe"))),
+            JiraColumn("Terminé", listOf(issue("FAC-201", "Avoirs partiels", done = true))),
+        ),
+    )
 }

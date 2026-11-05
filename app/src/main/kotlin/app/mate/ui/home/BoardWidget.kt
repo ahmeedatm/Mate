@@ -9,6 +9,7 @@ import app.mate.gitlab.pipelineTitle
 import app.mate.gitlab.shortProject
 import app.mate.gitlab.timeOf
 import app.mate.net.BackendClient
+import app.mate.net.Pipeline
 import app.mate.net.runCatchingCancellable
 import app.mate.ui.GitLabView
 import app.mate.ui.JiraView
@@ -83,7 +84,22 @@ class Glancer(val title: Int, val load: suspend () -> Pair<GlanceContent?, Strin
 fun jiraWidget(context: Context, host: HomeHost, placed: Placed): BoardWidget {
     val board = JiraView(context).apply { attach(host.owner) }
     // ⚙ : colonnes affichées et « tous les tickets » ; la vue se relit dès qu'il est enregistré.
-    return BoardWidget(context, host, placed, board, board::setActive, board::openColumns)
+    return BoardWidget(context, host, placed, board, board::setActive, board::openColumns, Glancer(R.string.widget_jira) { jiraIssuesGlance(context, host) })
+}
+
+/** Jira en petite forme : mes tickets ouverts en compteur et en lignes, chacun avec sa clé et sa colonne. */
+private suspend fun jiraIssuesGlance(context: Context, host: HomeHost): Pair<GlanceContent?, String?> {
+    val issues = if (glanceDemo(context)) sampleJira() else BackendClient(context).jira.issues()
+    if (!issues.connected) return null to context.getString(R.string.jira_connect)
+    val glance = jiraGlance(issues)
+    if (glance.rows.isEmpty()) return null to context.getString(R.string.jira_empty)
+    val lines = glance.rows.map { issue ->
+        val column = issues.columns.first { c -> c.issues.any { it.key == issue.key } }.title
+        GlanceLine(issue.summary, "${issue.key} · $column", Pipeline.NONE) {
+            host.scope.launch { runCatchingCancellable { BackendClient(context).jira.openOnComputer(issue.key) } }
+        }
+    }
+    return GlanceContent(glance.count, context.getString(R.string.glance_open), lines) to null
 }
 
 /** MR GitLab, ou PR GitHub (`forge`) : même vue. */

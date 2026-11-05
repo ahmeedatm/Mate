@@ -330,7 +330,7 @@ class WidgetModelTest {
         assertEquals(WidgetSize.FULL, layout.pick(jira, 4f, 4f))
         assertEquals(WidgetSize.T3, layout.pick(jira, 3.1f, 3.7f))
         assertEquals(WidgetSize.XL, layout.pick(jira, 3.6f, 1.2f))
-        assertEquals(WidgetSize.L, layout.pick(jira, 0.5f, 0.5f))
+        assertEquals(WidgetSize.S, layout.pick(jira, 0.5f, 0.5f))
         // Taille refusée par le widget : jamais choisie (une horloge n'a pas de plein écran).
         val clock = Placed(WidgetType.CLOCK, WidgetSize.L, 0, 0, 2)
         layout.widgets += clock
