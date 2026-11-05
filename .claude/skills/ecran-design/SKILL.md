@@ -33,7 +33,6 @@ Hors périmètre : Compose, Material You dynamique (Android 10), outillage web d
    qui est dit deux fois ? qu'est-ce qu'il faut deviner (icône sans texte, couleur seule) ? où est
    le vide qui ne sert à rien ? Dire à l'humain ce qu'on voit, en mots simples, avec la capture,
    avant de proposer quoi que ce soit : la nouveauté se place dans l'écran entier, pas toute seule.
-   Exemple : une seule capture de l'Accueil a montré le même score affiché 6 fois.
    - Changement visible (nouvel écran, nouveau widget, refonte) : 2 ou 3 variantes vraiment
      différentes par la mise en page et la densité (pas par la palette ni la police : le périmètre
      tient), chacune en capture avec une ligne « quand elle gagne / ce qu'elle coûte ». Puis
