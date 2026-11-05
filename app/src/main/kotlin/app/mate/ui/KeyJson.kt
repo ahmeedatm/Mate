@@ -1,5 +1,6 @@
 package app.mate.ui
 
+import app.mate.net.AudioOutput
 import org.json.JSONArray
 import org.json.JSONObject
 
@@ -20,3 +21,6 @@ fun keyJson(label: String, steps: List<JSONObject>, glyph: String?, color: Strin
     if (push == null && hold.isNotEmpty()) key.put("hold", JSONArray(hold))
     return key
 }
+
+/** Étape « Sortie son » : l'id (stable) sert à l'ordinateur, le nom à l'affichage et au message si la sortie manque. */
+fun outputStep(output: AudioOutput): JSONObject = JSONObject().put("type", "output").put("id", output.id).put("name", output.name)

@@ -108,6 +108,16 @@ describe("réglages", () => {
     assert.deepEqual(json(await call("deck_touches_lister")).perso[1], { numero: 2, vide: true });
   });
 
+  it("liste les sorties son de l'ordinateur et affecte une touche Sortie son", async () => {
+    const listed = json(await call("deck_touches_lister"));
+    assert.deepEqual(listed.sorties_son, [{ id: "defaut", name: "Haut-parleurs" }]);
+    const etapes = [{ type: "output", id: "defaut", name: "Haut-parleurs" }];
+    const set = await call("deck_touche_affecter", { numero: 3, libelle: "Enceintes", etapes });
+    assert.ok(!set.isError, set.content[0].text);
+    assert.deepEqual(json(await call("deck_touches_lister")).perso[2].steps, etapes);
+    assert.ok(!(await call("deck_touche_effacer", { numero: 3 })).isError);
+  });
+
   it("une page nommée inconnue est refusée avec la raison", async () => {
     const res = await call("deck_touche_affecter", { numero: 1, page: 9, libelle: "X", etapes: [{ type: "wait", ms: 10 }] });
     assert.equal(res.isError, true);
