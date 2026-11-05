@@ -18,6 +18,7 @@ import android.widget.ScrollView
 import android.widget.TextClock
 import android.widget.TextView
 import android.widget.Toast
+import androidx.annotation.StringRes
 import androidx.appcompat.app.AlertDialog
 import androidx.core.content.ContextCompat
 import androidx.core.graphics.ColorUtils
@@ -91,12 +92,28 @@ interface HomeHost {
 }
 
 /**
- * Un widget de l'Accueil : sa vue remplit ses cases ; [applySize] l'adapte à la taille choisie. [onMinute] : chaque
- * minute (affichage) ; [load] : chaque minute aussi, ce qui passe par le réseau ; [setActive] : page à l'écran ou non.
+ * Un widget de l'Accueil : sa vue remplit ses cases. [onMinute] : chaque minute (affichage) ; [load] : chaque minute
+ * aussi, ce qui passe par le réseau ; [setActive] : page à l'écran ou non.
  */
 abstract class HomeWidget(val context: Context, val host: HomeHost, val placed: Placed) {
     abstract val view: View
+
+    /**
+     * Adapte la vue à la forme posée : une mise en page par [family], jamais un simple étirement. Plus grand, le widget
+     * montre plus de choses ; plus petit, il garde l'essentiel. Les tailles de texte et d'image suivent la taille réelle
+     * de la vue (elle change avec le profil de rangées, [RowProfile]), pas une taille supposée de la forme.
+     */
     open fun applySize() = Unit
+
+    /** Famille de la forme posée, celle que [applySize] dessine. */
+    protected val family get() = placed.size.family
+
+    /**
+     * Aperçu du catalogue : remplit le widget avec son exemple ([WidgetSamples]), après [applySize] ; l'exemple tient si
+     * [applySize] repasse. Le catalogue n'appelle ni [load] ni [setActive] et garde les touchers pour lui : rien ne doit
+     * partir sur le réseau, tourner en boucle ni écrire dans `placed.config`, constructeur compris.
+     */
+    open fun showPreview(sample: WidgetSample) = Unit
     open fun onMinute() = Unit
     open suspend fun load() = Unit
     open fun onCalendar() = Unit
@@ -637,6 +654,9 @@ class ShoppingWidget(context: Context, host: HomeHost, placed: Placed) : HomeWid
     }
 }
 
+/** Exemple de la Note pour le catalogue : un texte. */
+class NoteSample(@StringRes val text: Int) : WidgetSample
+
 /** Note libre, écrite depuis la tablette (« Penser au pain », un code de salle…). */
 class NoteWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidget(context, host, placed) {
     private val text = label(22f).apply { gravity = Gravity.CENTER_VERTICAL }
@@ -655,8 +675,16 @@ class NoteWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidget(
         render()
     }
 
+    /** Aperçu du catalogue : son texte reste affiché, même si [applySize] repasse. */
+    private var preview: NoteSample? = null
+
+    override fun showPreview(sample: WidgetSample) {
+        preview = sample as? NoteSample ?: return
+        render()
+    }
+
     private fun render() {
-        val note = placed.config.optString("text")
+        val note = preview?.let { context.getString(it.text) } ?: placed.config.optString("text")
         text.text = note.ifBlank { context.getString(R.string.widget_note_empty) }
         text.setTextColor(color(if (note.isBlank()) R.attr.c_text_faint else R.attr.c_text))
     }

@@ -184,7 +184,9 @@ const name = { type: "string", minLength: 1, maxLength: 200 };
 export const stepSchema = {
   type: "object",
   required: ["type"],
-  properties: { type: { enum: ["app", "url", "keys", "shortcut", "media", "system", "text", "wait", "http", "window", "gesture"] } },
+  properties: {
+    type: { enum: ["app", "url", "keys", "shortcut", "media", "system", "text", "wait", "http", "window", "gesture", "output"] },
+  },
   allOf: [
     step("app", ["name"], { name }),
     step("url", ["url"], { url: { type: "string", maxLength: 2000 } }),
@@ -196,6 +198,7 @@ export const stepSchema = {
     step("wait", ["ms"], { ms: { type: "integer", minimum: 0, maximum: 10_000 } }),
     step("gesture", ["name"], { name: { enum: [...POINTER_GESTURES] } }),
     step("http", ["name"], { name }),
+    step("output", ["id", "name"], { id: name, name }),
     step("window", ["app"], { app: name, display: { type: "string", maxLength: 100 }, layout: { enum: ["keep", "left", "right", "max"] } }),
   ],
 };
