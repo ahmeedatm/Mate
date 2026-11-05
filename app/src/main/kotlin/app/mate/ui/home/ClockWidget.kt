@@ -125,8 +125,16 @@ class ClockWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidget
         if (!face.dateInDial) date.setTextSize(TypedValue.COMPLEX_UNIT_PX, below)
         val reserve = if (face.dateInDial) 0f else below * LINE * 2 + dp(GAP_DP)
         val size = minOf(w, h - reserve).toInt().coerceAtLeast(0)
-        ring.layoutParams = (ring.layoutParams as LinearLayout.LayoutParams).apply { width = size; height = size }
-        clock.setTextSize(TypedValue.COMPLEX_UNIT_PX, byWidth(clock, SAMPLE, size * DIAL_TEXT_PART))
+        // Rangée fine : un cadran de cette taille ne se lit plus, l'heure seule prend la place.
+        val bare = size < dp(MIN_DIAL_DP)
+        dial.visibility = if (bare) View.GONE else View.VISIBLE
+        if (face.dateInDial) date.visibility = if (bare) View.GONE else View.VISIBLE
+        ring.layoutParams = (ring.layoutParams as LinearLayout.LayoutParams).apply {
+            width = if (bare) w.toInt() else size
+            height = if (bare) (h - reserve).toInt().coerceAtLeast(0) else size
+        }
+        val text = if (bare) minOf(byWidth(clock, SAMPLE, w), (h - reserve) / LINE) else byWidth(clock, SAMPLE, size * DIAL_TEXT_PART)
+        clock.setTextSize(TypedValue.COMPLEX_UNIT_PX, text)
         if (face.dateInDial) date.setTextSize(TypedValue.COMPLEX_UNIT_PX, size * DIAL_DATE_PART)
         ring.requestLayout()
     }
@@ -148,16 +156,24 @@ class ClockWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidget
     }
 
     private fun fitStack(w: Float, h: Float) {
-        val greetingPx = sp(GREETING_MAX_SP)
-        val datePx = sp(DATE_MAX_SP)
         val lines = if (face.stacked) 2 else 1
-        val room = (h - (greetingPx + datePx) * LINE) / (lines * LINE)
         val wide = if (face.stacked) byWidth(hours, "00", w) else byWidth(clock, SAMPLE, w / if (face.seconds) 1f + SECONDS_PART * 0.5f else 1f)
-        val px = minOf(room, wide).coerceAtLeast(sp(MIN_SP))
+        var px = minOf(h / (lines * LINE), wide)
+        // Les marges des polices ne se devinent pas : mesurer le tout et rapetisser l'heure jusqu'à ce qu'il tienne.
+        repeat(FIT_PASSES) {
+            setStackSizes(px)
+            val content = view.getChildAt(0) ?: return
+            content.measure(View.MeasureSpec.makeMeasureSpec(w.toInt(), View.MeasureSpec.AT_MOST), View.MeasureSpec.makeMeasureSpec(0, View.MeasureSpec.UNSPECIFIED))
+            if (content.measuredHeight <= h) return
+            px = (px * h / content.measuredHeight * FIT_MARGIN).coerceAtLeast(sp(MIN_SP))
+        }
+    }
+
+    private fun setStackSizes(px: Float) {
         for (part in listOf(clock, hours, minutes)) part.setTextSize(TypedValue.COMPLEX_UNIT_PX, px)
         seconds.setTextSize(TypedValue.COMPLEX_UNIT_PX, px * SECONDS_PART)
-        greeting.setTextSize(TypedValue.COMPLEX_UNIT_PX, (px * GREETING_PART).coerceIn(sp(MIN_SP), greetingPx))
-        date.setTextSize(TypedValue.COMPLEX_UNIT_PX, (px * DATE_PART).coerceIn(sp(MIN_SP), datePx))
+        greeting.setTextSize(TypedValue.COMPLEX_UNIT_PX, (px * GREETING_PART).coerceIn(sp(MIN_SP), sp(GREETING_MAX_SP)))
+        date.setTextSize(TypedValue.COMPLEX_UNIT_PX, (px * DATE_PART).coerceIn(sp(MIN_SP), sp(DATE_MAX_SP)))
     }
 
     override fun onMinute() {
@@ -223,6 +239,13 @@ class ClockWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidget
 
         /** En dessous de cette hauteur, la rangée est « basse » (la fine de l'Accueil fait 92 dp). */
         const val SHORT_DP = 130
+
+        /** En dessous de ce diamètre, pas de cadran : l'heure seule. */
+        const val MIN_DIAL_DP = 110
+
+        /** Ajustement de l'heure à la hauteur : passes au plus, et marge prise à chaque passe. */
+        const val FIT_PASSES = 3
+        const val FIT_MARGIN = 0.97f
 
         /** Largeur de l'heure dans le cadran, en part de son diamètre (elle tient à l'intérieur des graduations). */
         const val DIAL_TEXT_PART = 0.56f

@@ -108,6 +108,7 @@ class WeatherWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidg
         for (line in listOf(sky, range, city)) details.addView(line)
         curve.across = face.curve != WeatherFace.Curve.DOWN
         curve.withHours = !pill
+        curve.maxPoints = if (pill) PILL_POINTS else Weather.HOURS
         view.addView(if (family == ShapeFamily.ROW) rowLayout() else stackLayout(), FrameLayout.LayoutParams(MATCH, MATCH))
         render()
         view.post(::fit)
@@ -150,6 +151,8 @@ class WeatherWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidg
         val px = (h * part).coerceIn(sp(TEMP_MIN_SP), sp(TEMP_MAX_SP))
         temp.setTextSize(TypedValue.COMPLEX_UNIT_PX, px)
         emoji.setTextSize(TypedValue.COMPLEX_UNIT_PX, px * EMOJI_PART)
+        sky.setTextSize(TypedValue.COMPLEX_UNIT_PX, (px * SKY_PART).coerceIn(sp(DETAIL_MIN_SP), sp(DETAIL_MAX_SP)))
+        for (line in listOf(range, city, smallCity, air)) line.setTextSize(TypedValue.COMPLEX_UNIT_PX, (px * DETAIL_PART).coerceIn(sp(DETAIL_MIN_SP), sp(DETAIL_MAX_SP)))
     }
 
     override fun showPreview(sample: WidgetSample) {
@@ -264,10 +267,19 @@ class WeatherWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidg
         /** Température en part de la hauteur de la carte, bornée ; l'emoji suit en part de la température. */
         const val PILL_TEMP_PART = 0.3f
         const val ROW_TEMP_PART = 0.5f
-        const val STACK_TEMP_PART = 0.14f
+        const val STACK_TEMP_PART = 0.16f
         const val TEMP_MIN_SP = 26f
-        const val TEMP_MAX_SP = 72f
+        const val TEMP_MAX_SP = 110f
+
+        /** Heures de la petite courbe de la Pastille. */
+        const val PILL_POINTS = 5
         const val EMOJI_PART = 0.9f
+
+        /** Ciel, puis min / max, ville et air, en part de la température, bornés. */
+        const val SKY_PART = 0.3f
+        const val DETAIL_PART = 0.24f
+        const val DETAIL_MIN_SP = 14f
+        const val DETAIL_MAX_SP = 24f
 
         val isoDate = SimpleDateFormat("yyyy-MM-dd", Locale.US)
         val dayName = SimpleDateFormat("EEE", Locale.FRANCE)

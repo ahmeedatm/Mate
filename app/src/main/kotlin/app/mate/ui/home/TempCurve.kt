@@ -22,6 +22,9 @@ import kotlin.math.roundToInt
 class TempCurve(context: Context) : View(context) {
     var across = true
     var withHours = true
+
+    /** Nombre d'heures au plus (la Pastille en garde 5, comme sur la maquette). */
+    var maxPoints = Weather.HOURS
     private var hours: List<Weather.Hour> = emptyList()
     private val line = Paint(Paint.ANTI_ALIAS_FLAG).apply {
         style = Paint.Style.STROKE
@@ -41,8 +44,17 @@ class TempCurve(context: Context) : View(context) {
         invalidate()
     }
 
+    /** Étiquettes à la taille de la courbe : lisibles de loin en grand, discrètes en Pastille. */
+    override fun onSizeChanged(w: Int, h: Int, oldw: Int, oldh: Int) {
+        val side = if (across) h else w
+        temp.textSize = (side * LABEL_PART).coerceIn(sp(TEMP_SP), sp(TEMP_MAX_SP))
+        hour.textSize = temp.textSize * HOUR_PART
+    }
+
     override fun onDraw(canvas: Canvas) {
-        if (hours.size < 2 || width == 0 || height == 0) return
+        // Trop petite (Pastille d'une rangée fine) : rien plutôt qu'un trait illisible.
+        val room = if (across) height else width
+        if (hours.size < 2 || width == 0 || room < context.dp(MIN_ROOM_DP)) return
         if (across) drawAcross(canvas) else drawDown(canvas)
     }
 
@@ -87,7 +99,7 @@ class TempCurve(context: Context) : View(context) {
     }
 
     /** Nombre d'heures qui tiennent sur [length] px avec au moins [minStep] px entre deux. */
-    private fun count(length: Float, minStep: Int) = (length / minStep).toInt().plus(1).coerceIn(2, hours.size)
+    private fun count(length: Float, minStep: Int) = (length / minStep).toInt().plus(1).coerceIn(2, minOf(hours.size, maxPoints))
 
     /** Position de chaque température entre [low] (la plus froide) et [high] (la plus chaude) ; toutes égales : au milieu. */
     private fun place(list: List<Weather.Hour>, low: Float, high: Float): FloatArray {
@@ -101,15 +113,25 @@ class TempCurve(context: Context) : View(context) {
     private fun text(colorAttr: Int, fontAttr: Int, sp: Float) = Paint(Paint.ANTI_ALIAS_FLAG).apply {
         color = themeColor(context, colorAttr)
         typeface = themeFont(context, fontAttr)
-        textSize = TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_SP, sp, context.resources.displayMetrics)
+        textSize = sp(sp)
     }
+
+    private fun sp(value: Float) = TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_SP, value, context.resources.displayMetrics)
 
     private fun Paint.centered() = apply { textAlign = Paint.Align.CENTER }
     private fun Paint.start() = apply { textAlign = Paint.Align.LEFT }
 
     private companion object {
-        const val TEMP_SP = 13f
-        const val HOUR_SP = 12f
+        const val TEMP_SP = 14f
+        const val HOUR_SP = 13f
+        const val TEMP_MAX_SP = 22f
+
+        /** Taille des températures en part de la hauteur (de la largeur debout) ; les heures un peu plus petites. */
+        const val LABEL_PART = 0.07f
+        const val HOUR_PART = 0.9f
+
+        /** En dessous de cette place, la courbe ne se dessine pas. */
+        const val MIN_ROOM_DP = 48
 
         /** Écart minimal entre deux heures : en travers, puis de haut en bas. */
         const val MIN_STEP_DP = 34
