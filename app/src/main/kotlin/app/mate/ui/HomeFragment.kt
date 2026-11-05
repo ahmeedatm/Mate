@@ -26,6 +26,7 @@ import app.mate.net.CalendarEvent
 import app.mate.net.HomeFeatures
 import app.mate.net.runCatchingCancellable
 import app.mate.ui.home.COLS
+import app.mate.ui.home.CatalogueView
 import app.mate.ui.home.DayLineWidget
 import app.mate.ui.home.DeckOverlays
 import app.mate.ui.home.DeckPagesCache
@@ -106,6 +107,13 @@ class HomeFragment : Fragment(), HomeHost, WidgetGrid.Listener {
     private val zoom: WidgetZoom
         get() = zoomView ?: WidgetZoom(requireContext()).also {
             zoomView = it
+            requireView().findViewById<ViewGroup>(R.id.home_root).addView(it, ViewGroup.LayoutParams(-1, -1))
+        }
+    /** Catalogue d'ajout, par-dessus la grille ; créé au premier ajout. */
+    private var catalogueView: CatalogueView? = null
+    private val catalogue: CatalogueView
+        get() = catalogueView ?: CatalogueView(requireContext(), this).also {
+            catalogueView = it
             requireView().findViewById<ViewGroup>(R.id.home_root).addView(it, ViewGroup.LayoutParams(-1, -1))
         }
     override val overlays: DeckOverlays
@@ -623,67 +631,21 @@ class HomeFragment : Fragment(), HomeHost, WidgetGrid.Listener {
     }
 
     override fun onAddAt(col: Int, row: Int) {
-        val ctx = requireContext()
+        val request = CatalogueView.Request(layout, page, col, row, grid.width / COLS, grid.height / ROWS)
         // Seulement ce que l'ordinateur actif offre (Jira, GitLab) et ce que ses plugins laissent (Ouvertes, Son, Pavé).
-        val types = WidgetType.entries.filter { it.offered(features) }
-        val list = LinearLayout(ctx).apply { orientation = LinearLayout.VERTICAL; setPadding(dp(16), dp(8), dp(16), dp(8)) }
-        val dialog = AlertDialog.Builder(ctx)
-            .setTitle(R.string.home_gallery_title)
-            .setView(ScrollView(ctx).apply { addView(list) })
-            .setNegativeButton(R.string.cancel, null)
-            .create()
-        for (type in types) list.addView(galleryRow(type) {
-            dialog.dismiss()
-            place(type, col, row)
-        }, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT).apply { topMargin = dp(8) })
-        dialog.showImmersive()
+        catalogue.show(request, { it.offered(features) }) { type, fit -> place(type, fit) }
     }
 
-    private fun galleryRow(type: WidgetType, onClick: () -> Unit): View {
-        val ctx = requireContext()
-        return LinearLayout(ctx).apply {
-            orientation = LinearLayout.HORIZONTAL
-            gravity = Gravity.CENTER_VERTICAL
-            setBackgroundResource(R.drawable.row_bg)
-            setPadding(dp(16), dp(12), dp(16), dp(12))
-            addView(ImageView(ctx).apply {
-                setImageResource(type.icon)
-                importantForAccessibility = View.IMPORTANT_FOR_ACCESSIBILITY_NO
-                setColorFilter(themeColor(ctx, R.attr.c_accent))
-            }, LinearLayout.LayoutParams(dp(28), dp(28)))
-            addView(LinearLayout(ctx).apply {
-                orientation = LinearLayout.VERTICAL
-                addView(TextView(ctx).apply {
-                    setText(type.title)
-                    textSize = 18f
-                    setTextColor(themeColor(ctx, R.attr.c_text))
-                })
-                addView(TextView(ctx).apply {
-                    val sizes = type.sizes.joinToString(", ") { getString(it.label).lowercase() }
-                    text = getString(R.string.home_gallery_detail, getString(type.description), sizes)
-                    textSize = 14f
-                    setTextColor(themeColor(ctx, R.attr.c_text_dim))
-                })
-            }, LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f).apply { marginStart = dp(16) })
-            setOnClickListener { onClick() }
-        }
+    /** Ferme le catalogue d'ajout ; faux s'il n'était pas ouvert (Retour). */
+    fun closeCatalogue(): Boolean {
+        val shown = catalogueView?.takeIf { it.isShowing } ?: return false
+        shown.hide()
+        return true
     }
 
-    /** Pose le widget à la case touchée si possible, sinon à la première place libre de la page, dans la plus grande taille qui tient. */
-    private fun place(type: WidgetType, col: Int, row: Int) {
-        val spot = type.sizes.firstNotNullOfOrNull { size ->
-            if (col >= 0) {
-                val c = col.coerceAtMost(COLS - size.w)
-                val r = row.coerceAtMost(ROWS - size.h)
-                if (layout.fits(page, c, r, size)) return@firstNotNullOfOrNull Triple(size, c, r)
-            }
-            layout.freeSpot(page, size)?.let { (c, r) -> Triple(size, c, r) }
-        }
-        if (spot == null) {
-            Toast.makeText(requireContext(), R.string.home_no_room, Toast.LENGTH_LONG).show()
-            return
-        }
-        val placed = Placed(type, spot.first, page, spot.second, spot.third)
+    /** Pose le widget à la place choisie dans le catalogue. */
+    private fun place(type: WidgetType, spot: Fit) {
+        val placed = Placed(type, spot.size, page, spot.col, spot.row)
         layout.widgets += placed
         val widget = addWidget(placed)
         grid.showPage()
