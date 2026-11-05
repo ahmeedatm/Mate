@@ -444,6 +444,7 @@ class AudioWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidget
     override val view = FrameLayout(context)
     private var audio: ComputerAudioView? = null
     private var mixer: SoundList? = null
+    private var link: AudioLink? = null
     private var shownSize: WidgetSize? = null
     private var active = false
 
@@ -451,10 +452,37 @@ class AudioWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidget
         if (placed.size == shownSize) return
         shownSize = placed.size
         mixer?.setActive(false)
+        link?.setActive(false)
         view.removeAllViews()
         audio = null
         mixer = null
+        link = null
         val fill = FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT)
+        val look = placed.config.optString("look")
+        if (look.isNotEmpty() && (placed.size == WidgetSize.V || look != "b")) {
+            var shape: AudioShapes.Shape? = null
+            val audioLink = AudioLink(context, host.scope) { state -> shape?.render?.invoke(state) }
+            val shapes = AudioShapes(context, audioLink)
+            shape = when {
+                placed.size == WidgetSize.S && look == "a" -> shapes.ring()
+                placed.size == WidgetSize.S -> shapes.fill()
+                look == "a" -> shapes.fill()
+                look == "b" -> shapes.fader()
+                else -> shapes.stack()
+            }
+            link = audioLink
+            val padded = shape.view !is VolumeFill
+            view.addView(
+                OwnerFrameLayout(context, ownsLongPress = false, ownsSwipe = true).asCard(if (padded) 16 else 0).apply {
+                    clipToOutline = true
+                    addView(shape.view, FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT))
+                },
+                fill,
+            )
+            shape.render(null)
+            setActive(active)
+            return
+        }
         if (placed.size == WidgetSize.L) {
             val list = SoundList(context, host.scope)
             mixer = list
@@ -505,6 +533,7 @@ class AudioWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidget
     override fun setActive(active: Boolean) {
         this.active = active
         mixer?.setActive(active)
+        link?.setActive(active)
     }
 }
 

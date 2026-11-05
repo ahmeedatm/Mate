@@ -12,6 +12,7 @@ import android.view.View
 import android.view.ViewGroup
 import android.widget.Button
 import android.widget.CheckBox
+import android.widget.FrameLayout
 import android.widget.ImageView
 import android.widget.LinearLayout
 import android.widget.ScrollView
@@ -56,6 +57,35 @@ class MixerWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidget
         addView(mixer, ViewGroup.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT))
     }
 
+    private var link: AudioLink? = null
+
+    override fun applySize() {
+        val look = placed.config.optString("look")
+        if (look.isEmpty()) return
+        val small = placed.size == WidgetSize.S
+        if ((small && look == "a") || (!small && look == "c")) {
+            var shape: AudioShapes.Shape? = null
+            val audioLink = AudioLink(context, host.scope) { state -> shape?.render?.invoke(state) }
+            shape = if (small) AudioShapes(context, audioLink).ring() else AudioShapes(context, audioLink).fill()
+            link = audioLink
+            view.removeAllViews()
+            view.addView(
+                FrameLayout(context).asCard(if (small) 16 else 0).apply {
+                    clipToOutline = true
+                    addView(shape.view, FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT))
+                },
+                ViewGroup.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT),
+            )
+            shape.render(null)
+            return
+        }
+        val scenesOnly = small && look == "c"
+        mixer.channelFilter = if (scenesOnly) null else { all -> all.filter { it.id == "master" } }
+        mixer.scenesShown = !small || scenesOnly
+        mixer.stripsShown = !scenesOnly
+        if (!small && look == "a") mixer.scenesShown = false
+    }
+
     override fun setActive(active: Boolean) {
         // Relu en arrivant sur l'écran, pas à chaque relecture de la table (4 fois par seconde).
         if (active) {
@@ -63,6 +93,7 @@ class MixerWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidget
             hidden = null
         }
         mixer.setActive(active)
+        link?.setActive(active)
     }
 
     private val computerId get() = Computers.active(context)?.id

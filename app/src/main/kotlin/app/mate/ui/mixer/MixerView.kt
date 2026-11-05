@@ -63,6 +63,7 @@ class MixerView @JvmOverloads constructor(
 ) : LinearLayout(context, attrs) {
 
     private val sceneScroll: HorizontalScrollView
+    private val stripScroll: HorizontalScrollView
     private val sceneRow: LinearLayout
     private val strips: LinearLayout
     private val note: TextView
@@ -123,6 +124,7 @@ class MixerView @JvmOverloads constructor(
         }
         stripScroll.addView(strips, ViewGroup.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.MATCH_PARENT))
         addView(stripScroll, LayoutParams(LayoutParams.MATCH_PARENT, 0, 1f))
+        this.stripScroll = stripScroll
 
         note = engraved(R.string.mixer_no_apps).apply {
             gravity = Gravity.CENTER
@@ -184,6 +186,29 @@ class MixerView @JvmOverloads constructor(
     /** Applis à montrer (table d'un profil : son choix, `MixerApps`) ; null : toutes. Rend null sans volume par appli (Mac). */
     var appFilter: ((MixerState) -> List<MixerChannel>?)? = null
 
+    /** Petites formes du widget : voies gardées parmi sortie, micro et applis (dans cet ordre) ; null : toutes. */
+    var channelFilter: ((List<MixerChannel>) -> List<MixerChannel>)? = null
+
+    /** Rangée des scènes montrée ; faux : les tranches seules (petites formes). */
+    var scenesShown = true
+        set(value) {
+            field = value
+            sceneScroll.visibility = if (value) VISIBLE else GONE
+            invalidate()
+        }
+
+    /** Tranches montrées ; faux : les scènes seules, sur toute la hauteur (forme Ligne). */
+    var stripsShown = true
+        set(value) {
+            field = value
+            stripScroll.visibility = if (value) VISIBLE else GONE
+            sceneScroll.layoutParams = (sceneScroll.layoutParams as LayoutParams).apply {
+                height = if (value) sceneHeight() else 0
+                weight = if (value) 0f else 1f
+            }
+            invalidate()
+        }
+
     /** Applis à régler ensemble quand on touche la voie `id` (groupe de la table) ; null : une voie simple. */
     var groupMembers: (String) -> List<String>? = { null }
 
@@ -207,7 +232,7 @@ class MixerView @JvmOverloads constructor(
     private fun render(next: MixerState) {
         state = next
         val apps = appFilter?.invoke(next) ?: next.apps
-        val channels = listOf(next.master, next.mic) + apps.orEmpty()
+        val channels = (listOf(next.master, next.mic) + apps.orEmpty()).let { all -> channelFilter?.invoke(all) ?: all }
         val ids = channels.map { it.id }
         if (ids != views.keys.toList()) {
             val reuse = HashMap(views)
@@ -217,10 +242,10 @@ class MixerView @JvmOverloads constructor(
             views.values.forEach { strips.addView(it, LinearLayout.LayoutParams(dp(MIN_STRIP_DP), ViewGroup.LayoutParams.MATCH_PARENT)) }
             // La note du Mac (« Volume par appli… ») n'est pas une voie : pas de trait avant elle sur une table nue.
             views.values.forEachIndexed { i, strip -> strip.last = i == views.size - 1 }
-            if (next.apps == null) strips.addView(note, LinearLayout.LayoutParams(dp(320), ViewGroup.LayoutParams.MATCH_PARENT))
+            if (next.apps == null && channelFilter == null) strips.addView(note, LinearLayout.LayoutParams(dp(320), ViewGroup.LayoutParams.MATCH_PARENT))
             fitStrips()
         }
-        note.visibility = if (next.apps == null) VISIBLE else GONE
+        note.visibility = if (next.apps == null && channelFilter == null) VISIBLE else GONE
         val now = SystemClock.uptimeMillis()
         channels.forEach { c ->
             val strip = views[c.id] ?: return@forEach
@@ -659,7 +684,7 @@ class MixerView @JvmOverloads constructor(
         val low = h < dp(FaderStrip.TIGHT_DP)
         if (low != tight) {
             tight = low
-            sceneScroll.layoutParams = sceneScroll.layoutParams.apply { height = sceneHeight() }
+            if (stripsShown) sceneScroll.layoutParams = sceneScroll.layoutParams.apply { height = sceneHeight() }
             strips.setPadding(dp(16), 0, dp(16), if (tight) 0 else dp(10))
             if (!dragging) renderScenes()
         }
@@ -670,6 +695,7 @@ class MixerView @JvmOverloads constructor(
         val w = width.toFloat()
         val h = height.toFloat()
         canvas.drawRect(0f, 0f, w, h, plate)
+        if (!scenesShown || !stripsShown) return
         // Rainure sous les scènes.
         brush.alpha = 255
         brush.color = cShadow
