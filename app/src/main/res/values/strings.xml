@@ -1497,6 +1497,14 @@
     <string name="widget_keys_remove_yes">Retirer du widget</string>
     <string name="widget_keys_edit">Modifier</string>
     <string name="widget_keys_edit_named">Modifier %1$s</string>
+    <string name="widget_keys_sample_mute">Couper le micro</string>
+    <string name="widget_keys_sample_screenshot">Capture</string>
+    <string name="widget_keys_sample_play">Lecture</string>
+    <string name="widget_keys_sample_next">Suivant</string>
+    <string name="widget_keys_sample_dnd">Ne pas déranger</string>
+    <string name="widget_keys_sample_lock">Verrouiller</string>
+    <string name="widget_keys_sample_dark">Mode sombre</string>
+    <string name="widget_keys_sample_volume_off">Son coupé</string>
     <string name="widget_weather">Météo</string>
     <string name="widget_weather_desc">Le temps qu\'il fait dans ta ville</string>
     <string name="widget_weather_choose">Choisir ma ville</string>

@@ -252,7 +252,8 @@ class WidgetModelTest {
     @Test
     fun `widget maintenu, agrandi dans sa plus grande taille, la plus large a surface egale`() {
         assertEquals(WidgetSize.L, WidgetType.MEDIA.zoomSize)
-        assertEquals(WidgetSize.XL, WidgetType.KEYS.zoomSize)
+        // Touches a les 16 formes : maintenu, il s'agrandit en plein écran.
+        assertEquals(WidgetSize.FULL, WidgetType.KEYS.zoomSize)
         // Tâches : Grand, Haut (2 × 4), Vertical, Moyen : Haut a la plus grande surface.
         assertEquals(WidgetSize.T, WidgetType.TASKS.zoomSize)
         assertEquals(WidgetSize.M, WidgetType.WATER.zoomSize)
@@ -281,6 +282,8 @@ class WidgetModelTest {
     fun `les tailles 3 x 2, 3 x 4 et plein ecran sont reservees aux tableaux`() {
         assertEquals(listOf(3 to 2, 3 to 4, 4 to 4), listOf(WidgetSize.L3, WidgetSize.T3, WidgetSize.FULL).map { it.w to it.h })
         for (type in WidgetType.entries) {
+            // Widget qui a déjà les 16 formes (#178) : la règle d'avant ne le concerne plus.
+            if (type.sizes.size == WidgetSize.entries.size) continue
             val big = type.sizes.filter { it == WidgetSize.L3 || it == WidgetSize.T3 || it == WidgetSize.FULL }
             if (type in boards) {
                 assertEquals("$type", listOf(WidgetSize.L3, WidgetSize.T3, WidgetSize.FULL), big)
