@@ -3,16 +3,12 @@ package app.mate.ui
 import android.content.Context
 import android.graphics.BitmapFactory
 import android.graphics.Outline
-import android.text.SpannableStringBuilder
-import android.text.Spanned
 import android.text.TextUtils
-import android.text.style.ForegroundColorSpan
 import android.util.AttributeSet
 import android.view.Gravity
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewOutlineProvider
-import android.widget.ImageButton
 import android.widget.ImageView
 import android.widget.LinearLayout
 import android.widget.TextView
@@ -28,21 +24,21 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
 /**
- * Lecture en cours de l'ordinateur, dans le header en haut à droite, au style du widget Média : pochette, titre et
- * artiste (sinon la provenance : Spotify, YouTube, nom du site), Précédent, Lecture / Pause, Suivant. Largeur fixe (le
- * header ne bouge pas d'un morceau à l'autre) ; titre trop long : il défile [MARQUEE_REPEAT] fois à chaque morceau, puis
- * s'arrête sur le début, pour ne pas redessiner sans fin sur la tablette.
+ * Lecture en cours de l'ordinateur, dans le header en haut à droite : pochette et titre seulement, estompés en pause.
+ * Largeur fixe (le header ne bouge pas d'un morceau à l'autre) ; titre trop long : il défile [MARQUEE_REPEAT] fois à
+ * chaque morceau, puis s'arrête sur le début, pour ne pas redessiner sans fin sur la tablette. Un toucher ouvre l'îlot ([MusicIsland]) :
+ * titre et artiste en entier, avancement, boutons.
  * Règles du petit lecteur de COMP-56 ([MiniPlayerLogic]) : ce qui joue d'abord, visible pendant une lecture et dix
- * minutes de pause. Relue toutes les [POLL_MS] (sur Mac, chaque lecture lance un programme), chaque seconde juste après
- * un appui ; pas de relecture tant que [suppressed] (cadre photo, aucun ordinateur).
+ * minutes de pause. Relue toutes les [POLL_MS] (sur Mac, chaque lecture lance un programme), chaque seconde tant que
+ * l'îlot est ouvert et juste après un appui ; pas de relecture tant que [suppressed] (cadre photo, aucun ordinateur).
  */
 class MusicChip @JvmOverloads constructor(context: Context, attrs: AttributeSet? = null) : LinearLayout(context, attrs) {
 
     private val thumb: ImageView
     private val title: TextView
-    private val previous: ImageButton
-    private val play: ImageButton
-    private val next: ImageButton
+
+    /** Îlot créé au premier toucher seulement : rien à gonfler au démarrage ni à chaque recreate quand rien ne joue. */
+    private var island: MusicIsland? = null
     private var session: MediaSession? = null
     private var thumbKey: String? = null
     private var poll: Job? = null
@@ -70,32 +66,44 @@ class MusicChip @JvmOverloads constructor(context: Context, attrs: AttributeSet?
             // Le défilement ne part que sur une vue « choisie ».
             isSelected = true
         }
-        previous = findViewById(R.id.chip_previous)
-        play = findViewById(R.id.chip_play)
-        next = findViewById(R.id.chip_next)
-        previous.setOnClickListener { control("previous") }
-        play.setOnClickListener { control("play-pause") }
-        next.setOnClickListener { control("next") }
+        setOnClickListener {
+            val shown = session ?: return@setOnClickListener
+            val opened = island ?: MusicIsland(this, ::control, ::update).also { island = it }
+            opened.open(shown, thumb.drawable)
+        }
     }
 
     override fun onAttachedToWindow() {
         super.onAttachedToWindow()
         poll = findViewTreeLifecycleOwner()?.lifecycleScope?.launch {
             while (true) {
-                if (suppressed()) visibility = GONE else refresh()
-                delay(if (System.currentTimeMillis() < fastUntilMs) FAST_MS else POLL_MS)
+                if (suppressed()) {
+                    island?.dismiss()
+                    visibility = GONE
+                } else {
+                    refresh()
+                }
+                delay(if (islandOpen() || System.currentTimeMillis() < fastUntilMs) FAST_MS else POLL_MS)
             }
         }
     }
 
     override fun onDetachedFromWindow() {
         poll?.cancel()
+        island?.release()
         super.onDetachedFromWindow()
     }
 
     /** Cachée tout de suite si [suppressed] (mode Modifier, cadre photo), sinon telle qu'à la dernière lecture. */
     fun update() {
-        visibility = if (!suppressed() && session != null) VISIBLE else GONE
+        val shown = !suppressed() && session != null
+        if (!shown) island?.dismiss()
+        visibility = when {
+            !shown -> GONE
+            // Cachée sous l'îlot ouvert, qui en est sorti.
+            islandOpen() -> INVISIBLE
+            else -> VISIBLE
+        }
     }
 
     /** Relit la lecture en cours ; en erreur (pas de lecture lisible) ou en pause depuis longtemps, la pastille se cache. */
@@ -105,34 +113,32 @@ class MusicChip @JvmOverloads constructor(context: Context, attrs: AttributeSet?
         if (picked?.playing == true) lastPlayingMs = now
         val shown = picked?.takeIf { MiniPlayerLogic.visible(it, lastPlayingMs, now) }
         session = shown
-        visibility = if (shown != null) VISIBLE else GONE
+        if (shown == null) island?.dismiss()
+        // Îlot ouvert : la pastille reste cachée dessous jusqu'à la fermeture.
+        if (!islandOpen()) visibility = if (shown != null) VISIBLE else GONE
         shown ?: return
-        val line = SpannableStringBuilder(shown.title).apply {
-            subtitle(shown)?.let {
-                val start = length
-                append("  ·  ").append(it)
-                setSpan(ForegroundColorSpan(themeColor(context, R.attr.c_text_dim)), start, length, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
-            }
-        }
         // Même morceau : on ne touche pas au texte, le défilement en cours continue (et ne repart pas à chaque relecture).
-        if (line.toString() != title.text.toString()) title.text = line
-        title.contentDescription = listOfNotNull(shown.title, subtitle(shown)).joinToString(", ")
-        play.setImageResource(if (shown.playing) R.drawable.ic_pause else R.drawable.ic_play)
-        play.visibility = if (shown.canPlayPause) VISIBLE else GONE
-        previous.visibility = if (shown.canPrevious) VISIBLE else GONE
-        next.visibility = if (shown.canNext) VISIBLE else GONE
+        if (shown.title != title.text.toString()) title.text = shown.title
+        val label = listOfNotNull(shown.title, subtitle(shown)).joinToString(", ")
+        contentDescription = context.getString(if (shown.playing) R.string.media_island_open else R.string.media_island_open_paused, label)
+        // En pause : pochette et titre estompés, la pastille dit son état sans bouton.
+        title.setTextColor(themeColor(context, if (shown.playing) R.attr.c_text else R.attr.c_text_dim))
+        thumb.alpha = if (shown.playing) 1f else PAUSED_THUMB_ALPHA
         if (shown.thumb != thumbKey) {
             thumbKey = shown.thumb
             val bytes = shown.thumb?.let { runCatching { BackendClient(context).system.mediaThumb(shown.app, it) }.getOrNull() }
             thumb.setImageBitmap(bytes?.let { BitmapFactory.decodeByteArray(it, 0, it.size, BitmapFactory.Options().apply { inSampleSize = 4 }) })
         }
+        if (islandOpen()) island?.render(shown, thumb.drawable)
     }
 
-    private fun control(action: String) {
+    private fun islandOpen() = island?.isOpen == true
+
+    private fun control(action: String, positionMs: Long?) {
         val current = session ?: return
         fastUntilMs = System.currentTimeMillis() + FAST_FOR_MS
         findViewTreeLifecycleOwner()?.lifecycleScope?.launch {
-            runCatching { BackendClient(context).system.mediaControl(action, current.app) }
+            runCatching { BackendClient(context).system.mediaControl(action, current.app, positionMs) }
             refresh()
         }
     }
@@ -140,9 +146,12 @@ class MusicChip @JvmOverloads constructor(context: Context, attrs: AttributeSet?
     companion object {
         private const val POLL_MS = 5_000L
 
-        /** Juste après un appui ([FAST_FOR_MS]) : relue chaque seconde, le nouveau morceau arrive vite. */
+        /** Îlot ouvert, ou juste après un appui ([FAST_FOR_MS]) : relue chaque seconde (avancement, nouveau morceau). */
         private const val FAST_MS = 1_000L
         private const val FAST_FOR_MS = 8_000L
+
+        /** Pochette d'une lecture en pause, estompée comme le titre (passé en c_text_dim). */
+        private const val PAUSED_THUMB_ALPHA = 0.5f
 
         /** Passages du titre trop long à chaque nouveau morceau. */
         private const val MARQUEE_REPEAT = 3
@@ -153,7 +162,7 @@ class MusicChip @JvmOverloads constructor(context: Context, attrs: AttributeSet?
         /** Provenance : l'appli ou le site, sauf vide ou identique au titre. */
         fun source(session: MediaSession): String? = session.name.trim().takeIf { it.isNotEmpty() && !it.equals(session.title.trim(), ignoreCase = true) }
 
-        /** Après le titre : l'artiste, sinon la provenance. */
+        /** Sous le titre, dans l'îlot : l'artiste, sinon la provenance. */
         fun subtitle(session: MediaSession): String? = session.artist.trim().takeIf { it.isNotEmpty() } ?: source(session)
     }
 }
