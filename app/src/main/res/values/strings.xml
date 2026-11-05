@@ -1283,6 +1283,11 @@
     <string name="widget_size_t3">3 × 4</string>
     <string name="widget_size_xl3">4 × 3</string>
     <string name="widget_size_full">Plein écran</string>
+    <string name="widget_size_m3">3 × 1</string>
+    <string name="widget_size_v3">1 × 3</string>
+    <string name="widget_size_v4">1 × 4</string>
+    <string name="widget_size_l23">2 × 3</string>
+    <string name="widget_size_l33">3 × 3</string>
     <string name="widget_resize_cd">Redimensionner %1$s, taille actuelle %2$s. Active pour passer à la taille suivante.</string>
     <string name="widget_needs_computer">%1$s : connecte ton ordinateur</string>
     <string name="widget_hero">Heure du jour</string>
@@ -1541,6 +1546,7 @@
     <string name="widget_note_desc">Un mot à garder sous les yeux</string>
     <string name="widget_note_empty">Touche pour écrire une note</string>
     <string name="widget_note_hint">Ta note</string>
+    <string name="widget_note_sample">Code de la salle : 4B</string>
     <string name="widget_web">Page web</string>
     <string name="widget_web_desc">Un tableau de bord ou un graphique, rechargé tout seul</string>
     <string name="widget_web_empty">Touche pour choisir une page</string>

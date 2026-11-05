@@ -17,9 +17,10 @@ const val COLS = 4
 const val ROWS = 4
 
 /**
- * Tailles en cases (largeur × hauteur). `L3` (3 × 2), `T3` (3 × 4) et `FULL` (4 × 4, tout l'écran) ne sont proposées qu'aux
- * tableaux (Agents, Jira, GitLab, Pipelines, GitHub, Actions, Ouvertes, Son) : ceux-là ont de quoi remplir la place. `XL3`
- * (4 × 3, le bas de la page sous une rangée si on la pose en bas) n'est proposée qu'au mixeur.
+ * Les 16 formes de la grille, en cases (largeur × hauteur), de 1 × 1 à 4 × 4. But : chaque widget les accepte toutes
+ * (règle gardée par `WidgetRulesTest`, #178) et dessine une mise en page par [family], pas une par forme. En attendant,
+ * `WidgetType.sizes` dit ce que chacun accepte (`L3`, `T3`, `FULL` aux tableaux, `XL3` au mixeur…) et les listes
+ * d'exceptions `WidgetGaps*.kt` ce qui manque. Les noms sont enregistrés dans les dispositions : ne jamais en renommer un.
  */
 enum class WidgetSize(val w: Int, val h: Int, @StringRes val label: Int) {
     S(1, 1, R.string.widget_size_s),
@@ -33,6 +34,47 @@ enum class WidgetSize(val w: Int, val h: Int, @StringRes val label: Int) {
     T3(3, 4, R.string.widget_size_t3),
     XL3(4, 3, R.string.widget_size_xl3),
     FULL(4, 4, R.string.widget_size_full),
+    M3(3, 1, R.string.widget_size_m3),
+    V3(1, 3, R.string.widget_size_v3),
+    V4(1, 4, R.string.widget_size_v4),
+    L23(2, 3, R.string.widget_size_l23),
+    L33(3, 3, R.string.widget_size_l33),
+    ;
+
+    /** Famille de la forme : la mise en page que le widget lui donne ([HomeWidget.applySize]). */
+    val family: ShapeFamily
+        get() = when {
+            w == 1 && h == 1 -> ShapeFamily.PILL
+            h == 1 -> ShapeFamily.ROW
+            w == 1 -> ShapeFamily.COLUMN
+            w == COLS && h == ROWS -> ShapeFamily.FULL
+            w == COLS || h == ROWS -> ShapeFamily.LARGE
+            else -> ShapeFamily.BLOCK
+        }
+}
+
+/**
+ * Familles de formes : un widget dessine une mise en page par famille, jamais un simple étirement. Plus grand, il
+ * montre plus de choses ; plus petit, il garde l'essentiel.
+ */
+enum class ShapeFamily {
+    /** 1 × 1 : un chiffre, une icône ou un bouton. */
+    PILL,
+
+    /** 2 × 1, 3 × 1, 4 × 1 : une ligne. */
+    ROW,
+
+    /** 1 × 2, 1 × 3, 1 × 4 : une colonne. */
+    COLUMN,
+
+    /** 2 × 2, 3 × 2, 2 × 3, 3 × 3 : un bloc. */
+    BLOCK,
+
+    /** 2 × 4, 3 × 4, 4 × 2, 4 × 3 : toute une largeur ou toute une hauteur. */
+    LARGE,
+
+    /** 4 × 4 : tout l'écran. */
+    FULL,
 }
 
 /**
