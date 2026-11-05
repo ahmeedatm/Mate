@@ -64,6 +64,8 @@ object ValorantTable {
     private fun head(kit: ValorantKit, title: Int, ally: Boolean, captions: List<Pair<Int, Int>>) = kit.row(ValorantArt.teamTitle(kit, title, ally)).apply {
         getChildAt(0).layoutParams = kit.lp(0, WRAP_CONTENT, 1f)
         for ((c, w) in captions) addView(kit.caption(c, Gravity.CENTER), kit.lp(kit.dp(w)).apply { marginStart = kit.dp(ValorantArt.GAP) })
+        // Même retrait que les lignes : chaque légende reste au-dessus de sa colonne.
+        setPadding(kit.dp(4), 0, kit.dp(4), 0)
     }
 
     private fun team(kit: ValorantKit, title: Int, ally: Boolean, players: List<ValorantPlayer>, empty: Int?, shape: ValorantShape) = LinearLayout(kit.context).apply {
@@ -160,7 +162,7 @@ object ValorantTable {
         if (p.mvp) top.addView(mvp(kit), kit.lp(WRAP_CONTENT).apply { marginStart = kit.dp(6) })
         line.addView(top, kit.lp(0, WRAP_CONTENT, 1f))
         line.addView(if (full) ValorantArt.chip(kit, p.acs.toString(), places.acs(p), ACS, 17f) else ValorantArt.chip(kit, p.acs.toString(), places.acs(p), ACS, 13f, tight = true))
-        line.addView(kit.text(kit.string(R.string.valorant_kda, p.kills, p.deaths, p.assists), 14f, R.attr.c_text_dim).apply { gravity = Gravity.CENTER }, kit.lp(kit.sp(KDA)).apply { marginStart = kit.dp(ValorantArt.GAP) })
+        line.addView(kit.text(kit.string(R.string.valorant_kda, p.kills, p.deaths, p.assists), 14f, R.attr.c_text_dim).apply { gravity = Gravity.CENTER }, kit.lp(kit.dp(KDA)).apply { marginStart = kit.dp(ValorantArt.GAP) })
         if (full) {
             line.addView(ValorantArt.chip(kit, ValorantKit.pct(p.hs), ValorantArt.hsTone(p.hs), CHIP))
             line.addView(ValorantArt.chip(kit, p.adr.toString(), places.adr(p), CHIP))
