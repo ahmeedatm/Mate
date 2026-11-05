@@ -1291,6 +1291,7 @@
     <string name="widget_gitlab_desc">Tes MR par colonne (prête à merger, à fixer, brouillon…), celles à relire, pipeline et fusion</string>
     <string name="widget_github">GitHub</string>
     <string name="widget_github_desc">Tes pull requests et celles à relire, contrôles et fusion</string>
+    <string name="glance_to_review">à relire</string>
     <string name="widget_actions">Actions</string>
     <string name="widget_actions_desc">Le dernier run GitHub Actions de tes dépôts : en cours, échecs, durée</string>
     <string name="widget_ytmusic">YouTube Music</string>

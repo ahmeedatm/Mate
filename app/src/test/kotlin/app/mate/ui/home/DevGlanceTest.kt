@@ -1,6 +1,5 @@
 package app.mate.ui.home
 
-import app.mate.gitlab.PipelineMark
 import app.mate.net.GitLabMr
 import app.mate.net.GitLabMrs
 import app.mate.net.GitLabPipeline
@@ -37,14 +36,14 @@ class DevGlanceTest {
     @Test
     fun `MR - l'etat de tete est le pire pipeline des lignes`() {
         val glance = mrGlance(GitLabMrs(mine = listOf(mr(1, MrColumn.READY, Pipeline.RUNNING), mr(2, MrColumn.FIX, Pipeline.FAILED)), review = emptyList()))
-        assertEquals(PipelineMark.CROSS, glance.lead)
+        assertEquals(Pipeline.FAILED, glance.lead)
     }
 
     @Test
     fun `MR - rien d'ouvert, rien a montrer`() {
         val glance = mrGlance(GitLabMrs(emptyList(), emptyList()))
         assertEquals(0, glance.count)
-        assertEquals(PipelineMark.NONE, glance.lead)
+        assertEquals(Pipeline.NONE, glance.lead)
         assertEquals(emptyList<GitLabMr>(), glance.rows)
     }
 
@@ -57,7 +56,7 @@ class DevGlanceTest {
             ),
         )
         assertEquals(listOf(3L, 2L, 1L), glance.rows.map { it.id })
-        assertEquals(PipelineMark.SYNC, glance.lead)
+        assertEquals(Pipeline.RUNNING, glance.lead)
         assertEquals(1, glance.count)
     }
 
@@ -65,7 +64,7 @@ class DevGlanceTest {
     fun `Actions - la liste a plat de GitHub compte aussi`() {
         val glance = pipelineGlance(GitLabPipelines(pipelines = listOf(run(7, Pipeline.SUCCESS, 120), run(8, Pipeline.FAILED, 30))))
         assertEquals(listOf(8L, 7L), glance.rows.map { it.id })
-        assertEquals(PipelineMark.CROSS, glance.lead)
+        assertEquals(Pipeline.FAILED, glance.lead)
     }
 
     @Test

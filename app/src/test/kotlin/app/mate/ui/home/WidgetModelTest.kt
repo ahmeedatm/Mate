@@ -97,7 +97,9 @@ class WidgetModelTest {
         assertEquals(WidgetType.JIRA, WidgetType.of("jira"))
         assertEquals(WidgetType.GITLAB, WidgetType.of("gitlab"))
         for (type in listOf(WidgetType.JIRA, WidgetType.GITLAB)) {
-            assertEquals(listOf(WidgetSize.XL, WidgetSize.L, WidgetSize.L3, WidgetSize.T3, WidgetSize.FULL), type.sizes)
+            // Ajouté en Très grand ; le tableau tient en Grand, 3 × 2, 3 × 4 et plein écran (les petites formes : #185).
+            assertEquals(WidgetSize.XL, type.sizes.first())
+            assertTrue(type.sizes.containsAll(listOf(WidgetSize.L, WidgetSize.L3, WidgetSize.T3, WidgetSize.FULL)))
             assertTrue(type.computer)
         }
         assertFalse(WidgetType.JIRA.offered(HomeFeatures()))
