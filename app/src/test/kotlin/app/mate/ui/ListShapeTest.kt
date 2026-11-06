@@ -28,6 +28,7 @@ class ListShapeTest {
         assertFalse(narrow.checks)
         assertFalse(narrow.addRow)
         assertTrue(ListShape.of(WidgetSize.V3).addRow)
+        assertTrue(ListShape.of(WidgetSize.V4).addRow)
         assertEquals(1, ListShape.of(WidgetSize.V4).columns)
     }
 

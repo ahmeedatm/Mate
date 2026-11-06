@@ -53,6 +53,7 @@ class TasksCard @JvmOverloads constructor(
         val newTask = View.OnClickListener { TaskDialog(context) { label, remindAt, days -> add(label, remindAt, days) }.show("") }
         views.addRow.setOnClickListener(newTask)
         views.title.setOnClickListener { showRecurring() }
+        views.headAction = context.getString(R.string.tasks_head_action)
         views.ringBox.contentDescription = context.getString(R.string.tasks_reload)
         views.ringBox.setOnClickListener { launch { load(refresh = true) } }
         views.showHead("", context.getString(R.string.widget_tasks), 0, 0)
@@ -182,7 +183,10 @@ class TasksCard @JvmOverloads constructor(
     }
 
     private fun showCount() {
-        val caption = if (total > 0 && pending == 0) {
+        val caption = if (total == 0) {
+            // Pastille et Ligne n'ont pas de liste pour dire « rien à faire » : la légende le dit.
+            context.getString(R.string.tasks_none_caption)
+        } else if (pending == 0) {
             context.getString(R.string.tasks_all_done)
         } else {
             context.resources.getQuantityString(R.plurals.tasks_left_caption, pending)
@@ -196,6 +200,7 @@ class TasksCard @JvmOverloads constructor(
         val check = row.findViewById<TaskCheck>(R.id.task_check)
         val label = row.findViewById<StrikeText>(R.id.task_label)
         label.text = task.label
+        check.contentDescription = task.label
         fun paint(done: Boolean, animate: Boolean) {
             check.setDone(done, animate)
             label.setStruck(done, animate)

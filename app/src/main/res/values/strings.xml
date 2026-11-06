@@ -644,6 +644,8 @@
     <!-- Dans l'anneau des cartes à liste : faits / total. -->
     <string name="list_ring_progress">%1$d/%2$d</string>
     <string name="tasks_empty">Rien à faire pour l\'instant</string>
+    <string name="tasks_none_caption">Rien à faire</string>
+    <string name="tasks_head_action">Ouvre les tâches récurrentes</string>
     <string name="tasks_unavailable">Tâches indisponibles</string>
     <!-- Courses (widget de l'Accueil) -->
     <string name="shopping_all_done">Tout est pris</string>
@@ -652,6 +654,7 @@
         <item quantity="other">articles à prendre</item>
     </plurals>
     <string name="shopping_empty">La liste est vide. Dis « ajoute du lait à la liste de courses ».</string>
+    <string name="shopping_none_caption">Liste vide</string>
     <string name="shopping_unavailable">Courses indisponibles</string>
     <string name="shopping_add">Ajouter un article</string>
     <string name="shopping_add_confirm">Ajouter</string>
