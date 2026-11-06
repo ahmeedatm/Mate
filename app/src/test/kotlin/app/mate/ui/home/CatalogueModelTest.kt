@@ -44,8 +44,11 @@ class CatalogueModelTest {
 
     @Test
     fun `seules les formes du widget sont proposees, rangees par famille`() {
-        val sizes = layout().shapeChoices(WidgetType.WEATHER, 0, 2, 0).map { it.size }
-        assertEquals(listOf(WidgetSize.S, WidgetSize.M, WidgetSize.L), sizes)
+        WidgetType.entries.forEach { type ->
+            val sizes = layout().shapeChoices(type, 0, 2, 0).map { it.size }
+            assertEquals(type.sizes.toSet(), sizes.toSet())
+            assertEquals(SHAPE_ORDER.filter { it in sizes }, sizes)
+        }
     }
 
     @Test
