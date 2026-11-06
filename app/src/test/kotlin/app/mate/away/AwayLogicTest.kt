@@ -70,4 +70,27 @@ class AwayLogicTest {
         Prefs.setAway(context, null)
         assertNull(Prefs.away(context))
     }
+
+    @Test
+    fun `avant de partir, le widget dit tout ce qu'il fera`() {
+        assertEquals(listOf(AwayEffect.MIC, AwayEffect.FOCUS, AwayEffect.WINDOWS), AwayLogic.effects(null))
+    }
+
+    @Test
+    fun `pendant l'absence, seulement ce qui a ete fait`() {
+        val none = AwayState(start, micMutedByUs = false, focusPausedByUs = false)
+        assertEquals(emptyList<AwayEffect>(), AwayLogic.effects(none))
+        val all = AwayState(start, micMutedByUs = true, focusPausedByUs = true, windows = 4)
+        assertEquals(listOf(AwayEffect.MIC, AwayEffect.FOCUS, AwayEffect.WINDOWS), AwayLogic.effects(all))
+        assertEquals(listOf(AwayEffect.FOCUS), AwayLogic.effects(none.copy(focusPausedByUs = true)))
+    }
+
+    @Test
+    fun `le nombre de fenetres gardees survit dans les preferences`() {
+        val context = FakeContext()
+        Prefs.setAway(context, AwayState(start, micMutedByUs = true, focusPausedByUs = false, windows = 7))
+        assertEquals(7, Prefs.away(context)?.windows)
+        Prefs.setAway(context, null)
+        assertNull(Prefs.away(context))
+    }
 }

@@ -120,9 +120,9 @@ class WidgetModelTest {
     }
 
     @Test
-    fun `Je m'absente, widget de l'ordinateur en M, L ou S, toujours propose, relu tel quel`() {
+    fun `Je m'absente, widget de l'ordinateur pose en M, toujours propose, relu tel quel`() {
         assertEquals(WidgetType.AWAY, WidgetType.of("away"))
-        assertEquals(listOf(WidgetSize.M, WidgetSize.L, WidgetSize.S), WidgetType.AWAY.sizes)
+        assertEquals(WidgetSize.M, WidgetType.AWAY.sizes.first())
         assertTrue(WidgetType.AWAY.computer)
         assertTrue(WidgetType.AWAY.offered(HomeFeatures(off = setOf("open", "mixer", "pad"))))
         val context = app.mate.FakeContext()
