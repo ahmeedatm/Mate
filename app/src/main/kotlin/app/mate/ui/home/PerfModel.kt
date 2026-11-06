@@ -106,6 +106,19 @@ fun perfLayout(size: WidgetSize): PerfLayout = when (size.family) {
     ShapeFamily.LARGE, ShapeFamily.FULL -> PerfLayout.FIGURES
 }
 
+/** La mesure de la Pastille : sa série et son pourcentage. */
+data class PillReading(val series: PerfSeries, val percent: Int)
+
+/**
+ * Ce que montre la Pastille (variante B choisie par Ahmed) : la plus chargée des trois mesures cochées et lisibles
+ * (processeur, carte graphique, mémoire) ; à égalité, la première dans cet ordre. Null : aucune des trois.
+ */
+fun pillReading(perf: PcPerf, choice: Set<PerfOption>): PillReading? = listOfNotNull(
+    PillReading(PerfSeries.CPU, perf.cpu).takeIf { PerfOption.CPU in choice },
+    perf.gpu?.let { PillReading(PerfSeries.GPU, it.usage) }?.takeIf { PerfOption.GPU in choice },
+    PillReading(PerfSeries.RAM, perf.ramPercent).takeIf { PerfOption.RAM in choice },
+).maxByOrNull { it.percent }
+
 /** Exemple de Performances pour le catalogue : un PC qui travaille un peu (processeur 42 %, carte graphique 71 %), sans ordinateur. */
 object PerfSample : WidgetSample {
     val perf = PcPerf(

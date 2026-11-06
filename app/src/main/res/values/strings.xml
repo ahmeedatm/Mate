@@ -1575,6 +1575,8 @@
     <string name="perf_cpu">CPU</string>
     <string name="perf_gpu">GPU</string>
     <string name="perf_ram">RAM</string>
+    <string name="perf_pill_none">–</string>
+    <string name="perf_pill_desc">%1$s, %2$d %%</string>
     <string name="perf_ram_gb">%1$s / %2$s Go</string>
     <string name="perf_fan">Ventilateur</string>
     <string name="perf_fan_rpm">%1$s tr/min</string>

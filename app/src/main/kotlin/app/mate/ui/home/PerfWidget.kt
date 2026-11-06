@@ -42,7 +42,8 @@ import kotlin.math.sqrt
 /**
  * Performances de l'ordinateur en direct : processeur, mémoire et carte graphique (avec sa température et son
  * ventilateur quand elle les donne), relevés toutes les 2 s tant que la page est à l'écran.
- * Moyen : quatre chiffres et la courbe des 5 dernières minutes ; grand : trois anneaux ; bandeau : trois barres.
+ * Une mise en page par famille de formes ([perfLayout]) : un anneau (la mesure la plus chargée), des chiffres et la
+ * courbe des 5 dernières minutes, des barres, ou trois anneaux.
  * DA Console douce : chiffres fins et graphiques neutres, le rouge d'alerte seulement pour une alerte ; un relevé remplace les
  * valeurs sans animation (comme le chrono du Focus). Les tailles suivent la hauteur de la ligne de l'Accueil (lignes
  * inégales) : sur une ligne basse, le titre et la courbe laissent la place aux chiffres, rangés sur une seule ligne.
@@ -234,7 +235,7 @@ class PerfWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidget(
             val room = if (compact) height else height - fixed
             // Grand et Plein écran : les chiffres grandissent avec la place (la courbe garde le reste).
             val big = family == ShapeFamily.LARGE || family == ShapeFamily.FULL
-            val size = minOf(sp(if (big) MAX_BIG_FIGURE_SP else MAX_FIGURE_SP), room / figureLine, (columnWidth - nameWidth) / figureWidth)
+            val size = minOf(sp(if (big) MAX_BIG_FIGURE_SP else MAX_FIGURE_SP), room * (if (big) BIG_FIGURE_SHARE else 1f) / figureLine, (columnWidth - nameWidth) / figureWidth)
             for (c in columns) {
                 c.value.fontPx(size)
                 // Sans courbe, plus de légende : tous les libellés au même ton.
@@ -339,7 +340,11 @@ class PerfWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidget(
     private fun pill(): View {
         val ring = ProgressRing(context).apply { trackColor = color(R.attr.c_stroke) }
         val value = figure(Gravity.CENTER)
-        val name = caption(context.getString(R.string.perf_cpu)).apply { gravity = Gravity.CENTER }
+        val name = label(PILL_NAME_SP, R.attr.c_text_dim).apply {
+            gravity = Gravity.CENTER
+            maxLines = 2
+            ellipsize = TextUtils.TruncateAt.END
+        }
         pill = Pill(ring, value, name)
         // Les trois relevés des autres formes ne sont pas montrés : la Pastille a son propre affichage (`showPill`).
         cpu = Reading(View(context), TextView(context), PerfSeries.CPU)
@@ -349,7 +354,7 @@ class PerfWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidget(
         fitter = { height, width ->
             showHeader(false)
             val diameter = minOf(height, width).toFloat()
-            val size = figureInCircle(diameter / 2 - ProgressRing.strokeFor(diameter, minStroke) - dp(RING_INSET), captionHeight.toFloat())
+            val size = figureInCircle(diameter / 2 - ProgressRing.strokeFor(diameter, minStroke) - dp(RING_INSET), natural(name).toFloat())
             value.fontPx(minOf(sp(MAX_PILL_SP), size))
         }
         return FrameLayout(context).apply {
@@ -363,21 +368,27 @@ class PerfWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidget(
         }
     }
 
-    /** La mesure de la Pastille (variante B choisie par Ahmed) : la plus chargée des mesures cochées, son nom dessous. */
-    private fun showPill(parts: Pill, perf: PcPerf, stale: Boolean, cpuOn: Boolean, gpuOn: Boolean, ramOn: Boolean) {
-        val readings = listOfNotNull(
-            if (cpuOn) Triple(PerfSeries.CPU, perf.cpu, R.string.perf_cpu) else null,
-            if (gpuOn) perf.gpu?.let { Triple(PerfSeries.GPU, it.usage, R.string.perf_gpu) } else null,
-            if (ramOn) Triple(PerfSeries.RAM, perf.ramPercent, R.string.perf_ram) else null,
+    /**
+     * La mesure de la Pastille (variante B choisie par Ahmed, [pillReading]) : la plus chargée, son nom dessous. L'alerte
+     * se dit aussi en mots (« RAM critique »), une erreur remplace le nom ; TalkBack lit le tout.
+     */
+    private fun showPill(parts: Pill, perf: PcPerf, stale: Boolean) {
+        val reading = pillReading(perf, choice) ?: return
+        val level = usageLevel(reading.percent)
+        val name = context.getString(
+            when (reading.series) {
+                PerfSeries.CPU -> R.string.perf_cpu
+                PerfSeries.GPU -> R.string.perf_gpu
+                PerfSeries.RAM -> R.string.perf_ram
+            },
         )
-        val shown = readings.maxByOrNull { it.second } ?: return
-        val (series, percent, name) = shown
-        val level = usageLevel(percent)
-        parts.value.set("$percent%")
-        parts.value.setTextColor(color(perfColorAttr(series, PerfMark.VALUE, level, stale)))
-        parts.name.set(context.getString(name))
-        parts.ring.progress = percent / 100f
-        parts.ring.color = color(perfColorAttr(series, PerfMark.FILL, level, stale))
+        val word = perfLevelWord(level)?.takeIf { !stale }?.let { "$name ${context.getString(it)}" } ?: name
+        parts.value.set("${reading.percent}%")
+        parts.value.setTextColor(color(perfColorAttr(reading.series, PerfMark.VALUE, level, stale)))
+        parts.name.set(error ?: word)
+        parts.ring.progress = reading.percent / 100f
+        parts.ring.color = color(perfColorAttr(reading.series, PerfMark.FILL, level, stale))
+        (parts.ring.parent as? View)?.contentDescription = context.getString(R.string.perf_pill_desc, word, reading.percent)
     }
 
     // ---- Bandeau : trois barres, température et ventilateur à droite ----
@@ -429,6 +440,13 @@ class PerfWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidget(
                 // Le chiffre laisse au moins 48 dp à sa barre.
                 val group = (width - (if (line.text.isEmpty()) 0 else naturalWidth(line) + dp(CHIPS_START))) / count - dp(BAR_GROUP_GAP)
                 minOf(height / figureLine, (group - nameWidth - dp(24) - dp(BAR_MIN)) / figureWidth)
+            } else if (family == ShapeFamily.COLUMN) {
+                // Colonne : les infos sont dessous, et la barre garde au moins 48 dp à côté du chiffre.
+                val below = if (line.text.isEmpty()) 0 else naturalHeight(line, width) + dp(CHIPS_GAP)
+                minOf(
+                    (height - headerHeight - dp(HEADER_GAP) - below).toFloat() / count * BAR_FIGURE_SHARE / figureLine,
+                    (width - nameWidth - dp(24) - dp(BAR_MIN)) / figureWidth,
+                )
             } else {
                 (height - headerHeight - dp(HEADER_GAP)).toFloat() / count * BAR_FIGURE_SHARE / figureLine
             }
@@ -479,12 +497,19 @@ class PerfWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidget(
         choice = PerfChoice.read(placed.config, Computers.active(context)?.id.orEmpty())
         val perf = last
         // Rien de coché qui soit lisible : une phrase au lieu de libellés sans chiffre.
-        val nothing = perf != null && PerfOption.entries.none { it in choice && it.readable(perf) }
+        // Pastille : seules ses trois mesures comptent (une info en texte ne s'y affiche pas).
+        val nothing = perf != null && if (pill != null) pillReading(perf, choice) == null else PerfOption.entries.none { it in choice && it.readable(perf) }
         unavailable.setText(if (notAvailable) R.string.perf_unavailable else R.string.perf_none_checked)
         unavailable.shown(notAvailable || nothing)
         // Rien à montrer avant la première mesure (des libellés sans chiffre).
         body.visibility = if (notAvailable || nothing) View.GONE else if (perf == null) View.INVISIBLE else View.VISIBLE
         note.set(error.orEmpty())
+        // Pastille sans en-tête : l'erreur d'avant la première mesure s'écrit sous l'anneau, au lieu d'une case vide.
+        pill?.takeIf { perf == null && error != null }?.let {
+            body.visibility = View.VISIBLE
+            it.value.set(context.getString(R.string.perf_pill_none))
+            it.name.set(error.orEmpty())
+        }
         if (perf == null) return
         // Dernières valeurs grisées tant que le relevé échoue, ou au retour sur la page avant le premier relevé.
         val stale = error != null || !fresh
@@ -505,10 +530,14 @@ class PerfWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidget(
             )
             note.set(alerts)
         }
-        show(cpu, perf.cpu.takeIf { cpuOn }, stale)
-        show(ram, perf.ramPercent.takeIf { ramOn }, stale)
-        show(gpu, perf.gpu?.usage?.takeIf { gpuOn }, stale)
-        pill?.let { showPill(it, perf, stale, cpuOn, gpuOn, ramOn) }
+        val shownPill = pill
+        if (shownPill != null) {
+            showPill(shownPill, perf, stale)
+        } else {
+            show(cpu, perf.cpu.takeIf { cpuOn }, stale)
+            show(ram, perf.ramPercent.takeIf { ramOn }, stale)
+            show(gpu, perf.gpu?.usage?.takeIf { gpuOn }, stale)
+        }
         ramGb?.set(context.getString(R.string.perf_ram_gb, perfNumber(perf.ramUsedGb), perfNumber(perf.ramTotalGb)))
         extras?.let { line ->
             val list = extras(perf, stale)
@@ -541,7 +570,8 @@ class PerfWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidget(
     /** Les infos cochées et lisibles qui ne passent pas par un anneau ou une barre, sur une ligne (Bandeau : une par ligne). */
     private fun extrasText(list: List<Extra>): CharSequence {
         // Barres d'une Ligne : les infos à droite, une par ligne.
-        val separator = if (perfLayout(placed.size) == PerfLayout.BARS && family == ShapeFamily.ROW) "\n" else context.getString(R.string.perf_extras_separator)
+        // Barres d'une Ligne (infos à droite) ou d'une Colonne (étroite) : une info par ligne.
+        val separator = if (perfLayout(placed.size) == PerfLayout.BARS) "\n" else context.getString(R.string.perf_extras_separator)
         val out = SpannableStringBuilder()
         for (extra in list) {
             if (out.isNotEmpty()) out.append(separator)
@@ -704,6 +734,12 @@ class PerfWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidget(
 
         /** Plus grand chiffre en Grand et Plein écran. */
         private const val MAX_BIG_FIGURE_SP = 96f
+
+        /** Part de la hauteur que les chiffres prennent en grand : la courbe garde le reste. */
+        private const val BIG_FIGURE_SHARE = 0.6f
+
+        /** Nom de la mesure sous l'anneau de la Pastille. */
+        private const val PILL_NAME_SP = 16f
 
         /** Plus grand chiffre de la Pastille. */
         private const val MAX_PILL_SP = 44f
