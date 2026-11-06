@@ -63,9 +63,9 @@ object WidgetSamples {
                 R.string.widget_apps_sample_mail,
             ),
         )
-        WidgetType.OPEN -> null
+        WidgetType.OPEN -> OpenWindowsSample
         WidgetType.PAD -> null
-        WidgetType.SCREEN -> null
+        WidgetType.SCREEN -> ScreenSample
         WidgetType.PERF -> null
         WidgetType.WEB -> null
 
