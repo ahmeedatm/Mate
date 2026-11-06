@@ -18,8 +18,8 @@ object WidgetSamples {
     fun of(type: WidgetType): WidgetSample? = when (type) {
         // #180 Heure et journée
         WidgetType.CLOCK -> ClockSample
-        WidgetType.HERO -> null
-        WidgetType.DAY -> null
+        WidgetType.HERO -> CalendarSample
+        WidgetType.DAY -> CalendarSample
         WidgetType.DAYLINE -> null
         WidgetType.WEATHER -> WeatherSample.paris()
         WidgetType.NEXT -> CalendarSample
