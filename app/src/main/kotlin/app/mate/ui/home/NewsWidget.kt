@@ -25,7 +25,6 @@ import app.mate.ui.errorText
 import app.mate.ui.showForTyping
 import app.mate.ui.themeFont
 import kotlinx.coroutines.launch
-import org.json.JSONArray
 
 /** Exemple des Actus pour le catalogue : le nom du flux et ses titres, dont les [seen] derniers déjà vus. */
 class NewsSample(@StringRes val feed: Int, @ArrayRes val titles: Int, val seen: Int) : WidgetSample
@@ -119,12 +118,7 @@ class NewsWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidget(
      * Titres déjà ouverts d'ici, relus dans la config du widget à chaque fois : le zoom de la tuile est un second
      * widget sur la même config, une copie gardée ici se périmerait.
      */
-    private val seen: Set<String> get() = if (preview) previewSeen else readSeen()
-
-    private fun readSeen(): Set<String> {
-        val array = placed.config.optJSONArray(SEEN) ?: return emptySet()
-        return (0 until array.length()).mapNotNullTo(LinkedHashSet()) { array.optString(it).takeIf(String::isNotEmpty) }
-    }
+    private val seen: Set<String> get() = if (preview) previewSeen else readSeen(placed.config)
 
     private fun keepSeen(next: Set<String>) {
         if (next == seen) return
@@ -132,7 +126,7 @@ class NewsWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidget(
             previewSeen = next
             return
         }
-        placed.config.put(SEEN, JSONArray(next.toList()))
+        writeSeen(placed.config, next)
         host.save()
     }
 
@@ -252,9 +246,5 @@ class NewsWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidget(
                 .onSuccess { load() }
                 .onFailure { Toast.makeText(context, context.errorText(it), Toast.LENGTH_LONG).show() }
         }
-    }
-
-    private companion object {
-        const val SEEN = "seen"
     }
 }

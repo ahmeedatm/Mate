@@ -1657,7 +1657,7 @@
         <item quantity="other">%1$d nouveaux titres, toucher pour ouvrir le premier</item>
     </plurals>
     <string name="widget_news_read">À jour</string>
-    <string name="widget_news_sample_feed">Le Monde · À la une</string>
+    <string name="widget_news_sample_feed">Actus du jour</string>
     <string-array name="widget_news_sample">
         <item>Le Sénat adopte le budget de la culture après un long débat</item>
         <item>Grève SNCF : le trafic perturbé jeudi en Île-de-France</item>

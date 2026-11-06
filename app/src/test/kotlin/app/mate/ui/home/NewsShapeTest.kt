@@ -1,5 +1,6 @@
 package app.mate.ui.home
 
+import org.json.JSONObject
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -45,5 +46,18 @@ class NewsShapeTest {
     fun `la taille du texte des titres suit la forme`() {
         assertTrue(NewsShape.of(WidgetSize.M).sp < NewsShape.of(WidgetSize.L).sp)
         assertTrue(NewsShape.of(WidgetSize.L).sp < NewsShape.of(WidgetSize.FULL).sp)
+    }
+
+    @Test
+    fun `les titres vus se gardent dans la config du widget`() {
+        val config = JSONObject()
+        assertEquals(emptySet<String>(), readSeen(config))
+        writeSeen(config, linkedSetOf("a", "b"))
+        assertEquals(setOf("a", "b"), readSeen(config))
+        // Un titre sorti du flux est oublié à la relecture suivante.
+        writeSeen(config, seenAfter(readSeen(config), listOf("b", "c"), opened = null))
+        assertEquals(setOf("b"), readSeen(config))
+        // Une config abîmée ne casse rien.
+        assertEquals(emptySet<String>(), readSeen(JSONObject().put("seen", "pas un tableau")))
     }
 }
