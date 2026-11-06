@@ -1442,6 +1442,7 @@
     <string name="ha_scenes">Scènes</string>
     <string name="ha_pick_title">Entité à montrer</string>
     <string name="ha_entity_state">%1$s, %2$s</string>
+    <string name="ha_entity_inline">%1$s · %2$s</string>
     <string name="ha_sample_salon">Salon</string>
     <string name="ha_sample_bureau">Bureau</string>
     <string name="ha_sample_cafe">Cafetière</string>

@@ -62,20 +62,31 @@ class AwayWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidget(
     /** Dernière liste dessinée : rien n'est refait chaque minute tant qu'elle ne change pas. */
     private var drawnList: Pair<AwayState?, Boolean>? = null
 
-    /** Empilé : la vue est assez haute pour la durée, la liste et le bouton à la fois (mesuré, suit le profil de rangées). */
-    private var tallEnough = true
+    /** Hauteur de la vue à la dernière mise en page : la liste se montre si ses lignes y tiennent ([listFits]). */
+    private var shownHeight = 0
 
     /** Mise en page empilée (colonne, bloc carré, grand en hauteur, plein écran) : seule à manquer de hauteur. */
     private var stackedLayout = false
 
     init {
         view.addOnLayoutChangeListener { _, _, top, _, bottom, _, _, _, _ ->
-            val tall = bottom - top >= dp(ROOM_DP)
-            if (tall != tallEnough) {
-                tallEnough = tall
+            if (bottom - top != shownHeight) {
+                shownHeight = bottom - top
+                drawnList = null
                 view.post { render() }
             }
         }
+    }
+
+    /**
+     * Empilé pendant l'absence : la liste de [lines] lignes tient-elle sous la durée, au-dessus du bouton ? Calculé sur la
+     * hauteur réelle (elle suit le profil de rangées) et la place prise par le reste. Pas encore mesuré : oui.
+     */
+    private fun listFits(lines: Int): Boolean {
+        if (shownHeight == 0 || duration.height == 0) return true
+        val button = maxOf(back.height, dp(56))
+        val used = view.paddingTop + view.paddingBottom + title.height + dp(8) + duration.height + dp(12) + dp(LABEL_DP) + dp(8) + button
+        return shownHeight - used >= lines * dp(EFFECT_ROW_DP)
     }
 
     override fun applySize() {
@@ -216,7 +227,7 @@ class AwayWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidget(
     /** « En partant » et tout ce que fera le bouton ; pendant l'absence, ce qui a vraiment été fait. */
     private fun renderList(away: AwayState?) {
         // Empilé et trop bas pendant l'absence : la durée et Reprendre prennent la place de la liste.
-        val room = !(stackedLayout && away != null && !tallEnough)
+        val room = !(stackedLayout && away != null) || listFits(maxOf(AwayLogic.effects(away).size, 1))
         if (drawnList == away?.copy(sinceMs = 0) to room) return
         drawnList = away?.copy(sinceMs = 0) to room
         listLabel.setText(if (away == null) R.string.away_will_label else R.string.away_done_label)
@@ -319,7 +330,7 @@ class AwayWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidget(
     private companion object {
         const val EFFECT_ROW_DP = 36
 
-        /** Hauteur où la durée, la liste de trois lignes et le bouton tiennent ensemble. */
-        const val ROOM_DP = 320
+        /** Hauteur du libellé « Pendant l'absence » au-dessus de la liste. */
+        const val LABEL_DP = 18
     }
 }

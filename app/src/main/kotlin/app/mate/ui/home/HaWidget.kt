@@ -19,6 +19,7 @@ import app.mate.R
 import app.mate.net.BackendClient
 import app.mate.net.HaEntity
 import app.mate.net.runCatchingCancellable
+import app.mate.ui.Look
 import app.mate.ui.errorText
 import app.mate.ui.showImmersive
 import kotlinx.coroutines.launch
@@ -217,20 +218,23 @@ class HaWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidget(co
             val texts = LinearLayout(context).apply {
                 orientation = LinearLayout.VERTICAL
                 addView(text(e.name, 15f, R.attr.c_text))
-                addView(text(stateText(e), 12f, if (on) R.attr.c_accent else R.attr.c_text_dim))
+                addView(text(stateText(e), 13f, if (on) R.attr.c_accent else R.attr.c_text_dim))
             }
             addView(texts, LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f).apply { marginStart = dp(12) })
             touchable(e)
+            Look.pressSpring(this)
         }
     }
 
     /**
-     * Pastille : la case entière est l'entité ; allumée, elle prend l'accent (l'état est aussi écrit). Dans la rangée basse
-     * de l'Accueil (92 dp), l'état laisse la place : l'icône et la couleur le disent, et la description le lit.
+     * Pastille : la case entière est l'entité ; allumée, elle prend l'accent, et l'état est toujours écrit (jamais la couleur
+     * seule). Dans la rangée basse de l'Accueil (92 dp), l'état passe sur la ligne du nom : « Salon · Allumé ».
      */
     private fun pill(e: HaEntity): View {
         val on = e.on && !e.isScene
-        val state = text(stateText(e), 13f, if (on) R.attr.c_on_accent else R.attr.c_text_dim)
+        val ink = if (on) R.attr.c_on_accent else R.attr.c_text
+        val name = text(e.name, 16f, ink).apply { setShadowLayer(0f, 0f, 0f, 0) }
+        val state = text(stateText(e), 13f, if (on) R.attr.c_on_accent else R.attr.c_text_dim).apply { setShadowLayer(0f, 0f, 0f, 0) }
         return LinearLayout(context).apply {
             orientation = LinearLayout.VERTICAL
             background = GradientDrawable().apply {
@@ -238,14 +242,19 @@ class HaWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidget(co
                 cornerRadius = dp(20).toFloat()
             }
             setPadding(dp(14), dp(10), dp(14), dp(10))
-            addView(icon(e, 28, if (on) R.attr.c_on_accent else R.attr.c_text))
+            addView(icon(e, 28, ink))
             addView(View(context), LinearLayout.LayoutParams(0, 0, 1f))
-            addView(text(e.name, 16f, if (on) R.attr.c_on_accent else R.attr.c_text))
+            addView(name)
             addView(state)
             touchable(e)
+            Look.pressSpring(this)
             addOnLayoutChangeListener { _, _, top, _, bottom, _, _, _, _ ->
-                val shown = bottom - top >= dp(PILL_STATE_DP)
-                if (shown != (state.visibility == View.VISIBLE)) post { state.visibility = if (shown) View.VISIBLE else View.GONE }
+                val low = bottom - top < dp(PILL_STATE_DP)
+                if (low == (state.visibility == View.GONE)) return@addOnLayoutChangeListener
+                post {
+                    state.visibility = if (low) View.GONE else View.VISIBLE
+                    name.text = if (low) context.getString(R.string.ha_entity_inline, e.name, stateText(e)) else e.name
+                }
             }
         }
     }
