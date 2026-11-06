@@ -1025,6 +1025,7 @@
     <string name="schedule_every_hours_minutes">%1$d h %2$02d</string>
     <string name="schedule_delete_title">Supprimer cette programmation ?</string>
     <string name="theme_title">Thème</string>
+    <string name="theme_chaleur">Chaleur</string>
     <string name="theme_console">Console</string>
     <string name="theme_console_jour">Console jour</string>
     <string name="theme_tile">Thème %s</string>
@@ -1042,6 +1043,7 @@
     <string name="theme_maison">Maison</string>
     <string name="theme_tableau">Tableau</string>
     <string name="theme_terminal">Terminal</string>
+    <string name="theme_group_chaleur">Chaleur</string>
     <string name="theme_group_console">Console</string>
     <string name="theme_group_sober">Sobres</string>
     <string name="theme_group_retro">Rétro</string>
@@ -1185,7 +1187,7 @@
     <string name="template_in_call">Appel en cours : choisis le template après l\'appel.</string>
     <string name="template_busy">Un template est déjà en cours de pose.</string>
     <string name="template_bureau">Bureau</string>
-    <string name="template_bureau_desc">La configuration de base : l\'Accueil du jour avec agenda, Focus, applis et raccourcis. Thème Console.</string>
+    <string name="template_bureau_desc">La configuration de base : l\'Accueil du jour avec agenda, Focus, applis et raccourcis. Thème Chaleur.</string>
     <string name="template_dev">Dev</string>
     <string name="template_dev_desc">Pour développer : l\'Accueil du jour, puis un écran pour les agents Claude, les MR GitLab, les pipelines et les tickets Jira. Thème Cadran nuit.</string>
     <string name="template_screen_agents">Agents</string>
@@ -1300,12 +1302,18 @@
     <string name="widget_hero_desc">L\'heure en grand, le prochain rendez-vous, la météo et l\'eau</string>
     <string name="widget_jira">Jira</string>
     <string name="widget_jira_desc">Tes tickets en colonnes ; toucher un ticket pour le faire avancer</string>
+    <plurals name="glance_open">
+        <item quantity="one">ouvert</item>
+        <item quantity="other">ouverts</item>
+    </plurals>
     <string name="widget_gitlab">GitLab</string>
     <string name="widget_gitlab_desc">Tes MR par colonne (prête à merger, à fixer, brouillon…), celles à relire, pipeline et fusion</string>
     <string name="widget_github">GitHub</string>
     <string name="widget_github_desc">Tes pull requests et celles à relire, contrôles et fusion</string>
+    <string name="glance_to_review">à relire</string>
     <string name="widget_actions">Actions</string>
     <string name="widget_actions_desc">Le dernier run GitHub Actions de tes dépôts : en cours, échecs, durée</string>
+    <string name="glance_failed">en échec</string>
     <string name="widget_ytmusic">YouTube Music</string>
     <string name="widget_ytmusic_desc">YouTube Music qui joue sur l\'ordi, piloté d\'ici : titre, file d\'attente, j\'aime</string>
     <string name="ytmusic_empty">Rien ne joue dans YouTube Music</string>
@@ -1389,6 +1397,12 @@
     <string name="widget_media_sites">Sites</string>
     <string name="widget_media_remove_confirm">Retirer le site « %1$s » ?</string>
     <string name="widget_media_desc">Musique ou vidéo de l\'ordi, avec ses commandes</string>
+    <string name="widget_media_sample_title" translatable="false">Midnight City</string>
+    <string name="widget_media_sample_artist" translatable="false">M83</string>
+    <string name="widget_media_sample_album" translatable="false">Hurry Up, We\'re Dreaming</string>
+    <string name="widget_media_sample_app" translatable="false">Spotify</string>
+    <string name="widget_media_sample_next" translatable="false">Reunion</string>
+    <string name="widget_media_sample_after" translatable="false">Wait</string>
     <string name="widget_agents">Agents Claude</string>
     <string name="widget_agents_desc">Qui travaille, qui a fini, qui t\'attend</string>
     <string name="widget_mixer">Console de mixage</string>
@@ -1397,6 +1411,12 @@
     <string name="widget_open_desc">Les fenêtres de l\'ordi par écran, à déplacer ou fermer</string>
     <string name="widget_apps">Applis</string>
     <string name="widget_apps_desc">Les applis de l\'ordinateur : lancer, ajouter, retirer, voir leurs fenêtres</string>
+    <string name="widget_apps_sample_music" translatable="false">Spotify</string>
+    <string name="widget_apps_sample_chat" translatable="false">Discord</string>
+    <string name="widget_apps_sample_browser" translatable="false">Firefox</string>
+    <string name="widget_apps_sample_notes">Notes</string>
+    <string name="widget_apps_sample_terminal">Terminal</string>
+    <string name="widget_apps_sample_mail">Mail</string>
     <string name="widget_discord">Discord</string>
     <string name="widget_discord_desc">L\'appel Discord : micro, sourdine, quitter l\'appel</string>
     <string name="widget_meeting">Réunion</string>
@@ -1517,7 +1537,7 @@
     <string name="widget_keys_title">Touches</string>
     <string name="widget_keys_desc">Tes touches, à créer et à modifier sur place</string>
     <string name="widget_keys_choose">Choisir les touches</string>
-    <string name="widget_keys_hint">%1$d touche(s) choisie(s) sur %2$d au plus. Un petit widget montre la première, un moyen les deux premières, un vertical les six premières, un grand toutes (il défile).</string>
+    <string name="widget_keys_hint">%1$d touche(s) choisie(s) sur %2$d au plus. Une petite forme montre les premières, autant qu\'elle en tient ; à partir de 2 × 2, le widget les montre toutes (il défile).</string>
     <string name="widget_keys_add">Ajouter</string>
     <string name="widget_keys_new">Nouvelle touche</string>
     <string name="widget_keys_existing">Choisir parmi les touches existantes</string>
@@ -1528,12 +1548,24 @@
     <string name="widget_keys_remove_yes">Retirer du widget</string>
     <string name="widget_keys_edit">Modifier</string>
     <string name="widget_keys_edit_named">Modifier %1$s</string>
+    <string name="widget_keys_sample_mute">Couper le micro</string>
+    <string name="widget_keys_sample_screenshot">Capture</string>
+    <string name="widget_keys_sample_play">Lecture</string>
+    <string name="widget_keys_sample_next">Suivant</string>
+    <string name="widget_keys_sample_dnd">Ne pas déranger</string>
+    <string name="widget_keys_sample_lock">Verrouiller</string>
+    <string name="widget_keys_sample_dark">Mode sombre</string>
+    <string name="widget_keys_sample_volume_off">Son coupé</string>
     <string name="widget_weather">Météo</string>
     <string name="widget_weather_desc">Le temps qu\'il fait dans ta ville</string>
     <string name="widget_weather_choose">Choisir ma ville</string>
     <string name="widget_weather_temp">%1$d°</string>
     <string name="widget_weather_range">min %1$d° · max %2$d°</string>
     <string name="widget_weather_day">%1$d° / %2$d°</string>
+    <string name="widget_weather_hour">%1$d h : %2$d°</string>
+    <string name="widget_weather_hour_short">%1$dh</string>
+    <string name="widget_weather_city_range">%1$s · %2$d° / %3$d°</string>
+    <string name="widget_weather_sample_city">Paris</string>
     <string name="widget_weather_city_hint">Ville (ex. Paris)</string>
     <string name="widget_weather_search">Chercher</string>
     <string name="widget_weather_locate">Ma position</string>

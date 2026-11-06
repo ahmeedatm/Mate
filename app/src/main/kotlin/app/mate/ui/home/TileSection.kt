@@ -37,6 +37,9 @@ class TileSection(
     var tiles: List<DeckTile> = emptyList()
         private set
 
+    /** Appelé quand [tiles] change (Applis en Pastille, Ligne ou Colonne les dessine sans la grille). */
+    var onTiles: () -> Unit = {}
+
     val grid = TileGridView(context, host.scope)
 
     /** « + » à droite du titre : toujours visible, quelle que soit la taille du widget. */
@@ -97,6 +100,7 @@ class TileSection(
         if (list == tiles) return
         tiles = list
         grid.cells = tiles.map { TileGridView.Cell(KeyRef.of(it), type = it.type) }
+        onTiles()
     }
 
     fun tileOf(cell: TileGridView.Cell) = tiles.firstOrNull { it.id == cell.key.id }

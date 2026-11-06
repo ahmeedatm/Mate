@@ -195,109 +195,6 @@ abstract class HomeWidget(val context: Context, val host: HomeHost, val placed: 
     }
 }
 
-/** Heure, salutation et date ; grand chiffre lisible de loin. */
-class ClockWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidget(context, host, placed) {
-    private val greeting = label(20f, R.attr.c_text_dim)
-    private val clock = TextClock(context).apply {
-        format12Hour = "HH:mm"
-        format24Hour = "HH:mm"
-        includeFontPadding = false
-        isSingleLine = true
-        setTextColor(color(R.attr.c_text))
-        typeface = themeFont(context, R.attr.c_font_light)
-    }
-    private val date = label(22f, R.attr.c_text_dim).apply { isSingleLine = true }
-    private val side = LinearLayout(context).apply { orientation = LinearLayout.VERTICAL }
-    override val view = LinearLayout(context).asCard(24)
-
-    override fun applySize() {
-        view.removeAllViews()
-        side.removeAllViews()
-        val wrap = ViewGroup.LayoutParams.WRAP_CONTENT
-        val small = placed.size == WidgetSize.S
-        view.setPadding(dp(if (small) 12 else 24), dp(if (small) 12 else 24), dp(if (small) 12 else 24), dp(if (small) 12 else 24))
-        when (placed.size) {
-            // Une case : l'heure et la date dessous, centrées.
-            WidgetSize.S -> {
-                view.orientation = LinearLayout.VERTICAL
-                view.gravity = Gravity.CENTER
-                clock.textSize = 48f
-                date.textSize = 15f
-                for (line in listOf(clock, date)) view.addView(line, LinearLayout.LayoutParams(wrap, wrap))
-            }
-            // Une ligne : l'heure, et à côté la salutation et la date.
-            WidgetSize.M, WidgetSize.W -> {
-                val wide = placed.size == WidgetSize.W
-                view.orientation = LinearLayout.HORIZONTAL
-                view.gravity = Gravity.CENTER_VERTICAL
-                clock.textSize = if (wide) 116f else 80f
-                greeting.textSize = if (wide) 22f else 17f
-                date.textSize = if (wide) 26f else 18f
-                view.addView(clock)
-                side.addView(greeting)
-                side.addView(date)
-                view.addView(side, LinearLayout.LayoutParams(0, wrap, 1f).apply { marginStart = dp(if (wide) 32 else 20) })
-            }
-            else -> {
-                val big = placed.size == WidgetSize.XL
-                view.orientation = LinearLayout.VERTICAL
-                view.gravity = if (big) Gravity.CENTER else Gravity.CENTER_VERTICAL or Gravity.START
-                clock.textSize = if (big) 190f else 120f
-                greeting.textSize = if (big) 24f else 20f
-                date.textSize = if (big) 30f else 22f
-                // Largeur ajustée au texte : sinon chaque ligne prend toute la carte et le centrage ne se voit pas.
-                for (line in listOf(greeting, clock, date)) view.addView(line, LinearLayout.LayoutParams(wrap, wrap))
-            }
-        }
-        onMinute()
-        view.post(::fitHeight)
-    }
-
-    init {
-        // La hauteur dépend de la ligne de l'Accueil (232, 92 ou 184 dp en Console) : l'heure s'y ajuste.
-        view.addOnLayoutChangeListener { _, _, top, _, bottom, _, oldTop, _, oldBottom ->
-            if (bottom - top != oldBottom - oldTop) view.post(::fitHeight)
-        }
-    }
-
-    /**
-     * Une ligne (Moyen, Bandeau) : sur une ligne basse (la fine de 92 dp), marges réduites, sans salutation, et l'heure
-     * rapetissée pour tenir en hauteur ; sinon les tailles de [applySize].
-     */
-    private fun fitHeight() {
-        if (placed.size != WidgetSize.M && placed.size != WidgetSize.W) return
-        val wide = placed.size == WidgetSize.W
-        val short = view.height in 1 until dp(SHORT_DP)
-        val pad = dp(if (short) 8 else 24)
-        if (view.paddingTop != pad) view.setPadding(dp(24), pad, dp(24), pad)
-        greeting.visibility = if (short) View.GONE else View.VISIBLE
-        date.textSize = if (short) 18f else if (wide) 26f else 18f
-        val base = TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_SP, if (wide) 116f else 80f, context.resources.displayMetrics)
-        // Chiffres sans marge de police (includeFontPadding faux) : la ligne fait ~1,15 fois la taille du texte.
-        val room = (view.height - 2 * pad) / CLOCK_LINE
-        clock.setTextSize(TypedValue.COMPLEX_UNIT_PX, if (view.height > 0) minOf(base, room) else base)
-    }
-
-    override fun onMinute() {
-        greeting.setText(when (Calendar.getInstance().get(Calendar.HOUR_OF_DAY)) {
-            in 5..11 -> R.string.greeting_morning
-            in 12..17 -> R.string.greeting_afternoon
-            else -> R.string.greeting_evening
-        })
-        // Une case : date courte (« Mer. 28 oct. »), qui tient sur une ligne.
-        val pattern = if (placed.size == WidgetSize.S) "EEE d MMM" else "EEEE d MMMM"
-        date.text = SimpleDateFormat(pattern, Locale.FRANCE).format(Date()).replaceFirstChar { it.uppercase() }
-    }
-
-    private companion object {
-        /** En dessous de cette hauteur, la ligne est « basse » (la fine de l'Accueil fait 92 dp). */
-        const val SHORT_DP = 130
-
-        /** Hauteur d'une ligne de chiffres, en tailles de texte. */
-        const val CLOCK_LINE = 1.15f
-    }
-}
-
 /**
  * Son de l'ordinateur, une mise en page par famille de formes : Pastille, le volume en anneau (toucher coupe) ; Ligne,
  * muet, curseur, volume et micro ; Colonne, la carte se remplit à hauteur du volume (glisser règle, toucher coupe) ;
@@ -441,10 +338,12 @@ class AudioWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidget
 }
 
 /**
- * Ce qui joue sur l'ordinateur (contrôles multimédias de Windows, MediaRemote sur Mac), comme la page Média ;
- * petit : titre et boutons ; moyen : la lecture sur une ligne ; grand : la même, puis les sites de la page Média
- * (toucher ouvre, appui long retire, « + » du titre ajoute). Ni pastilles des lectures (toucher la ligne de l'appli
- * passe à la suivante) ni barre de son : elles tronquaient la lecture et les sites, et le widget Son règle le volume. Seule la grille des sites garde l'appui long (mode Modifier ailleurs).
+ * Ce qui joue sur l'ordinateur (contrôles multimédias de Windows, MediaRemote sur Mac), comme la page Média ; une mise
+ * en page par famille de formes. Pastille : la pochette remplit la case, lecture / pause dessus ; Colonne : l'affiche,
+ * titre et boutons sur la pochette ([PlayingShapes], choisies par Ahmed, #182) ; Ligne : la lecture sur une ligne ;
+ * Bloc et plus grand : la même, puis les sites de la page Média (toucher ouvre, appui long retire, « + » du titre
+ * ajoute), d'autant plus nombreux que le widget est grand. Ni pastilles des lectures ni barre de son : le widget Son
+ * règle le volume. Seule la grille des sites garde l'appui long (mode Modifier ailleurs).
  */
 class MediaWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidget(context, host, placed) {
     private val playing = NowPlayingView(context).apply {
@@ -458,7 +357,8 @@ class MediaWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidget
         onAdd = { host.overlays.addLinks { sites.reload() } },
     )
 
-    override val view = LinearLayout(context).asCard(16).apply {
+    /** Ligne et plus grand : la lecture puis les sites. */
+    private val card = LinearLayout(context).asCard(16).apply {
         orientation = LinearLayout.VERTICAL
         gravity = Gravity.CENTER_VERTICAL
         playing.bind(true)
@@ -466,7 +366,15 @@ class MediaWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidget
         sites.addTo(this, headerTopMarginDp = 8)
     }
 
-    private val big get() = placed.size == WidgetSize.L
+    /** Conteneur stable : la carte ou une forme de [PlayingShapes], selon la famille. */
+    override val view = FrameLayout(context)
+    private var link: PlayingLink? = null
+    private var shape: PlayingShapes.Shape? = null
+    private var shownFamily: ShapeFamily? = null
+    private var active = false
+    private var preview = false
+
+    private val big get() = family in BIG
 
     init {
         // L'appui long d'un site n'entre pas en mode Modifier ; celui des autres tailles, si.
@@ -476,11 +384,65 @@ class MediaWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidget
     }
 
     override fun applySize() {
-        // Moyen (une ligne de cases) : titre sur une ligne, l'avancement reste dans la carte.
-        playing.titleLines = if (placed.size == WidgetSize.M) 1 else 2
-        playing.layout(if (placed.size == WidgetSize.S) NowPlayingView.Layout.SMALL else NowPlayingView.Layout.ROW)
-        sites.shown = big
-        if (big) host.scope.launch { load() }
+        // Ligne (une rangée de cases) : titre sur une ligne, l'avancement reste dans la carte.
+        playing.titleLines = if (placed.size.h == 1) 1 else 2
+        sites.shown = big && !preview
+        if (family == shownFamily) return
+        shownFamily = family
+        // Arrêt direct : `active` garde l'état de l'écran, relancé plus bas dans la nouvelle forme.
+        playing.setActive(false)
+        link?.setActive(false)
+        view.removeAllViews()
+        link = null
+        shape = null
+        val fill = FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT)
+        when (family) {
+            ShapeFamily.PILL -> showShape { it.pill() }
+            ShapeFamily.COLUMN -> showShape { it.column() }
+            else -> {
+                playing.layout(NowPlayingView.Layout.ROW)
+                view.addView(card, fill)
+            }
+        }
+        if (preview) showPreview(MediaSample)
+        setActive(active)
+    }
+
+    /** Pastille et Colonne : une forme de [PlayingShapes], relue par un [PlayingLink]. */
+    private fun showShape(make: (PlayingShapes) -> PlayingShapes.Shape) {
+        // La forme est tenue par ce lien : une réponse en retard après un changement de taille vise l'ancienne vue.
+        var made: PlayingShapes.Shape? = null
+        val api = BackendClient(context).system
+        val playingLink = PlayingLink(
+            host.scope,
+            shown = { view.isShown },
+            read = { NowTrack.ofMedia(api.media()) },
+            cover = { track -> track.app?.let { app -> track.coverKey?.let { api.mediaThumb(app, it.substringAfter('|')) } } },
+            send = { track, op -> api.mediaControl(op, track.app) },
+            coverPx = dp(COVER_DP),
+        ) { state -> made?.render?.invoke(state) }
+        val built = make(PlayingShapes(context, R.string.media_empty) { op -> playingLink.action(op) })
+        made = built
+        link = playingLink
+        shape = built
+        view.addView(
+            FrameLayout(context).asCard(0).apply {
+                clipToOutline = true
+                addView(built.view, FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT))
+            },
+            FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT),
+        )
+        built.render(null)
+    }
+
+    override fun showPreview(sample: WidgetSample) {
+        if (sample !is MediaSample) return
+        preview = true
+        // shortcut: les sites ne sont pas montrés dans l'aperçu (il faudrait des tuiles d'exemple), à revoir avec le catalogue.
+        sites.shown = false
+        val art = PlayingShapes.sampleCover(context)
+        shape?.render?.invoke(PlayingSamples.playing(context, art))
+        if (shape == null) playing.showSample(PlayingSamples.media(context), art)
     }
 
     override suspend fun load() {
@@ -507,10 +469,21 @@ class MediaWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidget
             .showImmersive()
     }
 
-    override fun setActive(active: Boolean) = playing.setActive(active)
+    override fun setActive(active: Boolean) {
+        this.active = active
+        // Rien ne part sur le réseau avant l'écran (le catalogue n'appelle pas setActive).
+        val shaped = shape != null
+        playing.setActive(active && !shaped && !preview)
+        link?.setActive(active && !preview)
+        if (active && big && !preview) host.scope.launch { load() }
+    }
 
     private companion object {
         const val BANNER_S = 4
+
+        /** Pochette des petites formes, réduite à la taille d'une colonne. */
+        const val COVER_DP = 280
+        val BIG = setOf(ShapeFamily.BLOCK, ShapeFamily.LARGE, ShapeFamily.FULL)
     }
 }
 

@@ -15,8 +15,9 @@ import { isScreenLocked } from "./screen-lock.ts";
 export const MODES = ["home", "deck", "docs", "focus", "camera", "tasks", "settings"] as const;
 export const NOISES = ["storm", "forest", "japan", "sea", "lofi", "off"] as const;
 export const FOCUS_ACTIONS = ["start", "pause", "reset", "skip"] as const;
-/** Thèmes de la tablette (AppTheme dans ui/Themes.kt), dans son ordre : Console (par défaut, nuit), Console jour, Clair, Sombre, Cadran, Cadran nuit, Rétro, Hush, Spider-Verse (SPIDERMAN), Registre, Studio, Maison, Tableau, Terminal, Contraste élevé. */
+/** Thèmes de la tablette (AppTheme dans ui/Themes.kt), dans son ordre : Chaleur (par défaut), Console (nuit), Console jour, Clair, Sombre, Cadran, Cadran nuit, Rétro, Hush, Spider-Verse (SPIDERMAN), Registre, Studio, Maison, Tableau, Terminal, Contraste élevé. */
 export const THEMES = [
+  "CHALEUR",
   "CONSOLE",
   "CONSOLE_JOUR",
   "CLAIR",
@@ -65,7 +66,7 @@ export const TEMPLATES = [
   {
     id: "bureau",
     title: "Bureau",
-    description: "La configuration de base : l'Accueil du jour avec agenda, Focus, applis et raccourcis. Thème Console.",
+    description: "La configuration de base : l'Accueil du jour avec agenda, Focus, applis et raccourcis. Thème Chaleur.",
   },
   {
     id: "dev",

@@ -86,6 +86,8 @@ POLICES (SIL Open Font License 1.1, texte plus bas)
 - Share Tech Mono : Copyright 2012 Carrois Type Design, Ralph du Carrois (https://github.com/google/fonts/tree/main/ofl/sharetechmono)
 - JetBrains Mono : Copyright 2020 The JetBrains Mono Project Authors (https://github.com/JetBrains/JetBrainsMono)
 - Atkinson Hyperlegible : Copyright 2020 Braille Institute of America, Inc. (https://github.com/googlefonts/atkinson-hyperlegible)
+- Source Serif 4 : © 2014 - 2021 Adobe Systems Incorporated (http://www.adobe.com/), with Reserved Font Name ‘Source’ (https://github.com/adobe-fonts/source-serif)
+- Hanken Grotesk : Copyright 2021 The Hanken Grotesk Project Authors (https://github.com/marcologous/hanken-grotesk)
 
 DONNÉES
 - Prévisions météo : MET Norway (Institut météorologique norvégien), licence CC BY 4.0,
