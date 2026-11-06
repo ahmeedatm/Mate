@@ -4,6 +4,7 @@ import android.animation.AnimatorInflater
 import android.content.Context
 import android.content.res.ColorStateList
 import android.os.SystemClock
+import android.text.TextUtils
 import android.view.Gravity
 import android.view.View
 import android.view.ViewGroup
@@ -77,6 +78,8 @@ class PresentWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidg
         for (key in listOf(previous, next, start, end, mic)) (key.parent as? ViewGroup)?.removeView(key)
         (chrono.parent as? ViewGroup)?.removeView(chrono)
         val plan = planPresent(placed.size)
+        // Hauteur relevée à nouveau au prochain tour de mise en page : pas de Pastille aux cotes de la forme d'avant.
+        innerH = 0
         val match = ViewGroup.LayoutParams.MATCH_PARENT
         val wrap = ViewGroup.LayoutParams.WRAP_CONTENT
         val pad = dp(if (plan.sideHeader || !plan.header) TIGHT_PAD else PAD)
@@ -102,13 +105,14 @@ class PresentWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidg
                         addView(title, LinearLayout.LayoutParams(0, wrap, 1f))
                         addView(chrono, LinearLayout.LayoutParams(wrap, wrap))
                     },
-                    LinearLayout.LayoutParams(match, wrap).apply { bottomMargin = dp(10) },
+                    LinearLayout.LayoutParams(match, wrap).apply { bottomMargin = dp(GAP) },
                 )
             }
             view
         }
         plan.rows.forEachIndexed { r, row ->
-            val line = LinearLayout(context)
+            // Au moins une cible tactile de haut (48 dp), même dans une colonne basse.
+            val line = LinearLayout(context).apply { minimumHeight = dp(MIN_TOUCH_DP) }
             row.cells.forEachIndexed { i, cell ->
                 val keys = cell.keys.map(::keyOf)
                 keys.forEach { it.arrange(cell.style, plan.scale) }
@@ -125,6 +129,7 @@ class PresentWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidg
         if (family == ShapeFamily.PILL && innerH > 0) next.fitPill(innerH)
         renderChrono()
         renderMic()
+        syncTicker()
     }
 
     private fun keyOf(key: PresentKey): Key = when (key) {
@@ -164,7 +169,8 @@ class PresentWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidg
 
     /** Un seul tick par seconde, seulement à l'écran et tant que le chrono tourne. */
     private fun syncTicker() {
-        if (!active || !timer.running) {
+        // Pastille : pas de chrono à l'écran, rien à faire tiquer.
+        if (!active || !timer.running || chrono.parent == null) {
             ticker?.cancel()
             ticker = null
             return
@@ -235,6 +241,8 @@ class PresentWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidg
             typeface = themeFont(context, R.attr.c_font_medium)
             gravity = Gravity.CENTER
             isSingleLine = true
+            // Texte agrandi (Réglages) ou touche étroite : le nom finit par « … » plutôt que coupé net.
+            ellipsize = TextUtils.TruncateAt.END
             setText(label)
         }
         private var alert = false
@@ -265,10 +273,9 @@ class PresentWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidg
 
         /** Pastille : l'icône prend la hauteur de la carte, le nom dessous s'il reste la place. */
         fun fitPill(heightDp: Int) {
-            val withText = heightDp >= PILL_TEXT_MIN_DP
-            text.visibility = if (withText) VISIBLE else GONE
-            val side = dp((heightDp - if (withText) PILL_TEXT_DP else 0).coerceIn(PILL_ICON_MIN_DP, PILL_ICON_MAX_DP))
-            image.layoutParams = LayoutParams(side, side)
+            val pill = presentPill(heightDp)
+            text.visibility = if (pill.withText) VISIBLE else GONE
+            image.layoutParams = LayoutParams(dp(pill.iconDp), dp(pill.iconDp))
         }
 
         /** Nom, icône, et rouge quand `alert` (micro coupé). */
@@ -291,13 +298,9 @@ class PresentWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidg
     private companion object {
         const val GAP = 10
         const val PAD = 16
+        const val MIN_TOUCH_DP = 48
         const val TIGHT_PAD = 10
 
-        // Pastille : icône de 32 à 96 dp, nom (24 sp et sa marge) seulement à partir de 90 dp de haut.
-        const val PILL_ICON_MIN_DP = 32
-        const val PILL_ICON_MAX_DP = 96
-        const val PILL_TEXT_DP = 36
-        const val PILL_TEXT_MIN_DP = 90
         const val TICK_MS = 1_000L
 
         /** Un seul chrono pour tous les exemplaires du widget. */

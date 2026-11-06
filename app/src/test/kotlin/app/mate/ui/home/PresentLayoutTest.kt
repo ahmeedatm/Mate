@@ -45,7 +45,8 @@ class PresentLayoutTest {
         assertEquals(listOf(PREVIOUS), rows[1].cells.single().keys)
         assertEquals(listOf(START, END, MIC), rows[2].cells.flatMap { it.keys })
         assertTrue(rows[0].weight > rows[1].weight)
-        assertEquals(PresentStyle.ICON, rows[2].cells.first().style)
+        assertEquals("1 × 3 : le nom sous l'icône", PresentStyle.STACKED, rows[2].cells.first().style)
+        assertEquals("1 × 2 : icône seule, la place manque", PresentStyle.ICON, planPresent(WidgetSize.V).rows[2].cells.first().style)
         assertEquals("Précédente tient dans une colonne basse", PresentStyle.INLINE, rows[1].cells.single().style)
     }
 
@@ -63,6 +64,14 @@ class PresentLayoutTest {
             val row = planPresent(size).rows.single()
             assertEquals(size.name, listOf(START, END), row.cells.single { it.keys.size == 2 }.keys)
         }
+    }
+
+    @Test
+    fun `pastille, le nom sous l'icone a partir de 90 dp de haut, icone de 32 a 96 dp`() {
+        assertEquals(PillKey(withText = false, iconDp = 89), presentPill(89))
+        assertEquals(PillKey(withText = true, iconDp = 54), presentPill(90))
+        assertEquals(PillKey(withText = true, iconDp = 96), presentPill(200))
+        assertEquals(PillKey(withText = false, iconDp = 32), presentPill(20))
     }
 
     @Test

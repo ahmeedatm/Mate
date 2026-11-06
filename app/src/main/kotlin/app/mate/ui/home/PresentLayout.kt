@@ -40,7 +40,11 @@ fun planPresent(size: WidgetSize): PresentPlan = when (size.family) {
             PresentRow(listOf(cell(PresentKey.NEXT, 1f, PresentStyle.STACKED)), 2f),
             // Précédente côte à côte : elle tient dans une colonne basse (1 × 2 sur une rangée de 92 px).
             PresentRow(listOf(cell(PresentKey.PREVIOUS, 1f, PresentStyle.INLINE)), 1f),
-            PresentRow(listOf(PresentKey.START, PresentKey.END, PresentKey.MIC).map { cell(it, 1f, PresentStyle.ICON) }, COLUMN_TOOLS_WEIGHT),
+            // 1 × 2 : icônes seules (la place manque) ; plus haut, le nom sous l'icône.
+            PresentRow(
+                listOf(PresentKey.START, PresentKey.END, PresentKey.MIC).map { cell(it, 1f, if (size.h >= 3) PresentStyle.STACKED else PresentStyle.ICON) },
+                COLUMN_TOOLS_WEIGHT,
+            ),
         ),
         scale = COLUMN_SCALE,
     )
@@ -76,10 +80,24 @@ private fun twoRows(chronoSp: Float, scale: Float) = PresentPlan(
 )
 
 private const val MAIN_WEIGHT = 1.6f
-private const val ROW_CHRONO_SP = 26f
+private const val ROW_CHRONO_SP = 22f
 private const val COLUMN_CHRONO_SP = 28f
 private const val BLOCK_CHRONO_SP = 34f
 private const val FULL_CHRONO_SP = 56f
-private const val COLUMN_TOOLS_WEIGHT = 0.8f
+private const val COLUMN_TOOLS_WEIGHT = 1f
 private const val COLUMN_SCALE = 0.85f
 private const val FULL_SCALE = 1.6f
+
+/** Touche Suivante de la Pastille : nom sous l'icône s'il reste la place, icône à la hauteur de la carte. */
+data class PillKey(val withText: Boolean, val iconDp: Int)
+
+/** [heightDp] : hauteur utile de la carte. Nom (24 sp et sa marge, 36 dp) à partir de 90 dp ; icône de 32 à 96 dp. */
+fun presentPill(heightDp: Int): PillKey {
+    val withText = heightDp >= PILL_TEXT_MIN_DP
+    return PillKey(withText, (heightDp - if (withText) PILL_TEXT_DP else 0).coerceIn(PILL_ICON_MIN_DP, PILL_ICON_MAX_DP))
+}
+
+private const val PILL_ICON_MIN_DP = 32
+private const val PILL_ICON_MAX_DP = 96
+private const val PILL_TEXT_DP = 36
+private const val PILL_TEXT_MIN_DP = 90
