@@ -303,17 +303,26 @@ class DayWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidget(c
         dndButton.isSelected = on == true
     }
 
-    /** Un repli posté à la fois, après la mise en page en cours. */
+    /** Un repli attendu à la fois ; une demande pendant l'attente est rejouée ensuite (la taille a pu changer entre-temps). */
     private var foldPosted = false
+    private var foldAgain = false
 
     private fun refold() {
-        if (face.band || foldPosted) return
+        if (face.band) return
+        if (foldPosted) {
+            foldAgain = true
+            return
+        }
+        val content = view.getChildAt(0) ?: return
         foldPosted = true
         // Après la prochaine mise en page : les positions sont celles de l'écran.
-        val content = view.getChildAt(0) ?: return run { foldPosted = false }
         content.doOnNextLayout {
             foldPosted = false
             if (view.width > 0) fold()
+            if (foldAgain) {
+                foldAgain = false
+                refold()
+            }
         }
         content.requestLayout()
     }
