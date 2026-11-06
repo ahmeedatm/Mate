@@ -1,5 +1,6 @@
 package app.mate.ui.home
 
+import android.animation.AnimatorInflater
 import android.annotation.SuppressLint
 import android.content.Context
 import android.view.Gravity
@@ -11,6 +12,7 @@ import android.widget.Button
 import android.widget.FrameLayout
 import android.widget.LinearLayout
 import android.widget.TextView
+import androidx.core.view.ViewCompat
 import app.mate.R
 import app.mate.net.PointerButton
 import app.mate.net.PointerChannel
@@ -67,7 +69,9 @@ class PadCompact(context: Context, private val family: ShapeFamily) : LinearLayo
         isAllCaps = false
         textSize = BUTTON_SP
         setTextColor(themeColor(context, R.attr.c_text))
-        setBackgroundResource(R.drawable.pill_bg)
+        // Le fond des tuiles du thème (filet compris en Contraste) et leur enfoncement : c'est lui qu'on touche.
+        setBackgroundResource(themeRes(context, R.attr.c_tile_bg))
+        stateListAnimator = AnimatorInflater.loadStateListAnimator(context, R.animator.press)
         contentDescription = context.getString(R.string.pad_click_desc)
         setOnClickListener {
             performHapticFeedback(HapticFeedbackConstants.VIRTUAL_KEY)
@@ -76,6 +80,9 @@ class PadCompact(context: Context, private val family: ShapeFamily) : LinearLayo
         setOnLongClickListener {
             performHapticFeedback(HapticFeedbackConstants.LONG_PRESS)
             send(PadCommand.Click(PointerButton.RIGHT))
+            // Pas de vibreur sur la 4.2 : le bouton dit « Clic droit » un instant.
+            setText(R.string.pad_right_click)
+            postDelayed({ setText(R.string.pad_click) }, RIGHT_CLICK_SHOWN_MS)
             true
         }
     }
@@ -96,11 +103,22 @@ class PadCompact(context: Context, private val family: ShapeFamily) : LinearLayo
                 gravity = Gravity.CENTER
                 importantForAccessibility = IMPORTANT_FOR_ACCESSIBILITY_NO
             }, FrameLayout.LayoutParams(MATCH, WRAP, Gravity.CENTER))
+            // TalkBack ne glisse pas : deux actions font défiler d'un cran.
+            ViewCompat.addAccessibilityAction(this, context.getString(R.string.pad_scroll_back)) { _, _ ->
+                send(if (vertical) PadCommand.Scroll(0, -1) else PadCommand.Scroll(-1, 0))
+                true
+            }
+            ViewCompat.addAccessibilityAction(this, context.getString(R.string.pad_scroll_forward)) { _, _ ->
+                send(if (vertical) PadCommand.Scroll(0, 1) else PadCommand.Scroll(1, 0))
+                true
+            }
             setOnTouchListener { v, e ->
                 // Les glissés sont pour la bande : ni le balayage de profils ni un défilement parent ne les prennent.
                 v.parent?.requestDisallowInterceptTouchEvent(true)
                 when (e.actionMasked) {
                     MotionEvent.ACTION_DOWN -> gestures.onTouch(TouchAction.DOWN, e.x, e.y)
+                    // Un deuxième doigt : la bande lâche jusqu'au prochain appui (sinon la position sauterait d'un doigt à l'autre).
+                    MotionEvent.ACTION_POINTER_DOWN, MotionEvent.ACTION_POINTER_UP -> gestures.onTouch(TouchAction.CANCEL, e.x, e.y)
                     MotionEvent.ACTION_MOVE -> gestures.onTouch(TouchAction.MOVE, e.x, e.y)
                     MotionEvent.ACTION_UP -> gestures.onTouch(TouchAction.UP, e.x, e.y)
                     MotionEvent.ACTION_CANCEL -> gestures.onTouch(TouchAction.CANCEL, e.x, e.y)
@@ -128,5 +146,6 @@ class PadCompact(context: Context, private val family: ShapeFamily) : LinearLayo
 
         /** La bande prend deux fois la place du bouton Clic. */
         const val STRIP_WEIGHT = 2f
+        const val RIGHT_CLICK_SHOWN_MS = 600L
     }
 }

@@ -4,6 +4,7 @@ import android.annotation.SuppressLint
 import android.content.Context
 import android.graphics.Bitmap
 import android.graphics.Canvas
+import android.graphics.Outline
 import android.graphics.Paint
 import android.graphics.RectF
 import android.graphics.drawable.BitmapDrawable
@@ -13,6 +14,7 @@ import android.view.Gravity
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import android.view.ViewOutlineProvider
 import android.webkit.WebResourceRequest
 import android.webkit.WebView
 import android.webkit.WebViewClient
@@ -32,7 +34,13 @@ import app.mate.ui.themeColor
  * en mémoire (tas de 128 Mo de la tablette).
  */
 class WebWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidget(context, host, placed) {
-    private val frame = FrameLayout(context)
+    // La page, aux coins arrondis comme la carte (rayon de la carte moins sa marge) : pas de rectangle blanc posé dedans.
+    private val frame = FrameLayout(context).apply {
+        outlineProvider = object : ViewOutlineProvider() {
+            override fun getOutline(view: View, outline: Outline) = outline.setRoundRect(0, 0, view.width, view.height, dp(PAGE_RADIUS_DP).toFloat())
+        }
+        clipToOutline = true
+    }
     private val empty = label(EMPTY_SP, R.attr.c_text_faint).apply {
         gravity = Gravity.CENTER
         setText(R.string.widget_web_empty)
@@ -54,10 +62,15 @@ class WebWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidget(c
     /** En Pastille, Ligne et Colonne, la phrase « choisis une page » rapetisse pour tenir. */
     override fun applySize() {
         empty.textSize = if (OpenWindowsSummary.compact(family)) SMALL_EMPTY_SP else EMPTY_SP
+        // Forme changée en place : la page est rechargée pour refaire sa vue d'ensemble à la nouvelle taille.
+        if (web != null) {
+            release()
+            if (active) show()
+        }
     }
 
     override fun showPreview(sample: WidgetSample) {
-        if (sample !is WebSample) return
+        if (sample !is WebSample || this.sample) return
         this.sample = true
         empty.visibility = View.GONE
         frame.addView(ImageView(context).apply {
@@ -172,6 +185,9 @@ class WebWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidget(c
     private companion object {
         const val EMPTY_SP = 18f
         const val SMALL_EMPTY_SP = 14f
+
+        /** Rayon des cartes (28 dp) moins leur marge (8 dp). */
+        const val PAGE_RADIUS_DP = 20
     }
 }
 
@@ -189,7 +205,8 @@ object WebSample : WidgetSample {
             canvas.drawRoundRect(RectF(left, top, right, bottom), radius, radius, paint)
         }
         canvas.drawColor(themeColor(context, R.attr.c_bg))
-        rect(R.attr.c_accent, 0f, 0f, 320f, 28f, 0f)
+        val w = WIDTH.toFloat()
+        rect(R.attr.c_accent, 0f, 0f, w, 28f, 0f)
         rect(R.attr.c_text_faint, 16f, 44f, 104f, 120f)
         rect(R.attr.c_text_faint, 116f, 44f, 204f, 120f)
         rect(R.attr.c_text_faint, 216f, 44f, 304f, 120f)

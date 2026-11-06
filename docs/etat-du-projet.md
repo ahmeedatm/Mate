@@ -172,6 +172,7 @@ Fait et testé sur la Gen2 (APK debug, compagnon lancé depuis le dépôt) :
 
 **Heure et journée en 16 formes** (#180) : Horloge (cadran des minutes) et Météo (courbe des prochaines heures) ont leurs 16 formes et leur aperçu (PR #195). Vu sur l'émulateur, pas sur la tablette 4.2 (vitesse du dessin à mesurer). Restent Prochain rendez-vous, Agenda, Héros, Journée, Ligne du jour (`WidgetGapsHeure.kt`).
 Famille Dev (#185) faite : Agents, Jira, GitLab, Pipelines, GitHub, Actions et Chiffres ont les 16 formes et leur aperçu ; en Pastille, Ligne et Colonne, un résumé (compteur puis éléments). Pas encore essayé sur une vraie 4.2.
+**Piloter l'ordinateur en 16 formes** (#183) : Touches et Applis (PR #191 : icônes en Pastille et Ligne, liste en Colonne), Fenêtres ouvertes et Écran de l'ordi (PR #203 : résumé en icônes, écran recadré en petit), Pavé tactile et Page web (PR #206 : bouton Clic en Pastille, bande de défilement + Clic en Ligne et Colonne). Vus sur l'émulateur dans les 15 thèmes avec le compagnon de démo, pas sur la tablette 4.2. Reste Performances (`WidgetGapsOrdinateur.kt`). À demander à l'ordinateur plus tard : l'image recadrée sur la fenêtre active pour l'Écran en petit.
 
 **Page par appli** (#23 puis #61) : la tablette passe sur la page dont une appli est au premier plan de l'ordinateur (ordre `foreground`), change de page d'une appli à l'autre, et revient 8 s après. Vérifié par tests JVM, tests backend et e2e. Non testé : émulateur, tablette réelle, Windows (`frontApp` par l'exe), une appli en plein écran.
 

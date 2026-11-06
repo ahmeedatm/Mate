@@ -181,6 +181,8 @@
     <string name="pad_click_desc">Clic : toucher pour le clic gauche, maintenir pour le clic droit</string>
     <string name="pad_scroll_hint_v">Glisser pour défiler</string>
     <string name="pad_scroll_hint_h">Glisser pour défiler de côté</string>
+    <string name="pad_scroll_back">Défiler en arrière</string>
+    <string name="pad_scroll_forward">Défiler en avant</string>
     <string name="pad_scroll_desc_v">Bande de défilement : glisser de haut en bas fait défiler l\'ordinateur</string>
     <string name="pad_scroll_desc_h">Bande de défilement : glisser de côté fait défiler l\'ordinateur</string>
     <string name="pad_record">Enregistrer</string>

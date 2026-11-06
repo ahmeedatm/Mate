@@ -27,7 +27,8 @@ class PadWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidget(c
 
     override val view = object : OwnerFrameLayout(context) {
         override val ownsLongPress get() = supported
-        override val ownsSwipe get() = supported
+        // En Pastille, le bouton couvre tout : le balayage de profils reste à la grille.
+        override val ownsSwipe get() = supported && family != ShapeFamily.PILL
     }
 
     init {
@@ -35,7 +36,8 @@ class PadWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidget(c
     }
 
     override fun applySize() {
-        pad?.setActive(false)
+        // Le pavé entier ne s'arrête qu'en passant en petit : d'une grande forme à l'autre, il garde son enregistrement.
+        if (OpenWindowsSummary.compact(family)) pad?.setActive(false)
         compact?.setActive(false)
         compact = null
         view.removeAllViews()
@@ -70,7 +72,7 @@ class PadWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidget(c
         this.active = active
         if (sample) return
         compact?.setActive(active)
-        pad?.setActive(active && compact == null)
+        pad?.setActive(active && compact == null && supported)
     }
 
     /** Aperçu du catalogue : le pavé ou ses boutons, sans canal ni ordinateur. */
