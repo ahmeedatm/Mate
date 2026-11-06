@@ -8,8 +8,10 @@ import android.text.TextPaint
 import android.text.TextUtils
 import android.util.TypedValue
 import android.view.View
+import androidx.core.graphics.ColorUtils
 import app.mate.R
 import app.mate.net.CalendarEvent
+import app.mate.ui.Look
 import app.mate.ui.dp
 import app.mate.ui.themeColor
 import app.mate.ui.themeFont
@@ -38,7 +40,8 @@ class DayTrack(context: Context) : View(context) {
     private val pastText = themeColor(context, R.attr.c_text_faint)
     private val laterText = themeColor(context, R.attr.c_text)
     private val colors = mapOf(
-        DayLineModel.State.PAST to themeColor(context, R.attr.c_stroke),
+        // Passé : la teinte des barres, effacée, pour rester visible sur la piste.
+        DayLineModel.State.PAST to ColorUtils.setAlphaComponent(themeColor(context, R.attr.c_graphic), PAST_ALPHA),
         DayLineModel.State.NEXT to themeColor(context, R.attr.c_accent),
         DayLineModel.State.LATER to themeColor(context, R.attr.c_graphic),
     )
@@ -106,7 +109,11 @@ class DayTrack(context: Context) : View(context) {
         val y = if (titles) dot + halo + thick / 2 else (height - hourH) / 2f
         nowR = minOf(dot, (minOf(y, height - hourH - y) - halo).coerceAtLeast(thick / 2))
         track.set(dot, y - thick / 2, width - dot, y + thick / 2)
-        rects = Array(bars.size) { RectF(track.left + bars[it].from * track.width(), track.top, track.left + bars[it].to * track.width(), track.bottom) }
+        rects = Array(bars.size) {
+            // Le prochain déborde de la piste : il se repère aussi sans la couleur.
+            val grow = if (bars[it].state == DayLineModel.State.NEXT) thick * NEXT_GROW else 0f
+            RectF(track.left + bars[it].from * track.width(), track.top - grow, track.left + bars[it].to * track.width(), track.bottom + grow)
+        }
         barColors = IntArray(bars.size) { colors.getValue(bars[it].state) }
         val room = DayLineModel.labelRoom(bars, track.width(), context.dp(LABEL_GAP_DP).toFloat())
         val shown = if (titles && height >= y + thick + titleH + hourH) bars.indices.filter { room[it] >= titleH * 2 } else emptyList()
@@ -129,7 +136,10 @@ class DayTrack(context: Context) : View(context) {
         nowR = dot
         val x = hourW + dot + halo
         track.set(x - thick / 2, hourH / 2, x + thick / 2, height - hourH / 2)
-        rects = Array(bars.size) { RectF(track.left, track.top + bars[it].from * track.height(), track.right, track.top + bars[it].to * track.height()) }
+        rects = Array(bars.size) {
+            val grow = if (bars[it].state == DayLineModel.State.NEXT) thick * NEXT_GROW else 0f
+            RectF(track.left - grow, track.top + bars[it].from * track.height(), track.right + grow, track.top + bars[it].to * track.height())
+        }
         barColors = IntArray(bars.size) { colors.getValue(bars[it].state) }
         val span = DayLineModel.TO_HOUR - DayLineModel.FROM_HOUR
         val every = if (track.height() / span * 2 >= hourH * 1.5f) 2 else span
@@ -143,7 +153,9 @@ class DayTrack(context: Context) : View(context) {
         val shown = if (titles) bars.indices.filter { room[it] >= titleH } else emptyList()
         labels = Array(shown.size) {
             val e = bars[shown[it]].event
-            ellipsize("${clock.format(Date(e.startMs))}  ${e.title}", width - textLeft)
+            // L'heure devant le titre seulement s'il tient en entier avec elle (polices larges : le titre d'abord).
+            val timed = "${clock.format(Date(e.startMs))}  ${e.title}"
+            ellipsize(if (titlePaint.measureText(timed) <= width - textLeft) timed else e.title, width - textLeft)
         }
         labelX = FloatArray(shown.size) { textLeft }
         labelY = FloatArray(shown.size) { rects[shown[it]].top - titlePaint.ascent() }
@@ -177,6 +189,7 @@ class DayTrack(context: Context) : View(context) {
         color = themeColor(context, colorAttr)
         typeface = themeFont(context, fontAttr)
         textSize = TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_SP, sp, context.resources.displayMetrics)
+        Look.halo(context, this)
     }
 
     private companion object {
@@ -185,7 +198,9 @@ class DayTrack(context: Context) : View(context) {
         const val DOT_DP = 6
         const val HALO_DP = 3
         const val LABEL_GAP_DP = 6
-        const val HOUR_SP = 13f
+        const val HOUR_SP = 14f
+        const val PAST_ALPHA = 0x59
+        const val NEXT_GROW = 0.35f
         const val TITLE_SP = 15f
     }
 }

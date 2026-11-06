@@ -908,7 +908,6 @@
     <string name="event_saved">Noté : %1$s</string>
     <string name="agenda_nothing_today">Rien aujourd\'hui</string>
     <string name="agenda_empty">Rien de prévu. Touche + pour noter un rendez-vous.</string>
-    <string name="next_today" tools:ignore="PluralsCandidate">%1$d aujourd\'hui</string>
     <string name="next_none_today">Rien de prévu aujourd\'hui</string>
     <string name="event_add">Noter un rendez-vous</string>
     <string name="tomorrow_at">demain à %1$s</string>

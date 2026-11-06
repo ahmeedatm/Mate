@@ -7,6 +7,7 @@ import android.graphics.RectF
 import android.util.TypedValue
 import android.view.View
 import app.mate.R
+import app.mate.ui.Look
 import app.mate.ui.themeColor
 import app.mate.ui.themeFont
 
@@ -29,12 +30,12 @@ class CountdownRing(context: Context) : View(context) {
         color = themeColor(context, R.attr.c_text)
         typeface = themeFont(context, R.attr.c_font_light)
         textAlign = Paint.Align.CENTER
-    }
+    }.also { Look.halo(context, it) }
     private val unitPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
         color = themeColor(context, R.attr.c_text_dim)
         typeface = themeFont(context, R.attr.c_font_regular)
         textAlign = Paint.Align.CENTER
-    }
+    }.also { Look.halo(context, it) }
     private val oval = RectF()
     private var fraction = 0f
     private var value = ""
@@ -62,7 +63,8 @@ class CountdownRing(context: Context) : View(context) {
         val d = minOf(width, height).toFloat()
         if (d <= 0f) return
         val stroke = (d / STROKE_PART).coerceAtLeast(MIN_STROKE_PX)
-        track.strokeWidth = stroke
+        // L'arc est plus épais que la piste : la part allumée se voit aussi sans la couleur (Contraste élevé).
+        track.strokeWidth = stroke * TRACK_PART
         arc.strokeWidth = stroke
         val inset = stroke / 2
         val left = (width - d) / 2 + inset
@@ -99,6 +101,7 @@ class CountdownRing(context: Context) : View(context) {
         /** Épaisseur : le diamètre divisé par ce nombre, au moins 3 px. */
         const val STROKE_PART = 22f
         const val MIN_STROKE_PX = 3f
+        const val TRACK_PART = 0.4f
 
         /** Valeur et unité en part du diamètre ; la valeur tient dans [INNER_PART] du diamètre. */
         const val VALUE_PART = 0.32f

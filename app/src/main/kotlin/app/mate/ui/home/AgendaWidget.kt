@@ -54,7 +54,15 @@ class AgendaWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidge
     private var sample: List<CalendarEvent>? = null
     private val events get() = sample ?: host.events
 
+    /** Rendez-vous en tête de la liste après le dernier défilement : on ne redéfile que quand il change. */
+    private var scrolledTo: String? = null
+
     init {
+        // Liste et semaine défilent : un fondu en bas dit qu'il y a une suite.
+        (list.parent as? View)?.apply {
+            isVerticalFadingEdgeEnabled = true
+            setFadingEdgeLength(dp(FADE_DP))
+        }
         // Agenda relié : « Mes agendas » (voir, délier, en relier un autre) ; sinon droit à la page de l'ordinateur.
         link.setOnClickListener { host.showCalendars() }
         listCard.findViewById<View>(R.id.widget_agenda_add).setOnClickListener { host.editEvent(null) }
@@ -65,6 +73,7 @@ class AgendaWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidge
 
     override fun applySize() {
         face = AgendaFace.of(placed.size)
+        scrolledTo = null
         view.removeAllViews()
         if (face.mode == AgendaFace.Mode.LIST || face.mode == AgendaFace.Mode.WEEK) {
             view.addView(listCard, FrameLayout.LayoutParams(MATCH, MATCH))
@@ -88,7 +97,7 @@ class AgendaWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidge
         val head = LinearLayout(context).apply {
             gravity = Gravity.BOTTOM
             addView(count)
-            addView(countUnit, LinearLayout.LayoutParams(WRAP, WRAP).apply { marginStart = dp(UNIT_GAP_DP); bottomMargin = dp(UNIT_LIFT_DP) })
+            addView(countUnit, LinearLayout.LayoutParams(WRAP, WRAP).apply { marginStart = dp(UNIT_GAP_DP) })
         }
         when (family) {
             ShapeFamily.ROW -> {
@@ -96,7 +105,7 @@ class AgendaWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidge
                 trackCard.gravity = Gravity.CENTER_VERTICAL
                 head.orientation = LinearLayout.VERTICAL
                 head.gravity = Gravity.START
-                (countUnit.layoutParams as LinearLayout.LayoutParams).apply { marginStart = 0; bottomMargin = 0 }
+                (countUnit.layoutParams as LinearLayout.LayoutParams).marginStart = 0
                 trackCard.addView(head, LinearLayout.LayoutParams(WRAP, WRAP))
                 trackCard.addView(track, LinearLayout.LayoutParams(0, MATCH, 1f).apply { marginStart = dp(GAP_DP) })
             }
@@ -123,9 +132,18 @@ class AgendaWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidge
         // Ligne fine (92 dp) : le compte et son unité l'un sous l'autre doivent tenir, d'où un plancher plus bas.
         val floor = sp(if (family == ShapeFamily.ROW) ROW_MIN_COUNT_SP else MIN_COUNT_SP)
         val px = if (face.mode == AgendaFace.Mode.TRACK_DOWN) sp(COLUMN_COUNT_SP) else (h * part).coerceIn(floor, sp(MAX_COUNT_SP))
-        // Ligne : le compte et son unité l'un sous l'autre tiennent dans la hauteur, quelle que soit la police du thème.
-        val room = if (family == ShapeFamily.ROW) (h - countUnit.lineHeight) / COUNT_LINE else px
-        count.setTextSize(TypedValue.COMPLEX_UNIT_PX, minOf(px, room))
+        count.setTextSize(TypedValue.COMPLEX_UNIT_PX, px)
+        if (family != ShapeFamily.ROW) return
+        // Ligne : le compte et son unité l'un sous l'autre tiennent dans la hauteur ; les marges des polices des thèmes
+        // ne se devinent pas, on mesure et on rapetisse.
+        val head = count.parent as? View ?: return
+        var size = px
+        repeat(FIT_PASSES) {
+            head.measure(View.MeasureSpec.makeMeasureSpec(0, View.MeasureSpec.UNSPECIFIED), View.MeasureSpec.makeMeasureSpec(0, View.MeasureSpec.UNSPECIFIED))
+            if (head.measuredHeight <= h) return
+            size = (size * (h - countUnit.measuredHeight) / (head.measuredHeight - countUnit.measuredHeight) * FIT_MARGIN).coerceAtLeast(sp(MIN_UNIT_SP))
+            count.setTextSize(TypedValue.COMPLEX_UNIT_PX, size)
+        }
     }
 
     override fun onMinute() = onCalendar()
@@ -175,9 +193,20 @@ class AgendaWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidge
         // Un événement commencé avant aujourd'hui (journée entière sur plusieurs jours) est rangé aujourd'hui.
         val byDay = events.groupBy { daysFrom(now, it.startMs).coerceAtLeast(0) }.toSortedMap()
         if (0 !in byDay) list.addView(note(R.string.agenda_nothing_today))
+        // Les rendez-vous finis restent au-dessus : la liste part du premier qui ne l'est pas (en cours ou prochain).
+        val first = events.firstOrNull { it.allDay || it.endMs > now }
+        var firstRow: View? = null
         for ((day, dayEvents) in byDay) {
             if (day > 0) list.addView(dayTitle(dayHeader.format(Date(dayEvents.first().startMs.coerceAtLeast(now)))))
-            for (event in dayEvents) list.addView(row(event, now), LinearLayout.LayoutParams(MATCH, WRAP).apply { bottomMargin = dp(4) })
+            for (event in dayEvents) {
+                val row = row(event, now)
+                if (event === first) firstRow = row
+                list.addView(row, LinearLayout.LayoutParams(MATCH, WRAP).apply { bottomMargin = dp(4) })
+            }
+        }
+        if (first?.id != scrolledTo) {
+            scrolledTo = first?.id
+            firstRow?.let { row -> list.post { (list.parent as? android.widget.ScrollView)?.scrollTo(0, row.top) } }
         }
     }
 
@@ -329,8 +358,8 @@ class AgendaWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidge
         const val GAP_DP = 16
         const val PILL_GAP_DP = 8
         const val UNIT_GAP_DP = 8
-        const val UNIT_LIFT_DP = 6
         const val WEEK_GAP_DP = 8
+        const val FADE_DP = 24
         const val TOUCH_DP = 48
 
         /** Compte en part de la hauteur utile, borné ; en colonne, une taille fixe. */
@@ -341,7 +370,9 @@ class AgendaWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidge
         const val MAX_COUNT_SP = 64f
         const val COLUMN_COUNT_SP = 40f
 
-        /** Hauteur d'une ligne du compte, en tailles de texte (marges de police comprises, polices hautes des thèmes). */
-        const val COUNT_LINE = 1.4f
+        /** Ajustement du compte à la hauteur : passes au plus, marge prise à chaque passe, plancher. */
+        const val FIT_PASSES = 3
+        const val FIT_MARGIN = 0.95f
+        const val MIN_UNIT_SP = 15f
     }
 }

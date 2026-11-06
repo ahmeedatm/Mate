@@ -34,11 +34,9 @@ class NextWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidget(
         setTextColor(color(R.attr.c_hue_orange))
         oneLine()
     }
-    private val todayCount = label(15f, R.attr.c_text_faint).apply { isSingleLine = true }
     private val header = LinearLayout(context).apply {
         gravity = Gravity.CENTER_VERTICAL
         addView(labelView, LinearLayout.LayoutParams(0, WRAP, 1f))
-        addView(todayCount, LinearLayout.LayoutParams(WRAP, WRAP).apply { marginStart = dp(COUNT_GAP_DP) })
     }
     private val title = label(22f).apply {
         ellipsize = TextUtils.TruncateAt.END
@@ -103,8 +101,6 @@ class NextWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidget(
         // Pastille et Ligne : l'anneau dit déjà ce que c'est, pas de titre de carte.
         val withHeader = family != ShapeFamily.PILL && family != ShapeFamily.ROW
         if (withHeader) texts.addView(header, LinearLayout.LayoutParams(MATCH, WRAP))
-        // Colonne : trop étroite pour le titre de la carte et le compte du jour côte à côte.
-        todayCount.visibility = if (family == ShapeFamily.COLUMN) View.GONE else View.VISIBLE
         texts.addView(title, LinearLayout.LayoutParams(MATCH, WRAP))
         texts.addView(whenText, LinearLayout.LayoutParams(MATCH, WRAP))
         if (face.details) texts.addView(details, LinearLayout.LayoutParams(MATCH, WRAP).apply { topMargin = dp(4) })
@@ -185,8 +181,6 @@ class NextWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidget(
         val upcoming = nextEvent(events, now, host.chosenId)
         val chosen = upcoming?.takeIf { it.id == host.chosenId }
         labelView.put(context.getString(if (chosen != null) R.string.chosen_label else R.string.next_label))
-        val today = events.count { !it.allDay && daysFrom(now, it.startMs) == 0 }
-        todayCount.put(if (today > 0) context.getString(R.string.next_today, today) else "")
         joinable = upcoming?.takeIf { sample == null && DayBrief.canJoin(it, now, chosen != null, host.features.meetings) }
         join.visibility = if (joinable == null) View.GONE else View.VISIBLE
         // Pastille : le titre sur une ligne quand Rejoindre est là, sinon le bouton sortirait de la rangée fine.
@@ -209,7 +203,9 @@ class NextWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidget(
         }
         title.put(upcoming.title)
         renderRing(upcoming, now)
-        val text = nextLine(upcoming, now).whenText(context)
+        // Moins d'une heure : l'anneau dit déjà « 13 min », la ligne donne l'heure de début.
+        val line = nextLine(upcoming, now)
+        val text = if (line is NextLine.InMinutes) context.getString(R.string.at_time, nextTime.format(Date(upcoming.startMs))) else line.whenText(context)
         whenText.put(if (face.details || upcoming.location.isBlank()) text else "$text · ${upcoming.location}")
         details.put(detailsOf(upcoming))
     }
@@ -241,7 +237,8 @@ class NextWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidget(
             split.minutes == 0 -> context.getString(R.string.next_duration_h, split.hours)
             else -> context.getString(R.string.next_duration_hm, split.hours, split.minutes)
         }
-        return listOf(event.location, span, length).filter { it.isNotBlank() }.joinToString(" · ")
+        // Chaque morceau reste entier au retour à la ligne (« 1 h » jamais seul).
+        return listOf(event.location, span, length).filter { it.isNotBlank() }.joinToString(" · ") { it.replace(' ', NBSP) }
     }
 
     /** Les rendez-vous qui suivent le prochain : l'heure (ou le jour) et le titre. */
@@ -330,7 +327,7 @@ class NextWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidget(
         const val ROW_GAP_DP = 10
         const val TIME_COL_DP = 56
         const val MIN_RING_DP = 72
-        const val COUNT_GAP_DP = 8
+        const val NBSP = '\u00A0'
 
         /** Large et basse : l'anneau et ses textes prennent ce poids, les suivants 1. */
         const val MAIN_WEIGHT = 1.4f
