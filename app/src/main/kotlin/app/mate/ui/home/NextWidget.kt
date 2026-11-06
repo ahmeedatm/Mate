@@ -38,7 +38,7 @@ class NextWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidget(
     private val header = LinearLayout(context).apply {
         gravity = Gravity.CENTER_VERTICAL
         addView(labelView, LinearLayout.LayoutParams(0, WRAP, 1f))
-        addView(todayCount)
+        addView(todayCount, LinearLayout.LayoutParams(WRAP, WRAP).apply { marginStart = dp(COUNT_GAP_DP) })
     }
     private val title = label(22f).apply {
         ellipsize = TextUtils.TruncateAt.END
@@ -103,6 +103,8 @@ class NextWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidget(
         // Pastille et Ligne : l'anneau dit déjà ce que c'est, pas de titre de carte.
         val withHeader = family != ShapeFamily.PILL && family != ShapeFamily.ROW
         if (withHeader) texts.addView(header, LinearLayout.LayoutParams(MATCH, WRAP))
+        // Colonne : trop étroite pour le titre de la carte et le compte du jour côte à côte.
+        todayCount.visibility = if (family == ShapeFamily.COLUMN) View.GONE else View.VISIBLE
         texts.addView(title, LinearLayout.LayoutParams(MATCH, WRAP))
         texts.addView(whenText, LinearLayout.LayoutParams(MATCH, WRAP))
         if (face.details) texts.addView(details, LinearLayout.LayoutParams(MATCH, WRAP).apply { topMargin = dp(4) })
@@ -328,6 +330,7 @@ class NextWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidget(
         const val ROW_GAP_DP = 10
         const val TIME_COL_DP = 56
         const val MIN_RING_DP = 72
+        const val COUNT_GAP_DP = 8
 
         /** Large et basse : l'anneau et ses textes prennent ce poids, les suivants 1. */
         const val MAIN_WEIGHT = 1.4f
