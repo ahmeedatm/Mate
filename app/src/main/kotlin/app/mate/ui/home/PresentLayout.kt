@@ -38,7 +38,8 @@ fun planPresent(size: WidgetSize): PresentPlan = when (size.family) {
         chronoSp = COLUMN_CHRONO_SP,
         rows = listOf(
             PresentRow(listOf(cell(PresentKey.NEXT, 1f, PresentStyle.STACKED)), 2f),
-            PresentRow(listOf(cell(PresentKey.PREVIOUS, 1f, PresentStyle.STACKED)), 1f),
+            // Précédente côte à côte : elle tient dans une colonne basse (1 × 2 sur une rangée de 92 px).
+            PresentRow(listOf(cell(PresentKey.PREVIOUS, 1f, PresentStyle.INLINE)), 1f),
             PresentRow(listOf(PresentKey.START, PresentKey.END, PresentKey.MIC).map { cell(it, 1f, PresentStyle.ICON) }, COLUMN_TOOLS_WEIGHT),
         ),
         scale = COLUMN_SCALE,

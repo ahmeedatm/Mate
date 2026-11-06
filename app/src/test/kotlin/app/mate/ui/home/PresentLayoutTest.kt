@@ -46,6 +46,7 @@ class PresentLayoutTest {
         assertEquals(listOf(START, END, MIC), rows[2].cells.flatMap { it.keys })
         assertTrue(rows[0].weight > rows[1].weight)
         assertEquals(PresentStyle.ICON, rows[2].cells.first().style)
+        assertEquals("Précédente tient dans une colonne basse", PresentStyle.INLINE, rows[1].cells.single().style)
     }
 
     @Test
