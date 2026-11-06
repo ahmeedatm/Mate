@@ -31,7 +31,7 @@ class MailWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidget(
     private val title = cardTitle(R.string.widget_mail)
     private val head = LinearLayout(context).apply {
         gravity = Gravity.CENTER_VERTICAL
-        addView(disc, LinearLayout.LayoutParams(dp(HUE_DISC_DP), dp(HUE_DISC_DP)))
+        addView(disc, hueDiscParams(context, side = false))
         addView(title, LinearLayout.LayoutParams(WRAP_CONTENT, WRAP_CONTENT).apply { marginStart = dp(12) })
     }
     private val count = label(36f).apply {
@@ -89,6 +89,7 @@ class MailWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidget(
         view.orientation = if (shape.side) LinearLayout.HORIZONTAL else LinearLayout.VERTICAL
         view.gravity = if (shape.side) Gravity.CENTER_VERTICAL else Gravity.NO_GRAVITY
         title.isVisible = shape.title
+        disc.layoutParams = hueDiscParams(context, shape.side)
         content.layoutParams = if (shape.side) {
             LinearLayout.LayoutParams(0, MATCH_PARENT, 1f).apply { marginStart = dp(16) }
         } else {
