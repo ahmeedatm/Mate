@@ -1189,7 +1189,7 @@
     <string name="catalogue_add">Ajouter le widget</string>
     <string name="catalogue_add_free">Ajouter ailleurs</string>
     <string name="catalogue_no_room_here">Pas la place ici</string>
-    <string name="catalogue_no_room_here_detail">Pas la place à la case touchée. Une place libre existe ailleurs sur la page.</string>
+    <string name="catalogue_no_room_button">Pas de place</string>
     <string name="catalogue_page_full">La page est pleine : retire ou réduis un widget, ou ajoute-le sur un autre écran.</string>
     <string name="catalogue_no_room_page">Plus de place sur la page pour cette forme. Essaie une forme plus petite.</string>
     <string name="home_no_room_size">Pas assez de place autour pour une autre taille : déplace ou retire un widget voisin.</string>

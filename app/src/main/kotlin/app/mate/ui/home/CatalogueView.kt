@@ -115,43 +115,44 @@ class CatalogueView(context: Context, host: HomeHost) : FrameLayout(context) {
             for (type in types) {
                 val row = row(type)
                 made[type] = row
-                list.addView(row, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, dp(ROW_DP)).apply { topMargin = dp(2) })
+                list.addView(row, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT).apply { topMargin = dp(2) })
             }
         }
         rows = made
     }
 
-    /** Une ligne : icône, nom, et la barre d'accent quand elle est choisie (le choix ne repose pas sur la seule teinte). */
+    /** Une ligne : icône et nom (2 lignes au plus) ; choisie, fond surélevé, icône d'accent et nom en gras. */
     private fun row(type: WidgetType) = object : LinearLayout(context) {
-        private val bar = View(context).apply {
-            setBackgroundResource(R.drawable.dot)
-            backgroundTintList = themeColorList(context, R.attr.c_accent)
-            visibility = INVISIBLE
+        private val glyph = ImageView(context).apply {
+            setImageResource(type.icon)
+            importantForAccessibility = IMPORTANT_FOR_ACCESSIBILITY_NO
+        }
+        private val name = TextView(context).apply {
+            setText(type.title)
+            textSize = 16f
+            maxLines = 2
+            ellipsize = TextUtils.TruncateAt.END
+            setTextColor(themeColor(context, R.attr.c_text))
         }
 
         init {
             gravity = Gravity.CENTER_VERTICAL
+            minimumHeight = dp(ROW_DP)
             setBackgroundResource(R.drawable.catalogue_row_bg)
-            setPadding(dp(12), 0, dp(10), 0)
-            addView(ImageView(context).apply {
-                setImageResource(type.icon)
-                imageTintList = themeColorList(context, R.attr.c_text_dim)
-                importantForAccessibility = IMPORTANT_FOR_ACCESSIBILITY_NO
-            }, LayoutParams(dp(24), dp(24)))
-            addView(TextView(context).apply {
-                setText(type.title)
-                textSize = 16f
-                maxLines = 1
-                ellipsize = TextUtils.TruncateAt.END
-                setTextColor(themeColor(context, R.attr.c_text))
-            }, LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f).apply { marginStart = dp(14) })
-            addView(bar, LayoutParams(dp(4), dp(20)))
+            setPadding(dp(12), dp(8), dp(10), dp(8))
+            addView(glyph, LayoutParams(dp(24), dp(24)))
+            addView(name, LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f).apply { marginStart = dp(14) })
             setOnClickListener { select(type) }
+            setSelected(false)
         }
 
         override fun setSelected(selected: Boolean) {
             super.setSelected(selected)
-            bar.visibility = if (selected) VISIBLE else INVISIBLE
+            // Appelé aussi par le constructeur de View, avant que les champs existent.
+            @Suppress("SENSELESS_COMPARISON")
+            if (glyph == null) return
+            glyph.imageTintList = themeColorList(context, if (selected) R.attr.c_accent else R.attr.c_text_dim)
+            name.typeface = themeFont(context, if (selected) R.attr.c_font_medium else R.attr.c_font_regular)
         }
     }
 
@@ -166,7 +167,7 @@ class CatalogueView(context: Context, host: HomeHost) : FrameLayout(context) {
     }
 
     private companion object {
-        const val LIST_DP = 240
+        const val LIST_DP = 264
         const val ROW_DP = 52
     }
 }

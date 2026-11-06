@@ -21,7 +21,6 @@ import app.mate.ui.dp
 import app.mate.ui.themeColor
 import app.mate.ui.themeColorList
 import app.mate.ui.themeFont
-import app.mate.ui.themeRes
 import kotlin.math.abs
 
 /**
@@ -46,7 +45,8 @@ class CatalogueSheet(context: Context, private val host: HomeHost) : LinearLayou
     }
     private val stage = Stage().apply {
         addView(holder, FrameLayout.LayoutParams(0, 0, Gravity.CENTER))
-        addView(noRoom, FrameLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, dp(48), Gravity.CENTER))
+        // En haut de la scène : la pastille ne cache pas l'aperçu grisé.
+        addView(noRoom, FrameLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, dp(48), Gravity.TOP or Gravity.CENTER_HORIZONTAL))
     }
     private val prev = arrow(R.drawable.ic_chevron_left, R.string.catalogue_shape_prev) { step(-1) }
     private val next = arrow(R.drawable.ic_chevron_right, R.string.catalogue_shape_next) { step(1) }
@@ -66,8 +66,8 @@ class CatalogueSheet(context: Context, private val host: HomeHost) : LinearLayou
         imageTintList = themeColorList(context, R.attr.c_accent)
     }
     private val title = text(26f, R.attr.c_text).apply { typeface = themeFont(context, R.attr.c_font_title) }
-    private val description = text(15f, R.attr.c_text_dim)
-    private val placeDetail = text(14f, R.attr.c_text_dim)
+    private val description = text(16f, R.attr.c_text_dim)
+    private val placeDetail = text(16f, R.attr.c_text)
     private val add = Button(context, null, 0, R.style.PrimaryButton).apply {
         maxLines = 2
         setOnClickListener {
@@ -146,10 +146,8 @@ class CatalogueSheet(context: Context, private val host: HomeHost) : LinearLayou
         val size = choice.size
         renderPreview(type, size, choice.atCase)
         noRoom.visibility = if (choice.atCase) GONE else VISIBLE
-        prev.isEnabled = index > 0
-        prev.alpha = if (index > 0) 1f else DISABLED_ALPHA
-        next.isEnabled = index < choices.size - 1
-        next.alpha = if (index < choices.size - 1) 1f else DISABLED_ALPHA
+        prev.visibility = if (index > 0) VISIBLE else INVISIBLE
+        next.visibility = if (index < choices.size - 1) VISIBLE else INVISIBLE
         for (i in 0 until dots.childCount) {
             val on = i == index
             val dot = dots.getChildAt(i)
@@ -159,18 +157,32 @@ class CatalogueSheet(context: Context, private val host: HomeHost) : LinearLayou
         }
         val name = context.getString(R.string.catalogue_shape, size.w, size.h, context.getString(size.family.label))
         shapeName.text = name
-        stage.contentDescription = context.getString(R.string.catalogue_shape_cd, name, index + 1, choices.size)
+        val state = if (choice.atCase) "" else " " + context.getString(R.string.catalogue_no_room_here) + "."
+        stage.contentDescription = context.getString(type.title) + ". " +
+            context.getString(R.string.catalogue_shape_cd, name, index + 1, choices.size) + state
         placeDetail.text = when {
-            choice.atCase -> null
-            choice.spot != null -> context.getString(R.string.catalogue_no_room_here_detail)
+            choice.spot != null -> null
             // Aucune forme ne tient : « essaie plus petit » mentirait.
             choices.none { it.spot != null } -> context.getString(R.string.catalogue_page_full)
             else -> context.getString(R.string.catalogue_no_room_page)
         }
-        placeDetail.visibility = if (choice.atCase) GONE else VISIBLE
-        add.setText(if (choice.atCase || choice.spot == null) R.string.catalogue_add else R.string.catalogue_add_free)
-        add.isEnabled = choice.spot != null
-        add.alpha = if (choice.spot != null) 1f else DISABLED_ALPHA
+        placeDetail.visibility = if (choice.spot != null) GONE else VISIBLE
+        renderButton(choice)
+    }
+
+    /** Ajouter ici, ailleurs, ou rien : un bouton éteint lisible qui dit pourquoi, pas un bouton vif à moitié effacé. */
+    private fun renderButton(choice: ShapeChoice) {
+        val spot = choice.spot != null
+        add.setText(
+            when {
+                choice.atCase -> R.string.catalogue_add
+                spot -> R.string.catalogue_add_free
+                else -> R.string.catalogue_no_room_button
+            },
+        )
+        add.isEnabled = spot
+        add.setBackgroundResource(if (spot) R.drawable.button_primary_bg else R.drawable.button_bg)
+        add.setTextColor(themeColor(context, if (spot) R.attr.c_on_primary else R.attr.c_text_dim))
     }
 
     /**
@@ -184,7 +196,7 @@ class CatalogueSheet(context: Context, private val host: HomeHost) : LinearLayou
         val fullW = size.w * cellW
         val fullH = size.h * cellH
         holder.removeAllViews()
-        val view = previewOf(type, size)
+        val view = previewOf(type, size, scale)
         view.pivotX = 0f
         view.pivotY = 0f
         view.scaleX = scale
@@ -197,24 +209,28 @@ class CatalogueSheet(context: Context, private val host: HomeHost) : LinearLayou
         holder.alpha = if (fits) 1f else DISABLED_ALPHA
     }
 
-    private fun previewOf(type: WidgetType, size: WidgetSize): View {
-        val sample = WidgetSamples.of(type) ?: return placeholder(type)
+    private fun previewOf(type: WidgetType, size: WidgetSize, scale: Float): View {
+        val sample = WidgetSamples.of(type) ?: return placeholder(type, scale)
         val widget = HomeWidget.create(context, host, Placed(type, size, 0, 0, 0), noComputer = false)
         widget.applySize()
         widget.showPreview(sample)
         return widget.view
     }
 
-    /** Widget sans exemple encore (exception de `WidgetRulesTest`) : sa carte, son icône et son nom. */
-    private fun placeholder(type: WidgetType) = LinearLayout(context).apply {
+    /**
+     * Widget sans exemple encore (exception de `WidgetRulesTest`) : un cadre, son icône et son nom. Cadre tracé (le fond
+     * de carte est transparent dans certains thèmes, et le cadre est ce qui dit la taille) ; icône et nom grossis de
+     * 1 / `scale` pour rester lisibles une fois l'aperçu réduit.
+     */
+    private fun placeholder(type: WidgetType, scale: Float) = LinearLayout(context).apply {
         orientation = VERTICAL
         gravity = Gravity.CENTER
-        setBackgroundResource(themeRes(context, R.attr.c_home_card_bg))
+        setBackgroundResource(R.drawable.catalogue_placeholder_bg)
         addView(ImageView(context).apply {
             setImageResource(type.icon)
             imageTintList = themeColorList(context, R.attr.c_accent)
-        }, LayoutParams(dp(56), dp(56)))
-        addView(text(22f, R.attr.c_text).apply {
+        }, LayoutParams((dp(32) / scale).toInt(), (dp(32) / scale).toInt()))
+        addView(text(16f / scale, R.attr.c_text).apply {
             setText(type.title)
             gravity = Gravity.CENTER
         }, LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT).apply { topMargin = dp(12) })
