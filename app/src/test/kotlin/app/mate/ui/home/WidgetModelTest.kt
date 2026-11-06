@@ -220,18 +220,18 @@ class WidgetModelTest {
     }
 
     @Test
-    fun `widget d'appel generique, en XL et L, remplit le modele Reunion`() {
+    fun `widget d'appel generique, ajoute en XL, remplit le modele Reunion`() {
         assertEquals(WidgetType.CALL, WidgetType.of("call"))
-        assertEquals(listOf(WidgetSize.XL, WidgetSize.L), WidgetType.CALL.sizes)
+        assertEquals(WidgetSize.XL, WidgetType.CALL.sizes.first())
         val layout = Template.CALL_CADRAN.build()
         assertTrue(layout.widgets.any { it.type == WidgetType.CALL && it.size == WidgetSize.XL })
         for (r in 0 until ROWS) for (c in 0 until COLS) assertTrue("case $c,$r", layout.widgets.any { it.covers(c, r) })
     }
 
     @Test
-    fun `widget Presentation, en XL et L, propose a tous et a besoin de l'ordinateur`() {
+    fun `widget Presentation, ajoute en XL, propose a tous et a besoin de l'ordinateur`() {
         assertEquals(WidgetType.PRESENT, WidgetType.of("present"))
-        assertEquals(listOf(WidgetSize.XL, WidgetSize.L), WidgetType.PRESENT.sizes)
+        assertEquals(WidgetSize.XL, WidgetType.PRESENT.sizes.first())
         assertTrue(WidgetType.PRESENT.computer)
         assertTrue(WidgetType.PRESENT.offered(HomeFeatures()))
         assertTrue(WidgetType.PRESENT.offered(HomeFeatures(off = setOf("open", "mixer", "pad"))))

@@ -32,9 +32,11 @@ import kotlinx.coroutines.sync.withLock
 
 /**
  * Télécommande de diapos pour l'appli ouverte sur l'ordinateur (PowerPoint, Keynote) : précédente, suivante (la plus
- * grande, c'est le geste principal), début, fin, chrono et micro de l'ordinateur (rouge quand il est coupé). XL : tout
- * sur une rangée ; L : précédente et suivante en haut, début, fin et micro dessous. Le chrono est partagé par tous les
- * exemplaires du widget (l'exemplaire agrandi continue le même) et ne tique qu'à l'écran, tant qu'il tourne.
+ * grande, c'est le geste principal), début, fin, chrono et micro de l'ordinateur (rouge quand il est coupé), disposés
+ * selon la forme (`planPresent`, #184) : Pastille = Suivante seule, Ligne = les touches qui tiennent, Colonne =
+ * Suivante, Précédente puis les outils, Bloc et Plein écran = deux rangées, Grand en largeur = une rangée. Le chrono est
+ * partagé par tous les exemplaires du widget (l'exemplaire agrandi continue le même) et ne tique qu'à l'écran, tant
+ * qu'il tourne.
  */
 class PresentWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidget(context, host, placed) {
     override val view = LinearLayout(context).asCard(16).apply { orientation = LinearLayout.VERTICAL }
@@ -55,51 +57,98 @@ class PresentWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidg
     private var active = false
     private var ticker: Job? = null
 
+    /** Aperçu du catalogue : chrono et micro d'exemple, sans toucher au chrono partagé ni à l'ordinateur. */
+    private var preview: PresentSample? = null
+
+    /** Hauteur utile de la carte, en dp : la Pastille y règle sa touche. */
+    private var innerH = 0
+
+    init {
+        view.addOnLayoutChangeListener { v, _, t, _, b, _, _, _, _ ->
+            val h = ((b - t - v.paddingTop - v.paddingBottom) / context.resources.displayMetrics.density).toInt()
+            if (h == innerH) return@addOnLayoutChangeListener
+            innerH = h
+            if (family == ShapeFamily.PILL) v.post { next.fitPill(h) }
+        }
+    }
+
     override fun applySize() {
         view.removeAllViews()
         for (key in listOf(previous, next, start, end, mic)) (key.parent as? ViewGroup)?.removeView(key)
+        (chrono.parent as? ViewGroup)?.removeView(chrono)
+        val plan = planPresent(placed.size)
         val match = ViewGroup.LayoutParams.MATCH_PARENT
         val wrap = ViewGroup.LayoutParams.WRAP_CONTENT
-        val header = LinearLayout(context).apply {
-            gravity = Gravity.CENTER_VERTICAL
-            addView(cardTitle(placed.type.title), LinearLayout.LayoutParams(0, wrap, 1f))
-            addView(chrono, LinearLayout.LayoutParams(wrap, wrap))
-        }
-        view.addView(header, LinearLayout.LayoutParams(match, wrap))
-        fun row(vararg parts: Pair<View, Float>) = LinearLayout(context).apply {
-            orientation = LinearLayout.HORIZONTAL
-            parts.forEachIndexed { i, (child, weight) ->
-                addView(child, LinearLayout.LayoutParams(0, match, weight).apply { if (i > 0) marginStart = dp(GAP) })
+        val pad = dp(if (plan.sideHeader || !plan.header) TIGHT_PAD else PAD)
+        view.setPadding(pad, pad, pad, pad)
+        chrono.textSize = plan.chronoSp
+        val title = cardTitle(placed.type.title)
+        // Ligne : titre et chrono à gauche, les touches à droite ; ailleurs, titre et chrono en haut.
+        val body: LinearLayout = if (plan.sideHeader) {
+            LinearLayout(context).apply { gravity = Gravity.CENTER_VERTICAL }.also { line ->
+                val side = LinearLayout(context).apply {
+                    orientation = LinearLayout.VERTICAL
+                    addView(title)
+                    addView(chrono)
+                }
+                line.addView(side, LinearLayout.LayoutParams(wrap, wrap).apply { marginEnd = dp(GAP) })
+                view.addView(line, LinearLayout.LayoutParams(match, 0, 1f))
             }
-        }
-        if (placed.size == WidgetSize.XL) {
-            previous.arrange(compact = false)
-            next.arrange(compact = false)
-            mic.arrange(compact = false)
-            start.arrange(compact = true)
-            end.arrange(compact = true)
-            val side = LinearLayout(context).apply {
-                orientation = LinearLayout.VERTICAL
-                addView(start, LinearLayout.LayoutParams(match, 0, 1f))
-                addView(end, LinearLayout.LayoutParams(match, 0, 1f).apply { topMargin = dp(GAP) })
-            }
-            view.addView(row(previous to 2f, next to 3.2f, side to 1.5f, mic to 1.5f), LinearLayout.LayoutParams(match, 0, 1f).apply { topMargin = dp(10) })
         } else {
-            previous.arrange(compact = false)
-            next.arrange(compact = false)
-            for (key in listOf(start, end, mic)) key.arrange(compact = true)
-            view.addView(row(previous to 1f, next to 1.6f), LinearLayout.LayoutParams(match, 0, 1.5f).apply { topMargin = dp(10) })
-            view.addView(row(start to 1f, end to 1f, mic to 1.2f), LinearLayout.LayoutParams(match, 0, 1f).apply { topMargin = dp(GAP) })
+            if (plan.header) {
+                view.addView(
+                    LinearLayout(context).apply {
+                        gravity = Gravity.CENTER_VERTICAL
+                        addView(title, LinearLayout.LayoutParams(0, wrap, 1f))
+                        addView(chrono, LinearLayout.LayoutParams(wrap, wrap))
+                    },
+                    LinearLayout.LayoutParams(match, wrap).apply { bottomMargin = dp(10) },
+                )
+            }
+            view
         }
+        plan.rows.forEachIndexed { r, row ->
+            val line = LinearLayout(context)
+            row.cells.forEachIndexed { i, cell ->
+                val keys = cell.keys.map(::keyOf)
+                keys.forEach { it.arrange(cell.style, plan.scale) }
+                val child: View = keys.singleOrNull() ?: LinearLayout(context).apply {
+                    orientation = LinearLayout.VERTICAL
+                    keys.forEachIndexed { k, key -> addView(key, LinearLayout.LayoutParams(match, 0, 1f).apply { if (k > 0) topMargin = dp(GAP) }) }
+                }
+                line.addView(child, LinearLayout.LayoutParams(0, match, cell.weight).apply { if (i > 0) marginStart = dp(GAP) })
+            }
+            val params = if (plan.sideHeader) LinearLayout.LayoutParams(0, match, 1f) else LinearLayout.LayoutParams(match, 0, row.weight)
+            if (r > 0) params.topMargin = dp(GAP)
+            body.addView(line, params)
+        }
+        if (family == ShapeFamily.PILL && innerH > 0) next.fitPill(innerH)
         renderChrono()
         renderMic()
     }
 
-    override suspend fun load() = readMic()
+    private fun keyOf(key: PresentKey): Key = when (key) {
+        PresentKey.PREVIOUS -> previous
+        PresentKey.NEXT -> next
+        PresentKey.START -> start
+        PresentKey.END -> end
+        PresentKey.MIC -> mic
+    }
+
+    override fun showPreview(sample: WidgetSample) {
+        preview = sample as? PresentSample ?: return
+        audio = preview?.audio
+        renderChrono()
+        renderMic()
+    }
+
+    override suspend fun load() {
+        if (preview == null) readMic()
+    }
 
     override fun setActive(active: Boolean) {
-        this.active = active
-        if (!active) {
+        this.active = active && preview == null
+        if (!this.active) {
             ticker?.cancel()
             ticker = null
             return
@@ -130,8 +179,10 @@ class PresentWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidg
     }
 
     private fun renderChrono() {
-        chrono.text = PresentLogic.clock(timer.elapsed(SystemClock.elapsedRealtime()))
-        chrono.setTextColor(themeColor(context, if (timer.running) R.attr.c_text else R.attr.c_text_dim))
+        val sample = preview
+        val running = sample?.running ?: timer.running
+        chrono.text = PresentLogic.clock(sample?.elapsedMs ?: timer.elapsed(SystemClock.elapsedRealtime()))
+        chrono.setTextColor(themeColor(context, if (running) R.attr.c_text else R.attr.c_text_dim))
     }
 
     private fun renderMic() {
@@ -141,6 +192,7 @@ class PresentWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidg
 
     /** Gestes envoyés dans l'ordre des appuis (Début = deux touches : jamais mêlées à une flèche). Le chrono suit une fois la touche passée. */
     private fun send(action: PresentAction) {
+        if (preview != null) return
         host.scope.launch {
             queue.withLock {
                 runCatchingCancellable { BackendClient(context).present.send(action) }
@@ -156,6 +208,7 @@ class PresentWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidg
 
     /** Même geste que la touche « Couper le micro » du deck : on lit l'état de l'ordinateur et on pose l'inverse. */
     private fun toggleMic() {
+        if (preview != null) return
         host.scope.launch {
             runCatchingCancellable { val system = BackendClient(context).system; system.setAudio(micMuted = !system.audio().micMuted) }
                 .onSuccess { audio = it; renderMic() }
@@ -198,13 +251,24 @@ class PresentWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidg
             paint()
         }
 
-        fun arrange(compact: Boolean) {
+        /** [style] : icône sur le nom, côte à côte ou icône seule ; [scale] : 1 pour les cotes du Bloc. */
+        fun arrange(style: PresentStyle, scale: Float) {
             val main = kind == Kind.MAIN
+            val compact = style != PresentStyle.STACKED
             orientation = if (compact) HORIZONTAL else VERTICAL
-            val size = dp(if (compact) 28 else if (main) 72 else 52)
+            val size = dp(((if (compact) 28 else if (main) 72 else 52) * scale).toInt())
             image.layoutParams = LayoutParams(size, size)
-            text.textSize = if (compact) 18f else if (main) 24f else 20f
+            text.textSize = (if (compact) 18f else if (main) 24f else 20f) * scale
+            text.visibility = if (style == PresentStyle.ICON) GONE else VISIBLE
             (text.layoutParams as LayoutParams).apply { if (compact) { topMargin = 0; marginStart = dp(10) } else { topMargin = dp(4); marginStart = 0 } }
+        }
+
+        /** Pastille : l'icône prend la hauteur de la carte, le nom dessous s'il reste la place. */
+        fun fitPill(heightDp: Int) {
+            val withText = heightDp >= PILL_TEXT_MIN_DP
+            text.visibility = if (withText) VISIBLE else GONE
+            val side = dp((heightDp - if (withText) PILL_TEXT_DP else 0).coerceIn(PILL_ICON_MIN_DP, PILL_ICON_MAX_DP))
+            image.layoutParams = LayoutParams(side, side)
         }
 
         /** Nom, icône, et rouge quand `alert` (micro coupé). */
@@ -226,6 +290,14 @@ class PresentWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidg
 
     private companion object {
         const val GAP = 10
+        const val PAD = 16
+        const val TIGHT_PAD = 10
+
+        // Pastille : icône de 32 à 96 dp, nom (24 sp et sa marge) seulement à partir de 90 dp de haut.
+        const val PILL_ICON_MIN_DP = 32
+        const val PILL_ICON_MAX_DP = 96
+        const val PILL_TEXT_DP = 36
+        const val PILL_TEXT_MIN_DP = 90
         const val TICK_MS = 1_000L
 
         /** Un seul chrono pour tous les exemplaires du widget. */
@@ -235,3 +307,6 @@ class PresentWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidg
         val queue = Mutex()
     }
 }
+
+/** Exemple de Présentation pour le catalogue : chrono qui tourne depuis 12 min 34 s, micro ouvert. */
+class PresentSample(val elapsedMs: Long, val running: Boolean, val audio: AudioState) : WidgetSample
