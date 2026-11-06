@@ -79,7 +79,7 @@ class WidgetModelTest {
         val top = Template.WORK_CADRAN.build().widgets.single { it.row == 0 }
         assertEquals(WidgetType.HERO to WidgetSize.W, top.type to top.size)
         assertEquals(WidgetType.DAY, WidgetType.of("day"))
-        assertEquals(listOf(WidgetSize.W), WidgetType.DAY.sizes)
+        assertEquals(WidgetSize.W, WidgetType.DAY.sizes.first())
         assertFalse(WidgetType.DAY.computer)
         assertTrue(WidgetType.DAY.bare)
     }

@@ -19,7 +19,7 @@ object WidgetSamples {
         // #180 Heure et journée
         WidgetType.CLOCK -> ClockSample
         WidgetType.HERO -> CalendarSample
-        WidgetType.DAY -> null
+        WidgetType.DAY -> CalendarSample
         WidgetType.DAYLINE -> null
         WidgetType.WEATHER -> WeatherSample.paris()
         WidgetType.NEXT -> CalendarSample
