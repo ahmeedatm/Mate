@@ -53,7 +53,7 @@ class MailWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidget(
     private val content = LinearLayout(context).apply {
         orientation = LinearLayout.VERTICAL
         gravity = Gravity.CENTER_VERTICAL
-        addView(number)
+        addView(number, LinearLayout.LayoutParams(WRAP_CONTENT, WRAP_CONTENT))
         addView(status, LinearLayout.LayoutParams(MATCH_PARENT, WRAP_CONTENT))
         addView(boxes, LinearLayout.LayoutParams(MATCH_PARENT, WRAP_CONTENT).apply { topMargin = dp(8) })
     }
