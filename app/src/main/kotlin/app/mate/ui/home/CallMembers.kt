@@ -8,11 +8,13 @@ data class MemberRowPlan(val shown: List<VoiceMember>, val more: Int)
 /**
  * Ordre de la rangée. Tous tiennent : ordre d'arrivée, personne ne bouge quand quelqu'un parle. Salon plein (`max` :
  * ronds qui tiennent en largeur) : les derniers à avoir parlé d'abord (`lastSpoke` : identifiant → instant), les autres
- * dans l'ordre d'arrivée, et la dernière place devient « +N ».
+ * dans l'ordre d'arrivée, et la dernière place devient « +N ». [faceFirst] (colonne de l'îlot Discord) : une seule
+ * place montre un visage, le dernier à avoir parlé, pas un « +N » seul.
  */
-fun planMembers(members: List<VoiceMember>, lastSpoke: Map<String, Long>, max: Int): MemberRowPlan {
+fun planMembers(members: List<VoiceMember>, lastSpoke: Map<String, Long>, max: Int, faceFirst: Boolean = false): MemberRowPlan {
     if (members.isEmpty() || max <= 0) return MemberRowPlan(emptyList(), 0)
     if (members.size <= max) return MemberRowPlan(members, 0)
+    if (faceFirst && max == 1) return MemberRowPlan(planMembers(members, lastSpoke, 2).shown.take(1), 0)
     val ordered = members.withIndex()
         .sortedWith(compareByDescending<IndexedValue<VoiceMember>> { lastSpoke[it.value.id] ?: Long.MIN_VALUE }.thenBy { it.index })
         .map { it.value }

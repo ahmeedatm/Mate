@@ -5,6 +5,7 @@ import app.mate.focus.FocusTimer
 import app.mate.focus.NoisePlayer
 import app.mate.focus.Water
 import app.mate.github.Forge
+import app.mate.net.AudioState
 import java.util.Calendar
 
 /**
@@ -64,16 +65,16 @@ object WidgetSamples {
             ),
         )
         WidgetType.OPEN -> OpenWindowsSample
-        WidgetType.PAD -> null
+        WidgetType.PAD -> PadSample
         WidgetType.SCREEN -> ScreenSample
         WidgetType.PERF -> null
-        WidgetType.WEB -> null
+        WidgetType.WEB -> WebSample
 
         // #184 Appels
-        WidgetType.DISCORD -> null
-        WidgetType.MEETING -> null
-        WidgetType.CALL -> null
-        WidgetType.PRESENT -> null
+        WidgetType.DISCORD -> CallSample(meeting = false)
+        WidgetType.MEETING -> CallSample(meeting = true)
+        WidgetType.CALL -> CallSample(meeting = true)
+        WidgetType.PRESENT -> PresentSample(elapsedMs = 754_000L, running = true, audio = AudioState(output = 60, muted = false, input = 80, micMuted = false))
 
         // #185 Dev
         WidgetType.AGENTS -> AgentsSample(sampleAgents())
@@ -87,8 +88,8 @@ object WidgetSamples {
         // #186 Perso, maison et jeux
         WidgetType.FOCUS -> FocusSample(FocusTimer.State(FocusTimer.Phase.FOCUS, 25 * MINUTE, 18 * MINUTE + 42_000, running = true, completed = 2), NoisePlayer.Kind.FOREST)
         WidgetType.WATER -> WaterSample(Water.State(glasses = 5, goal = 8, reminder = true, intervalMinutes = 60), todayAt(15))
-        WidgetType.AWAY -> null
-        WidgetType.HA -> null
+        WidgetType.AWAY -> AwaySample(state = null, minutes = 0)
+        WidgetType.HA -> HaSample.DEFAULT
         WidgetType.VALORANT -> ValorantWidget.SAMPLE
     }
 

@@ -177,6 +177,14 @@
     <string name="pad_hint">Un doigt pour bouger, deux pour défiler · pince pour zoomer · 3 doigts : fenêtres · touche pour cliquer</string>
     <string name="pad_left_click">Clic gauche</string>
     <string name="pad_right_click">Clic droit</string>
+    <string name="pad_click">Clic</string>
+    <string name="pad_click_desc">Clic : toucher pour le clic gauche, maintenir pour le clic droit</string>
+    <string name="pad_scroll_hint_v">Glisser pour défiler</string>
+    <string name="pad_scroll_hint_h">Glisser pour défiler de côté</string>
+    <string name="pad_scroll_back">Défiler en arrière</string>
+    <string name="pad_scroll_forward">Défiler en avant</string>
+    <string name="pad_scroll_desc_v">Bande de défilement : glisser de haut en bas fait défiler l\'ordinateur</string>
+    <string name="pad_scroll_desc_h">Bande de défilement : glisser de côté fait défiler l\'ordinateur</string>
     <string name="pad_record">Enregistrer</string>
     <string name="pad_record_stop">Terminer (%1$d)</string>
     <string name="pad_record_label">Macro du Pavé</string>
@@ -1533,6 +1541,15 @@
     <string name="ha_unavailable">Injoignable</string>
     <string name="ha_unavailable_hint">%1$s : Home Assistant ne la joint pas pour le moment</string>
     <string name="ha_empty">Aucune lumière, prise ou scène à afficher : ajoute-les dans HA_ENTITIES, dans le fichier .env de l\'ordinateur</string>
+    <string name="ha_scenes">Scènes</string>
+    <string name="ha_pick_title">Entité à montrer</string>
+    <string name="ha_entity_state">%1$s, %2$s</string>
+    <string name="ha_entity_inline">%1$s · %2$s</string>
+    <string name="ha_sample_salon">Salon</string>
+    <string name="ha_sample_bureau">Bureau</string>
+    <string name="ha_sample_cafe">Cafetière</string>
+    <string name="ha_sample_chambre">Chambre</string>
+    <string name="ha_sample_film">Soirée film</string>
     <string name="widget_away">Je m\'absente</string>
     <string name="widget_away_desc">Un geste pour partir : micro coupé, Focus en pause, fenêtres gardées, puis tout est remis</string>
     <string name="away_leave">Je m\'absente</string>
@@ -1541,10 +1558,42 @@
     <string name="away_since_now">Absence à l\'instant</string>
     <string name="away_since_min">Absence depuis %1$d min</string>
     <string name="away_since_hour">Absence depuis %1$d h %2$02d</string>
+    <string name="away_does_mic">Micro de l\'ordi coupé</string>
+    <string name="away_does_focus">Focus en pause</string>
+    <string name="away_does_windows">Fenêtres gardées</string>
+    <string name="away_will_label">En partant</string>
+    <string name="away_done_label">Pendant l\'absence</string>
+    <plurals name="away_does_windows_n">
+        <item quantity="one">%1$d fenêtre gardée</item>
+        <item quantity="other">%1$d fenêtres gardées</item>
+    </plurals>
+    <string name="away_duration_min">%1$d min</string>
+    <string name="away_duration_hour">%1$d h %2$02d</string>
+    <string name="away_nothing_done">Rien n\'a été coupé</string>
     <string name="pad_unsupported">Le pavé marche avec un Mac ou un PC Windows</string>
     <string name="call_idle">Pas d\'appel</string>
     <string name="call_lobby">Avant la réunion</string>
     <string name="call_no_page">Pas de page pour ce widget sur cet ordinateur</string>
+    <string name="call_speaking">%1$s parle</string>
+    <string name="call_key_on">%1$s, activé</string>
+    <!-- Aperçu du catalogue (CallSample) : un appel Discord et une réunion d'exemple. -->
+    <string name="call_sample_channel">Salon général</string>
+    <string name="call_sample_meeting">Point d\'équipe</string>
+    <string-array name="call_sample_people">
+        <item>Eliot</item>
+        <item>Bruno</item>
+        <item>Léa</item>
+        <item>Sam</item>
+        <item>Nora</item>
+    </string-array>
+    <string name="call_sample_open">Ouvrir Discord</string>
+    <string name="call_sample_mute">Couper mon micro</string>
+    <string name="call_sample_deafen">Sourdine (casque)</string>
+    <string name="call_sample_leave">Quitter l\'appel</string>
+    <string name="call_sample_mic">Micro</string>
+    <string name="call_sample_camera">Caméra</string>
+    <string name="call_sample_share">Partager l\'écran</string>
+    <string name="call_sample_hand">Lever la main</string>
     <string name="widget_perf">Performances du PC</string>
     <string name="widget_perf_desc">Processeur, carte graphique et mémoire en direct</string>
     <string name="perf_title">PC · %1$s</string>

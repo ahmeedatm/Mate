@@ -7,4 +7,6 @@
     <!-- Contenu déjà apparu en fondu (Look.revealOnce) ; dernière seconde marquée du compte à rebours (Look.countdown). -->
     <item name="revealed" type="id" />
     <item name="countdown_second" type="id" />
+    <!-- Plaque ronde d'une case de touche (TileGridView.newCell, îlot d'un widget d'appel). -->
+    <item name="tile_round" type="id" />
 </resources>

@@ -3,9 +3,13 @@ package app.mate.away
 /**
  * Absence en cours (widget « Je m'absente / Reprendre »). `sinceMs` : début, en heure du système ; `micMutedByUs` : c'est
  * le widget qui a coupé le micro de l'ordinateur ; `focusPausedByUs` : c'est lui qui a mis le Focus en pause. Ces deux
- * indicateurs disent ce que la reprise doit rendre, et rien de plus.
+ * indicateurs disent ce que la reprise doit rendre, et rien de plus. `windows` : fenêtres gardées par l'ordinateur (0 tant
+ * qu'il n'a pas répondu), seulement pour l'afficher.
  */
-data class AwayState(val sinceMs: Long, val micMutedByUs: Boolean, val focusPausedByUs: Boolean)
+data class AwayState(val sinceMs: Long, val micMutedByUs: Boolean, val focusPausedByUs: Boolean, val windows: Int = 0)
+
+/** Ce que fait « Je m'absente », ligne par ligne dans le widget. */
+enum class AwayEffect { MIC, FOCUS, WINDOWS }
 
 object AwayLogic {
 
@@ -15,6 +19,16 @@ object AwayLogic {
 
     /** Minutes écoulées depuis le début (jamais négatif, même si l'horloge a reculé). */
     fun minutes(state: AwayState, nowMs: Long): Int = ((nowMs - state.sinceMs) / 60_000L).coerceAtLeast(0L).toInt()
+
+    /** Hors absence ([state] null) : tout ce que le bouton fera. Pendant : seulement ce qui a vraiment été fait. */
+    fun effects(state: AwayState?): List<AwayEffect> {
+        if (state == null) return AwayEffect.entries
+        return listOfNotNull(
+            AwayEffect.MIC.takeIf { state.micMutedByUs },
+            AwayEffect.FOCUS.takeIf { state.focusPausedByUs },
+            AwayEffect.WINDOWS.takeIf { state.windows > 0 },
+        )
+    }
 
     /** Rouvrir le micro seulement si l'absence l'a coupé. */
     fun shouldUnmute(state: AwayState) = state.micMutedByUs

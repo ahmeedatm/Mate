@@ -135,6 +135,11 @@ class PadView @JvmOverloads constructor(
     /** Sur un profil, la surface prend le fond des cartes de l'Accueil, comme les autres widgets (translucide en Rétro). */
     fun useHomeCard() = surface.setBackgroundResource(themeRes(context, R.attr.c_home_card_bg))
 
+    /** Aperçu du catalogue : le pavé visible, sans canal ni écran gardé allumé. */
+    fun showSample() {
+        visibility = VISIBLE
+    }
+
     /** Affichée : canal ouvert et écran gardé allumé ; cachée : canal fermé. */
     fun setActive(active: Boolean) {
         visibility = if (active) VISIBLE else GONE
