@@ -1,47 +1,84 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Carte Tâches en thème Console : titre et « N restantes » sur une ligne, cases rondes, « + Nouvelle tâche » en dernière ligne. -->
+<!-- Carte à liste (Tâches, Courses) : une tête (anneau de progrès, nombre restant, légende), un filet, puis la liste à cases
+     rondes et « + Nouvelle tâche » en dernière ligne. La forme posée range le tout (ListShape, ListCardViews). -->
 <merge xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto">
 
     <LinearLayout
+        android:id="@+id/tasks_head"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:gravity="center_vertical"
         android:orientation="horizontal">
 
-        <app.mate.ui.TitleView
-            android:id="@+id/tasks_title"
-            style="@style/CardTitle"
-            android:layout_marginTop="-10dp"
-            android:layout_marginBottom="-10dp"
-            android:paddingStart="0dp"
-            android:paddingTop="10dp"
-            android:paddingEnd="16dp"
-            android:paddingBottom="10dp"
-            android:text="@string/widget_tasks" />
+        <!-- Anneau : faits sur total ; le toucher relit la liste. -->
+        <FrameLayout
+            android:id="@+id/tasks_ring_box"
+            android:layout_width="56dp"
+            android:layout_height="56dp"
+            android:clickable="true"
+            android:focusable="true">
 
-        <TextView
-            android:id="@+id/tasks_count"
+            <app.mate.ui.ProgressRing
+                android:id="@+id/tasks_ring"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent" />
+
+            <TextView
+                android:id="@+id/tasks_ring_text"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_gravity="center"
+                android:includeFontPadding="false"
+                android:singleLine="true"
+                android:textColor="?attr/c_text"
+                android:textSize="13sp" />
+        </FrameLayout>
+
+        <LinearLayout
+            android:id="@+id/tasks_title"
             android:layout_width="0dp"
             android:layout_height="wrap_content"
-            android:layout_marginTop="-10dp"
-            android:layout_marginBottom="-10dp"
+            android:layout_marginStart="16dp"
             android:layout_weight="1"
-            android:gravity="end"
-            android:paddingStart="12dp"
-            android:paddingTop="10dp"
-            android:paddingEnd="0dp"
-            android:paddingBottom="10dp"
-            android:singleLine="true"
-            android:textColor="?attr/c_text_faint"
-            android:textSize="14sp" />
+            android:orientation="vertical">
+
+            <TextView
+                android:id="@+id/tasks_number"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:includeFontPadding="false"
+                android:singleLine="true"
+                android:textColor="?attr/c_text"
+                android:textSize="34sp" />
+
+            <TextView
+                android:id="@+id/tasks_count"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="4dp"
+                android:ellipsize="end"
+                android:maxLines="2"
+                android:textColor="?attr/c_text_dim"
+                android:textSize="14sp" />
+        </LinearLayout>
     </LinearLayout>
 
+    <View
+        android:id="@+id/tasks_rule"
+        android:layout_width="match_parent"
+        android:layout_height="1dp"
+        android:layout_marginTop="12dp"
+        android:background="?attr/c_stroke" />
+
     <ScrollView
+        android:id="@+id/tasks_scroll"
         android:layout_width="match_parent"
         android:layout_height="0dp"
-        android:layout_marginTop="12dp"
-        android:layout_weight="1">
+        android:layout_marginTop="8dp"
+        android:layout_weight="1"
+        android:fadingEdgeLength="32dp"
+        android:requiresFadingEdge="vertical">
 
         <LinearLayout
             android:layout_width="match_parent"
@@ -62,21 +99,22 @@
                 android:paddingBottom="8dp"
                 android:textColor="?attr/c_text_dim"
                 android:visibility="gone" />
-
-            <!-- Ouvre la fenêtre de tâche (texte, répétition, rappel) : pas de clavier dans la carte. -->
-            <TextView
-                android:id="@+id/tasks_add_row"
-                android:layout_width="match_parent"
-                android:layout_height="48dp"
-                android:clickable="true"
-                android:drawablePadding="12dp"
-                app:drawableStartCompat="@drawable/ic_add"
-                app:drawableTint="?attr/c_text_faint"
-                android:focusable="true"
-                android:gravity="center_vertical"
-                android:text="@string/task_new"
-                android:textColor="?attr/c_text_faint"
-                android:textSize="16sp" />
         </LinearLayout>
     </ScrollView>
+
+    <!-- Ouvre la fenêtre de tâche (texte, répétition, rappel) : pas de clavier dans la carte. Hors du défilement : toujours
+         visible en pied de carte, même quand la liste déborde. -->
+    <TextView
+        android:id="@+id/tasks_add_row"
+        android:layout_width="match_parent"
+        android:layout_height="48dp"
+        android:clickable="true"
+        android:drawablePadding="12dp"
+        app:drawableStartCompat="@drawable/ic_add"
+        app:drawableTint="?attr/c_text_faint"
+        android:focusable="true"
+        android:gravity="center_vertical"
+        android:text="@string/task_new"
+        android:textColor="?attr/c_text_faint"
+        android:textSize="16sp" />
 </merge>

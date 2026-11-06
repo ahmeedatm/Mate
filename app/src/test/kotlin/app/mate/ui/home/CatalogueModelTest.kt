@@ -1,0 +1,124 @@
+package app.mate.ui.home
+
+import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNull
+import org.junit.Assert.assertTrue
+import org.junit.Test
+
+class CatalogueModelTest {
+
+    /** Horloge en haut à gauche (2 × 2) : la moitié droite et le bas sont libres. */
+    private fun layout() = HomeLayout(mutableListOf(Placed(WidgetType.CLOCK, WidgetSize.L, 0, 0, 0)), 2)
+
+    @Test
+    fun `une forme qui tient a la case touchee s y pose`() {
+        val choice = layout().shapeChoices(WidgetType.WEATHER, 0, 2, 0).first { it.size == WidgetSize.L }
+        assertTrue(choice.atCase)
+        assertEquals(Fit(WidgetSize.L, 2, 0), choice.spot)
+    }
+
+    @Test
+    fun `une case pres du bord recule pour laisser tenir la forme`() {
+        val choice = layout().shapeChoices(WidgetType.WEATHER, 0, 3, 3).first { it.size == WidgetSize.L }
+        assertTrue(choice.atCase)
+        assertEquals(Fit(WidgetSize.L, 2, 2), choice.spot)
+    }
+
+    @Test
+    fun `une forme sans place a la case propose la premiere place libre`() {
+        // Bandeau 4 × 1 touché en (2, 0) : la rangée 0 est prise à gauche, la première rangée libre est la 2.
+        val choice = layout().shapeChoices(WidgetType.CLOCK, 0, 2, 0).first { it.size == WidgetSize.W }
+        assertFalse(choice.atCase)
+        assertEquals(Fit(WidgetSize.W, 0, 2), choice.spot)
+    }
+
+    @Test
+    fun `une forme qui ne tient nulle part n a pas de place`() {
+        val full = HomeLayout(mutableListOf(Placed(WidgetType.CLOCK, WidgetSize.FULL, 0, 0, 0)), 1)
+        full.shapeChoices(WidgetType.CLOCK, 0, 1, 1).forEach {
+            assertFalse(it.atCase)
+            assertNull(it.spot)
+        }
+    }
+
+    @Test
+    fun `seules les formes du widget sont proposees, rangees par famille`() {
+        WidgetType.entries.forEach { type ->
+            val sizes = layout().shapeChoices(type, 0, 2, 0).map { it.size }
+            assertEquals(type.sizes.toSet(), sizes.toSet())
+            assertEquals(SHAPE_ORDER.filter { it in sizes }, sizes)
+        }
+    }
+
+    @Test
+    fun `les 16 formes une fois chacune, par famille, de la plus petite a la plus grande`() {
+        assertEquals(WidgetSize.entries.toSet(), SHAPE_ORDER.toSet())
+        assertEquals(WidgetSize.entries.size, SHAPE_ORDER.size)
+        assertEquals(ShapeFamily.entries.toList(), SHAPE_ORDER.map { it.family }.distinct())
+        SHAPE_ORDER.zipWithNext().filter { (a, b) -> a.family == b.family }.forEach { (a, b) ->
+            assertTrue("$a avant $b", a.w * a.h <= b.w * b.h)
+        }
+    }
+
+    @Test
+    fun `la fiche s ouvre sur la forme par defaut du widget quand elle tient`() {
+        WidgetType.entries.forEach { type ->
+            val choices = HomeLayout(mutableListOf(), 1).shapeChoices(type, 0, 0, 0)
+            assertEquals(type.sizes.first(), choices[openingShape(type, choices)].size)
+        }
+    }
+
+    @Test
+    fun `sinon la fiche s ouvre sur la premiere forme qui tient a la case`() {
+        // Case (1, 1), voisine d'un 2 × 2 en (2, 0) : la Météo 2 × 1 (sa forme d'ajout) et 2 × 2 butent dessus, la 1 × 1 tient.
+        val busy = HomeLayout(mutableListOf(Placed(WidgetType.CLOCK, WidgetSize.L, 0, 2, 0), Placed(WidgetType.CLOCK, WidgetSize.L, 0, 0, 2)), 1)
+        val choices = busy.shapeChoices(WidgetType.WEATHER, 0, 1, 1)
+        assertEquals(WidgetSize.S, choices[openingShape(WidgetType.WEATHER, choices)].size)
+    }
+
+    @Test
+    fun `l echelle de l apercu fait tenir la plus grande forme du widget`() {
+        // Cases de 200 × 100 ; formes jusqu'à 2 × 2 (400 × 200) dans une scène de 300 × 300 : la largeur limite.
+        assertEquals(0.75f, previewScale(listOf(WidgetSize.S, WidgetSize.L), 200, 100, 300, 300), 0.001f)
+        // Jamais agrandi au-delà de la taille réelle.
+        assertEquals(1f, previewScale(listOf(WidgetSize.S), 200, 100, 1000, 1000), 0.001f)
+    }
+
+    @Test
+    fun `chaque widget est range une seule fois, suggestions comprises`() {
+        val shelves = catalogueShelves { true }
+        assertEquals(WidgetType.entries.size, shelves.sumOf { it.second.size })
+        assertEquals(WidgetType.entries.toSet(), shelves.flatMap { it.second }.toSet())
+        assertEquals(CatalogueShelf.SUGGESTIONS, shelves.first().first)
+        assertEquals(SUGGESTED.size, shelves.first().second.size)
+    }
+
+    @Test
+    fun `un rayon sans widget propose disparait`() {
+        val dev = CatalogueShelf.DEV.types.toSet()
+        val shelves = catalogueShelves { it !in dev }
+        assertFalse(shelves.any { it.first == CatalogueShelf.DEV })
+        assertTrue(shelves.flatMap { it.second }.none { it in dev })
+    }
+
+    @Test
+    fun `une suggestion non proposee laisse sa place`() {
+        val shelves = catalogueShelves { it != SUGGESTED.first() }
+        assertEquals(SUGGESTED.drop(1), shelves.first().second)
+    }
+
+    @Test
+    fun `sans case touchee, toute forme qui tient quelque part est posable`() {
+        val choice = layout().shapeChoices(WidgetType.CLOCK, 0, -1, -1).first { it.size == WidgetSize.L }
+        assertTrue(choice.atCase)
+        assertEquals(Fit(WidgetSize.L, 2, 0), choice.spot)
+    }
+
+    @Test
+    fun `l autre page ne gene pas`() {
+        val choice = layout().shapeChoices(WidgetType.CLOCK, 1, 0, 0).first { it.size == WidgetSize.L }
+        assertTrue(choice.atCase)
+        assertEquals(Fit(WidgetSize.L, 0, 0), choice.spot)
+    }
+}
