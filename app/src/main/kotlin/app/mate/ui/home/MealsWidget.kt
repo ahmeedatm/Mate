@@ -32,7 +32,7 @@ class MealsWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidget
     private val title = cardTitle(R.string.widget_meals)
     private val head = LinearLayout(context).apply {
         gravity = Gravity.CENTER_VERTICAL
-        addView(disc, hueDiscParams(context))
+        addView(disc, hueDiscParams(context, side = false))
         addView(title, LinearLayout.LayoutParams(WRAP_CONTENT, WRAP_CONTENT).apply { marginStart = dp(12) })
     }
     private val status = label(14f, R.attr.c_text_dim)
@@ -76,6 +76,7 @@ class MealsWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidget
         view.orientation = if (shape.side) LinearLayout.HORIZONTAL else LinearLayout.VERTICAL
         view.gravity = if (shape.side) Gravity.CENTER_VERTICAL else Gravity.NO_GRAVITY
         title.isVisible = shape.title
+        disc.layoutParams = hueDiscParams(context, shape.side)
         title.setText(if (shape.week) R.string.meals_week_title else R.string.widget_meals)
         content.layoutParams = if (shape.side) {
             LinearLayout.LayoutParams(0, MATCH_PARENT, 1f).apply { marginStart = dp(16) }

@@ -47,7 +47,7 @@ class NewsWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidget(
     }
     private val head = LinearLayout(context).apply {
         gravity = Gravity.CENTER_VERTICAL
-        addView(disc, hueDiscParams(context))
+        addView(disc, hueDiscParams(context, side = false))
         addView(title, LinearLayout.LayoutParams(0, WRAP_CONTENT, 1f).apply { marginStart = dp(12) })
     }
     private val status = label(14f, R.attr.c_text_dim)
@@ -94,6 +94,7 @@ class NewsWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidget(
         view.orientation = if (shape.side) LinearLayout.HORIZONTAL else LinearLayout.VERTICAL
         view.gravity = if (shape.side) Gravity.CENTER_VERTICAL else Gravity.NO_GRAVITY
         title.isVisible = shape.title
+        disc.layoutParams = hueDiscParams(context, shape.side)
         head.layoutParams = LinearLayout.LayoutParams(if (shape.side) WRAP_CONTENT else MATCH_PARENT, WRAP_CONTENT)
         content.layoutParams = if (shape.side) {
             LinearLayout.LayoutParams(0, MATCH_PARENT, 1f).apply { marginStart = dp(16) }
