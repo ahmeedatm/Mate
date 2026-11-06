@@ -635,19 +635,26 @@
 
     <!-- Tâches (carte de l'Accueil) -->
     <string name="tasks_all_done">Tout est fait</string>
-    <plurals name="tasks_remaining">
-        <item quantity="one">%1$d restante</item>
-        <item quantity="other">%1$d restantes</item>
+    <!-- Légende sous le nombre de la tête (#181) : « 3 » puis « tâches restantes ». -->
+    <plurals name="tasks_left_caption">
+        <item quantity="one">tâche restante</item>
+        <item quantity="other">tâches restantes</item>
     </plurals>
+    <string name="tasks_reload">Relire les tâches</string>
+    <!-- Dans l'anneau des cartes à liste : faits / total. -->
+    <string name="list_ring_progress">%1$d/%2$d</string>
     <string name="tasks_empty">Rien à faire pour l\'instant</string>
+    <string name="tasks_none_caption">Rien à faire</string>
+    <string name="tasks_head_action">Ouvre les tâches récurrentes</string>
     <string name="tasks_unavailable">Tâches indisponibles</string>
     <!-- Courses (widget de l'Accueil) -->
     <string name="shopping_all_done">Tout est pris</string>
-    <plurals name="shopping_remaining">
-        <item quantity="one">%1$d à prendre</item>
-        <item quantity="other">%1$d à prendre</item>
+    <plurals name="shopping_left_caption">
+        <item quantity="one">article à prendre</item>
+        <item quantity="other">articles à prendre</item>
     </plurals>
     <string name="shopping_empty">La liste est vide. Dis « ajoute du lait à la liste de courses ».</string>
+    <string name="shopping_none_caption">Liste vide</string>
     <string name="shopping_unavailable">Courses indisponibles</string>
     <string name="shopping_add">Ajouter un article</string>
     <string name="shopping_add_confirm">Ajouter</string>
@@ -908,7 +915,6 @@
     <string name="event_saved">Noté : %1$s</string>
     <string name="agenda_nothing_today">Rien aujourd\'hui</string>
     <string name="agenda_empty">Rien de prévu. Touche + pour noter un rendez-vous.</string>
-    <string name="next_today" tools:ignore="PluralsCandidate">%1$d aujourd\'hui</string>
     <string name="next_none_today">Rien de prévu aujourd\'hui</string>
     <string name="event_add">Noter un rendez-vous</string>
     <string name="tomorrow_at">demain à %1$s</string>
@@ -1168,8 +1174,30 @@
     <string name="home_edit_add">Ajouter</string>
     <string name="home_edit_done">Terminé</string>
     <string name="home_gallery_title">Ajouter un widget</string>
-    <string name="home_gallery_detail">%1$s · %2$s</string>
-    <string name="home_no_room">Plus de place sur cet écran : retire ou réduis un widget.</string>
+    <string name="catalogue_shelf_suggestions">Suggestions</string>
+    <string name="catalogue_shelf_day">Heure et journée</string>
+    <string name="catalogue_shelf_lists">Listes et notes</string>
+    <string name="catalogue_shelf_sound">Son et musique</string>
+    <string name="catalogue_shelf_computer">Piloter l\'ordinateur</string>
+    <string name="catalogue_shelf_calls">Appels</string>
+    <string name="catalogue_shelf_dev">Dev</string>
+    <string name="catalogue_shelf_home">Perso, maison et jeux</string>
+    <string name="catalogue_family_pill">Pastille</string>
+    <string name="catalogue_family_row">Ligne</string>
+    <string name="catalogue_family_column">Colonne</string>
+    <string name="catalogue_family_block">Bloc</string>
+    <string name="catalogue_family_large">Grand</string>
+    <string name="catalogue_family_full">Plein écran</string>
+    <string name="catalogue_shape">%1$d × %2$d · %3$s</string>
+    <string name="catalogue_shape_cd">Forme %1$s, %2$d sur %3$d. Glisse ou utilise les flèches pour changer.</string>
+    <string name="catalogue_shape_prev">Forme précédente</string>
+    <string name="catalogue_shape_next">Forme suivante</string>
+    <string name="catalogue_add">Ajouter le widget</string>
+    <string name="catalogue_add_free">Ajouter ailleurs</string>
+    <string name="catalogue_no_room_here">Pas la place ici</string>
+    <string name="catalogue_no_room_button">Pas de place</string>
+    <string name="catalogue_page_full">La page est pleine : retire ou réduis un widget, ou ajoute-le sur un autre écran.</string>
+    <string name="catalogue_no_room_page">Plus de place sur la page pour cette forme. Essaie une forme plus petite.</string>
     <string name="home_no_room_size">Pas assez de place autour pour une autre taille : déplace ou retire un widget voisin.</string>
     <string name="template_work">Bureau</string>
     <string name="template_standby">Veille</string>
@@ -1376,12 +1404,48 @@
     <string name="widget_clock_desc">L\'heure et la date, en grand</string>
     <string name="widget_next">Prochain rendez-vous</string>
     <string name="widget_next_desc">Et le bouton Rejoindre d\'une réunion en ligne</string>
+    <string name="next_ring_min">min</string>
+    <string name="next_ring_now">en cours</string>
+    <string name="next_ring_tomorrow">demain</string>
+    <string name="next_span">%1$s – %2$s</string>
+    <string name="next_duration_h">%1$d h</string>
+    <string name="next_duration_hm">%1$d h %2$02d</string>
+    <string name="calendar_sample_daily">Daily</string>
+    <string name="calendar_sample_team">Point équipe</string>
+    <string name="calendar_sample_teams">Teams</string>
+    <string name="calendar_sample_review">Revue design</string>
+    <string name="calendar_sample_room">Salle Lune</string>
+    <string name="calendar_sample_call">Appel Eliot</string>
+    <string name="calendar_sample_lunch">Déjeuner avec Bruno</string>
+    <string name="calendar_sample_place">Le Comptoir</string>
+    <string name="calendar_sample_sport">Sport</string>
+    <string name="calendar_sample_demo">Démo client</string>
     <string name="widget_agenda">Agenda</string>
     <string name="widget_agenda_desc">Aujourd\'hui et les 7 jours suivants</string>
+    <string name="agenda_left_one">restant</string>
+    <string name="agenda_left_many">restants</string>
+    <string name="agenda_unknown">—</string>
     <string name="widget_tasks">Tâches</string>
     <string name="widget_tasks_desc">Les tâches du jour et leurs rappels</string>
     <string name="widget_shopping">Courses</string>
     <string name="widget_shopping_desc">La liste de courses : se coche d\'un toucher, se remplit à la voix</string>
+    <!-- Aperçus du catalogue (#181) : les dernières lignes sont cochées (TasksSample.done, ShoppingSample.done). -->
+    <string-array name="widget_tasks_sample">
+        <item>Appeler le garage</item>
+        <item>Sortir les poubelles</item>
+        <item>Payer la cantine</item>
+        <item>Arroser les plantes</item>
+        <item>Lancer une lessive</item>
+    </string-array>
+    <string-array name="widget_shopping_sample">
+        <item>Lait</item>
+        <item>Pain</item>
+        <item>Œufs</item>
+        <item>Tomates</item>
+        <item>Café</item>
+        <item>Riz</item>
+        <item>Beurre</item>
+    </string-array>
     <string name="widget_focus">Focus</string>
     <string name="widget_focus_desc">Le minuteur Pomodoro</string>
     <string name="widget_water">Eau</string>
@@ -1409,6 +1473,26 @@
     <string name="widget_mixer_desc">Sortie, micro et chaque appli, avec leurs scènes</string>
     <string name="widget_open">Fenêtres ouvertes</string>
     <string name="widget_open_desc">Les fenêtres de l\'ordi par écran, à déplacer ou fermer</string>
+    <string name="widget_open_none_short">Aucune fenêtre</string>
+    <string name="widget_open_focus">Mettre %1$s devant</string>
+    <string name="widget_open_front_desc">%1$s, au premier plan</string>
+    <string name="widget_open_pill_desc">%1$s au premier plan, %2$s</string>
+    <string name="widget_open_row_desc">%1$s, %2$s</string>
+    <string name="widget_open_times">×%1$d</string>
+    <plurals name="widget_open_windows">
+        <item quantity="one">%1$d fenêtre ouverte</item>
+        <item quantity="other">%1$d fenêtres ouvertes</item>
+    </plurals>
+    <string name="widget_open_sample_browser">Navigateur</string>
+    <string name="widget_open_sample_browser_title">Météo de la semaine</string>
+    <string name="widget_open_sample_mail">Mail</string>
+    <string name="widget_open_sample_mail_title">Boîte de réception</string>
+    <string name="widget_open_sample_mail_title2">Réponse à Eliot</string>
+    <string name="widget_open_sample_notes">Notes</string>
+    <string name="widget_open_sample_notes_title">Courses du samedi</string>
+    <string name="widget_open_sample_music">Musique</string>
+    <string name="widget_open_sample_music_title">Lecture en cours</string>
+    <string name="widget_open_sample_display">Écran principal</string>
     <string name="widget_apps">Applis</string>
     <string name="widget_apps_desc">Les applis de l\'ordinateur : lancer, ajouter, retirer, voir leurs fenêtres</string>
     <string name="widget_apps_sample_music" translatable="false">Spotify</string>
@@ -1609,6 +1693,7 @@
     <string name="widget_note_desc">Un mot à garder sous les yeux</string>
     <string name="widget_note_empty">Touche pour écrire une note</string>
     <string name="widget_note_hint">Ta note</string>
+    <string name="widget_note_cd">Note : %1$s. Toucher pour la modifier.</string>
     <string name="widget_note_sample">Code de la salle : 4B</string>
     <string name="widget_web">Page web</string>
     <string name="widget_web_desc">Un tableau de bord ou un graphique, rechargé tout seul</string>
@@ -1623,9 +1708,35 @@
     <string name="widget_news_none">Le flux ne contient encore aucun article</string>
     <string name="widget_news_loading">Lecture du flux en cours, réessaie dans un instant</string>
     <string name="widget_news_hint">Adresse du flux (RSS ou Atom)</string>
+    <plurals name="widget_news_unseen">
+        <item quantity="one">nouveau titre</item>
+        <item quantity="other">nouveaux titres</item>
+    </plurals>
+    <plurals name="widget_news_unseen_cd">
+        <item quantity="one">%1$d nouveau titre, toucher pour l\'ouvrir</item>
+        <item quantity="other">%1$d nouveaux titres, toucher pour ouvrir le premier</item>
+    </plurals>
+    <string name="widget_news_read">À jour</string>
+    <string name="widget_news_open_cd">Ouvrir sur l\'ordinateur : %1$s</string>
+    <string name="widget_news_open_read_cd">Déjà lu. Ouvrir sur l\'ordinateur : %1$s</string>
+    <string name="widget_news_sample_feed">Actus du jour</string>
+    <string-array name="widget_news_sample">
+        <item>Le Sénat adopte le budget de la culture après un long débat</item>
+        <item>Grève SNCF : le trafic perturbé jeudi en Île-de-France</item>
+        <item>Ligue 1 : Lens s\'impose à Marseille</item>
+        <item>Le prix du café atteint un record</item>
+        <item>Une comète visible à l\'œil nu ce week-end</item>
+    </string-array>
     <string name="widget_mail">Mails</string>
     <string name="widget_mail_desc">Le nombre de mails non lus de la boîte de réception ; un toucher ouvre la boîte sur l\'ordinateur</string>
     <string name="widget_mail_empty">Connecte tes mails sur la page de l\'ordinateur</string>
+    <string name="widget_mail_none">–</string>
+    <string name="widget_mail_box_down">%1$s indisponible</string>
+    <string name="widget_mail_box_down_short">indisponible</string>
+    <string-array name="widget_mail_sample">
+        <item>Gmail</item>
+        <item>Outlook</item>
+    </string-array>
     <string name="widget_mail_a11y">Mails : %1$d non lus. Toucher pour ouvrir la boîte sur l\'ordinateur</string>
     <string name="widget_valorant">Valorant</string>
     <string name="widget_valorant_desc">Pendant une partie, l\'agent, le rang et les stats de chaque joueur ; après, le tableau des scores ; hors partie, ton rang et tes dernières classées</string>
@@ -1697,6 +1808,38 @@
     <string name="meals_today_dinner">Aujourd\'hui, soir</string>
     <string name="meals_tomorrow_lunch">Demain, midi</string>
     <string name="meals_tomorrow_dinner">Demain, soir</string>
+    <string name="meals_lunch">Midi</string>
+    <string name="meals_dinner">Soir</string>
+    <string name="meals_week_today">Aujourd\'hui</string>
+    <string name="meals_week_tomorrow">Demain</string>
+    <string name="meals_week_title">Repas de la semaine</string>
+    <string-array name="meals_weekdays">
+        <item>Lundi</item>
+        <item>Mardi</item>
+        <item>Mercredi</item>
+        <item>Jeudi</item>
+        <item>Vendredi</item>
+        <item>Samedi</item>
+        <item>Dimanche</item>
+    </string-array>
+    <string-array name="meals_sample_lunch">
+        <item>Lasagnes aux légumes</item>
+        <item>Poulet basquaise</item>
+        <item>Salade niçoise</item>
+        <item>Couscous</item>
+        <item>Poisson pané, riz</item>
+        <item>Croque-monsieur</item>
+        <item>Rôti de porc, purée</item>
+    </string-array>
+    <string-array name="meals_sample_dinner">
+        <item>Soupe de potiron</item>
+        <item>Omelette, salade</item>
+        <item>Pâtes au pesto</item>
+        <item>Quiche lorraine</item>
+        <item>Pizza maison</item>
+        <item>Raclette</item>
+        <item>Restes</item>
+    </string-array>
     <string name="widget_metrics">Valeurs</string>
     <string name="widget_metrics_desc">Des chiffres calculés par l\'ordinateur (dossier, build, compteur), remis à jour chaque minute</string>
     <string name="widget_metrics_empty">Écris tes commandes dans metrics.json, dans le dossier Mate de l\'ordinateur</string>
@@ -1739,9 +1882,7 @@
     <string name="checklist_days">J-%1$d</string>
     <string name="checklist_hours">%1$d h %2$02d</string>
     <string name="checklist_minutes">%1$d min</string>
-    <string name="checklist_passed">Échéance passée</string>
-    <string name="checklist_countdown_cd">Échéance : %1$s</string>
-    <string name="checklist_progress">%1$d / %2$d</string>
+    <string name="checklist_passed">Passée</string>
     <string name="checklist_progress_cd">%1$d étapes faites sur %2$d</string>
     <string name="checklist_step_done">%1$s, fait</string>
     <string name="checklist_step_todo">%1$s, à faire</string>
@@ -1758,6 +1899,16 @@
     <string name="checklist_step_hint">Nom de l\'étape</string>
     <string name="checklist_step_rename">Renommer l\'étape %1$s</string>
     <string name="checklist_step_remove">Retirer l\'étape %1$s</string>
+    <string name="checklist_sample_title">Impôts</string>
+    <string-array name="checklist_sample_steps">
+        <item>Fiches de paie</item>
+        <item>Relevé bancaire</item>
+        <item>Frais réels</item>
+        <item>Dons</item>
+        <item>Vérifier le montant</item>
+        <item>Signer</item>
+        <item>Envoyer</item>
+    </string-array>
     <string name="media_opened_app">Ouvert dans l\'appli %1$s</string>
 
     <!-- Commandes vocales (bouton Parler de la barre latérale) -->
