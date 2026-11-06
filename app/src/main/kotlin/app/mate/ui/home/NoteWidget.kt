@@ -29,7 +29,7 @@ class NoteWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidget(
     private val title = cardTitle(R.string.widget_note)
     private val head = LinearLayout(context).apply {
         gravity = Gravity.CENTER_VERTICAL
-        addView(disc, LinearLayout.LayoutParams(dp(HUE_DISC_DP), dp(HUE_DISC_DP)))
+        addView(disc, hueDiscParams(context))
         addView(title, LinearLayout.LayoutParams(WRAP_CONTENT, WRAP_CONTENT).apply { marginStart = dp(12) })
     }
     private val text = label(22f).apply { gravity = Gravity.CENTER_VERTICAL }

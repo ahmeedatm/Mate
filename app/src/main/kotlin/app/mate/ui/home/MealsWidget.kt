@@ -32,7 +32,7 @@ class MealsWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidget
     private val title = cardTitle(R.string.widget_meals)
     private val head = LinearLayout(context).apply {
         gravity = Gravity.CENTER_VERTICAL
-        addView(disc, LinearLayout.LayoutParams(dp(HUE_DISC_DP), dp(HUE_DISC_DP)))
+        addView(disc, hueDiscParams(context))
         addView(title, LinearLayout.LayoutParams(WRAP_CONTENT, WRAP_CONTENT).apply { marginStart = dp(12) })
     }
     private val status = label(14f, R.attr.c_text_dim)
@@ -76,6 +76,7 @@ class MealsWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidget
         view.orientation = if (shape.side) LinearLayout.HORIZONTAL else LinearLayout.VERTICAL
         view.gravity = if (shape.side) Gravity.CENTER_VERTICAL else Gravity.NO_GRAVITY
         title.isVisible = shape.title
+        title.setText(if (shape.week) R.string.meals_week_title else R.string.widget_meals)
         content.layoutParams = if (shape.side) {
             LinearLayout.LayoutParams(0, MATCH_PARENT, 1f).apply { marginStart = dp(16) }
         } else {
@@ -110,15 +111,16 @@ class MealsWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidget
         val now = Calendar.getInstance()
         val weekday = (now.get(Calendar.DAY_OF_WEEK) + 5) % 7 // lundi = 0
         val minuteOfDay = now.get(Calendar.HOUR_OF_DAY) * 60 + now.get(Calendar.MINUTE)
+        val all = if (current == null || unset) null else mealLines(current, weekday, minuteOfDay)
         val days = if (current == null || unset || !shape.week) null else weekFrom(current, weekday)
-        val lines = if (current == null || unset || shape.week) null else visibleMeals(mealLines(current, weekday, minuteOfDay), shape.meals)
+        val lines = if (all == null) null else if (shape.week) all.take(2) else visibleMeals(all, shape.meals)
         val next = listOf(note, shape, placed.size, days, lines)
         if (next == drawn) return
         drawn = next
         body.removeAllViews()
         status.text = note
         status.isVisible = note != null
-        if (days != null) return renderWeek(days)
+        if (days != null) return renderWeek(days, lines.orEmpty())
         if (lines == null) return
         when {
             // Ligne : un repas par case en plus, côte à côte.
@@ -153,7 +155,7 @@ class MealsWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidget
         // Un repas passé recule par la couleur « atténuée » du thème (contraste testé), pas par une transparence qui le rendrait illisible.
         val past = line.state == MealState.PAST
         addView(TextView(context).apply {
-            setText(caption(line))
+            setText(caption(line, short = shape.side))
             textSize = 14f
             isSingleLine = true
             ellipsize = TextUtils.TruncateAt.END
@@ -171,12 +173,13 @@ class MealsWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidget
 
     private fun dishSp() = when (placed.size.family) {
         ShapeFamily.PILL, ShapeFamily.ROW -> 17f
-        ShapeFamily.LARGE -> 20f
-        else -> 18f
+        ShapeFamily.LARGE -> 22f
+        else -> 20f
     }
 
     /** Plein écran : la semaine, aujourd'hui d'abord ; une ligne par jour, le midi puis le soir. */
-    private fun renderWeek(days: List<WeekDay>) {
+    /** `today` : midi et soir d'aujourd'hui avec leur état, pour mettre le repas en cours en avant comme ailleurs. */
+    private fun renderWeek(days: List<WeekDay>, today: List<MealLine>) {
         body.orientation = LinearLayout.VERTICAL
         body.addView(weekRow(null, context.getString(R.string.meals_lunch), context.getString(R.string.meals_dinner), header = true))
         val names = context.resources.getStringArray(R.array.meals_weekdays)
@@ -186,19 +189,22 @@ class MealsWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidget
                 1 -> context.getString(R.string.meals_week_tomorrow)
                 else -> names[day.weekday]
             }
-            body.addView(weekRow(day, name, null, header = false), LinearLayout.LayoutParams(MATCH_PARENT, 0, 1f))
+            body.addView(weekRow(day, name, null, header = false, today), LinearLayout.LayoutParams(MATCH_PARENT, 0, 1f))
         }
     }
 
-    private fun weekRow(day: WeekDay?, first: String, second: String?, header: Boolean) = LinearLayout(context).apply {
+    private fun weekRow(day: WeekDay?, first: String, second: String?, header: Boolean, todayLines: List<MealLine> = emptyList()) = LinearLayout(context).apply {
         gravity = Gravity.CENTER_VERTICAL
         val today = day?.offset == 0
-        fun cell(text: String, empty: Boolean = false) = TextView(context).apply {
+        fun cell(text: String, empty: Boolean = false, state: MealState? = null) = TextView(context).apply {
             this.text = text
             textSize = if (header) 14f else 18f
             maxLines = 2
             ellipsize = TextUtils.TruncateAt.END
-            setTextColor(color(if (header || empty) R.attr.c_text_dim else R.attr.c_text))
+            // Aujourd'hui : le repas en cours en couleur et en gras, le passé estompé, comme dans les autres formes.
+            val current = state == MealState.CURRENT && !empty
+            setTextColor(color(if (header || empty || state == MealState.PAST) R.attr.c_text_dim else if (current) R.attr.c_accent else R.attr.c_text))
+            if (current) setTypeface(typeface, Typeface.BOLD)
         }
         addView(label(if (header) 14f else 16f, if (today) R.attr.c_accent else R.attr.c_text_dim).apply {
             text = if (header) "" else first
@@ -207,13 +213,15 @@ class MealsWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidget
         val none = context.getString(R.string.meals_none)
         val lunch = if (header) first else day?.day?.lunch.orEmpty()
         val dinner = if (header) second.orEmpty() else day?.day?.dinner.orEmpty()
-        addView(cell(lunch.ifEmpty { none }, lunch.isEmpty()), LinearLayout.LayoutParams(0, WRAP_CONTENT, 1f).apply { marginEnd = dp(16) })
-        addView(cell(dinner.ifEmpty { none }, dinner.isEmpty()), LinearLayout.LayoutParams(0, WRAP_CONTENT, 1f))
+        val states = if (today) todayLines.map { it.state } else emptyList()
+        addView(cell(lunch.ifEmpty { none }, lunch.isEmpty(), states.getOrNull(0)), LinearLayout.LayoutParams(0, WRAP_CONTENT, 1f).apply { marginEnd = dp(16) })
+        addView(cell(dinner.ifEmpty { none }, dinner.isEmpty(), states.getOrNull(1)), LinearLayout.LayoutParams(0, WRAP_CONTENT, 1f))
     }
 
-    private fun caption(line: MealLine) = when (line.dayOffset to line.meal) {
-        0 to Meal.LUNCH -> R.string.meals_today_lunch
-        0 to Meal.DINNER -> R.string.meals_today_dinner
+    /** `short` : Pastille et Ligne, où « Aujourd'hui, midi » serait coupé avant le mot qui compte. */
+    private fun caption(line: MealLine, short: Boolean) = when (line.dayOffset to line.meal) {
+        0 to Meal.LUNCH -> if (short) R.string.meals_lunch else R.string.meals_today_lunch
+        0 to Meal.DINNER -> if (short) R.string.meals_dinner else R.string.meals_today_dinner
         1 to Meal.LUNCH -> R.string.meals_tomorrow_lunch
         else -> R.string.meals_tomorrow_dinner
     }
