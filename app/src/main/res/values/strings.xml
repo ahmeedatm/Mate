@@ -1183,12 +1183,11 @@
     <string name="catalogue_family_large">Grand</string>
     <string name="catalogue_family_full">Plein écran</string>
     <string name="catalogue_shape">%1$d × %2$d · %3$s</string>
-    <string name="catalogue_shape_title">Forme</string>
     <string name="catalogue_shape_cd">Forme %1$s, %2$d sur %3$d. Glisse ou utilise les flèches pour changer.</string>
     <string name="catalogue_shape_prev">Forme précédente</string>
     <string name="catalogue_shape_next">Forme suivante</string>
     <string name="catalogue_add">Ajouter le widget</string>
-    <string name="catalogue_add_free">Ajouter à la première place libre</string>
+    <string name="catalogue_add_free">Ajouter ailleurs</string>
     <string name="catalogue_no_room_here">Pas la place ici</string>
     <string name="catalogue_no_room_here_detail">Pas la place à la case touchée. Une place libre existe ailleurs sur la page.</string>
     <string name="catalogue_no_room_page">Plus de place sur la page pour cette forme. Essaie une forme plus petite.</string>

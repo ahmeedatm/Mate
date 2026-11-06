@@ -56,7 +56,7 @@ class CatalogueView(context: Context, host: HomeHost) : FrameLayout(context) {
             }, LinearLayout.LayoutParams(dp(LIST_DP), ViewGroup.LayoutParams.MATCH_PARENT))
             addView(LinearLayout(context).apply {
                 orientation = LinearLayout.VERTICAL
-                setPadding(dp(32), dp(16), dp(32), dp(32))
+                setPadding(dp(24), dp(16), dp(24), dp(24))
                 addView(closeButton(), LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, dp(48)).apply { gravity = Gravity.END })
                 addView(sheet, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, 0, 1f).apply { topMargin = dp(8) })
             }, LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.MATCH_PARENT, 1f))
@@ -166,7 +166,7 @@ class CatalogueView(context: Context, host: HomeHost) : FrameLayout(context) {
     }
 
     private companion object {
-        const val LIST_DP = 280
+        const val LIST_DP = 240
         const val ROW_DP = 52
     }
 }

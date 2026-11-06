@@ -17,7 +17,6 @@ import androidx.core.content.ContextCompat
 import androidx.dynamicanimation.animation.DynamicAnimation
 import app.mate.R
 import app.mate.ui.Look
-import app.mate.ui.TitleView
 import app.mate.ui.dp
 import app.mate.ui.themeColor
 import app.mate.ui.themeColorList
@@ -68,7 +67,6 @@ class CatalogueSheet(context: Context, private val host: HomeHost) : LinearLayou
     }
     private val title = text(26f, R.attr.c_text).apply { typeface = themeFont(context, R.attr.c_font_title) }
     private val description = text(15f, R.attr.c_text_dim)
-    private val shapeDetail = text(16f, R.attr.c_text)
     private val placeDetail = text(14f, R.attr.c_text_dim)
     private val add = Button(context, null, 0, R.style.PrimaryButton).apply {
         maxLines = 2
@@ -82,11 +80,11 @@ class CatalogueSheet(context: Context, private val host: HomeHost) : LinearLayou
         orientation = HORIZONTAL
         addView(LinearLayout(context).apply {
             orientation = VERTICAL
-            addView(LinearLayout(context).apply {
-                gravity = Gravity.CENTER_VERTICAL
-                addView(prev, LayoutParams(dp(48), dp(48)))
-                addView(stage, LayoutParams(0, ViewGroup.LayoutParams.MATCH_PARENT, 1f).apply { marginStart = dp(8); marginEnd = dp(8) })
-                addView(next, LayoutParams(dp(48), dp(48)))
+            // Flèches posées sur la scène, aux bords : l'aperçu prend toute la largeur de la colonne.
+            addView(FrameLayout(context).apply {
+                addView(stage, FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT))
+                addView(prev, FrameLayout.LayoutParams(dp(48), dp(48), Gravity.START or Gravity.CENTER_VERTICAL))
+                addView(next, FrameLayout.LayoutParams(dp(48), dp(48), Gravity.END or Gravity.CENTER_VERTICAL))
             }, LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, 0, 1f))
             addView(dots, LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, dp(24)).apply { topMargin = dp(12) })
             addView(shapeName, LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT).apply { topMargin = dp(4) })
@@ -96,12 +94,10 @@ class CatalogueSheet(context: Context, private val host: HomeHost) : LinearLayou
             addView(icon, LayoutParams(dp(48), dp(48)))
             addView(title, LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT).apply { topMargin = dp(16) })
             addView(description, LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT).apply { topMargin = dp(6) })
-            addView(TitleView(context).apply { setText(R.string.catalogue_shape_title) }, LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT).apply { topMargin = dp(28) })
-            addView(shapeDetail, LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT).apply { topMargin = dp(6) })
-            addView(placeDetail, LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT).apply { topMargin = dp(4) })
+            addView(placeDetail, LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT).apply { topMargin = dp(20) })
             addView(View(context), LayoutParams(0, 0, 1f))
             addView(add, LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT).apply { height = ViewGroup.LayoutParams.WRAP_CONTENT })
-        }, LayoutParams(dp(INFO_DP), ViewGroup.LayoutParams.MATCH_PARENT).apply { marginStart = dp(24) })
+        }, LayoutParams(dp(INFO_DP), ViewGroup.LayoutParams.MATCH_PARENT).apply { marginStart = dp(20) })
         add.minHeight = dp(52)
     }
 
@@ -163,7 +159,6 @@ class CatalogueSheet(context: Context, private val host: HomeHost) : LinearLayou
         }
         val name = context.getString(R.string.catalogue_shape, size.w, size.h, context.getString(size.family.label))
         shapeName.text = name
-        shapeDetail.text = name
         stage.contentDescription = context.getString(R.string.catalogue_shape_cd, name, index + 1, choices.size)
         placeDetail.text = when {
             choice.atCase -> null
@@ -269,7 +264,7 @@ class CatalogueSheet(context: Context, private val host: HomeHost) : LinearLayou
     }
 
     private companion object {
-        const val INFO_DP = 280
+        const val INFO_DP = 240
         const val DOT_DP = 8
         const val DOT_ON_DP = 20
         const val SWIPE_DP = 48
