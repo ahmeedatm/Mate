@@ -123,7 +123,9 @@ class AgendaWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidge
         // Ligne fine (92 dp) : le compte et son unité l'un sous l'autre doivent tenir, d'où un plancher plus bas.
         val floor = sp(if (family == ShapeFamily.ROW) ROW_MIN_COUNT_SP else MIN_COUNT_SP)
         val px = if (face.mode == AgendaFace.Mode.TRACK_DOWN) sp(COLUMN_COUNT_SP) else (h * part).coerceIn(floor, sp(MAX_COUNT_SP))
-        count.setTextSize(TypedValue.COMPLEX_UNIT_PX, px)
+        // Ligne : le compte et son unité l'un sous l'autre tiennent dans la hauteur, quelle que soit la police du thème.
+        val room = if (family == ShapeFamily.ROW) (h - countUnit.lineHeight) / COUNT_LINE else px
+        count.setTextSize(TypedValue.COMPLEX_UNIT_PX, minOf(px, room))
     }
 
     override fun onMinute() = onCalendar()
@@ -338,5 +340,8 @@ class AgendaWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidge
         const val ROW_MIN_COUNT_SP = 22f
         const val MAX_COUNT_SP = 64f
         const val COLUMN_COUNT_SP = 40f
+
+        /** Hauteur d'une ligne du compte, en tailles de texte (marges de police comprises, polices hautes des thèmes). */
+        const val COUNT_LINE = 1.4f
     }
 }
