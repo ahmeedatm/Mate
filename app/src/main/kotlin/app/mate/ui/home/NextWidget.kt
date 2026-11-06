@@ -190,7 +190,9 @@ class NextWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidget(
             else -> 3
         }
         // Rien de prévu : l'action pour noter un rendez-vous. Ordinateur injoignable et rien de lu : on ne dit pas « rien de prévu ».
-        val empty = upcoming == null && host.unreachable == null
+        // Rien de lu (ordinateur injoignable, agenda en erreur) : on ne sait pas, on ne dit pas « rien de prévu ».
+        val unread = sample == null && (host.unreachable != null || (events.isEmpty() && host.calendarNote.isNotBlank()))
+        val empty = upcoming == null && !unread
         add.visibility = if (empty && sample == null) View.VISIBLE else View.GONE
         ring.visibility = if (upcoming == null) View.GONE else View.VISIBLE
         whenText.visibility = if (upcoming == null || family == ShapeFamily.PILL) View.GONE else View.VISIBLE
@@ -198,7 +200,7 @@ class NextWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidget(
         renderFollowing(events, upcoming, now)
         if (upcoming == null) {
             add.setText(if (host.features.linked) R.string.event_add else R.string.agenda_link_now)
-            title.put(if (!empty) "" else context.getString(if (host.features.linked) R.string.next_none_today else R.string.next_not_linked))
+            title.put(if (!empty) context.getString(R.string.agenda_unknown) else context.getString(if (host.features.linked) R.string.next_none_today else R.string.next_not_linked))
             return
         }
         title.put(upcoming.title)

@@ -160,9 +160,10 @@ class AgendaWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidge
     private fun renderTrack(now: Long) {
         val events = events
         track.show(events, now)
-        // Rien de lu parce que l'ordinateur ne répond pas ou que l'agenda n'est pas relié : ne pas dire « 0 restant ».
+        // Rien de lu parce que l'ordinateur ne répond pas (ou l'agenda en erreur) ou que l'agenda n'est pas relié :
+        // ne pas dire « 0 restant ».
         val linked = host.features.linked
-        if (sample == null && events.isEmpty() && (host.unreachable != null || !linked)) {
+        if (sample == null && events.isEmpty() && (host.unreachable != null || !linked || host.calendarNote.isNotBlank())) {
             count.put(context.getString(R.string.agenda_unknown))
             countUnit.put(if (linked) "" else context.getString(R.string.agenda_link_now))
             trackCard.setOnClickListener(if (linked) null else View.OnClickListener { host.showCalendars() })
