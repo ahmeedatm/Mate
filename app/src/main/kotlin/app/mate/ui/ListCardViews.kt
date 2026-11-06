@@ -14,7 +14,7 @@ import app.mate.R
 import app.mate.ui.home.WidgetSize
 
 /**
- * Vues du gabarit `view_tasks_cadran`, partagées par [TasksCard] et [ShoppingCard], rangées selon la forme posée
+ * Vues du gabarit `view_tasks_cadran`, partagées par [TasksCard], [ShoppingCard] et l'Échéance ([app.mate.ui.home.ChecklistWidget]), rangées selon la forme posée
  * ([ListShape]) : la tête (anneau faits / total, nombre restant, légende), le filet, la liste en une ou plusieurs colonnes.
  */
 class ListCardViews(private val card: LinearLayout) {
@@ -78,10 +78,11 @@ class ListCardViews(private val card: LinearLayout) {
         return true
     }
 
-    /** `number` vide : rien de lu encore (la légende dit le titre ou l'erreur). */
-    fun showHead(number: String, caption: String, done: Int, total: Int) {
+    /** `number` vide : rien de lu encore (la légende dit le titre ou l'erreur) ; `urgent` : le chiffre en rouge (Échéance). */
+    fun showHead(number: String, caption: String, done: Int, total: Int, urgent: Boolean = false) {
         this.number.text = number
         this.number.isVisible = number.isNotEmpty()
+        this.number.setTextColor(themeColor(context, if (urgent) R.attr.c_ko else R.attr.c_text))
         this.caption.text = caption
         ring.progress = if (total == 0) 0f else done.toFloat() / total
         // Au-delà de 99, « faits/total » ne tient plus dans l'anneau : l'arc seul le dit.
@@ -125,7 +126,7 @@ class ListCardViews(private val card: LinearLayout) {
     private fun fitHead() {
         val inner = card.height - card.paddingTop - card.paddingBottom
         val compact = shape.compact((inner / context.resources.displayMetrics.density).toInt())
-        val ringSize = if (compact) inner.coerceAtMost(card.dp(RING_DP)) else card.dp(RING_DP)
+        val ringSize = if (compact) inner.coerceAtMost(card.dp(ListShape.RING_DP)) else card.dp(shape.ringDp)
         ringBox.layoutParams.let {
             if (it.width != ringSize) {
                 it.width = ringSize
@@ -133,8 +134,9 @@ class ListCardViews(private val card: LinearLayout) {
                 ringBox.layoutParams = it
             }
         }
-        number.textSize = if (compact) 24f else 34f
-        ringText.textSize = if (compact) 10f else 13f
+        number.textSize = if (compact) 24f else shape.headSp
+        // « faits/total » suit la taille de l'anneau (13 sp pour 56 dp).
+        ringText.textSize = if (compact) 10f else RING_TEXT_SP * shape.ringDp / ListShape.RING_DP
         widenRingTarget(compact)
         caption.maxLines = if (compact) 1 else 2
         // Compacte : « 5 tâches restantes » sur une ligne, la légende alignée sur le pied du chiffre.
@@ -165,7 +167,7 @@ class ListCardViews(private val card: LinearLayout) {
     }
 
     private companion object {
-        const val RING_DP = 56
+        const val RING_TEXT_SP = 13f
         const val MIN_TARGET_DP = 48
         const val MAX_RING_TOTAL = 99
         const val HEAD_GAP_DP = 16

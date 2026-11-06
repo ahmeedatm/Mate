@@ -69,4 +69,14 @@ class ListShapeTest {
         assertEquals(listOf(listOf(1), listOf(2)), ListShape.rows(listOf(1, 2), columns = 1))
         assertEquals(emptyList<List<Int>>(), ListShape.rows(emptyList<Int>(), columns = 2))
     }
+
+    @Test
+    fun `la tete grandit avec la forme, Grand puis Plein ecran`() {
+        val block = ListShape.of(WidgetSize.L)
+        val large = ListShape.of(WidgetSize.XL)
+        val full = ListShape.of(WidgetSize.FULL)
+        assertTrue(block.headSp < large.headSp && large.headSp < full.headSp)
+        assertTrue(block.ringDp < large.ringDp && large.ringDp < full.ringDp)
+        assertEquals(block.headSp, ListShape.of(WidgetSize.S).headSp, 0f)
+    }
 }

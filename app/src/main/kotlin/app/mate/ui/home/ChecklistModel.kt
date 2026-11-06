@@ -62,6 +62,9 @@ data class Checklist(val title: String = "", val dueMs: Long? = null, val steps:
 
     fun uncheckAll() = copy(steps = steps.map { it.copy(done = false) })
 
+    /** Les étapes à faire d'abord, puis les faites, dans l'ordre de saisie ; `index` : rang dans [steps], pour [toggle]. */
+    fun todoFirst(): List<IndexedValue<ChecklistStep>> = steps.withIndex().sortedBy { it.value.done }
+
     fun withTitle(text: String) = copy(title = text.trim().take(MAX_TITLE))
 
     fun withDue(ms: Long?) = copy(dueMs = ms)
@@ -92,6 +95,9 @@ data class Checklist(val title: String = "", val dueMs: Long? = null, val steps:
         private const val MINUTE_MS = 60_000L
         private const val HOUR_MS = 60 * MINUTE_MS
         private const val DAY_MS = 24 * HOUR_MS
+
+        /** Échéance à `days` jours de `now`, une heure plus tard pour que le compte à rebours dise bien « J-days » (aperçu). */
+        fun inDays(now: Long, days: Int): Long = now + days * DAY_MS + HOUR_MS
 
         /** Lit la config ; une valeur absente ou du mauvais type donne le défaut, une étape sans texte est ignorée. */
         fun read(config: JSONObject): Checklist {

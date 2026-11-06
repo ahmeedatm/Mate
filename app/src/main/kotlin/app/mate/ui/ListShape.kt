@@ -15,6 +15,9 @@ data class ListShape(
     val checks: Boolean,
     val addRow: Boolean,
     val sideHead: Boolean,
+    /** Taille du chiffre et de l'anneau de la tête : plus grands en Grand, encore plus en Plein écran. */
+    val headSp: Float = HEAD_SP,
+    val ringDp: Int = RING_DP,
 ) {
     /**
      * Tête resserrée (chiffre et légende sur une ligne, anneau à la hauteur de la carte) : Pastille ou Ligne posée dans
@@ -25,13 +28,17 @@ data class ListShape(
     companion object {
         /** Hauteur utile sous laquelle la tête se resserre (rangée de 92 dp moins les marges de la carte). */
         const val COMPACT_BELOW_DP = 80
+        const val HEAD_SP = 34f
+        const val RING_DP = 56
 
         fun of(size: WidgetSize): ListShape = when (size.family) {
             ShapeFamily.PILL -> ListShape(list = false, columns = 1, checks = false, addRow = false, sideHead = false)
             ShapeFamily.ROW -> ListShape(list = true, columns = size.w - 1, checks = true, addRow = false, sideHead = true)
             ShapeFamily.COLUMN -> ListShape(list = true, columns = 1, checks = false, addRow = size.h >= 3, sideHead = false)
-            ShapeFamily.BLOCK, ShapeFamily.LARGE -> ListShape(list = true, columns = if (size.w >= 3) 2 else 1, checks = true, addRow = true, sideHead = false)
-            ShapeFamily.FULL -> ListShape(list = true, columns = 3, checks = true, addRow = true, sideHead = false)
+            ShapeFamily.BLOCK -> ListShape(list = true, columns = if (size.w >= 3) 2 else 1, checks = true, addRow = true, sideHead = false)
+            ShapeFamily.LARGE ->
+                ListShape(list = true, columns = if (size.w >= 3) 2 else 1, checks = true, addRow = true, sideHead = false, headSp = 44f, ringDp = 68)
+            ShapeFamily.FULL -> ListShape(list = true, columns = 3, checks = true, addRow = true, sideHead = false, headSp = 56f, ringDp = 84)
         }
 
         /** Les éléments rangés ligne par ligne, `columns` par ligne : l'ordre de lecture reste celui de la liste. */
