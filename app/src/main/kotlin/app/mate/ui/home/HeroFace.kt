@@ -30,7 +30,7 @@ data class HeroFace(
 }
 
 /**
- * Ce que la Journée montre dans une forme (#180, direction Cadran). [band] : la Ligne garde le bandeau d'avant. Ailleurs :
+ * Ce que la Journée montre dans une forme (#180, direction Cadran). [band] : le 4 × 1 garde le bandeau d'avant. Ailleurs :
  * [ring] = anneau de compte à rebours avant la réunion ([ringBeside] : à gauche de son titre, sinon au-dessus),
  * [greeting] = salutation et date, [actions] = Focus et Ne pas déranger, [track] = la journée avec les titres,
  * [compl] = météo et eau.
@@ -46,7 +46,8 @@ data class DayFace(
 ) {
     companion object {
         fun of(size: WidgetSize): DayFace = when (size.family) {
-            ShapeFamily.ROW -> DayFace(band = true)
+            // Le bandeau est fait pour 4 × 1 ; plus étroit, sa réunion et ses boutons se chevauchent : l'anneau et la réunion seuls.
+            ShapeFamily.ROW -> if (size.w == COLS) DayFace(band = true) else DayFace(band = false, ring = true, ringBeside = true)
             ShapeFamily.PILL -> DayFace(band = false, ring = true, ringBeside = true)
             ShapeFamily.COLUMN -> DayFace(band = false, ring = true, greeting = true, actions = true)
             ShapeFamily.BLOCK -> DayFace(band = false, ring = true, ringBeside = true, greeting = true, actions = true)

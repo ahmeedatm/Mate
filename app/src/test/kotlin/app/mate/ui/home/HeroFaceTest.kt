@@ -7,14 +7,24 @@ import org.junit.Test
 class HeroFaceTest {
 
     @Test
-    fun `en ligne, le heros et la journee gardent leur bandeau`() {
-        for (size in listOf(WidgetSize.M, WidgetSize.M3, WidgetSize.W)) {
-            assertTrue(size.name, HeroFace.of(size).band)
-            assertTrue(size.name, DayFace.of(size).band)
-        }
+    fun `en ligne, le heros garde son bandeau, la journee seulement en 4 x 1`() {
+        for (size in listOf(WidgetSize.M, WidgetSize.M3, WidgetSize.W)) assertTrue(size.name, HeroFace.of(size).band)
+        assertTrue(DayFace.of(WidgetSize.W).band)
         for (size in WidgetSize.entries.filter { it.family != ShapeFamily.ROW }) {
             assertFalse(size.name, HeroFace.of(size).band)
             assertFalse(size.name, DayFace.of(size).band)
+        }
+    }
+
+    @Test
+    fun `journee en 2 x 1 et 3 x 1 = l'anneau a cote de la reunion, sans salutation ni actions`() {
+        for (size in listOf(WidgetSize.M, WidgetSize.M3)) {
+            val face = DayFace.of(size)
+            assertFalse(size.name, face.band)
+            assertTrue(size.name, face.ring)
+            assertTrue(size.name, face.ringBeside)
+            assertFalse(size.name, face.greeting)
+            assertFalse(size.name, face.actions)
         }
     }
 

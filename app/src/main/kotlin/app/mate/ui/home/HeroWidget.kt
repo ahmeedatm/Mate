@@ -242,8 +242,10 @@ class HeroWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidget(
         setClock(minOf((h - reserve) / LINE_RATIO, byWidth, sp(MAX_CLOCK_SP)).coerceAtLeast(sp(MIN_CLOCK_SP)))
     }
 
+    /** Hors bandeau, personne ne mesure l'heure juste après : `setSize` ne relance pas la mise en page, on la demande. */
     private fun setClock(size: Float) {
         clock.setSize(size, (size * LINE_RATIO).roundToInt(), size.roundToInt())
+        clock.requestLayout()
     }
 
     private fun measured(part: View): Int {

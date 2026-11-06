@@ -168,7 +168,7 @@ class DayWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidget(c
         val h = view.height.toFloat()
         if (w <= 0f || h <= 0f) return
         val d = when (family) {
-            ShapeFamily.PILL -> minOf(h, w * PILL_RING_W)
+            ShapeFamily.PILL, ShapeFamily.ROW -> minOf(h, w * PILL_RING_W)
             ShapeFamily.COLUMN -> minOf(w * COLUMN_RING_W, h * COLUMN_RING_H)
             else -> if (face.ringBeside) minOf(h * BESIDE_RING_H, w * BESIDE_RING_W) else minOf(w * COLUMN_RING_W, h * COLUMN_RING_H)
         }.coerceAtLeast(dp(MIN_RING_DP).toFloat()).coerceAtMost(minOf(w, h))
@@ -177,6 +177,19 @@ class DayWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidget(c
             height = d.toInt()
         }
         ring.requestLayout()
+        fold(w.toInt(), h.toInt())
+    }
+
+    /** Trop haut pour la carte (colonne basse) : la météo, puis les actions, puis la salutation se replient. */
+    private fun fold(w: Int, h: Int) {
+        val content = view.getChildAt(0) ?: return
+        for (part in listOf(complView, actions, greeting, date)) if (part.parent != null) part.visibility = View.VISIBLE
+        renderDnd()
+        for (part in listOf(listOf(complView), listOf(actions), listOf(greeting, date))) {
+            content.measure(View.MeasureSpec.makeMeasureSpec(w, View.MeasureSpec.AT_MOST), View.MeasureSpec.makeMeasureSpec(0, View.MeasureSpec.UNSPECIFIED))
+            if (content.measuredHeight <= h) return
+            part.forEach { if (it.parent != null) it.visibility = View.GONE }
+        }
     }
 
     override fun setActive(active: Boolean) {
