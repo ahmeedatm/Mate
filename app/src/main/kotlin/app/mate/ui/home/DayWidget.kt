@@ -79,6 +79,9 @@ class DayWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidget(c
 
     override fun applySize() {
         face = DayFace.of(placed.size)
+        // L'ancien contenu part sans mise en page : un repli qui l'attendait n'arrivera jamais.
+        foldPosted = false
+        foldAgain = false
         view.removeAllViews()
         val root = LayoutInflater.from(context).inflate(R.layout.widget_day, view, false)
         greeting = root.findViewById(R.id.day_greeting)
@@ -180,22 +183,27 @@ class DayWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidget(c
         }
         ring.requestLayout()
         // Nouvelle taille : tout revient, puis se replie s'il le faut.
-        for (part in listOf(complView, actions, greeting, date)) if (part.parent != null) part.visibility = View.VISIBLE
+        for (part in listOf(complView, track, actions, greeting, date)) if (part.parent != null) part.visibility = View.VISIBLE
         refold()
     }
 
     /**
-     * Trop haute pour la carte (colonne basse) : la météo, puis les actions, puis la salutation se replient, une à la fois,
+     * Trop haute pour la carte (colonne basse) : la météo, la journée, puis les actions, puis la salutation se replient, une à la fois,
      * jugé sur les positions réelles après la mise en page (une mesure à part se trompe sur les polices des thèmes).
      */
     private fun fold() {
         val content = view.getChildAt(0) as? ViewGroup ?: return
         val shown = (0 until content.childCount).map { content.getChildAt(it) }.filter { it.visibility == View.VISIBLE }
         if (shown.isEmpty()) return
-        val top = shown.minOf { it.top - it.topMargin() }
-        val bottom = shown.maxOf { it.bottom }
-        if (top >= 0 && bottom <= content.height) return
-        val next = listOf(listOf(complView), listOf(actions), listOf(greeting, date)).firstOrNull { part -> part.any { it.parent != null && it.visibility == View.VISIBLE } } ?: return
+        // La colonne écrase le dernier bloc pour qu'il tienne (un bouton coupé sans dépasser) : comparer la place que
+        // chaque bloc voudrait, à sa largeur réelle, à la hauteur de la carte.
+        val wanted = shown.sumOf {
+            it.measure(View.MeasureSpec.makeMeasureSpec(it.width, View.MeasureSpec.EXACTLY), View.MeasureSpec.makeMeasureSpec(0, View.MeasureSpec.UNSPECIFIED))
+            it.measuredHeight + it.topMargin()
+        }
+        if (wanted <= content.height) return
+        val next = listOf(listOf(complView), listOf(track), listOf(actions), listOf(greeting, date))
+            .firstOrNull { part -> part.any { it.parent != null && it.visibility == View.VISIBLE } } ?: return
         next.forEach { it.visibility = View.GONE }
         refold()
     }
