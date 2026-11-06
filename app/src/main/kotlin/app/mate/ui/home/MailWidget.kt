@@ -97,8 +97,14 @@ class MailWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidget(
         }
         count.textSize = shape.numberSp
         caption.textSize = shape.captionSp
-        // Ligne : le détail colle au nombre, la rangée est basse.
-        (boxes.layoutParams as LinearLayout.LayoutParams).topMargin = dp(if (shape.side) 2 else 8)
+        // Ligne : la rangée est basse, le détail se met à droite du nombre ; ailleurs, dessous.
+        content.orientation = if (shape.side) LinearLayout.HORIZONTAL else LinearLayout.VERTICAL
+        boxes.layoutParams = if (shape.side) {
+            LinearLayout.LayoutParams(0, WRAP_CONTENT, 1f).apply { marginStart = dp(16) }
+        } else {
+            LinearLayout.LayoutParams(MATCH_PARENT, WRAP_CONTENT).apply { topMargin = dp(8) }
+        }
+        status.layoutParams = if (shape.side) LinearLayout.LayoutParams(0, WRAP_CONTENT, 1f) else LinearLayout.LayoutParams(MATCH_PARENT, WRAP_CONTENT)
         render()
     }
 
