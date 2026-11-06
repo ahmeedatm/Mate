@@ -231,7 +231,7 @@ class HeroWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidget(
             val below = listOf(date, complView).filter { it.parent != null && it.visibility != View.GONE }.sumOf { measured(it) + dp(GAP_DP * 2) }
             val d = minOf(w, h - below).coerceAtLeast(0f).toInt()
             dialFrame.layoutParams = (dialFrame.layoutParams as LinearLayout.LayoutParams).apply { width = d; height = d }
-            setClock(d * DIAL_TEXT_PART / (CLOCK_CELLS * clock.cellEm))
+            setClock(d * DIAL_TEXT_PART / (CLOCK_CELLS * clock.cellEm), d * DIAL_TEXT_PART)
             return
         }
         if (face.ring) {
@@ -244,9 +244,19 @@ class HeroWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidget(
         setClock(minOf((h - reserve) / LINE_RATIO, byWidth, sp(MAX_CLOCK_SP)).coerceAtLeast(sp(MIN_CLOCK_SP)))
     }
 
-    /** Hors bandeau, personne ne mesure l'heure juste après : `setSize` ne relance pas la mise en page, on la demande. */
-    private fun setClock(size: Float) {
-        clock.setSize(size, (size * LINE_RATIO).roundToInt(), size.roundToInt())
+    /**
+     * Hors bandeau, personne ne mesure l'heure juste après : `setSize` ne relance pas la mise en page, on la demande. La
+     * largeur est mesurée sur la police du thème (Spider-Verse a des chiffres plus larges que prévu) et l'heure rapetisse
+     * si elle dépasse [room].
+     */
+    private fun setClock(size: Float, room: Float = view.width.toFloat()) {
+        var px = size
+        repeat(FIT_PASSES) {
+            clock.setSize(px, (px * LINE_RATIO).roundToInt(), px.roundToInt())
+            clock.measure(View.MeasureSpec.makeMeasureSpec(0, View.MeasureSpec.UNSPECIFIED), View.MeasureSpec.makeMeasureSpec(0, View.MeasureSpec.UNSPECIFIED))
+            if (room <= 0f || clock.measuredWidth <= room) return@repeat
+            px *= room / clock.measuredWidth * FIT_MARGIN
+        }
         clock.requestLayout()
     }
 
@@ -368,6 +378,8 @@ class HeroWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidget(
         const val MAX_CLOCK_SP = 184f
         const val MIN_CLOCK_SP = 28f
         const val MIN_SP = 15f
+        const val FIT_PASSES = 3
+        const val FIT_MARGIN = 0.97f
 
         const val GAP_DP = 6
         const val TRACK_DP = 28

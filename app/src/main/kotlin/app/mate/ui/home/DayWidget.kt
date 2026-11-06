@@ -178,19 +178,28 @@ class DayWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidget(c
             height = d.toInt()
         }
         ring.requestLayout()
-        fold(w.toInt(), h.toInt())
+        // Nouvelle taille : tout revient, puis se replie s'il le faut.
+        for (part in listOf(complView, actions, greeting, date)) if (part.parent != null) part.visibility = View.VISIBLE
+        refold()
     }
 
-    /** Trop haut pour la carte (colonne basse) : la météo, puis les actions, puis la salutation se replient. */
-    private fun fold(w: Int, h: Int) {
-        val content = view.getChildAt(0) ?: return
-        for (part in listOf(complView, actions, greeting, date)) if (part.parent != null) part.visibility = View.VISIBLE
-        for (part in listOf(listOf(complView), listOf(actions), listOf(greeting, date))) {
-            content.measure(View.MeasureSpec.makeMeasureSpec(w, View.MeasureSpec.AT_MOST), View.MeasureSpec.makeMeasureSpec(0, View.MeasureSpec.UNSPECIFIED))
-            if (content.measuredHeight <= h) return
-            part.forEach { if (it.parent != null) it.visibility = View.GONE }
-        }
+    /**
+     * Trop haute pour la carte (colonne basse) : la météo, puis les actions, puis la salutation se replient, une à la fois,
+     * jugé sur les positions réelles après la mise en page (une mesure à part se trompe sur les polices des thèmes).
+     */
+    private fun fold() {
+        val content = view.getChildAt(0) as? ViewGroup ?: return
+        val shown = (0 until content.childCount).map { content.getChildAt(it) }.filter { it.visibility == View.VISIBLE }
+        if (shown.isEmpty()) return
+        val top = shown.minOf { it.top - it.topMargin() }
+        val bottom = shown.maxOf { it.bottom }
+        if (top >= 0 && bottom <= content.height) return
+        val next = listOf(listOf(complView), listOf(actions), listOf(greeting, date)).firstOrNull { part -> part.any { it.parent != null && it.visibility == View.VISIBLE } } ?: return
+        next.forEach { it.visibility = View.GONE }
+        refold()
     }
+
+    private fun View.topMargin() = (layoutParams as? ViewGroup.MarginLayoutParams)?.topMargin ?: 0
 
     override fun setActive(active: Boolean) {
         this.active = active
@@ -299,9 +308,12 @@ class DayWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidget(c
     private fun refold() {
         if (face.band || foldPosted) return
         foldPosted = true
+        // Après la mise en page qui suit : les positions sont celles de l'écran.
         view.post {
-            foldPosted = false
-            if (view.width > 0) fold(view.width, view.height)
+            view.post {
+                foldPosted = false
+                if (view.width > 0) fold()
+            }
         }
     }
 
