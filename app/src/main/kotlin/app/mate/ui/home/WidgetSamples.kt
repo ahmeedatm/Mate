@@ -5,6 +5,7 @@ import app.mate.focus.FocusTimer
 import app.mate.focus.NoisePlayer
 import app.mate.focus.Water
 import app.mate.github.Forge
+import app.mate.net.AudioState
 import java.util.Calendar
 
 /**
@@ -72,8 +73,8 @@ object WidgetSamples {
         // #184 Appels
         WidgetType.DISCORD -> CallSample(meeting = false)
         WidgetType.MEETING -> CallSample(meeting = true)
-        WidgetType.CALL -> null
-        WidgetType.PRESENT -> null
+        WidgetType.CALL -> CallSample(meeting = true)
+        WidgetType.PRESENT -> PresentSample(elapsedMs = 754_000L, running = true, audio = AudioState(output = 60, muted = false, input = 80, micMuted = false))
 
         // #185 Dev
         WidgetType.AGENTS -> AgentsSample(sampleAgents())
