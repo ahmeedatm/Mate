@@ -1670,6 +1670,9 @@
     <string name="widget_mail">Mails</string>
     <string name="widget_mail_desc">Le nombre de mails non lus de la boîte de réception ; un toucher ouvre la boîte sur l\'ordinateur</string>
     <string name="widget_mail_empty">Connecte tes mails sur la page de l\'ordinateur</string>
+    <string name="widget_mail_none">–</string>
+    <string name="widget_mail_box_down">%1$s indisponible</string>
+    <string name="widget_mail_box_down_short">indisponible</string>
     <string-array name="widget_mail_sample">
         <item>Gmail</item>
         <item>Outlook</item>

@@ -16,17 +16,17 @@ fun mailNote(mail: Mail?, hasError: Boolean): MailNote? = when {
 /**
  * Mise en page des Mails selon la forme posée (#181). `side` : l'icône à côté du nombre (Pastille, Ligne) ; `title` :
  * « Mails » à côté de l'icône (Bloc et plus grand) ; `accounts` : une ligne par boîte sous le nombre (Ligne de 3 cases et
- * plus, Colonne, Bloc et plus grand) ; `numberSp` : le nombre, très grand en plein écran.
+ * plus, Colonne, Bloc et plus grand) ; `numberSp` : le nombre, très grand en plein écran ; `boxSp`, `captionSp` : les lignes de boîte et « non lus », qui grandissent avec lui.
  */
-data class MailShape(val side: Boolean, val title: Boolean, val accounts: Boolean, val numberSp: Float) {
+data class MailShape(val side: Boolean, val title: Boolean, val accounts: Boolean, val numberSp: Float, val boxSp: Float = 15f, val captionSp: Float = 14f) {
     companion object {
         fun of(size: WidgetSize): MailShape = when (size.family) {
             ShapeFamily.PILL -> MailShape(side = true, title = false, accounts = false, numberSp = 36f)
-            ShapeFamily.ROW -> MailShape(side = true, title = false, accounts = size.w >= 3, numberSp = 36f)
+            ShapeFamily.ROW -> MailShape(side = true, title = false, accounts = size.w >= 3, numberSp = 30f, boxSp = 14f)
             ShapeFamily.COLUMN -> MailShape(side = false, title = false, accounts = true, numberSp = 44f)
-            ShapeFamily.BLOCK -> MailShape(side = false, title = true, accounts = true, numberSp = 52f)
-            ShapeFamily.LARGE -> MailShape(side = false, title = true, accounts = true, numberSp = 72f)
-            ShapeFamily.FULL -> MailShape(side = false, title = true, accounts = true, numberSp = 120f)
+            ShapeFamily.BLOCK -> MailShape(side = false, title = true, accounts = true, numberSp = 52f, boxSp = 16f, captionSp = 16f)
+            ShapeFamily.LARGE -> MailShape(side = false, title = true, accounts = true, numberSp = 72f, boxSp = 20f, captionSp = 18f)
+            ShapeFamily.FULL -> MailShape(side = false, title = true, accounts = true, numberSp = 120f, boxSp = 24f, captionSp = 24f)
         }
     }
 }

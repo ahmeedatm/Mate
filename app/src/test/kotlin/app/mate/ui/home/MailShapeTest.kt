@@ -36,6 +36,10 @@ class MailShapeTest {
         assertTrue(sp.getValue(WidgetSize.S) < sp.getValue(WidgetSize.L))
         assertTrue(sp.getValue(WidgetSize.L) < sp.getValue(WidgetSize.XL))
         assertTrue(sp.getValue(WidgetSize.XL) < sp.getValue(WidgetSize.FULL))
+        assertTrue(MailShape.of(WidgetSize.L).boxSp < MailShape.of(WidgetSize.FULL).boxSp)
+        assertTrue(MailShape.of(WidgetSize.L).captionSp < MailShape.of(WidgetSize.FULL).captionSp)
+        // Ligne basse : le nombre rapetisse pour laisser la place au détail.
+        assertTrue(MailShape.of(WidgetSize.M3).numberSp < MailShape.of(WidgetSize.S).numberSp)
     }
 
     @Test

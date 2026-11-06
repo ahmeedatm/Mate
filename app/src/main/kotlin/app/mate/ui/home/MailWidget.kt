@@ -96,6 +96,9 @@ class MailWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidget(
             LinearLayout.LayoutParams(MATCH_PARENT, 0, 1f).apply { topMargin = dp(8) }
         }
         count.textSize = shape.numberSp
+        caption.textSize = shape.captionSp
+        // Ligne : le détail colle au nombre, la rangée est basse.
+        (boxes.layoutParams as LinearLayout.LayoutParams).topMargin = dp(if (shape.side) 2 else 8)
         render()
     }
 
@@ -108,6 +111,9 @@ class MailWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidget(
         render()
     }
 
+    /** Ce qui est dessiné : une relecture qui ne change rien ne refait pas les vues. */
+    private var drawn: List<Any?>? = null
+
     private fun render() {
         val current = mail
         val note = when (mailNote(current, error != null)) {
@@ -116,29 +122,37 @@ class MailWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidget(
             MailNote.ACCOUNT_ERROR -> current?.accounts?.firstNotNullOfOrNull { it.error }
             null -> null
         }
+        val list = current?.let(::mailBoxes).orEmpty()
+        val next = listOf(note, shape, placed.size, list, current?.target, preview)
+        if (next == drawn) return
+        drawn = next
         val shown = current?.takeIf { it.hasCount }?.total
-        count.text = shown?.toString() ?: "–"
+        val none = context.getString(R.string.widget_mail_none)
+        count.text = shown?.toString() ?: none
         caption.text = context.resources.getQuantityString(R.plurals.widget_mail_unread, shown ?: 0)
         caption.isVisible = shown != null
         status.text = note
         status.isVisible = note != null
-        renderBoxes(current)
-        val target = current?.target
+        renderBoxes(list)
+        val target = current?.target?.takeIf { !preview }
         view.isClickable = target != null
-        // Lu à voix haute : le nombre, puis le geste (le tiret seul ne dit rien).
-        view.contentDescription =
-            if (target != null && shown != null) context.getString(R.string.widget_mail_a11y, shown) else note
+        // Lu à voix haute : le nombre, puis le geste (le tiret seul ne dit rien), puis le détail affiché par boîte.
+        val said = if (target != null && shown != null) context.getString(R.string.widget_mail_a11y, shown) else note
+        val detail = if (boxes.isVisible) list.joinToString(", ") { boxText(it) } else null
+        view.contentDescription = listOfNotNull(said, detail).joinToString(". ").ifEmpty { null }
     }
 
-    /** Une ligne par boîte (son nom, son nombre) ; en Ligne, toutes sur une seule ligne. Rien s'il n'y en a qu'une. */
-    private fun renderBoxes(current: Mail?) {
+    /** « Gmail 9 », ou « Outlook indisponible » pour une boîte qui n'a pas répondu (la cause suit en colonne). */
+    private fun boxText(box: MailBox) = box.count?.let { "${box.label} $it" } ?: context.getString(R.string.widget_mail_box_down, box.label)
+
+    /** Une ligne par boîte (son nom, son nombre, ou sa panne et sa cause) ; en Ligne, toutes sur une ligne. Rien pour une seule boîte. */
+    private fun renderBoxes(list: List<MailBox>) {
         boxes.removeAllViews()
-        val list = current?.let(::mailBoxes).orEmpty()
         boxes.isVisible = shape.accounts && list.size > 1
         if (!boxes.isVisible) return
         if (shape.side) {
-            boxes.addView(label(14f, R.attr.c_text_dim).apply {
-                text = list.joinToString(" · ") { "${it.label} ${it.count ?: "–"}" }
+            boxes.addView(label(shape.boxSp, R.attr.c_text_dim).apply {
+                text = list.joinToString(" · ", transform = ::boxText)
                 maxLines = 1
                 ellipsize = TextUtils.TruncateAt.END
             })
@@ -148,19 +162,25 @@ class MailWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidget(
             boxes.addView(LinearLayout(context).apply {
                 gravity = Gravity.CENTER_VERTICAL
                 minimumHeight = dp(BOX_ROW_DP)
-                addView(label(boxSp(), R.attr.c_text_dim).apply {
+                addView(label(shape.boxSp, R.attr.c_text_dim).apply {
                     text = box.label
                     maxLines = 1
                     ellipsize = TextUtils.TruncateAt.END
                 }, LinearLayout.LayoutParams(0, WRAP_CONTENT, 1f))
-                addView(label(boxSp(), if (box.count == null) R.attr.c_text_faint else R.attr.c_text).apply {
-                    text = box.count ?: "–"
+                addView(label(shape.boxSp, R.attr.c_text).apply {
+                    text = box.count ?: context.getString(R.string.widget_mail_box_down_short)
                 }, LinearLayout.LayoutParams(WRAP_CONTENT, WRAP_CONTENT).apply { marginStart = dp(12) })
             }, LinearLayout.LayoutParams(MATCH_PARENT, WRAP_CONTENT))
+            // La cause d'une panne, sur sa propre ligne sous le nom : lisible, pas seulement une couleur.
+            box.error?.takeIf { box.count == null }?.let { cause ->
+                boxes.addView(label(shape.boxSp - 1f, R.attr.c_text_dim).apply {
+                    text = cause
+                    maxLines = 2
+                    ellipsize = TextUtils.TruncateAt.END
+                }, LinearLayout.LayoutParams(MATCH_PARENT, WRAP_CONTENT).apply { bottomMargin = dp(4) })
+            }
         }
     }
-
-    private fun boxSp() = if (placed.size.family == ShapeFamily.FULL || placed.size.family == ShapeFamily.LARGE) 18f else 15f
 
     private fun open() {
         if (preview) return
