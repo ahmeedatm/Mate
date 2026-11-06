@@ -32,7 +32,7 @@ object WidgetSamples {
         WidgetType.NOTE -> NoteSample(R.string.widget_note_sample)
         WidgetType.MEALS -> MealsSample(R.array.meals_sample_lunch, R.array.meals_sample_dinner)
         WidgetType.NEWS -> NewsSample(R.string.widget_news_sample_feed, R.array.widget_news_sample, seen = 2)
-        WidgetType.MAIL -> null
+        WidgetType.MAIL -> MailSample(R.array.widget_mail_sample, listOf(9, 3))
 
         // #182 Son et musique
         WidgetType.AUDIO -> AudioSample

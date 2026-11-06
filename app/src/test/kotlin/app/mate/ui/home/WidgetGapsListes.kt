@@ -1,6 +1,4 @@
 package app.mate.ui.home
 
 /** #181 Listes et notes : ce qui manque encore à ses widgets ([WidgetRulesTest]). Retirer une ligne quand le widget est fini. */
-val GAPS_LISTES = listOf(
-    WidgetGap(WidgetType.MAIL, shapes = true, preview = true, reason = "formes et aperçu à faire (#181)"),
-)
+val GAPS_LISTES = emptyList<WidgetGap>()
