@@ -136,4 +136,19 @@ class ChecklistModelTest {
         Checklist.read(config).toggle(0).writeTo(config)
         assertEquals(listOf(true, false), Checklist.read(config).steps.map { it.done })
     }
+
+    @Test
+    fun `les etapes a faire d'abord, chacune avec son rang dans la config`() {
+        val list = Checklist(steps = listOf(ChecklistStep("a", true), ChecklistStep("b"), ChecklistStep("c", true), ChecklistStep("d")))
+        assertEquals(listOf(1, 3, 0, 2), list.todoFirst().map { it.index })
+        assertEquals(listOf("b", "d", "a", "c"), list.todoFirst().map { it.value.text })
+        // Le rang rendu coche la bonne étape.
+        assertTrue(list.toggle(list.todoFirst()[0].index).steps[1].done)
+    }
+
+    @Test
+    fun `une echeance dans n jours, pour l'apercu`() {
+        val now = at(9, 0)
+        assertEquals(Countdown.Days(3), Checklist(dueMs = Checklist.inDays(now, 3)).countdown(now))
+    }
 }

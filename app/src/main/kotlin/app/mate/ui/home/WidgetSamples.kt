@@ -18,21 +18,21 @@ object WidgetSamples {
     fun of(type: WidgetType): WidgetSample? = when (type) {
         // #180 Heure et journée
         WidgetType.CLOCK -> ClockSample
-        WidgetType.HERO -> null
-        WidgetType.DAY -> null
+        WidgetType.HERO -> CalendarSample
+        WidgetType.DAY -> CalendarSample
         WidgetType.DAYLINE -> null
         WidgetType.WEATHER -> WeatherSample.paris()
-        WidgetType.NEXT -> null
-        WidgetType.AGENDA -> null
+        WidgetType.NEXT -> CalendarSample
+        WidgetType.AGENDA -> CalendarSample
 
         // #181 Listes et notes
-        WidgetType.TASKS -> null
-        WidgetType.SHOPPING -> null
-        WidgetType.CHECKLIST -> null
+        WidgetType.TASKS -> TasksSample(R.array.widget_tasks_sample, done = 2)
+        WidgetType.SHOPPING -> ShoppingSample(R.array.widget_shopping_sample, done = 1)
+        WidgetType.CHECKLIST -> ChecklistSample(R.string.checklist_sample_title, R.array.checklist_sample_steps, done = 4, days = 3)
         WidgetType.NOTE -> NoteSample(R.string.widget_note_sample)
-        WidgetType.MEALS -> null
-        WidgetType.NEWS -> null
-        WidgetType.MAIL -> null
+        WidgetType.MEALS -> MealsSample(R.array.meals_sample_lunch, R.array.meals_sample_dinner)
+        WidgetType.NEWS -> NewsSample(R.string.widget_news_sample_feed, R.array.widget_news_sample, seen = 2)
+        WidgetType.MAIL -> MailSample(R.array.widget_mail_sample, listOf(9, 3))
 
         // #182 Son et musique
         WidgetType.AUDIO -> AudioSample
@@ -70,8 +70,8 @@ object WidgetSamples {
         WidgetType.WEB -> WebSample
 
         // #184 Appels
-        WidgetType.DISCORD -> null
-        WidgetType.MEETING -> null
+        WidgetType.DISCORD -> CallSample(meeting = false)
+        WidgetType.MEETING -> CallSample(meeting = true)
         WidgetType.CALL -> null
         WidgetType.PRESENT -> null
 

@@ -20,8 +20,17 @@ import app.mate.ui.themeFont
  * Rangée de photos rondes d'un appel Discord : photo, ou initiales sans photo, puis « +N » quand la largeur manque
  * (ordre : `planMembers`). Un anneau de la couleur d'accent entoure qui parle : il apparaît en 120 ms et s'éteint en
  * 300 ms, sans boucle (écran à 55 Hz, GPU modeste : docs/tablette-4.2.md). Dessin seul, aucune vue par personne.
+ * [photoDp] : diamètre d'une photo ; [vertical] : les photos en colonne (Colonne de l'îlot Discord), où une seule place
+ * montre un visage plutôt qu'un « +N ».
  */
-class MemberRowView(context: Context) : View(context) {
+class MemberRowView(context: Context, photoDp: Int = PHOTO_DP, private val vertical: Boolean = false) : View(context) {
+    /** Rangée centrée dans sa largeur (Plein écran de l'îlot Discord) ; sinon calée à gauche. */
+    var centered = false
+        set(value) {
+            field = value
+            invalidate()
+        }
+
     /** Photo déjà chargée d'un participant ; null : initiales. */
     var photoOf: (String) -> Bitmap? = { null }
 
@@ -39,7 +48,7 @@ class MemberRowView(context: Context) : View(context) {
     private val haloTarget = HashMap<String, Float>()
     private val haloAnim = HashMap<String, ValueAnimator>()
 
-    private val photoSize = dp(PHOTO_DP).toFloat()
+    private val photoSize = dp(photoDp).toFloat()
     private val ringWidth = dp(RING_DP).toFloat()
     private val ringGap = dp(RING_GAP_DP).toFloat()
     private val cell = photoSize + 2 * (ringGap + ringWidth)
@@ -86,14 +95,19 @@ class MemberRowView(context: Context) : View(context) {
     }
 
     override fun onMeasure(widthMeasureSpec: Int, heightMeasureSpec: Int) {
-        setMeasuredDimension(MeasureSpec.getSize(widthMeasureSpec), resolveSize(cell.toInt(), heightMeasureSpec))
+        if (vertical) {
+            setMeasuredDimension(resolveSize(cell.toInt(), widthMeasureSpec), MeasureSpec.getSize(heightMeasureSpec))
+        } else {
+            setMeasuredDimension(MeasureSpec.getSize(widthMeasureSpec), resolveSize(cell.toInt(), heightMeasureSpec))
+        }
     }
 
     override fun onSizeChanged(w: Int, h: Int, oldw: Int, oldh: Int) = replan()
 
     private fun replan() {
-        val fits = if (width == 0) 0 else ((width + spacing) / (cell + spacing)).toInt()
-        plan = planMembers(members, lastSpoke, fits)
+        val length = if (vertical) height else width
+        val fits = if (length == 0) 0 else ((length + spacing) / (cell + spacing)).toInt()
+        plan = planMembers(members, lastSpoke, fits, faceFirst = vertical)
         labels = plan.shown.associate { it.id to initials(it.name) }
         moreLabel = if (plan.more > 0) "+${plan.more}" else ""
         val speaking = members.filter { it.speaking }.map { it.id }.toSet()
@@ -126,11 +140,18 @@ class MemberRowView(context: Context) : View(context) {
     }
 
     override fun onDraw(canvas: Canvas) {
-        val cy = height / 2f
         val radius = photoSize / 2
-        var left = paddingLeft.toFloat()
+        // Position le long de la rangée (gauche à droite, ou haut en bas en colonne) ; l'autre axe est centré.
+        val count = plan.shown.size + if (moreLabel.isEmpty()) 0 else 1
+        val content = count * cell + (count - 1).coerceAtLeast(0) * spacing
+        var along = when {
+            vertical -> paddingTop.toFloat()
+            centered -> ((width - content) / 2).coerceAtLeast(paddingLeft.toFloat())
+            else -> paddingLeft.toFloat()
+        }
         for (member in plan.shown) {
-            val cx = left + cell / 2
+            val cx = if (vertical) width / 2f else along + cell / 2
+            val cy = if (vertical) along + cell / 2 else height / 2f
             val alpha = halo[member.id] ?: 0f
             if (alpha > 0f) {
                 ring.alpha = (alpha * 255).toInt()
@@ -147,11 +168,13 @@ class MemberRowView(context: Context) : View(context) {
             } else {
                 drawLabel(canvas, labels[member.id].orEmpty(), cx, cy, text)
             }
-            left += cell + spacing
+            along += cell + spacing
         }
         if (moreLabel.isNotEmpty()) {
-            canvas.drawCircle(left + cell / 2, cy, radius - moreStroke.strokeWidth / 2, moreStroke)
-            drawLabel(canvas, moreLabel, left + cell / 2, cy, dimText)
+            val cx = if (vertical) width / 2f else along + cell / 2
+            val cy = if (vertical) along + cell / 2 else height / 2f
+            canvas.drawCircle(cx, cy, radius - moreStroke.strokeWidth / 2, moreStroke)
+            drawLabel(canvas, moreLabel, cx, cy, dimText)
         }
     }
 

@@ -47,6 +47,16 @@ class TileGridView(context: Context, private val scope: CoroutineScope) : GridVi
             reslot()
         }
 
+    /** Cotes des cases : celles du thème, ou les grandes (Grand et Plein écran d'un widget d'appel). */
+    var cellMetrics: TileMetrics = metrics(context)
+        set(value) {
+            if (value === field) return
+            field = value
+            setColumnWidth(dp(value.columnDp))
+            // Les vues recyclées ont les anciennes cotes : la grille repart de vues neuves.
+            setAdapter(adapter)
+        }
+
     /** Colonnes de la grille, comptées comme `AUTO_FIT` : la grille ne les donne qu'une fois mesurée. */
     private var columns = 1
     private var usableWidth = 0
@@ -111,8 +121,8 @@ class TileGridView(context: Context, private val scope: CoroutineScope) : GridVi
 
         override fun getView(position: Int, convertView: View?, parent: ViewGroup): View {
             val type = getItemViewType(position)
-            if (type == TYPE_BLANK) return convertView ?: View(context).apply { layoutParams = AbsListView.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, cellHeight(context, metrics(context))) }
-            val view = convertView ?: newCell(context, metrics(context), wide = type == TYPE_WIDE)
+            if (type == TYPE_BLANK) return convertView ?: View(context).apply { layoutParams = AbsListView.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, cellHeight(context, cellMetrics)) }
+            val view = convertView ?: newCell(context, cellMetrics, wide = type == TYPE_WIDE)
             // Deux colonnes et l'espace entre elles : la largeur change avec les colonnes, la vue recyclée la reprend.
             if (type == TYPE_WIDE) {
                 val width = 2 * columnWidth + horizontalSpacing
@@ -126,9 +136,8 @@ class TileGridView(context: Context, private val scope: CoroutineScope) : GridVi
     }
 
     init {
-        val metrics = metrics(context)
         numColumns = AUTO_FIT
-        setColumnWidth(dp(metrics.columnDp))
+        setColumnWidth(dp(cellMetrics.columnDp))
         stretchMode = STRETCH_COLUMN_WIDTH
         horizontalSpacing = dp(8)
         verticalSpacing = dp(8)
@@ -264,7 +273,8 @@ class TileGridView(context: Context, private val scope: CoroutineScope) : GridVi
             }
             view.layoutParams = AbsListView.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, cellHeight(context, metrics, label.lineHeight))
             view.findViewById<TextView>(R.id.tile_initial).textSize = metrics.initialSp
-            val radius = context.dp(TileMetrics.radiusFor(metrics.plateDp)).toFloat()
+            val radius = context.dp(if (metrics.round) metrics.plateDp / 2 else TileMetrics.radiusFor(metrics.plateDp)).toFloat()
+            plate.setTag(R.id.tile_round, metrics.round)
             view.findViewById<ImageView>(R.id.tile_icon).apply {
                 clipToOutline = true
                 outlineProvider = object : ViewOutlineProvider() {
@@ -312,7 +322,9 @@ class TileGridView(context: Context, private val scope: CoroutineScope) : GridVi
             val tint = if (lit) themeColor(context, R.attr.c_ko) else custom
             val plain = tint == null
             plate.background = tint?.let {
-                GradientDrawable().apply { setColor(it); cornerRadius = TileMetrics.radiusFor(plate.layoutParams.height).toFloat() }
+                val side = plate.layoutParams.height
+                val round = plate.getTag(R.id.tile_round) == true
+                GradientDrawable().apply { setColor(it); cornerRadius = (if (round) side / 2 else TileMetrics.radiusFor(side)).toFloat() }
             }
             val inset = if (plain) 0 else context.dp(8)
             icon.setPadding(inset, inset, inset, inset)

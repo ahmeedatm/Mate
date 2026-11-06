@@ -21,17 +21,16 @@ import kotlinx.coroutines.launch
 
 /**
  * Widget « Courses » : la liste d'articles de l'ordinateur, cochée d'un toucher (les cochés descendent sous les autres).
- * Même gabarit que la carte Tâches. Toucher le compteur relit la liste, la dernière ligne supprime les articles cochés (après confirmation), toucher un
- * article ouvre sa suppression, « + Ajouter un article » ouvre le champ. L'ajout à la voix passe par `VoiceCommand.AddShopping`.
+ * Même gabarit que la carte Tâches, rangé selon la forme ([setShape]). Toucher la tête relit la liste, la dernière ligne supprime les articles cochés (après confirmation), toucher un
+ * article ouvre sa suppression (en Colonne, il le coche), « + Ajouter un article » ouvre le champ. L'ajout à la voix passe par `VoiceCommand.AddShopping`.
  */
 class ShoppingCard @JvmOverloads constructor(
     context: Context,
     attrs: AttributeSet? = null,
 ) : LinearLayout(context, attrs) {
 
+    private val views: ListCardViews
     private val list: LinearLayout
-    private val count: TextView
-    private val status: TextView
     private var doneCount = 0
 
     private lateinit var scope: CoroutineScope
@@ -39,14 +38,27 @@ class ShoppingCard @JvmOverloads constructor(
     init {
         orientation = VERTICAL
         LayoutInflater.from(context).inflate(R.layout.view_tasks_cadran, this, true)
-        list = findViewById(R.id.tasks_list)
-        count = findViewById(R.id.tasks_count)
-        status = findViewById(R.id.tasks_status)
-        findViewById<TextView>(R.id.tasks_title).setText(R.string.widget_shopping)
-        findViewById<TextView>(R.id.tasks_add_row).setText(R.string.shopping_add)
-        findViewById<View>(R.id.tasks_add_row).setOnClickListener { askNewItem() }
-        count.contentDescription = context.getString(R.string.shopping_reload)
-        count.setOnClickListener { launch { load() } }
+        views = ListCardViews(this)
+        list = views.list
+        (views.addRow as TextView).setText(R.string.shopping_add)
+        views.addRow.setOnClickListener { askNewItem() }
+        views.ringBox.contentDescription = context.getString(R.string.shopping_reload)
+        views.ringBox.setOnClickListener { launch { load() } }
+        views.title.setOnClickListener { launch { load() } }
+        views.showHead("", context.getString(R.string.widget_shopping), 0, 0)
+    }
+
+    /** Aperçu du catalogue : ni réseau, ni coche. */
+    private var preview = false
+
+    fun setShape(shape: ListShape) {
+        if (views.apply(shape)) shown?.let { shown = null; render(it) }
+    }
+
+    /** Aperçu du catalogue : les articles d'exemple, sans toucher à l'ordinateur. */
+    fun showPreview(items: List<ShoppingItem>) {
+        preview = true
+        render(items)
     }
 
     fun attach(scope: CoroutineScope) {
@@ -61,10 +73,11 @@ class ShoppingCard @JvmOverloads constructor(
     var quiet = false
         set(value) {
             field = value
-            if (value && failed) showStatus(if (hasRead) null else context.getString(R.string.shopping_unavailable))
+            if (value && failed) showStatus(if (hasRead) null else unavailable())
         }
 
     suspend fun load() {
+        if (preview) return
         try {
             val items = client().shopping.list()
             Computers.active(context)?.let { lastRead[it.id] = items }
@@ -73,9 +86,12 @@ class ShoppingCard @JvmOverloads constructor(
         } catch (e: Exception) {
             failed = true
             if (!hasRead) Computers.active(context)?.let { lastRead[it.id] }?.let { render(it) }
-            if (!hasRead) showStatus(context.getString(R.string.shopping_unavailable)) else if (!quiet) showStatus(context.errorText(e))
+            if (!hasRead) showStatus(unavailable()) else if (!quiet) showStatus(context.errorText(e))
         }
     }
+
+    /** Rien de lu : la tête le dit aussi (la Pastille n'a pas de ligne d'état). */
+    private fun unavailable(): String = context.getString(R.string.shopping_unavailable).also { views.showHead("", it, 0, 0) }
 
     private fun client() = BackendClient(context)
 
@@ -126,16 +142,21 @@ class ShoppingCard @JvmOverloads constructor(
         if (items == shown) return
         shown = items
         doneCount = items.count { it.done }
-        count.text = when {
-            items.isEmpty() -> ""
-            doneCount == items.size -> context.getString(R.string.shopping_all_done)
-            else -> context.resources.getQuantityString(R.plurals.shopping_remaining, items.size - doneCount, items.size - doneCount)
+        val left = items.size - doneCount
+        val caption = if (items.isEmpty()) {
+            context.getString(R.string.shopping_none_caption)
+        } else if (left == 0) {
+            context.getString(R.string.shopping_all_done)
+        } else {
+            context.resources.getQuantityString(R.plurals.shopping_left_caption, left)
         }
+        views.showHead(left.toString(), caption, doneCount, items.size)
         showStatus(if (items.isEmpty()) context.getString(R.string.shopping_empty) else null)
-        list.removeAllViews()
         if (items.isNotEmpty()) Look.revealOnce(list)
-        items.sortedBy { it.done }.forEach { list.addView(itemRow(it)) }
-        if (doneCount > 0) list.addView(clearRow())
+        // Pastille : pas de liste à l'écran, pas de lignes à construire.
+        if (!views.shape.list) return views.fill(emptyList())
+        views.fill(items.sortedBy { it.done }.map { itemRow(it) })
+        if (doneCount > 0 && !preview) list.addView(clearRow())
     }
 
     /** Dernière ligne quand des articles sont cochés : les supprime après confirmation. */
@@ -162,7 +183,7 @@ class ShoppingCard @JvmOverloads constructor(
         }
         var done = item.done
         paint(done, animate = false)
-        check.setOnClickListener {
+        if (!preview) check.setOnClickListener {
             done = !done
             paint(done, animate = true)
             launch {
@@ -173,10 +194,10 @@ class ShoppingCard @JvmOverloads constructor(
                     throw e
                 }
                 // Relue après l'animation de la coche : le coché passe sous les autres.
-                row.postDelayed({ if (row.parent === list) scope.launch { load() } }, SORT_DELAY_MS)
+                row.postDelayed({ if (row.parent != null) scope.launch { load() } }, SORT_DELAY_MS)
             }
         }
-        row.setOnClickListener {
+        if (!preview) row.setOnClickListener {
             AlertDialog.Builder(context)
                 .setTitle(item.label)
                 .setNegativeButton(R.string.cancel, null)
@@ -188,8 +209,8 @@ class ShoppingCard @JvmOverloads constructor(
     }
 
     private fun showStatus(message: String?) {
-        status.text = message
-        status.visibility = if (message == null) View.GONE else View.VISIBLE
+        views.status.text = message
+        views.status.visibility = if (message == null) View.GONE else View.VISIBLE
     }
 
     private companion object {

@@ -79,7 +79,7 @@ class WidgetModelTest {
         val top = Template.WORK_CADRAN.build().widgets.single { it.row == 0 }
         assertEquals(WidgetType.HERO to WidgetSize.W, top.type to top.size)
         assertEquals(WidgetType.DAY, WidgetType.of("day"))
-        assertEquals(listOf(WidgetSize.W), WidgetType.DAY.sizes)
+        assertEquals(WidgetSize.W, WidgetType.DAY.sizes.first())
         assertFalse(WidgetType.DAY.computer)
         assertTrue(WidgetType.DAY.bare)
     }
@@ -212,9 +212,9 @@ class WidgetModelTest {
     }
 
     @Test
-    fun `le heros et la ligne du jour n'ont besoin que de la largeur de la grille`() {
-        assertEquals(listOf(WidgetSize.W), WidgetType.HERO.sizes)
-        assertEquals(listOf(WidgetSize.W), WidgetType.DAYLINE.sizes)
+    fun `le heros et la ligne du jour se posent d'abord sur toute la largeur de la grille`() {
+        assertEquals(WidgetSize.W, WidgetType.HERO.sizes.first())
+        assertEquals(WidgetSize.W, WidgetType.DAYLINE.sizes.first())
         assertFalse(WidgetType.HERO.computer)
         assertFalse(WidgetType.DAYLINE.computer)
     }
@@ -271,10 +271,12 @@ class WidgetModelTest {
     @Test
     fun `widget Cloture, en L et Haut, tout sur la tablette, config gardee avec la disposition`() {
         assertEquals(WidgetType.CHECKLIST, WidgetType.of("checklist"))
-        assertEquals(listOf(WidgetSize.L, WidgetSize.T), WidgetType.CHECKLIST.sizes)
+        // Les 16 formes (#181) ; l'ajout reste en 2 × 2, puis 2 × 4.
+        assertEquals(listOf(WidgetSize.L, WidgetSize.T), WidgetType.CHECKLIST.sizes.take(2))
+        assertEquals(WidgetSize.entries.size, WidgetType.CHECKLIST.sizes.size)
         assertFalse(WidgetType.CHECKLIST.computer)
         assertTrue(WidgetType.CHECKLIST.offered(HomeFeatures()))
-        assertEquals(WidgetSize.T, WidgetType.CHECKLIST.zoomSize)
+        assertEquals(WidgetSize.FULL, WidgetType.CHECKLIST.zoomSize)
         val config = Checklist.config("Bilan", 1_800_000_000_000L, listOf(ChecklistStep("Balance", true), ChecklistStep("TVA")))
         val context = app.mate.FakeContext()
         HomeLayout.save(context, HomeLayout(mutableListOf(Placed(WidgetType.CHECKLIST, WidgetSize.T, 0, 0, 0, config)), 1))
