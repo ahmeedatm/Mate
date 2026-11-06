@@ -1,13 +1,12 @@
 package app.mate.ui.pointer
 
-import app.mate.net.PointerButton
 import org.junit.Assert.assertEquals
 import org.junit.Test
 
 class ScrollStripTest {
-    private fun strip(vertical: Boolean, tapClicks: Boolean = true): Pair<ScrollStrip, MutableList<PadCommand>> {
+    private fun strip(vertical: Boolean): Pair<ScrollStrip, MutableList<PadCommand>> {
         val sent = mutableListOf<PadCommand>()
-        return ScrollStrip(vertical, tapClicks, { sent += it }, slopPx = 20f, pxPerNotch = 60f) to sent
+        return ScrollStrip(vertical, { sent += it }, slopPx = 20f, pxPerNotch = 60f) to sent
     }
 
     @Test
@@ -30,17 +29,12 @@ class ScrollStripTest {
     }
 
     @Test
-    fun `une tape sans glisser clique, sauf si la bande ne clique pas`() {
+    fun `une tape sans glisser n'envoie rien`() {
         val (s, sent) = strip(vertical = true)
         s.onTouch(TouchAction.DOWN, 100f, 100f)
         s.onTouch(TouchAction.MOVE, 105f, 110f)
         s.onTouch(TouchAction.UP, 105f, 110f)
-        assertEquals(listOf(PadCommand.Click(PointerButton.LEFT)), sent)
-
-        val (quiet, none) = strip(vertical = true, tapClicks = false)
-        quiet.onTouch(TouchAction.DOWN, 100f, 100f)
-        quiet.onTouch(TouchAction.UP, 100f, 100f)
-        assertEquals(emptyList<PadCommand>(), none)
+        assertEquals(emptyList<PadCommand>(), sent)
     }
 
     @Test

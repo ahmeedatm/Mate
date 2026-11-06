@@ -43,7 +43,7 @@ class PadWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidget(c
         view.setPadding(0, 0, 0, 0)
         if (!supported) return showUnsupported()
         val shown: View = if (OpenWindowsSummary.compact(family)) {
-            PadCompact(context, family, placed.config.optString("variant", "A")).also { compact = it }
+            PadCompact(context, family).also { compact = it }
         } else {
             pad ?: PadView(context).apply {
                 useHomeCard()

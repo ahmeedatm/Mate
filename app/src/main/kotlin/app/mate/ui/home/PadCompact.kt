@@ -26,27 +26,21 @@ import app.mate.ui.themeRes
 
 /**
  * Le Pavé tactile en Pastille, Ligne et Colonne (#183). Pastille : un bouton Clic (toucher = clic gauche, maintenir =
- * clic droit). Ligne et Colonne : une bande de défilement sur un axe ([ScrollStrip]) ; [variant] provisoire, le temps
- * qu'Ahmed choisisse : A bande seule (une tape clique), B bande + bouton Clic, C deux boutons Clic gauche et droit.
+ * clic droit). Ligne et Colonne (variante B choisie par Ahmed) : une bande de défilement sur un axe ([ScrollStrip]),
+ * deux tiers de la place, et le même bouton Clic au bout.
  * Le canal vers l'ordinateur n'existe que tant que le widget est à l'écran ; l'aperçu du catalogue n'en ouvre pas.
  */
-class PadCompact(context: Context, private val family: ShapeFamily, private val variant: String) : LinearLayout(context) {
+class PadCompact(context: Context, private val family: ShapeFamily) : LinearLayout(context) {
     private var channel: PointerChannel? = null
     private var strip: ScrollStrip? = null
 
     init {
         orientation = if (family == ShapeFamily.ROW) HORIZONTAL else VERTICAL
-        when {
-            family == ShapeFamily.PILL -> addView(clickButton(R.string.pad_click, null), LayoutParams(MATCH, MATCH))
-            variant == "C" -> {
-                addView(clickButton(R.string.pad_left_click, PointerButton.LEFT), weighted(0))
-                addView(clickButton(R.string.pad_right_click, PointerButton.RIGHT), weighted(1))
-            }
-            variant == "B" -> {
-                addView(stripView(tapClicks = false), weighted(0, weight = 2f))
-                addView(clickButton(R.string.pad_click, null), weighted(1))
-            }
-            else -> addView(stripView(tapClicks = true), LayoutParams(MATCH, MATCH))
+        if (family == ShapeFamily.PILL) {
+            addView(clickButton(), LayoutParams(MATCH, MATCH))
+        } else {
+            addView(stripView(), weighted(0, weight = STRIP_WEIGHT))
+            addView(clickButton(), weighted(1))
         }
     }
 
@@ -67,33 +61,31 @@ class PadCompact(context: Context, private val family: ShapeFamily, private val 
         channel?.send(command)
     }
 
-    /** Bouton Clic : [button] null = toucher pour le clic gauche, maintenir pour le clic droit. */
-    private fun clickButton(label: Int, button: PointerButton?) = Button(context).apply {
-        setText(label)
+    /** Bouton Clic : toucher pour le clic gauche, maintenir pour le clic droit. */
+    private fun clickButton() = Button(context).apply {
+        setText(R.string.pad_click)
         isAllCaps = false
         textSize = BUTTON_SP
         setTextColor(themeColor(context, R.attr.c_text))
         setBackgroundResource(R.drawable.pill_bg)
-        if (button == null) contentDescription = context.getString(R.string.pad_click_desc)
+        contentDescription = context.getString(R.string.pad_click_desc)
         setOnClickListener {
             performHapticFeedback(HapticFeedbackConstants.VIRTUAL_KEY)
-            send(PadCommand.Click(button ?: PointerButton.LEFT))
+            send(PadCommand.Click(PointerButton.LEFT))
         }
-        if (button == null) {
-            setOnLongClickListener {
-                performHapticFeedback(HapticFeedbackConstants.LONG_PRESS)
-                send(PadCommand.Click(PointerButton.RIGHT))
-                true
-            }
+        setOnLongClickListener {
+            performHapticFeedback(HapticFeedbackConstants.LONG_PRESS)
+            send(PadCommand.Click(PointerButton.RIGHT))
+            true
         }
     }
 
     /** La bande : fond des cartes, une phrase courte au milieu ; glisser le long d'elle fait défiler. */
     @SuppressLint("ClickableViewAccessibility")
-    private fun stripView(tapClicks: Boolean): View {
+    private fun stripView(): View {
         val vertical = family != ShapeFamily.ROW
         val density = resources.displayMetrics.density
-        val gestures = ScrollStrip(vertical, tapClicks, ::send, TAP_SLOP_PX * density, PX_PER_NOTCH * density).also { strip = it }
+        val gestures = ScrollStrip(vertical, emit = ::send, slopPx = TAP_SLOP_PX * density, pxPerNotch = PX_PER_NOTCH * density).also { strip = it }
         return FrameLayout(context).apply {
             setBackgroundResource(themeRes(context, R.attr.c_home_card_bg))
             contentDescription = context.getString(if (vertical) R.string.pad_scroll_desc_v else R.string.pad_scroll_desc_h)
@@ -133,5 +125,8 @@ class PadCompact(context: Context, private val family: ShapeFamily, private val 
         const val GAP_DP = 8
         const val BUTTON_SP = 16f
         const val HINT_SP = 14f
+
+        /** La bande prend deux fois la place du bouton Clic. */
+        const val STRIP_WEIGHT = 2f
     }
 }
