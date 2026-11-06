@@ -1,6 +1,7 @@
 package app.mate.ui.home
 
 import android.content.Context
+import android.content.res.ColorStateList
 import android.text.InputType
 import android.text.TextUtils
 import android.view.Gravity
@@ -24,6 +25,7 @@ import app.mate.net.runCatchingCancellable
 import app.mate.ui.errorText
 import app.mate.ui.showForTyping
 import app.mate.ui.themeFont
+import app.mate.ui.themeRes
 import kotlinx.coroutines.launch
 
 /** Exemple des Actus pour le catalogue : le nom du flux et ses titres, dont les [seen] derniers déjà vus. */
@@ -45,7 +47,7 @@ class NewsWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidget(
     }
     private val head = LinearLayout(context).apply {
         gravity = Gravity.CENTER_VERTICAL
-        addView(disc, LinearLayout.LayoutParams(dp(HUE_DISC_DP), dp(HUE_DISC_DP)))
+        addView(disc, hueDiscParams(context, side = false))
         addView(title, LinearLayout.LayoutParams(0, WRAP_CONTENT, 1f).apply { marginStart = dp(12) })
     }
     private val status = label(14f, R.attr.c_text_dim)
@@ -92,6 +94,7 @@ class NewsWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidget(
         view.orientation = if (shape.side) LinearLayout.HORIZONTAL else LinearLayout.VERTICAL
         view.gravity = if (shape.side) Gravity.CENTER_VERTICAL else Gravity.NO_GRAVITY
         title.isVisible = shape.title
+        disc.layoutParams = hueDiscParams(context, shape.side)
         head.layoutParams = LinearLayout.LayoutParams(if (shape.side) WRAP_CONTENT else MATCH_PARENT, WRAP_CONTENT)
         content.layoutParams = if (shape.side) {
             LinearLayout.LayoutParams(0, MATCH_PARENT, 1f).apply { marginStart = dp(16) }
@@ -200,7 +203,16 @@ class NewsWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidget(
     private fun row(index: Int, text: String) = TextView(context).apply {
         this.text = text
         textSize = shape.sp
-        setTextColor(color(if (text in seen) R.attr.c_text_dim else R.attr.c_text))
+        val read = text in seen
+        setTextColor(color(if (read) R.attr.c_text_dim else R.attr.c_text))
+        // Lu : estompé et une coche en bout de ligne (la couleur seule ne suffit pas).
+        if (read) {
+            setCompoundDrawablesRelativeWithIntrinsicBounds(0, 0, R.drawable.ic_tile_check_circle, 0)
+            compoundDrawablePadding = dp(8)
+            compoundDrawableTintList = ColorStateList.valueOf(color(R.attr.c_text_faint))
+        }
+        setBackgroundResource(themeRes(context, android.R.attr.selectableItemBackground))
+        contentDescription = context.getString(if (read) R.string.widget_news_open_read_cd else R.string.widget_news_open_cd, text)
         maxLines = shape.maxLines
         ellipsize = TextUtils.TruncateAt.END
         gravity = Gravity.CENTER_VERTICAL

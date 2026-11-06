@@ -14,7 +14,7 @@ data class NewsShape(val titles: Int, val side: Boolean, val title: Boolean, val
 
         fun of(size: WidgetSize): NewsShape = when (size.family) {
             ShapeFamily.PILL -> NewsShape(titles = 0, side = true, title = false, maxLines = 1)
-            ShapeFamily.ROW -> NewsShape(titles = size.w - 1, side = true, title = false, maxLines = 2, sp = 15f)
+            ShapeFamily.ROW -> NewsShape(titles = size.w - 1, side = true, title = false, maxLines = 2, sp = 16f)
             ShapeFamily.COLUMN -> NewsShape(titles = size.h, side = false, title = false, maxLines = 3)
             ShapeFamily.BLOCK -> NewsShape(titles = MAX_TITLES, side = false, title = true, maxLines = 1, sp = 18f)
             ShapeFamily.LARGE -> NewsShape(titles = MAX_TITLES, side = false, title = true, maxLines = 2, sp = 19f)

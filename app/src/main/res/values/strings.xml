@@ -1657,6 +1657,8 @@
         <item quantity="other">%1$d nouveaux titres, toucher pour ouvrir le premier</item>
     </plurals>
     <string name="widget_news_read">À jour</string>
+    <string name="widget_news_open_cd">Ouvrir sur l\'ordinateur : %1$s</string>
+    <string name="widget_news_open_read_cd">Déjà lu. Ouvrir sur l\'ordinateur : %1$s</string>
     <string name="widget_news_sample_feed">Actus du jour</string>
     <string-array name="widget_news_sample">
         <item>Le Sénat adopte le budget de la culture après un long débat</item>
@@ -1747,6 +1749,7 @@
     <string name="meals_dinner">Soir</string>
     <string name="meals_week_today">Aujourd\'hui</string>
     <string name="meals_week_tomorrow">Demain</string>
+    <string name="meals_week_title">Repas de la semaine</string>
     <string-array name="meals_weekdays">
         <item>Lundi</item>
         <item>Mardi</item>
