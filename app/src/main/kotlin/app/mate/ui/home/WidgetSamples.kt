@@ -21,7 +21,7 @@ object WidgetSamples {
         WidgetType.CLOCK -> ClockSample
         WidgetType.HERO -> CalendarSample
         WidgetType.DAY -> CalendarSample
-        WidgetType.DAYLINE -> null
+        WidgetType.DAYLINE -> CalendarSample
         WidgetType.WEATHER -> WeatherSample.paris()
         WidgetType.NEXT -> CalendarSample
         WidgetType.AGENDA -> CalendarSample

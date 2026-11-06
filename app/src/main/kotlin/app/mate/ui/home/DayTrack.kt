@@ -35,7 +35,8 @@ class DayTrack(context: Context) : View(context) {
     private val barPaint = Paint(Paint.ANTI_ALIAS_FLAG)
     private val nowPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply { color = themeColor(context, R.attr.c_text) }
     private val haloPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply { color = themeColor(context, R.attr.c_bg) }
-    private val hourPaint = text(R.attr.c_text_faint, R.attr.c_font_regular, HOUR_SP)
+    // Seuls repères du temps d'une petite ligne sans titres, lue de loin : le gris le plus lisible.
+    private val hourPaint = text(R.attr.c_text_dim, R.attr.c_font_regular, HOUR_SP)
     private val titlePaint = text(R.attr.c_text, R.attr.c_font_regular, TITLE_SP)
     private val pastText = themeColor(context, R.attr.c_text_faint)
     private val laterText = themeColor(context, R.attr.c_text)
@@ -99,7 +100,8 @@ class DayTrack(context: Context) : View(context) {
         val inWindow = DayLineModel.inWindow(now, start)
         nowX = if (!inWindow) -1f else if (across) track.left + f * track.width() else track.centerX()
         nowY = if (!inWindow) -1f else if (across) track.centerY() else track.top + f * track.height()
-        contentDescription = bars.joinToString(", ") { "${clock.format(Date(it.event.startMs))} ${it.event.title}" }
+        contentDescription = context.getString(R.string.widget_dayline) + " : " +
+            bars.joinToString(", ") { "${clock.format(Date(it.event.startMs))} ${it.event.title}" }
     }
 
     /** Couchée : la ligne en haut (ou au milieu sans titres), les titres sous les barres, « 8 h » et « 20 h » aux bouts en bas. */
@@ -116,7 +118,9 @@ class DayTrack(context: Context) : View(context) {
         }
         barColors = IntArray(bars.size) { colors.getValue(bars[it].state) }
         val room = DayLineModel.labelRoom(bars, track.width(), context.dp(LABEL_GAP_DP).toFloat())
-        val shown = if (titles && height >= y + thick + titleH + hourH) bars.indices.filter { room[it] >= titleH * 2 } else emptyList()
+        // Un titre coupé à trois lettres ne dit rien : seulement ceux qui ont la place d'un mot.
+        val word = titlePaint.measureText(WORD)
+        val shown = if (titles && height >= y + thick + titleH + hourH) bars.indices.filter { room[it] >= maxOf(titleH * 2, word) } else emptyList()
         labels = Array(shown.size) { ellipsize(bars[shown[it]].event.title, room[shown[it]]) }
         labelX = FloatArray(shown.size) { rects[shown[it]].left }
         labelY = FloatArray(shown.size) { track.bottom + context.dp(LABEL_GAP_DP) - titlePaint.ascent() }
@@ -151,12 +155,11 @@ class DayTrack(context: Context) : View(context) {
         val textLeft = track.right + dot + context.dp(LABEL_GAP_DP)
         val room = DayLineModel.labelRoom(bars, track.height(), 0f)
         val shown = if (titles) bars.indices.filter { room[it] >= titleH } else emptyList()
-        labels = Array(shown.size) {
-            val e = bars[shown[it]].event
-            // L'heure devant le titre seulement s'il tient en entier avec elle (polices larges : le titre d'abord).
-            val timed = "${clock.format(Date(e.startMs))}  ${e.title}"
-            ellipsize(if (titlePaint.measureText(timed) <= width - textLeft) timed else e.title, width - textLeft)
-        }
+        // L'heure devant chaque titre, ou devant aucun : une liste mi-horodatée se lit comme une erreur. Sans la place pour
+        // tous (polices larges), les titres seuls ; l'axe des heures reste à gauche.
+        val timed = shown.map { "${clock.format(Date(bars[it].event.startMs))}  ${bars[it].event.title}" }
+        val withTime = timed.all { titlePaint.measureText(it) <= width - textLeft }
+        labels = Array(shown.size) { ellipsize(if (withTime) timed[it] else bars[shown[it]].event.title, width - textLeft) }
         labelX = FloatArray(shown.size) { textLeft }
         labelY = FloatArray(shown.size) { rects[shown[it]].top - titlePaint.ascent() }
         labelColors = IntArray(shown.size) { if (bars[shown[it]].state == DayLineModel.State.PAST) pastText else laterText }
@@ -202,5 +205,8 @@ class DayTrack(context: Context) : View(context) {
         const val PAST_ALPHA = 0x59
         const val NEXT_GROW = 0.35f
         const val TITLE_SP = 15f
+
+        /** Largeur d'un mot court : en dessous, un titre n'est pas montré sur la ligne couchée. */
+        const val WORD = "Mmmmmm"
     }
 }

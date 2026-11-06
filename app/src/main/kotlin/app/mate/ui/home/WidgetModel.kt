@@ -104,7 +104,7 @@ enum class WidgetType(
     NOTE("note", R.string.widget_note, R.string.widget_note_desc, R.drawable.ic_edit, listOf(WidgetSize.M, WidgetSize.S, WidgetSize.L).let { it + (WidgetSize.entries - it) }, false),
     HERO("hero", R.string.widget_hero, R.string.widget_hero_desc, R.drawable.ic_clock, listOf(WidgetSize.W).let { it + (WidgetSize.entries - it) }, false),
     DAY("day", R.string.widget_day, R.string.widget_day_desc, R.drawable.ic_event, listOf(WidgetSize.W).let { it + (WidgetSize.entries - it) }, false),
-    DAYLINE("dayline", R.string.widget_dayline, R.string.widget_dayline_desc, R.drawable.ic_alarm, listOf(WidgetSize.W), false),
+    DAYLINE("dayline", R.string.widget_dayline, R.string.widget_dayline_desc, R.drawable.ic_alarm, listOf(WidgetSize.W).let { it + (WidgetSize.entries - it) }, false),
     AGENTS("agents", R.string.widget_agents, R.string.widget_agents_desc, R.drawable.ic_agents, listOf(WidgetSize.M) + (WidgetSize.entries - WidgetSize.M), true),
     MIXER("mixer", R.string.widget_mixer, R.string.widget_mixer_desc, R.drawable.ic_wave, listOf(WidgetSize.XL, WidgetSize.L3, WidgetSize.XL3, WidgetSize.T3, WidgetSize.FULL, WidgetSize.S, WidgetSize.V, WidgetSize.M, WidgetSize.M3, WidgetSize.W, WidgetSize.V3, WidgetSize.V4, WidgetSize.L, WidgetSize.L23, WidgetSize.L33, WidgetSize.T), true),
     OPEN("open", R.string.widget_open, R.string.widget_open_desc, R.drawable.ic_display, listOf(WidgetSize.XL) + (WidgetSize.entries - WidgetSize.XL), true),
