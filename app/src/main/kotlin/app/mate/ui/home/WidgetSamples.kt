@@ -22,8 +22,8 @@ object WidgetSamples {
         WidgetType.DAY -> null
         WidgetType.DAYLINE -> null
         WidgetType.WEATHER -> WeatherSample.paris()
-        WidgetType.NEXT -> null
-        WidgetType.AGENDA -> null
+        WidgetType.NEXT -> CalendarSample
+        WidgetType.AGENDA -> CalendarSample
 
         // #181 Listes et notes
         WidgetType.TASKS -> TasksSample(R.array.widget_tasks_sample, done = 2)
