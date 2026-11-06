@@ -28,7 +28,8 @@ data class DayLineFace(val band: Boolean, val line: Line) {
 sealed interface DayNow {
     data class Busy(val title: String, val untilMs: Long) : DayNow
 
-    data class Free(val untilMs: Long?) : DayNow
+    /** [title] : le rendez-vous qui met fin au temps libre (sur la ligne, il peut chevaucher le suivant et perdre son titre). */
+    data class Free(val untilMs: Long?, val title: String?) : DayNow
 
     companion object {
         /** Les journées entières ne rendent pas occupé ; deux rendez-vous en même temps : le premier à finir. */
@@ -45,7 +46,7 @@ sealed interface DayNow {
                 set(Calendar.MILLISECOND, 0)
             }.timeInMillis
             val next = timed.filter { it.startMs in (now + 1) until tomorrow }.minByOrNull { it.startMs }
-            return Free(next?.startMs)
+            return Free(next?.startMs, next?.title)
         }
     }
 }

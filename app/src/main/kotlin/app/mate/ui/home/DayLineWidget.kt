@@ -100,7 +100,8 @@ class DayLineWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidg
             is DayNow.Busy -> show(state.title, context.getString(R.string.dayline_until, clock.format(Date(state.untilMs))), R.attr.c_accent)
             is DayNow.Free -> show(
                 context.getString(R.string.dayline_free),
-                state.untilMs?.let { context.getString(R.string.dayline_until, clock.format(Date(it))) } ?: context.getString(R.string.dayline_free_rest),
+                state.untilMs?.let { context.getString(R.string.dayline_until_title, clock.format(Date(it)), state.title.orEmpty()) }
+                    ?: context.getString(R.string.dayline_free_rest),
                 R.attr.c_text_dim,
             )
         }

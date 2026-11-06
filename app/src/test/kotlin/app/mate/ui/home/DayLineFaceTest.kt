@@ -48,14 +48,14 @@ class DayLineFaceTest {
     @Test
     fun `maintenant, libre jusqu'au prochain du jour, ou pour le reste de la journee`() {
         val events = listOf(event("Point", 10.0, 11.0), event("Revue", 14.0, 15.0), event("Demain", 33.0, 34.0))
-        assertEquals(DayNow.Free(h(14.0)), DayNow.of(events, h(12.0)))
+        assertEquals(DayNow.Free(h(14.0), "Revue"), DayNow.of(events, h(12.0)))
         assertNull((DayNow.of(events, h(16.0)) as DayNow.Free).untilMs)
     }
 
     @Test
     fun `une journee entiere ne rend pas occupe`() {
         val now = DayNow.of(listOf(event("Congé", 0.0, 24.0, allDay = true)), h(12.0))
-        assertEquals(DayNow.Free(null), now)
+        assertEquals(DayNow.Free(null, null), now)
     }
 
     @Test

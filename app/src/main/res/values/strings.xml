@@ -1402,6 +1402,7 @@
     <string name="dayline_hour">%1$d h</string>
     <string name="dayline_free">Libre</string>
     <string name="dayline_until">jusqu\'à %1$s</string>
+    <string name="dayline_until_title">jusqu\'à %1$s · %2$s</string>
     <string name="dayline_free_rest">plus rien aujourd\'hui</string>
     <string name="widget_clock">Horloge</string>
     <string name="widget_clock_desc">L\'heure et la date, en grand</string>
