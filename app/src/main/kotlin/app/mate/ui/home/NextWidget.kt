@@ -76,6 +76,9 @@ class NextWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidget(
     private var face = NextFace.of(placed.size)
     private var joinable: CalendarEvent? = null
 
+    /** Suivants affichés : reconstruits seulement quand ils changent. */
+    private var followingKey: String? = null
+
     /** Aperçu du catalogue : la journée d'exemple à la place de l'agenda de l'ordinateur. */
     private var sample: List<CalendarEvent>? = null
     private val events get() = sample ?: host.events
@@ -111,18 +114,19 @@ class NextWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidget(
         join.minimumWidth = 0
         main.orientation = if (face.across) LinearLayout.HORIZONTAL else LinearLayout.VERTICAL
         main.gravity = if (face.across) Gravity.CENTER_VERTICAL else Gravity.CENTER_HORIZONTAL
-        main.addView(ring, LinearLayout.LayoutParams(0, 0))
         val gap = dp(if (pill) PILL_GAP_DP else GAP_DP)
+        // La marge suit l'anneau : sans rendez-vous, il disparaît et le texte reste calé au bord.
+        main.addView(ring, LinearLayout.LayoutParams(0, 0).apply { if (face.across) marginEnd = gap else bottomMargin = gap })
         if (face.across) {
-            main.addView(texts, LinearLayout.LayoutParams(0, WRAP, 1f).apply { marginStart = gap })
+            main.addView(texts, LinearLayout.LayoutParams(0, WRAP, 1f))
             // Ligne : Rejoindre à droite du titre ; ailleurs, sous les textes.
             if (family == ShapeFamily.ROW) main.addView(actions, LinearLayout.LayoutParams(WRAP, WRAP).apply { marginStart = gap })
             else texts.addView(actions, LinearLayout.LayoutParams(WRAP, WRAP).apply { topMargin = gap })
         } else {
-            main.addView(texts, LinearLayout.LayoutParams(MATCH, WRAP).apply { topMargin = gap })
+            main.addView(texts, LinearLayout.LayoutParams(MATCH, WRAP))
             texts.addView(actions, LinearLayout.LayoutParams(WRAP, WRAP).apply { topMargin = gap })
         }
-        title.maxLines = if (pill || family == ShapeFamily.ROW) 2 else 3
+        followingKey = null
         view.addView(content(), FrameLayout.LayoutParams(MATCH, MATCH))
         onCalendar()
         view.post(::fit)
@@ -156,7 +160,8 @@ class NextWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidget(
         if (w <= 0 || h <= 0) return
         val mainW = if (face.following > 0 && face.followBeside) w * MAIN_WEIGHT / (MAIN_WEIGHT + 1) else w
         val mainH = if (face.following > 0 && !face.followBeside) h * BELOW_MAIN_PART else h
-        val d = if (face.across) minOf(mainH, mainW * ACROSS_RING_PART) else minOf(mainW * STACK_RING_W, mainH * STACK_RING_H)
+        // Debout (Colonne basse) : jamais sous 72 dp, la valeur et son unité doivent tenir dans le cercle.
+        val d = if (face.across) minOf(mainH, mainW * ACROSS_RING_PART) else minOf(maxOf(minOf(mainW * STACK_RING_W, mainH * STACK_RING_H), dp(MIN_RING_DP).toFloat()), mainW)
         ring.layoutParams = (ring.layoutParams as LinearLayout.LayoutParams).apply {
             width = d.toInt()
             height = d.toInt()
@@ -177,11 +182,17 @@ class NextWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidget(
         val events = events
         val upcoming = nextEvent(events, now, host.chosenId)
         val chosen = upcoming?.takeIf { it.id == host.chosenId }
-        labelView.setText(if (chosen != null) R.string.chosen_label else R.string.next_label)
+        labelView.put(context.getString(if (chosen != null) R.string.chosen_label else R.string.next_label))
         val today = events.count { !it.allDay && daysFrom(now, it.startMs) == 0 }
-        todayCount.text = if (today > 0) context.getString(R.string.next_today, today) else ""
+        todayCount.put(if (today > 0) context.getString(R.string.next_today, today) else "")
         joinable = upcoming?.takeIf { sample == null && DayBrief.canJoin(it, now, chosen != null, host.features.meetings) }
         join.visibility = if (joinable == null) View.GONE else View.VISIBLE
+        // Pastille : le titre sur une ligne quand Rejoindre est là, sinon le bouton sortirait de la rangée fine.
+        title.maxLines = when {
+            family == ShapeFamily.PILL -> if (joinable != null) 1 else 2
+            family == ShapeFamily.ROW -> 2
+            else -> 3
+        }
         // Rien de prévu : l'action pour noter un rendez-vous. Ordinateur injoignable et rien de lu : on ne dit pas « rien de prévu ».
         val empty = upcoming == null && host.unreachable == null
         add.visibility = if (empty && sample == null) View.VISIBLE else View.GONE
@@ -191,48 +202,56 @@ class NextWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidget(
         renderFollowing(events, upcoming, now)
         if (upcoming == null) {
             add.setText(if (host.features.linked) R.string.event_add else R.string.agenda_link_now)
-            title.text = if (!empty) "" else context.getString(if (host.features.linked) R.string.next_none_today else R.string.next_not_linked)
+            title.put(if (!empty) "" else context.getString(if (host.features.linked) R.string.next_none_today else R.string.next_not_linked))
             return
         }
-        title.text = upcoming.title
-        val line = nextLine(upcoming, now)
-        renderRing(upcoming, line, now)
-        val text = line.whenText(context)
-        whenText.text = if (face.details || upcoming.location.isBlank()) text else "$text · ${upcoming.location}"
-        details.text = detailsOf(upcoming)
+        title.put(upcoming.title)
+        renderRing(upcoming, now)
+        val text = nextLine(upcoming, now).whenText(context)
+        whenText.put(if (face.details || upcoming.location.isBlank()) text else "$text · ${upcoming.location}")
+        details.put(detailsOf(upcoming))
     }
 
     /** Au centre : les minutes qui restent avant (ou pendant) la réunion, sinon son heure et, plus loin, le jour. */
-    private fun renderRing(event: CalendarEvent, line: NextLine, now: Long) {
-        val start = nextTime.format(Date(event.startMs))
-        val (value, unit) = when (line) {
-            is NextLine.InMinutes -> line.minutes.coerceAtLeast(1).toString() to context.getString(R.string.next_ring_min)
-            is NextLine.Now -> ((event.endMs - now) / MINUTE + 1).toString() to context.getString(R.string.next_ring_now)
-            is NextLine.At -> start to ""
-            is NextLine.Tomorrow -> start to context.getString(R.string.next_ring_tomorrow)
-            is NextLine.Day -> start to nextShortDay.format(Date(event.startMs))
+    private fun renderRing(event: CalendarEvent, now: Long) {
+        val center = NextRing.center(event, now)
+        val unit = when (center.unit) {
+            NextRing.Unit.NONE -> ""
+            NextRing.Unit.MIN -> context.getString(R.string.next_ring_min)
+            NextRing.Unit.NOW -> context.getString(R.string.next_ring_now)
+            NextRing.Unit.TOMORROW -> context.getString(R.string.next_ring_tomorrow)
+            NextRing.Unit.DAY -> nextShortDay.format(Date(event.startMs))
         }
-        ring.show(NextRing.fraction(event, now), value, unit)
+        ring.show(NextRing.fraction(event, now), center.value, unit)
+    }
+
+    /** Même texte : pas de nouvelle mise en page (une fois par minute sur la tablette). */
+    private fun TextView.put(value: CharSequence) {
+        if (text.toString() != value.toString()) text = value
     }
 
     /** « Salle Lune · 14:45 – 15:45 · 1 h ». */
     private fun detailsOf(event: CalendarEvent): String {
         val span = context.getString(R.string.next_span, nextTime.format(Date(event.startMs)), nextTime.format(Date(event.endMs)))
-        val minutes = ((event.endMs - event.startMs) / MINUTE).toInt()
+        val split = NextRing.length(((event.endMs - event.startMs) / MINUTE).toInt())
         val length = when {
-            minutes < 60 -> context.getString(R.string.duration_minutes, minutes)
-            minutes % 60 == 0 -> context.getString(R.string.next_duration_h, minutes / 60)
-            else -> context.getString(R.string.next_duration_hm, minutes / 60, minutes % 60)
+            split.hours == 0 -> context.getString(R.string.duration_minutes, split.minutes)
+            split.minutes == 0 -> context.getString(R.string.next_duration_h, split.hours)
+            else -> context.getString(R.string.next_duration_hm, split.hours, split.minutes)
         }
         return listOf(event.location, span, length).filter { it.isNotBlank() }.joinToString(" · ")
     }
 
     /** Les rendez-vous qui suivent le prochain : l'heure (ou le jour) et le titre. */
     private fun renderFollowing(events: List<CalendarEvent>, upcoming: CalendarEvent?, now: Long) {
-        after.removeAllViews()
         if (face.following == 0) return
-        val following = events.filter { !it.allDay && it.endMs > now && it !== upcoming }.take(face.following)
-        val show = if (following.isEmpty() || upcoming == null) View.GONE else View.VISIBLE
+        val following = if (upcoming == null) emptyList() else events.filter { !it.allDay && it.endMs > now && it !== upcoming }.take(face.following)
+        // Mêmes suivants, même jour : rien à reconstruire (la carte repasse chaque minute).
+        val key = following.joinToString("|") { "${it.id}/${daysFrom(now, it.startMs) == 0}/${it.title}" }
+        if (key == followingKey) return
+        followingKey = key
+        after.removeAllViews()
+        val show = if (following.isEmpty()) View.GONE else View.VISIBLE
         divider.visibility = show
         afterBlock.visibility = show
         if (show == View.GONE) return
@@ -255,10 +274,14 @@ class NextWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidget(
         view.post(::fitFollowing)
     }
 
-    /** Cache les suivants qui ne tiennent pas ; sans aucun, ni filet ni « Ensuite ». La décision ne dépend pas des lignes cachées. */
+    /**
+     * Cache les suivants qui ne tiennent pas ; sans aucun, ni filet ni « Ensuite » (gardés en place, invisibles). La place
+     * se lit sur la carte (à droite) ou sur le bloc du dessous, qui ne dépendent pas des lignes cachées.
+     */
     private fun fitFollowing() {
-        if (face.following == 0 || after.childCount == 0 || afterBlock.height == 0 || after.width == 0) return
-        var free = afterBlock.height - after.top
+        if (face.following == 0 || after.childCount == 0 || after.width == 0 || afterBlock.visibility == View.GONE) return
+        val room = if (face.followBeside) view.height - view.paddingTop - view.paddingBottom else afterBlock.height
+        var free = room - after.top
         var fitting = 0
         for (i in 0 until after.childCount) {
             val row = after.getChildAt(i)
@@ -269,7 +292,7 @@ class NextWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidget(
             fitting++
         }
         for (i in 0 until after.childCount) after.getChildAt(i).visibility = if (i < fitting) View.VISIBLE else View.GONE
-        val show = if (fitting > 0) View.VISIBLE else View.GONE
+        val show = if (fitting > 0) View.VISIBLE else View.INVISIBLE
         divider.visibility = show
         afterBlock.visibility = show
     }
@@ -304,6 +327,7 @@ class NextWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidget(
         const val PILL_GAP_DP = 10
         const val ROW_GAP_DP = 10
         const val TIME_COL_DP = 56
+        const val MIN_RING_DP = 72
 
         /** Large et basse : l'anneau et ses textes prennent ce poids, les suivants 1. */
         const val MAIN_WEIGHT = 1.4f

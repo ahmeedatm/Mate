@@ -1,6 +1,9 @@
 package app.mate.ui.home
 
 import app.mate.net.CalendarEvent
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
 
 /**
  * Ce que le Prochain rendez-vous montre dans une forme (#180, direction Cadran) : [across] = l'anneau à gauche du titre
@@ -42,4 +45,27 @@ object NextRing {
         val left = event.startMs - now
         return if (left < HOUR_MS) left.toFloat() / HOUR_MS else 0f
     }
+
+    /** Ce qui s'écrit sous la valeur : rien, « min », « en cours », « demain », ou le jour court. */
+    enum class Unit { NONE, MIN, NOW, TOMORROW, DAY }
+
+    data class Center(val value: String, val unit: Unit)
+
+    /** Durée découpée : [hours] et [minutes] (« 45 min », « 1 h », « 1 h 30 »). */
+    data class Length(val hours: Int, val minutes: Int)
+
+    /** Au centre : les minutes avant (moins d'une heure), les minutes qui restent (en cours, minute entamée comptée), sinon l'heure. */
+    fun center(event: CalendarEvent, now: Long): Center = when (val line = nextLine(event, now)) {
+        is NextLine.InMinutes -> Center(line.minutes.coerceAtLeast(1).toString(), Unit.MIN)
+        is NextLine.Now -> Center(((event.endMs - now + MINUTE - 1) / MINUTE).toString(), Unit.NOW)
+        is NextLine.At -> Center(clock(event.startMs), Unit.NONE)
+        is NextLine.Tomorrow -> Center(clock(event.startMs), Unit.TOMORROW)
+        is NextLine.Day -> Center(clock(event.startMs), Unit.DAY)
+    }
+
+    fun length(minutes: Int) = Length(minutes / 60, minutes % 60)
+
+    private const val MINUTE = 60_000L
+
+    private fun clock(ms: Long) = SimpleDateFormat("HH:mm", Locale.FRANCE).format(Date(ms))
 }

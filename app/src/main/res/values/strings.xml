@@ -1390,6 +1390,7 @@
     <string name="widget_agenda_desc">Aujourd\'hui et les 7 jours suivants</string>
     <string name="agenda_left_one">restant</string>
     <string name="agenda_left_many">restants</string>
+    <string name="agenda_unknown">—</string>
     <string name="widget_tasks">Tâches</string>
     <string name="widget_tasks_desc">Les tâches du jour et leurs rappels</string>
     <string name="widget_shopping">Courses</string>

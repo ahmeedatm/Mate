@@ -1,31 +1,12 @@
 package app.mate.ui.home
 
 import android.content.Context
-import android.graphics.drawable.GradientDrawable
-import android.text.TextUtils
-import android.view.Gravity
-import android.view.LayoutInflater
 import android.view.View
-import android.view.ViewGroup
-import android.widget.Button
-import android.widget.LinearLayout
-import android.widget.TextView
-import androidx.core.content.ContextCompat
-import androidx.core.graphics.ColorUtils
-import androidx.core.view.isEmpty
-import androidx.core.view.isNotEmpty
 import app.mate.R
 import app.mate.net.BackendClient
 import app.mate.net.CalendarEvent
 import app.mate.ui.CallSession
-import app.mate.ui.Look
-import app.mate.ui.TitleView
 import app.mate.ui.errorText
-import app.mate.ui.themeBool
-import app.mate.ui.themeColor
-import app.mate.ui.themeFont
-import app.mate.ui.themePx
-import app.mate.ui.themeRes
 import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
 import java.util.Calendar
@@ -35,7 +16,6 @@ import java.util.Locale
 private val timeFormat get() = SimpleDateFormat("HH:mm", Locale.FRANCE)
 private val dayHeader get() = SimpleDateFormat("EEEE d MMMM", Locale.FRANCE)
 private val dayName get() = SimpleDateFormat("EEEE", Locale.FRANCE)
-private val shortDay get() = SimpleDateFormat("EEE", Locale.FRANCE)
 
 /** Jours entre aujourd'hui et `ms` (0 = aujourd'hui), au calendrier (pas en tranches de 24 h). */
 internal fun daysFrom(now: Long, ms: Long): Int {

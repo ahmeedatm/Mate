@@ -14,8 +14,8 @@ import android.widget.TextView
 import app.mate.R
 import app.mate.net.CalendarEvent
 import app.mate.ui.Look
-import app.mate.ui.themeFont
 import java.text.SimpleDateFormat
+import java.util.Calendar
 import java.util.Date
 import java.util.Locale
 
@@ -120,7 +120,9 @@ class AgendaWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidge
         val h = trackCard.height - trackCard.paddingTop - trackCard.paddingBottom
         if (h <= 0) return
         val part = if (family == ShapeFamily.ROW) ROW_COUNT_PART else PILL_COUNT_PART
-        val px = if (face.mode == AgendaFace.Mode.TRACK_DOWN) sp(COLUMN_COUNT_SP) else (h * part).coerceIn(sp(MIN_COUNT_SP), sp(MAX_COUNT_SP))
+        // Ligne fine (92 dp) : le compte et son unité l'un sous l'autre doivent tenir, d'où un plancher plus bas.
+        val floor = sp(if (family == ShapeFamily.ROW) ROW_MIN_COUNT_SP else MIN_COUNT_SP)
+        val px = if (face.mode == AgendaFace.Mode.TRACK_DOWN) sp(COLUMN_COUNT_SP) else (h * part).coerceIn(floor, sp(MAX_COUNT_SP))
         count.setTextSize(TypedValue.COMPLEX_UNIT_PX, px)
     }
 
@@ -136,10 +138,25 @@ class AgendaWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidge
     }
 
     private fun renderTrack(now: Long) {
-        val left = AgendaPlan.remaining(events, now)
-        count.text = left.toString()
-        countUnit.setText(if (left <= 1) R.string.agenda_left_one else R.string.agenda_left_many)
+        val events = events
         track.show(events, now)
+        // Rien de lu parce que l'ordinateur ne répond pas ou que l'agenda n'est pas relié : ne pas dire « 0 restant ».
+        val linked = host.features.linked
+        if (sample == null && events.isEmpty() && (host.unreachable != null || !linked)) {
+            count.put(context.getString(R.string.agenda_unknown))
+            countUnit.put(if (linked) "" else context.getString(R.string.agenda_link_now))
+            trackCard.setOnClickListener(if (linked) null else View.OnClickListener { host.showCalendars() })
+            return
+        }
+        trackCard.setOnClickListener(null)
+        val left = AgendaPlan.remaining(events, now)
+        count.put(left.toString())
+        countUnit.put(context.getString(if (left <= 1) R.string.agenda_left_one else R.string.agenda_left_many))
+    }
+
+    /** Même texte : pas de nouvelle mise en page (une fois par minute sur la tablette). */
+    private fun TextView.put(value: String) {
+        if (text.toString() != value) text = value
     }
 
     private fun renderHeader() {
@@ -172,7 +189,7 @@ class AgendaWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidge
         val row = LinearLayout(context)
         week.forEachIndexed { day, dayEvents ->
             val column = LinearLayout(context).apply { orientation = LinearLayout.VERTICAL }
-            val date = now + day * DAY_MS
+            val date = Calendar.getInstance().apply { timeInMillis = now; add(Calendar.DAY_OF_YEAR, day) }.timeInMillis
             column.addView(dayTitle(if (day == 0) context.getString(R.string.event_today) else weekDay.format(Date(date))).apply { setPadding(dp(4), 0, 0, dp(4)) })
             for (event in dayEvents) column.addView(cell(event, now), LinearLayout.LayoutParams(MATCH, WRAP).apply { topMargin = dp(4) })
             row.addView(column, LinearLayout.LayoutParams(0, WRAP, 1f).apply { if (day > 0) marginStart = dp(WEEK_GAP_DP) })
@@ -304,7 +321,6 @@ class AgendaWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidge
     private companion object {
         const val MATCH = ViewGroup.LayoutParams.MATCH_PARENT
         const val WRAP = ViewGroup.LayoutParams.WRAP_CONTENT
-        const val DAY_MS = 86_400_000L
 
         const val PAD_DP = 20
         const val PILL_PAD_DP = 14
@@ -319,6 +335,7 @@ class AgendaWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidge
         const val PILL_COUNT_PART = 0.4f
         const val ROW_COUNT_PART = 0.5f
         const val MIN_COUNT_SP = 28f
+        const val ROW_MIN_COUNT_SP = 22f
         const val MAX_COUNT_SP = 64f
         const val COLUMN_COUNT_SP = 40f
     }

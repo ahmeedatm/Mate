@@ -45,6 +45,10 @@ class DayTrack(context: Context) : View(context) {
     private val clock = SimpleDateFormat("HH:mm", Locale.FRANCE)
     private val thick = context.dp(BAR_DP).toFloat()
     private val dot = context.dp(DOT_DP).toFloat()
+    private val halo = context.dp(HALO_DP).toFloat()
+
+    /** Rayon du point « maintenant », réduit si la ligne est trop basse pour lui (Pastille sur la rangée fine). */
+    private var nowR = dot
 
     private var events: List<CalendarEvent> = emptyList()
     private var now = 0L
@@ -99,7 +103,8 @@ class DayTrack(context: Context) : View(context) {
     private fun planAcross(bars: List<DayLineModel.Bar>) {
         val hourH = hourPaint.descent() - hourPaint.ascent()
         val titleH = titlePaint.descent() - titlePaint.ascent()
-        val y = if (titles) dot + thick / 2 else (height - hourH) / 2f
+        val y = if (titles) dot + halo + thick / 2 else (height - hourH) / 2f
+        nowR = minOf(dot, (minOf(y, height - hourH - y) - halo).coerceAtLeast(thick / 2))
         track.set(dot, y - thick / 2, width - dot, y + thick / 2)
         rects = Array(bars.size) { RectF(track.left + bars[it].from * track.width(), track.top, track.left + bars[it].to * track.width(), track.bottom) }
         barColors = IntArray(bars.size) { colors.getValue(bars[it].state) }
@@ -121,7 +126,8 @@ class DayTrack(context: Context) : View(context) {
         val hourH = hourPaint.descent() - hourPaint.ascent()
         val titleH = titlePaint.descent() - titlePaint.ascent()
         val hourW = hourPaint.measureText(hourText(DayLineModel.TO_HOUR)) + context.dp(LABEL_GAP_DP)
-        val x = hourW + dot
+        nowR = dot
+        val x = hourW + dot + halo
         track.set(x - thick / 2, hourH / 2, x + thick / 2, height - hourH / 2)
         rects = Array(bars.size) { RectF(track.left, track.top + bars[it].from * track.height(), track.right, track.top + bars[it].to * track.height()) }
         barColors = IntArray(bars.size) { colors.getValue(bars[it].state) }
@@ -158,8 +164,8 @@ class DayTrack(context: Context) : View(context) {
             canvas.drawText(labels[i], labelX[i], labelY[i], titlePaint)
         }
         if (nowX >= 0f) {
-            canvas.drawCircle(nowX, nowY, dot + context.dp(HALO_DP), haloPaint)
-            canvas.drawCircle(nowX, nowY, dot, nowPaint)
+            canvas.drawCircle(nowX, nowY, nowR + halo, haloPaint)
+            canvas.drawCircle(nowX, nowY, nowR, nowPaint)
         }
     }
 

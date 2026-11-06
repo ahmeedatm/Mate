@@ -71,4 +71,21 @@ class NextFaceTest {
         assertEquals(0f, NextRing.fraction(event(120, 180), now), 0f)
         assertEquals(0f, NextRing.fraction(null, now), 0f)
     }
+
+    @Test
+    fun `au centre de l'anneau, les minutes avant, les minutes qui restent, ou l'heure`() {
+        assertEquals(NextRing.Center("13", NextRing.Unit.MIN), NextRing.center(event(13, 43), now))
+        // En cours : les minutes qui restent, la minute entamée comptée.
+        assertEquals(NextRing.Center("15", NextRing.Unit.NOW), NextRing.center(event(-15, 15), now))
+        assertEquals(NextRing.Center("16:32", NextRing.Unit.NONE), NextRing.center(event(120, 150), now))
+        assertEquals(NextRing.Unit.TOMORROW, NextRing.center(event(24 * 60, 24 * 60 + 30), now).unit)
+        assertEquals(NextRing.Unit.DAY, NextRing.center(event(3 * 24 * 60, 3 * 24 * 60 + 30), now).unit)
+    }
+
+    @Test
+    fun `la duree en minutes, en heures rondes, ou en heures et minutes`() {
+        assertEquals(NextRing.Length(0, 45), NextRing.length(45))
+        assertEquals(NextRing.Length(1, 0), NextRing.length(60))
+        assertEquals(NextRing.Length(1, 30), NextRing.length(90))
+    }
 }
