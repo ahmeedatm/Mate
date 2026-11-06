@@ -67,7 +67,7 @@ object WidgetSamples {
         WidgetType.OPEN -> OpenWindowsSample
         WidgetType.PAD -> PadSample
         WidgetType.SCREEN -> ScreenSample
-        WidgetType.PERF -> null
+        WidgetType.PERF -> PerfSample
         WidgetType.WEB -> WebSample
 
         // #184 Appels

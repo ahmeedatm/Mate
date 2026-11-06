@@ -95,6 +95,9 @@ class PerfWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidget(
     /** Infos cochées pour l'ordinateur actif, relues à chaque mesure (réglages changés, autre ordinateur). */
     private var choice: Set<PerfOption> = PerfChoice.DEFAULT
 
+    /** Aperçu du catalogue : une mesure d'exemple, ni réseau ni boucle. */
+    private var sample = false
+
     /** Met la vue courante à la taille de la place intérieure de la tuile (hauteur, largeur), à chaque mesure. */
     private var fitter: (Int, Int) -> Unit = { _, _ -> }
 
@@ -120,6 +123,16 @@ class PerfWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidget(
 
     override val hasSettings get() = true
 
+    override fun showPreview(sample: WidgetSample) {
+        if (sample !is PerfSample) return
+        this.sample = true
+        PerfSample.fill(history)
+        last = PerfSample.perf
+        error = null
+        fresh = true
+        render()
+    }
+
     override fun applySize() {
         title.text = context.getString(R.string.perf_title, Computers.active(context)?.name ?: context.getString(R.string.computer_generic))
         body.removeAllViews()
@@ -127,10 +140,12 @@ class PerfWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidget(
         extras = null
         extrasKey = ""
         spark = null
-        body.addView(when (placed.size) {
-            WidgetSize.L -> gauges()
-            WidgetSize.W -> bars()
-            else -> figures()
+        pill = null
+        body.addView(when (perfLayout(placed.size)) {
+            PerfLayout.PILL -> pill()
+            PerfLayout.GAUGES -> gauges()
+            PerfLayout.BARS -> bars()
+            PerfLayout.FIGURES -> figures()
         }, FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT))
         render()
     }
@@ -140,6 +155,7 @@ class PerfWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidget(
      * et les dernières valeurs restent grisées jusqu'au relevé suivant.
      */
     override fun setActive(active: Boolean) {
+        if (sample) return
         if (!active) {
             job?.cancel()
             job = null
@@ -311,6 +327,65 @@ class PerfWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidget(
         return if (disc <= 0f) 0f else (-b + sqrt(disc)) / (2 * a)
     }
 
+    // ---- Pastille : un seul anneau ----
+
+    /** La Pastille : son anneau (absent en variante C), son chiffre et le nom de la mesure. */
+    private class Pill(val ring: ProgressRing, val value: TextView, val name: TextView)
+
+    private var pill: Pill? = null
+
+    /** Variante provisoire, le temps qu'Ahmed choisisse : A le processeur, B la mesure la plus chargée, C son chiffre seul. */
+    private val pillVariant get() = placed.config.optString("variant", "A")
+
+    private fun pill(): View {
+        val ring = ProgressRing(context).apply { trackColor = color(R.attr.c_stroke) }
+        val value = figure(Gravity.CENTER)
+        val name = caption(context.getString(R.string.perf_cpu)).apply { gravity = Gravity.CENTER }
+        pill = Pill(ring, value, name)
+        // Les trois relevés des autres formes ne sont pas montrés : la Pastille a son propre affichage (`showPill`).
+        cpu = Reading(View(context), TextView(context), PerfSeries.CPU)
+        gpu = Reading(View(context), TextView(context), PerfSeries.GPU)
+        ram = Reading(View(context), TextView(context), PerfSeries.RAM)
+        ring.shown(pillVariant != "C")
+        val minStroke = dp(4).toFloat()
+        fitter = { height, width ->
+            showHeader(false)
+            val diameter = minOf(height, width).toFloat()
+            val size = if (pillVariant == "C") {
+                minOf(sp(MAX_PILL_SP), (height - captionHeight) / figureLine, width / figureWidth)
+            } else {
+                figureInCircle(diameter / 2 - ProgressRing.strokeFor(diameter, minStroke) - dp(RING_INSET), captionHeight.toFloat())
+            }
+            value.fontPx(minOf(sp(MAX_PILL_SP), size))
+        }
+        return FrameLayout(context).apply {
+            addView(ring, FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT))
+            addView(LinearLayout(context).apply {
+                orientation = LinearLayout.VERTICAL
+                gravity = Gravity.CENTER
+                addView(value, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT))
+                addView(name, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT))
+            }, FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT))
+        }
+    }
+
+    /** La mesure de la Pastille : le processeur (A), ou la plus chargée des mesures cochées (B, C). */
+    private fun showPill(parts: Pill, perf: PcPerf, stale: Boolean, cpuOn: Boolean, gpuOn: Boolean, ramOn: Boolean) {
+        val readings = listOfNotNull(
+            if (cpuOn) Triple(PerfSeries.CPU, perf.cpu, R.string.perf_cpu) else null,
+            if (gpuOn) perf.gpu?.let { Triple(PerfSeries.GPU, it.usage, R.string.perf_gpu) } else null,
+            if (ramOn) Triple(PerfSeries.RAM, perf.ramPercent, R.string.perf_ram) else null,
+        )
+        val shown = (if (pillVariant == "A") readings.firstOrNull() else readings.maxByOrNull { it.second }) ?: return
+        val (series, percent, name) = shown
+        val level = usageLevel(percent)
+        parts.value.set("$percent%")
+        parts.value.setTextColor(color(perfColorAttr(series, PerfMark.VALUE, level, stale)))
+        parts.name.set(context.getString(name))
+        parts.ring.progress = percent / 100f
+        parts.ring.color = color(perfColorAttr(series, PerfMark.FILL, level, stale))
+    }
+
     // ---- Bandeau : trois barres, température et ventilateur à droite ----
 
     private fun bars(): View {
@@ -369,6 +444,14 @@ class PerfWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidget(
                 // Largeur fixe, celle de « 100% » : un nouveau chiffre ne refait pas la mise en page.
                 val w = ceil(figureWidth * value.textSize).toInt()
                 if (value.layoutParams?.width != w) value.layoutParams = LinearLayout.LayoutParams(w, ViewGroup.LayoutParams.WRAP_CONTENT)
+            }
+        }
+        // Colonne : les infos en texte sous les barres (à côté, elles écraseraient la colonne).
+        if (family == ShapeFamily.COLUMN) {
+            return LinearLayout(context).apply {
+                orientation = LinearLayout.VERTICAL
+                addView(rows, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, 0, 1f))
+                addView(line, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT).apply { topMargin = dp(CHIPS_GAP) })
             }
         }
         return LinearLayout(context).apply {
@@ -431,6 +514,7 @@ class PerfWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidget(
         show(cpu, perf.cpu.takeIf { cpuOn }, stale)
         show(ram, perf.ramPercent.takeIf { ramOn }, stale)
         show(gpu, perf.gpu?.usage?.takeIf { gpuOn }, stale)
+        pill?.let { showPill(it, perf, stale, cpuOn, gpuOn, ramOn) }
         ramGb?.set(context.getString(R.string.perf_ram_gb, perfNumber(perf.ramUsedGb), perfNumber(perf.ramTotalGb)))
         extras?.let { line ->
             val list = extras(perf, stale)
@@ -462,7 +546,8 @@ class PerfWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidget(
 
     /** Les infos cochées et lisibles qui ne passent pas par un anneau ou une barre, sur une ligne (Bandeau : une par ligne). */
     private fun extrasText(list: List<Extra>): CharSequence {
-        val separator = if (placed.size == WidgetSize.W) "\n" else context.getString(R.string.perf_extras_separator)
+        // Barres d'une Ligne : les infos à droite, une par ligne.
+        val separator = if (perfLayout(placed.size) == PerfLayout.BARS && family == ShapeFamily.ROW) "\n" else context.getString(R.string.perf_extras_separator)
         val out = SpannableStringBuilder()
         for (extra in list) {
             if (out.isNotEmpty()) out.append(separator)
@@ -622,6 +707,9 @@ class PerfWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidget(
 
         /** Taille « Valeurs » de la DA (44 à 52 sp) : plafond des chiffres du Moyen et des anneaux. */
         private const val MAX_FIGURE_SP = 52f
+
+        /** Plus grand chiffre de la Pastille. */
+        private const val MAX_PILL_SP = 44f
 
         /** Plus petit chiffre du Moyen avec titre et courbe ; en dessous, il passe sur une ligne. */
         private const val MIN_FIGURE_SP = 28f
