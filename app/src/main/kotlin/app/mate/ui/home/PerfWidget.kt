@@ -232,7 +232,9 @@ class PerfWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidget(
             val columnWidth = width / count - dp(COLUMN_GAP)
             val nameWidth = if (compact) columns.maxOf { naturalWidth(it.name) } + nameGap else 0
             val room = if (compact) height else height - fixed
-            val size = minOf(sp(MAX_FIGURE_SP), room / figureLine, (columnWidth - nameWidth) / figureWidth)
+            // Grand et Plein écran : les chiffres grandissent avec la place (la courbe garde le reste).
+            val big = family == ShapeFamily.LARGE || family == ShapeFamily.FULL
+            val size = minOf(sp(if (big) MAX_BIG_FIGURE_SP else MAX_FIGURE_SP), room / figureLine, (columnWidth - nameWidth) / figureWidth)
             for (c in columns) {
                 c.value.fontPx(size)
                 // Sans courbe, plus de légende : tous les libellés au même ton.
@@ -329,13 +331,10 @@ class PerfWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidget(
 
     // ---- Pastille : un seul anneau ----
 
-    /** La Pastille : son anneau (absent en variante C), son chiffre et le nom de la mesure. */
+    /** La Pastille : son anneau, son chiffre et le nom de la mesure. */
     private class Pill(val ring: ProgressRing, val value: TextView, val name: TextView)
 
     private var pill: Pill? = null
-
-    /** Variante provisoire, le temps qu'Ahmed choisisse : A le processeur, B la mesure la plus chargée, C son chiffre seul. */
-    private val pillVariant get() = placed.config.optString("variant", "A")
 
     private fun pill(): View {
         val ring = ProgressRing(context).apply { trackColor = color(R.attr.c_stroke) }
@@ -346,16 +345,11 @@ class PerfWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidget(
         cpu = Reading(View(context), TextView(context), PerfSeries.CPU)
         gpu = Reading(View(context), TextView(context), PerfSeries.GPU)
         ram = Reading(View(context), TextView(context), PerfSeries.RAM)
-        ring.shown(pillVariant != "C")
         val minStroke = dp(4).toFloat()
         fitter = { height, width ->
             showHeader(false)
             val diameter = minOf(height, width).toFloat()
-            val size = if (pillVariant == "C") {
-                minOf(sp(MAX_PILL_SP), (height - captionHeight) / figureLine, width / figureWidth)
-            } else {
-                figureInCircle(diameter / 2 - ProgressRing.strokeFor(diameter, minStroke) - dp(RING_INSET), captionHeight.toFloat())
-            }
+            val size = figureInCircle(diameter / 2 - ProgressRing.strokeFor(diameter, minStroke) - dp(RING_INSET), captionHeight.toFloat())
             value.fontPx(minOf(sp(MAX_PILL_SP), size))
         }
         return FrameLayout(context).apply {
@@ -369,14 +363,14 @@ class PerfWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidget(
         }
     }
 
-    /** La mesure de la Pastille : le processeur (A), ou la plus chargée des mesures cochées (B, C). */
+    /** La mesure de la Pastille (variante B choisie par Ahmed) : la plus chargée des mesures cochées, son nom dessous. */
     private fun showPill(parts: Pill, perf: PcPerf, stale: Boolean, cpuOn: Boolean, gpuOn: Boolean, ramOn: Boolean) {
         val readings = listOfNotNull(
             if (cpuOn) Triple(PerfSeries.CPU, perf.cpu, R.string.perf_cpu) else null,
             if (gpuOn) perf.gpu?.let { Triple(PerfSeries.GPU, it.usage, R.string.perf_gpu) } else null,
             if (ramOn) Triple(PerfSeries.RAM, perf.ramPercent, R.string.perf_ram) else null,
         )
-        val shown = (if (pillVariant == "A") readings.firstOrNull() else readings.maxByOrNull { it.second }) ?: return
+        val shown = readings.maxByOrNull { it.second } ?: return
         val (series, percent, name) = shown
         val level = usageLevel(percent)
         parts.value.set("$percent%")
@@ -707,6 +701,9 @@ class PerfWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidget(
 
         /** Taille « Valeurs » de la DA (44 à 52 sp) : plafond des chiffres du Moyen et des anneaux. */
         private const val MAX_FIGURE_SP = 52f
+
+        /** Plus grand chiffre en Grand et Plein écran. */
+        private const val MAX_BIG_FIGURE_SP = 96f
 
         /** Plus grand chiffre de la Pastille. */
         private const val MAX_PILL_SP = 44f
