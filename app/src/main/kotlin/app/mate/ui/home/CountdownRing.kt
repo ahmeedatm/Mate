@@ -7,9 +7,13 @@ import android.graphics.RectF
 import android.util.TypedValue
 import android.view.View
 import app.mate.R
+import app.mate.net.CalendarEvent
 import app.mate.ui.Look
 import app.mate.ui.themeColor
 import app.mate.ui.themeFont
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
 
 /**
  * Anneau de compte à rebours (direction Cadran, #180) : un cercle fin, la part [show] allumée en accent depuis le haut,
@@ -109,4 +113,17 @@ class CountdownRing(context: Context) : View(context) {
         const val INNER_PART = 0.66f
         const val MIN_UNIT_SP = 14f
     }
+}
+
+/** L'anneau du rendez-vous [event] : la part qui reste ou qui passe, et au centre les minutes, ou l'heure et le jour. */
+internal fun CountdownRing.showNext(event: CalendarEvent, now: Long) {
+    val center = NextRing.center(event, now)
+    val unit = when (center.unit) {
+        NextRing.Unit.NONE -> ""
+        NextRing.Unit.MIN -> context.getString(R.string.next_ring_min)
+        NextRing.Unit.NOW -> context.getString(R.string.next_ring_now)
+        NextRing.Unit.TOMORROW -> context.getString(R.string.next_ring_tomorrow)
+        NextRing.Unit.DAY -> SimpleDateFormat("EEE", Locale.FRANCE).format(Date(event.startMs))
+    }
+    show(NextRing.fraction(event, now), center.value, unit)
 }

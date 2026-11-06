@@ -204,25 +204,12 @@ class NextWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidget(
             return
         }
         title.put(upcoming.title)
-        renderRing(upcoming, now)
+        ring.showNext(upcoming, now)
         // Moins d'une heure : l'anneau dit déjà « 13 min », la ligne donne l'heure de début.
         val line = nextLine(upcoming, now)
         val text = if (line is NextLine.InMinutes) context.getString(R.string.at_time, nextTime.format(Date(upcoming.startMs))) else line.whenText(context)
         whenText.put(if (face.details || upcoming.location.isBlank()) text else "$text · ${upcoming.location}")
         details.put(detailsOf(upcoming))
-    }
-
-    /** Au centre : les minutes qui restent avant (ou pendant) la réunion, sinon son heure et, plus loin, le jour. */
-    private fun renderRing(event: CalendarEvent, now: Long) {
-        val center = NextRing.center(event, now)
-        val unit = when (center.unit) {
-            NextRing.Unit.NONE -> ""
-            NextRing.Unit.MIN -> context.getString(R.string.next_ring_min)
-            NextRing.Unit.NOW -> context.getString(R.string.next_ring_now)
-            NextRing.Unit.TOMORROW -> context.getString(R.string.next_ring_tomorrow)
-            NextRing.Unit.DAY -> nextShortDay.format(Date(event.startMs))
-        }
-        ring.show(NextRing.fraction(event, now), center.value, unit)
     }
 
     /** Même texte : pas de nouvelle mise en page (une fois par minute sur la tablette). */
