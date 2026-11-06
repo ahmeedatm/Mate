@@ -271,10 +271,12 @@ class WidgetModelTest {
     @Test
     fun `widget Cloture, en L et Haut, tout sur la tablette, config gardee avec la disposition`() {
         assertEquals(WidgetType.CHECKLIST, WidgetType.of("checklist"))
-        assertEquals(listOf(WidgetSize.L, WidgetSize.T), WidgetType.CHECKLIST.sizes)
+        // Les 16 formes (#181) ; l'ajout reste en 2 × 2, puis 2 × 4.
+        assertEquals(listOf(WidgetSize.L, WidgetSize.T), WidgetType.CHECKLIST.sizes.take(2))
+        assertEquals(WidgetSize.entries.size, WidgetType.CHECKLIST.sizes.size)
         assertFalse(WidgetType.CHECKLIST.computer)
         assertTrue(WidgetType.CHECKLIST.offered(HomeFeatures()))
-        assertEquals(WidgetSize.T, WidgetType.CHECKLIST.zoomSize)
+        assertEquals(WidgetSize.FULL, WidgetType.CHECKLIST.zoomSize)
         val config = Checklist.config("Bilan", 1_800_000_000_000L, listOf(ChecklistStep("Balance", true), ChecklistStep("TVA")))
         val context = app.mate.FakeContext()
         HomeLayout.save(context, HomeLayout(mutableListOf(Placed(WidgetType.CHECKLIST, WidgetSize.T, 0, 0, 0, config)), 1))
@@ -358,11 +360,11 @@ class WidgetModelTest {
     }
 
     @Test
-    fun `aucune taille ne tient, rien ne change`() {
+    fun `colonne voisine prise, le widget s'etire dans la sienne`() {
         val open = Placed(WidgetType.OPEN, WidgetSize.L, 0, 3, 0)
-        // Colonne 2 prise de haut en bas : aucune taille d'Ouvertes (2 cases de large au moins) ne tient.
+        // Colonne 2 prise de haut en bas : seules les formes d'une case de large tiennent ; Fenêtres a les 16 formes (#183).
         val layout = HomeLayout(mutableListOf(open, Placed(WidgetType.FOCUS, WidgetSize.V, 0, 2, 0), Placed(WidgetType.FOCUS, WidgetSize.V, 0, 2, 2)), 1)
-        assertNull(layout.pick(open, 4f, 4f))
+        assertEquals(WidgetSize.V4, layout.pick(open, 4f, 4f))
     }
 
     @Test
