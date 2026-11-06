@@ -12,7 +12,8 @@ data class NoteShape(val side: Boolean, val title: Boolean, val minSp: Int, val 
         fun of(size: WidgetSize): NoteShape = when (size.family) {
             ShapeFamily.PILL -> NoteShape(side = true, title = false, minSp = MIN_SP, maxSp = 22)
             ShapeFamily.ROW -> NoteShape(side = true, title = false, minSp = MIN_SP, maxSp = 28)
-            ShapeFamily.COLUMN -> NoteShape(side = false, title = false, minSp = MIN_SP, maxSp = 30)
+            // Colonne : plus haute, le texte peut grossir (30 sp en 1 × 2, 42 en 1 × 4).
+            ShapeFamily.COLUMN -> NoteShape(side = false, title = false, minSp = MIN_SP, maxSp = 18 + 6 * size.h)
             ShapeFamily.BLOCK -> NoteShape(side = false, title = true, minSp = 16, maxSp = 44)
             ShapeFamily.LARGE -> NoteShape(side = false, title = true, minSp = 18, maxSp = 60)
             ShapeFamily.FULL -> NoteShape(side = false, title = true, minSp = 20, maxSp = 88)

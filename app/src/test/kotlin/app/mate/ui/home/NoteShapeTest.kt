@@ -43,4 +43,10 @@ class NoteShapeTest {
             assertTrue("$size", shape.title)
         }
     }
+
+    @Test
+    fun `en colonne, plus haute, le texte peut grossir`() {
+        assertTrue(NoteShape.of(WidgetSize.V).maxSp < NoteShape.of(WidgetSize.V3).maxSp)
+        assertTrue(NoteShape.of(WidgetSize.V3).maxSp < NoteShape.of(WidgetSize.V4).maxSp)
+    }
 }

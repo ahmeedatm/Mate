@@ -53,6 +53,7 @@ class ChecklistWidget(context: Context, host: HomeHost, placed: Placed) : HomeWi
         (addRow as TextView).setText(R.string.checklist_add)
         addRow.setOnClickListener { askText(R.string.checklist_add, R.string.checklist_step_hint, "") { text -> commit(model().add(text)); render() } }
         ringBox.isClickable = false
+        ringBox.isFocusable = false
     }
 
     override val view: View = card.asCard()
@@ -75,14 +76,14 @@ class ChecklistWidget(context: Context, host: HomeHost, placed: Placed) : HomeWi
         val shape = ListShape.of(placed.size)
         views.apply(shape)
         card.setOnClickListener(if (shape.list) null else View.OnClickListener { showSettings() })
+        card.isClickable = !shape.list
         render()
     }
 
     override fun showPreview(sample: WidgetSample) {
         val example = sample as? ChecklistSample ?: return
         val steps = context.resources.getStringArray(example.steps).mapIndexed { i, text -> ChecklistStep(text, done = i < example.done) }
-        val due = System.currentTimeMillis() + example.days * DAY_MS + HOUR_MS
-        preview = Checklist(context.getString(example.title), due, steps)
+        preview = Checklist(context.getString(example.title), Checklist.inDays(System.currentTimeMillis(), example.days), steps)
         render()
     }
 
@@ -95,7 +96,7 @@ class ChecklistWidget(context: Context, host: HomeHost, placed: Placed) : HomeWi
         views.status.setText(R.string.checklist_empty)
         views.status.isVisible = list.steps.isEmpty()
         // Les étapes à faire d'abord (une étape cochée descend au prochain affichage), chacune garde son rang dans la config.
-        views.fill(list.steps.withIndex().sortedBy { it.value.done }.map { (i, step) -> stepRow(i, step) })
+        views.fill(list.todoFirst().map { (i, step) -> stepRow(i, step) })
         views.addRow.isVisible = views.shape.addRow && list.total < Checklist.MAX_STEPS
     }
 
@@ -268,8 +269,5 @@ class ChecklistWidget(context: Context, host: HomeHost, placed: Placed) : HomeWi
 
     private companion object {
         const val MATCH = ViewGroup.LayoutParams.MATCH_PARENT
-
-        const val HOUR_MS = 3_600_000L
-        const val DAY_MS = 24 * HOUR_MS
     }
 }

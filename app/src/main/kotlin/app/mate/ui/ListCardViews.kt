@@ -126,7 +126,7 @@ class ListCardViews(private val card: LinearLayout) {
     private fun fitHead() {
         val inner = card.height - card.paddingTop - card.paddingBottom
         val compact = shape.compact((inner / context.resources.displayMetrics.density).toInt())
-        val ringSize = if (compact) inner.coerceAtMost(card.dp(RING_DP)) else card.dp(RING_DP)
+        val ringSize = if (compact) inner.coerceAtMost(card.dp(ListShape.RING_DP)) else card.dp(shape.ringDp)
         ringBox.layoutParams.let {
             if (it.width != ringSize) {
                 it.width = ringSize
@@ -134,8 +134,9 @@ class ListCardViews(private val card: LinearLayout) {
                 ringBox.layoutParams = it
             }
         }
-        number.textSize = if (compact) 24f else 34f
-        ringText.textSize = if (compact) 10f else 13f
+        number.textSize = if (compact) 24f else shape.headSp
+        // « faits/total » suit la taille de l'anneau (13 sp pour 56 dp).
+        ringText.textSize = if (compact) 10f else RING_TEXT_SP * shape.ringDp / ListShape.RING_DP
         widenRingTarget(compact)
         caption.maxLines = if (compact) 1 else 2
         // Compacte : « 5 tâches restantes » sur une ligne, la légende alignée sur le pied du chiffre.
@@ -166,7 +167,7 @@ class ListCardViews(private val card: LinearLayout) {
     }
 
     private companion object {
-        const val RING_DP = 56
+        const val RING_TEXT_SP = 13f
         const val MIN_TARGET_DP = 48
         const val MAX_RING_TOTAL = 99
         const val HEAD_GAP_DP = 16

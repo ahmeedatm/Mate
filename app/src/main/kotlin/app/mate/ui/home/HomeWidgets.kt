@@ -2,14 +2,11 @@ package app.mate.ui.home
 
 import android.content.Context
 import android.content.res.ColorStateList
-import android.text.InputType
 import android.util.TypedValue
 import android.view.Gravity
-import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.widget.Button
-import android.widget.EditText
 import android.widget.FrameLayout
 import android.widget.ImageButton
 import android.widget.ImageView
@@ -19,7 +16,6 @@ import android.widget.TextClock
 import android.widget.TextView
 import android.widget.Toast
 import androidx.annotation.ArrayRes
-import androidx.annotation.StringRes
 import androidx.appcompat.app.AlertDialog
 import androidx.core.content.ContextCompat
 import androidx.core.graphics.ColorUtils
@@ -48,7 +44,6 @@ import app.mate.ui.dp
 import app.mate.ui.errorText
 import app.mate.ui.label
 import app.mate.ui.mixer.AudioOutputChooser
-import app.mate.ui.showForTyping
 import app.mate.ui.showImmersive
 import app.mate.ui.themeBool
 import app.mate.ui.themeColor

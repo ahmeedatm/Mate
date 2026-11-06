@@ -30,7 +30,8 @@ class NoteSample(@StringRes val text: Int) : WidgetSample
  */
 class NoteWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidget(context, host, placed) {
     private val disc = ImageView(context).apply {
-        setImageResource(R.drawable.ic_edit)
+        // Un pense-bête, pas le crayon du mode Modifier : c'est un repère de type, pas un bouton.
+        setImageResource(R.drawable.ic_tile_sticky_note_2)
         imageTintList = ColorStateList.valueOf(color(R.attr.c_hue_yellow))
         background = GradientDrawable().apply {
             shape = GradientDrawable.OVAL
@@ -82,6 +83,8 @@ class NoteWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidget(
     private fun render() {
         val note = preview?.let { context.getString(it.text) } ?: placed.config.optString("text")
         text.text = note.ifBlank { context.getString(R.string.widget_note_empty) }
+        // Sans le titre (Pastille, Ligne, Colonne), TalkBack dit quand même que c'est une Note.
+        view.contentDescription = context.getString(R.string.widget_note_cd, text.text)
         text.setTextColor(color(if (note.isBlank()) R.attr.c_text_faint else R.attr.c_text))
     }
 
@@ -109,7 +112,8 @@ class NoteWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidget(
     }
 
     private companion object {
-        const val DISC_DP = 44
+        /** Comme l'anneau de la tête des cartes à liste : Note et Échéance côte à côte s'alignent. */
+        const val DISC_DP = 56
 
         /** Fond du disque : la teinte à 18 %. */
         const val DISC_ALPHA = 0x2E
