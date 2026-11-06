@@ -9,6 +9,7 @@ import android.widget.Button
 import android.widget.FrameLayout
 import android.widget.LinearLayout
 import android.widget.TextView
+import androidx.core.view.doOnNextLayout
 import app.mate.R
 import app.mate.focus.FocusTimer
 import app.mate.net.BackendClient
@@ -308,13 +309,13 @@ class DayWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidget(c
     private fun refold() {
         if (face.band || foldPosted) return
         foldPosted = true
-        // Après la mise en page qui suit : les positions sont celles de l'écran.
-        view.post {
-            view.post {
-                foldPosted = false
-                if (view.width > 0) fold()
-            }
+        // Après la prochaine mise en page : les positions sont celles de l'écran.
+        val content = view.getChildAt(0) ?: return run { foldPosted = false }
+        content.doOnNextLayout {
+            foldPosted = false
+            if (view.width > 0) fold()
         }
+        content.requestLayout()
     }
 
     private fun toggleDnd() {
