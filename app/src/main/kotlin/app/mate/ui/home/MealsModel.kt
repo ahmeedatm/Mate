@@ -39,3 +39,41 @@ fun mealLines(week: List<MenuDay>, weekday: Int, minuteOfDay: Int): List<MealLin
         MealLine(meal.first, meal.second, meal.third, state)
     }
 }
+
+/**
+ * Mise en page des Repas selon la forme posée (#181). `meals` : combien de repas montrer ; `side` : l'icône à côté
+ * (Pastille, Ligne, un repas par case en plus), sinon au-dessus ; `title` : « Repas du jour » à côté de l'icône ;
+ * `columns` : aujourd'hui et demain côte à côte ; `week` : la semaine entière (plein écran).
+ */
+data class MealsShape(val meals: Int, val side: Boolean, val title: Boolean, val columns: Int = 1, val week: Boolean = false) {
+    companion object {
+        private const val ALL = 4
+
+        fun of(size: WidgetSize): MealsShape = when (size.family) {
+            ShapeFamily.PILL -> MealsShape(meals = 1, side = true, title = false)
+            ShapeFamily.ROW -> MealsShape(meals = size.w - 1, side = true, title = false)
+            ShapeFamily.COLUMN -> MealsShape(meals = if (size.h >= 3) ALL else 2, side = false, title = false)
+            ShapeFamily.BLOCK, ShapeFamily.LARGE -> MealsShape(meals = ALL, side = false, title = true, columns = if (size.w >= 3) 2 else 1)
+            ShapeFamily.FULL -> MealsShape(meals = ALL, side = false, title = true, week = true)
+        }
+    }
+}
+
+/**
+ * Les `count` repas à montrer : tous s'il y a la place, sinon à partir du repas en cours (un repas vide qui le précède
+ * ne passe pas devant lui) ; sans repas en cours, à partir du premier qui n'est pas passé.
+ */
+fun visibleMeals(lines: List<MealLine>, count: Int): List<MealLine> {
+    if (count >= lines.size) return lines
+    val start = lines.indexOfFirst { it.state == MealState.CURRENT }.takeIf { it >= 0 } ?: lines.indexOfFirst { it.state != MealState.PAST }
+    return lines.drop(start.coerceAtLeast(0)).take(count)
+}
+
+/** Un jour de la semaine affichée : `offset` 0 aujourd'hui, `weekday` 0 lundi … 6 dimanche. */
+data class WeekDay(val offset: Int, val weekday: Int, val day: MenuDay)
+
+/** La semaine en commençant par aujourd'hui (`weekday` : 0 lundi … 6 dimanche). */
+fun weekFrom(week: List<MenuDay>, weekday: Int): List<WeekDay> = List(MenuApi.DAYS) { offset ->
+    val day = (weekday + offset) % MenuApi.DAYS
+    WeekDay(offset, day, week.getOrElse(day) { MenuDay("", "") })
+}

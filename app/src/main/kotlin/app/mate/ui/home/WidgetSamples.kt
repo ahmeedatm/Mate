@@ -4,6 +4,7 @@ import app.mate.R
 import app.mate.focus.FocusTimer
 import app.mate.focus.NoisePlayer
 import app.mate.focus.Water
+import app.mate.github.Forge
 import java.util.Calendar
 
 /**
@@ -16,21 +17,21 @@ interface WidgetSample
 object WidgetSamples {
     fun of(type: WidgetType): WidgetSample? = when (type) {
         // #180 Heure et journée
-        WidgetType.CLOCK -> null
+        WidgetType.CLOCK -> ClockSample
         WidgetType.HERO -> null
         WidgetType.DAY -> null
         WidgetType.DAYLINE -> null
-        WidgetType.WEATHER -> null
+        WidgetType.WEATHER -> WeatherSample.paris()
         WidgetType.NEXT -> null
         WidgetType.AGENDA -> null
 
         // #181 Listes et notes
-        WidgetType.TASKS -> null
-        WidgetType.SHOPPING -> null
-        WidgetType.CHECKLIST -> null
+        WidgetType.TASKS -> TasksSample(R.array.widget_tasks_sample, done = 2)
+        WidgetType.SHOPPING -> ShoppingSample(R.array.widget_shopping_sample, done = 1)
+        WidgetType.CHECKLIST -> ChecklistSample(R.string.checklist_sample_title, R.array.checklist_sample_steps, done = 4, days = 3)
         WidgetType.NOTE -> NoteSample(R.string.widget_note_sample)
-        WidgetType.MEALS -> null
-        WidgetType.NEWS -> null
+        WidgetType.MEALS -> MealsSample(R.array.meals_sample_lunch, R.array.meals_sample_dinner)
+        WidgetType.NEWS -> NewsSample(R.string.widget_news_sample_feed, R.array.widget_news_sample, seen = 2)
         WidgetType.MAIL -> null
 
         // #182 Son et musique
@@ -62,9 +63,9 @@ object WidgetSamples {
                 R.string.widget_apps_sample_mail,
             ),
         )
-        WidgetType.OPEN -> null
+        WidgetType.OPEN -> OpenWindowsSample
         WidgetType.PAD -> null
-        WidgetType.SCREEN -> null
+        WidgetType.SCREEN -> ScreenSample
         WidgetType.PERF -> null
         WidgetType.WEB -> null
 
@@ -75,13 +76,13 @@ object WidgetSamples {
         WidgetType.PRESENT -> null
 
         // #185 Dev
-        WidgetType.AGENTS -> null
-        WidgetType.JIRA -> null
-        WidgetType.GITLAB -> null
-        WidgetType.PIPELINES -> null
-        WidgetType.GITHUB -> null
-        WidgetType.ACTIONS -> null
-        WidgetType.METRICS -> null
+        WidgetType.AGENTS -> AgentsSample(sampleAgents())
+        WidgetType.JIRA -> JiraSample(sampleJira())
+        WidgetType.GITLAB -> MrsSample(sampleMrs())
+        WidgetType.PIPELINES -> PipelinesSample(samplePipelines(Forge.GITLAB))
+        WidgetType.GITHUB -> MrsSample(sampleMrs())
+        WidgetType.ACTIONS -> PipelinesSample(samplePipelines(Forge.GITHUB))
+        WidgetType.METRICS -> MetricsSample(sampleMetrics())
 
         // #186 Perso, maison et jeux
         WidgetType.FOCUS -> FocusSample(FocusTimer.State(FocusTimer.Phase.FOCUS, 25 * MINUTE, 18 * MINUTE + 42_000, running = true, completed = 2), NoisePlayer.Kind.FOREST)

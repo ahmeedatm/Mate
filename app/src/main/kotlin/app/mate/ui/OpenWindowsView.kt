@@ -106,6 +106,15 @@ class OpenWindowsView @JvmOverloads constructor(
         this.scope = scope
     }
 
+    /** Aperçu du catalogue : des fenêtres d'exemple, sans relecture ni icône à charger (rien ne part sur le réseau). */
+    private var sample = false
+
+    fun showSample(data: OpenWindows) {
+        sample = true
+        visibility = VISIBLE
+        render(data)
+    }
+
     // Widget de 2 lignes : la corbeille se resserre, elle cache moins les écrans.
     override fun onSizeChanged(w: Int, h: Int, oldw: Int, oldh: Int) {
         super.onSizeChanged(w, h, oldw, oldh)
@@ -115,6 +124,7 @@ class OpenWindowsView @JvmOverloads constructor(
 
     /** Affichée et relue en boucle, ou cachée. Sans changement d'état, la boucle en cours continue (pas de relecture en plus). */
     fun setActive(active: Boolean) {
+        if (sample) return
         visibility = if (active) VISIBLE else GONE
         if (this.active == active) return
         this.active = active
@@ -241,8 +251,10 @@ class OpenWindowsView @JvmOverloads constructor(
             icon.imageTintList = null
             icon.setImageBitmap(bitmap)
         }
-        IconCache.peekApp(app.name)?.let(::showIcon) ?: scope.launch {
-            IconCache.loadApp(BackendClient(context), app.name)?.let(::showIcon)
+        if (!sample) {
+            IconCache.peekApp(app.name)?.let(::showIcon) ?: scope.launch {
+                IconCache.loadApp(BackendClient(context), app.name)?.let(::showIcon)
+            }
         }
         card.findViewById<TextView>(R.id.open_app).text = app.name
         val meta = listOfNotNull(

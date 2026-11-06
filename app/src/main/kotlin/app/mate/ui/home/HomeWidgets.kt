@@ -2,14 +2,11 @@ package app.mate.ui.home
 
 import android.content.Context
 import android.content.res.ColorStateList
-import android.text.InputType
 import android.util.TypedValue
 import android.view.Gravity
-import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.widget.Button
-import android.widget.EditText
 import android.widget.FrameLayout
 import android.widget.ImageButton
 import android.widget.ImageView
@@ -18,7 +15,7 @@ import android.widget.ScrollView
 import android.widget.TextClock
 import android.widget.TextView
 import android.widget.Toast
-import androidx.annotation.StringRes
+import androidx.annotation.ArrayRes
 import androidx.appcompat.app.AlertDialog
 import androidx.core.content.ContextCompat
 import androidx.core.graphics.ColorUtils
@@ -33,9 +30,12 @@ import app.mate.net.CalendarEvent
 import app.mate.net.DeckPage
 import app.mate.net.DeckTile
 import app.mate.net.HomeFeatures
+import app.mate.net.ShoppingItem
+import app.mate.net.TaskItem
 import app.mate.net.runCatchingCancellable
 import app.mate.ui.ComputerAudioView
 import app.mate.ui.IconCache
+import app.mate.ui.ListShape
 import app.mate.ui.NowPlayingView
 import app.mate.ui.ShoppingCard
 import app.mate.ui.TasksCard
@@ -44,7 +44,6 @@ import app.mate.ui.dp
 import app.mate.ui.errorText
 import app.mate.ui.label
 import app.mate.ui.mixer.AudioOutputChooser
-import app.mate.ui.showForTyping
 import app.mate.ui.showImmersive
 import app.mate.ui.themeBool
 import app.mate.ui.themeColor
@@ -192,109 +191,6 @@ abstract class HomeWidget(val context: Context, val host: HomeHost, val placed: 
                 WidgetType.VALORANT -> ValorantWidget(context, host, placed)
                 WidgetType.SCREEN -> ScreenWidget(context, host, placed)
             }
-    }
-}
-
-/** Heure, salutation et date ; grand chiffre lisible de loin. */
-class ClockWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidget(context, host, placed) {
-    private val greeting = label(20f, R.attr.c_text_dim)
-    private val clock = TextClock(context).apply {
-        format12Hour = "HH:mm"
-        format24Hour = "HH:mm"
-        includeFontPadding = false
-        isSingleLine = true
-        setTextColor(color(R.attr.c_text))
-        typeface = themeFont(context, R.attr.c_font_light)
-    }
-    private val date = label(22f, R.attr.c_text_dim).apply { isSingleLine = true }
-    private val side = LinearLayout(context).apply { orientation = LinearLayout.VERTICAL }
-    override val view = LinearLayout(context).asCard(24)
-
-    override fun applySize() {
-        view.removeAllViews()
-        side.removeAllViews()
-        val wrap = ViewGroup.LayoutParams.WRAP_CONTENT
-        val small = placed.size == WidgetSize.S
-        view.setPadding(dp(if (small) 12 else 24), dp(if (small) 12 else 24), dp(if (small) 12 else 24), dp(if (small) 12 else 24))
-        when (placed.size) {
-            // Une case : l'heure et la date dessous, centrées.
-            WidgetSize.S -> {
-                view.orientation = LinearLayout.VERTICAL
-                view.gravity = Gravity.CENTER
-                clock.textSize = 48f
-                date.textSize = 15f
-                for (line in listOf(clock, date)) view.addView(line, LinearLayout.LayoutParams(wrap, wrap))
-            }
-            // Une ligne : l'heure, et à côté la salutation et la date.
-            WidgetSize.M, WidgetSize.W -> {
-                val wide = placed.size == WidgetSize.W
-                view.orientation = LinearLayout.HORIZONTAL
-                view.gravity = Gravity.CENTER_VERTICAL
-                clock.textSize = if (wide) 116f else 80f
-                greeting.textSize = if (wide) 22f else 17f
-                date.textSize = if (wide) 26f else 18f
-                view.addView(clock)
-                side.addView(greeting)
-                side.addView(date)
-                view.addView(side, LinearLayout.LayoutParams(0, wrap, 1f).apply { marginStart = dp(if (wide) 32 else 20) })
-            }
-            else -> {
-                val big = placed.size == WidgetSize.XL
-                view.orientation = LinearLayout.VERTICAL
-                view.gravity = if (big) Gravity.CENTER else Gravity.CENTER_VERTICAL or Gravity.START
-                clock.textSize = if (big) 190f else 120f
-                greeting.textSize = if (big) 24f else 20f
-                date.textSize = if (big) 30f else 22f
-                // Largeur ajustée au texte : sinon chaque ligne prend toute la carte et le centrage ne se voit pas.
-                for (line in listOf(greeting, clock, date)) view.addView(line, LinearLayout.LayoutParams(wrap, wrap))
-            }
-        }
-        onMinute()
-        view.post(::fitHeight)
-    }
-
-    init {
-        // La hauteur dépend de la ligne de l'Accueil (232, 92 ou 184 dp en Console) : l'heure s'y ajuste.
-        view.addOnLayoutChangeListener { _, _, top, _, bottom, _, oldTop, _, oldBottom ->
-            if (bottom - top != oldBottom - oldTop) view.post(::fitHeight)
-        }
-    }
-
-    /**
-     * Une ligne (Moyen, Bandeau) : sur une ligne basse (la fine de 92 dp), marges réduites, sans salutation, et l'heure
-     * rapetissée pour tenir en hauteur ; sinon les tailles de [applySize].
-     */
-    private fun fitHeight() {
-        if (placed.size != WidgetSize.M && placed.size != WidgetSize.W) return
-        val wide = placed.size == WidgetSize.W
-        val short = view.height in 1 until dp(SHORT_DP)
-        val pad = dp(if (short) 8 else 24)
-        if (view.paddingTop != pad) view.setPadding(dp(24), pad, dp(24), pad)
-        greeting.visibility = if (short) View.GONE else View.VISIBLE
-        date.textSize = if (short) 18f else if (wide) 26f else 18f
-        val base = TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_SP, if (wide) 116f else 80f, context.resources.displayMetrics)
-        // Chiffres sans marge de police (includeFontPadding faux) : la ligne fait ~1,15 fois la taille du texte.
-        val room = (view.height - 2 * pad) / CLOCK_LINE
-        clock.setTextSize(TypedValue.COMPLEX_UNIT_PX, if (view.height > 0) minOf(base, room) else base)
-    }
-
-    override fun onMinute() {
-        greeting.setText(when (Calendar.getInstance().get(Calendar.HOUR_OF_DAY)) {
-            in 5..11 -> R.string.greeting_morning
-            in 12..17 -> R.string.greeting_afternoon
-            else -> R.string.greeting_evening
-        })
-        // Une case : date courte (« Mer. 28 oct. »), qui tient sur une ligne.
-        val pattern = if (placed.size == WidgetSize.S) "EEE d MMM" else "EEEE d MMMM"
-        date.text = SimpleDateFormat(pattern, Locale.FRANCE).format(Date()).replaceFirstChar { it.uppercase() }
-    }
-
-    private companion object {
-        /** En dessous de cette hauteur, la ligne est « basse » (la fine de l'Accueil fait 92 dp). */
-        const val SHORT_DP = 130
-
-        /** Hauteur d'une ligne de chiffres, en tailles de texte. */
-        const val CLOCK_LINE = 1.15f
     }
 }
 
@@ -590,10 +486,25 @@ class MediaWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidget
     }
 }
 
+/** Exemple des Tâches pour le catalogue : les libellés, dont les [done] derniers sont faits. */
+class TasksSample(@ArrayRes val labels: Int, val done: Int) : WidgetSample
+
 /** Tâches du jour, stockées sur l'ordinateur ; le nombre restant va sur la pastille de la barre latérale. */
 class TasksWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidget(context, host, placed) {
     private val tasks = TasksCard(context).apply { attach(host.scope) { pending -> host.main?.setPendingTasks(pending) } }
     override val view: View = tasks.asCard()
+
+    override fun applySize() = tasks.setShape(ListShape.of(placed.size))
+
+    override fun showPreview(sample: WidgetSample) {
+        val example = sample as? TasksSample ?: return
+        val labels = context.resources.getStringArray(example.labels)
+        tasks.showPreview(
+            labels.mapIndexed { i, label ->
+                TaskItem("sample-$i", label, daily = false, done = i >= labels.size - example.done, auto = false, detail = null, hasUrl = false)
+            },
+        )
+    }
 
     override suspend fun load() = tasks.load()
 
@@ -603,75 +514,27 @@ class TasksWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidget
     }
 }
 
+/** Exemple des Courses pour le catalogue : les articles, dont les [done] derniers sont pris. */
+class ShoppingSample(@ArrayRes val labels: Int, val done: Int) : WidgetSample
+
 /** Liste de courses, stockée sur l'ordinateur ; l'ajout à la voix la remplit (« ajoute du lait à la liste de courses »). */
 class ShoppingWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidget(context, host, placed) {
     private val shopping = ShoppingCard(context).apply { attach(host.scope) }
     override val view: View = shopping.asCard()
+
+    override fun applySize() = shopping.setShape(ListShape.of(placed.size))
+
+    override fun showPreview(sample: WidgetSample) {
+        val example = sample as? ShoppingSample ?: return
+        val labels = context.resources.getStringArray(example.labels)
+        shopping.showPreview(labels.mapIndexed { i, label -> ShoppingItem("sample-$i", label, done = i >= labels.size - example.done) })
+    }
 
     override suspend fun load() = shopping.load()
 
     override fun setUnavailable(on: Boolean) {
         shopping.quiet = on
         super.setUnavailable(on)
-    }
-}
-
-/** Exemple de la Note pour le catalogue : un texte. */
-class NoteSample(@StringRes val text: Int) : WidgetSample
-
-/** Note libre, écrite depuis la tablette (« Penser au pain », un code de salle…). */
-class NoteWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidget(context, host, placed) {
-    private val text = label(22f).apply { gravity = Gravity.CENTER_VERTICAL }
-    override val view = LinearLayout(context).asCard().apply {
-        orientation = LinearLayout.VERTICAL
-        setPadding(dp(20), dp(16), dp(20), dp(16))
-        addView(cardTitle(R.string.widget_note))
-        addView(text, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, 0, 1f).apply { topMargin = dp(6) })
-        setOnClickListener { showSettings() }
-    }
-
-    override val hasSettings get() = true
-
-    override fun applySize() {
-        text.textSize = when (placed.size) { WidgetSize.S -> 17f; WidgetSize.M -> 21f; else -> 26f }
-        render()
-    }
-
-    /** Aperçu du catalogue : son texte reste affiché, même si [applySize] repasse. */
-    private var preview: NoteSample? = null
-
-    override fun showPreview(sample: WidgetSample) {
-        preview = sample as? NoteSample ?: return
-        render()
-    }
-
-    private fun render() {
-        val note = preview?.let { context.getString(it.text) } ?: placed.config.optString("text")
-        text.text = note.ifBlank { context.getString(R.string.widget_note_empty) }
-        text.setTextColor(color(if (note.isBlank()) R.attr.c_text_faint else R.attr.c_text))
-    }
-
-    override fun showSettings() {
-        val input = LayoutInflater.from(context).inflate(R.layout.item_input, null) as EditText
-        input.inputType = InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_FLAG_CAP_SENTENCES or InputType.TYPE_TEXT_FLAG_MULTI_LINE
-        input.setText(placed.config.optString("text"))
-        input.setSelection(input.text.length)
-        input.setHint(R.string.widget_note_hint)
-        val box = LinearLayout(context).apply {
-            setPadding(dp(24), dp(8), dp(24), 0)
-            addView(input, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT))
-        }
-        AlertDialog.Builder(context)
-            .setTitle(R.string.widget_note)
-            .setView(box)
-            .setNegativeButton(R.string.cancel, null)
-            .setPositiveButton(R.string.save) { _, _ ->
-                placed.config.put("text", input.text.toString().trim().take(200))
-                host.save()
-                render()
-            }
-            .create()
-            .showForTyping(input)
     }
 }
 

@@ -97,7 +97,9 @@ class WidgetModelTest {
         assertEquals(WidgetType.JIRA, WidgetType.of("jira"))
         assertEquals(WidgetType.GITLAB, WidgetType.of("gitlab"))
         for (type in listOf(WidgetType.JIRA, WidgetType.GITLAB)) {
-            assertEquals(listOf(WidgetSize.XL, WidgetSize.L, WidgetSize.L3, WidgetSize.T3, WidgetSize.FULL), type.sizes)
+            // Ajouté en Très grand ; le tableau tient en Grand, 3 × 2, 3 × 4 et plein écran (les petites formes : #185).
+            assertEquals(WidgetSize.XL, type.sizes.first())
+            assertTrue(type.sizes.containsAll(listOf(WidgetSize.L, WidgetSize.L3, WidgetSize.T3, WidgetSize.FULL)))
             assertTrue(type.computer)
         }
         assertFalse(WidgetType.JIRA.offered(HomeFeatures()))
@@ -131,7 +133,8 @@ class WidgetModelTest {
     @Test
     fun `Pipelines, console de GitLab en tableau, proposee seulement quand GitLab l'est`() {
         assertEquals(WidgetType.PIPELINES, WidgetType.of("pipelines"))
-        assertEquals(listOf(WidgetSize.XL, WidgetSize.L, WidgetSize.L3, WidgetSize.T3, WidgetSize.FULL), WidgetType.PIPELINES.sizes)
+        assertEquals(WidgetSize.XL, WidgetType.PIPELINES.sizes.first())
+        assertTrue(WidgetType.PIPELINES.sizes.containsAll(listOf(WidgetSize.L, WidgetSize.L3, WidgetSize.T3, WidgetSize.FULL)))
         assertTrue(WidgetType.PIPELINES.computer)
         assertFalse(WidgetType.PIPELINES.offered(HomeFeatures()))
         assertFalse(WidgetType.PIPELINES.offered(HomeFeatures(jira = true)))
@@ -268,10 +271,12 @@ class WidgetModelTest {
     @Test
     fun `widget Cloture, en L et Haut, tout sur la tablette, config gardee avec la disposition`() {
         assertEquals(WidgetType.CHECKLIST, WidgetType.of("checklist"))
-        assertEquals(listOf(WidgetSize.L, WidgetSize.T), WidgetType.CHECKLIST.sizes)
+        // Les 16 formes (#181) ; l'ajout reste en 2 × 2, puis 2 × 4.
+        assertEquals(listOf(WidgetSize.L, WidgetSize.T), WidgetType.CHECKLIST.sizes.take(2))
+        assertEquals(WidgetSize.entries.size, WidgetType.CHECKLIST.sizes.size)
         assertFalse(WidgetType.CHECKLIST.computer)
         assertTrue(WidgetType.CHECKLIST.offered(HomeFeatures()))
-        assertEquals(WidgetSize.T, WidgetType.CHECKLIST.zoomSize)
+        assertEquals(WidgetSize.FULL, WidgetType.CHECKLIST.zoomSize)
         val config = Checklist.config("Bilan", 1_800_000_000_000L, listOf(ChecklistStep("Balance", true), ChecklistStep("TVA")))
         val context = app.mate.FakeContext()
         HomeLayout.save(context, HomeLayout(mutableListOf(Placed(WidgetType.CHECKLIST, WidgetSize.T, 0, 0, 0, config)), 1))
@@ -324,8 +329,8 @@ class WidgetModelTest {
         assertEquals(WidgetSize.L3, layout.pick(jira, 3f, 2f))
         assertEquals(WidgetSize.FULL, layout.pick(jira, 4f, 4f))
         assertEquals(WidgetSize.T3, layout.pick(jira, 3.1f, 3.7f))
-        assertEquals(WidgetSize.XL, layout.pick(jira, 3.6f, 1.2f))
-        assertEquals(WidgetSize.L, layout.pick(jira, 0.5f, 0.5f))
+        assertEquals(WidgetSize.W, layout.pick(jira, 3.6f, 1.2f))
+        assertEquals(WidgetSize.S, layout.pick(jira, 0.5f, 0.5f))
         // Taille refusée par le widget : jamais choisie (une horloge n'a pas de plein écran).
         val clock = Placed(WidgetType.CLOCK, WidgetSize.L, 0, 0, 2)
         layout.widgets += clock
@@ -355,11 +360,11 @@ class WidgetModelTest {
     }
 
     @Test
-    fun `aucune taille ne tient, rien ne change`() {
+    fun `colonne voisine prise, le widget s'etire dans la sienne`() {
         val open = Placed(WidgetType.OPEN, WidgetSize.L, 0, 3, 0)
-        // Colonne 2 prise de haut en bas : aucune taille d'Ouvertes (2 cases de large au moins) ne tient.
+        // Colonne 2 prise de haut en bas : seules les formes d'une case de large tiennent ; Fenêtres a les 16 formes (#183).
         val layout = HomeLayout(mutableListOf(open, Placed(WidgetType.FOCUS, WidgetSize.V, 0, 2, 0), Placed(WidgetType.FOCUS, WidgetSize.V, 0, 2, 2)), 1)
-        assertNull(layout.pick(open, 4f, 4f))
+        assertEquals(WidgetSize.V4, layout.pick(open, 4f, 4f))
     }
 
     @Test
