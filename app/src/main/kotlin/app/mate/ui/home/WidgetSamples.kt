@@ -30,8 +30,8 @@ object WidgetSamples {
         WidgetType.SHOPPING -> ShoppingSample(R.array.widget_shopping_sample, done = 1)
         WidgetType.CHECKLIST -> ChecklistSample(R.string.checklist_sample_title, R.array.checklist_sample_steps, done = 4, days = 3)
         WidgetType.NOTE -> NoteSample(R.string.widget_note_sample)
-        WidgetType.MEALS -> null
-        WidgetType.NEWS -> null
+        WidgetType.MEALS -> MealsSample(R.array.meals_sample_lunch, R.array.meals_sample_dinner)
+        WidgetType.NEWS -> NewsSample(R.string.widget_news_sample_feed, R.array.widget_news_sample, seen = 2)
         WidgetType.MAIL -> null
 
         // #182 Son et musique

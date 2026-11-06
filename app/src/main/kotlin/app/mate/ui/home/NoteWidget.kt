@@ -1,21 +1,16 @@
 package app.mate.ui.home
 
 import android.content.Context
-import android.content.res.ColorStateList
-import android.graphics.drawable.GradientDrawable
 import android.text.InputType
 import android.util.TypedValue
 import android.view.Gravity
 import android.view.LayoutInflater
-import android.view.View
 import android.view.ViewGroup.LayoutParams.MATCH_PARENT
 import android.view.ViewGroup.LayoutParams.WRAP_CONTENT
 import android.widget.EditText
-import android.widget.ImageView
 import android.widget.LinearLayout
 import androidx.annotation.StringRes
 import androidx.appcompat.app.AlertDialog
-import androidx.core.graphics.ColorUtils
 import androidx.core.view.isVisible
 import androidx.core.widget.TextViewCompat
 import app.mate.R
@@ -29,21 +24,12 @@ class NoteSample(@StringRes val text: Int) : WidgetSample
  * texte à la plus grande taille qui tient dans la forme posée ([NoteShape]) ; un toucher ouvre la saisie.
  */
 class NoteWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidget(context, host, placed) {
-    private val disc = ImageView(context).apply {
-        // Un pense-bête, pas le crayon du mode Modifier : c'est un repère de type, pas un bouton.
-        setImageResource(R.drawable.ic_tile_sticky_note_2)
-        imageTintList = ColorStateList.valueOf(color(R.attr.c_hue_yellow))
-        background = GradientDrawable().apply {
-            shape = GradientDrawable.OVAL
-            setColor(ColorUtils.setAlphaComponent(color(R.attr.c_hue_yellow), DISC_ALPHA))
-        }
-        scaleType = ImageView.ScaleType.CENTER_INSIDE
-        importantForAccessibility = View.IMPORTANT_FOR_ACCESSIBILITY_NO
-    }
+    // Un pense-bête, pas le crayon du mode Modifier : c'est un repère de type, pas un bouton.
+    private val disc = hueDisc(context, R.drawable.ic_tile_sticky_note_2, R.attr.c_hue_yellow)
     private val title = cardTitle(R.string.widget_note)
     private val head = LinearLayout(context).apply {
         gravity = Gravity.CENTER_VERTICAL
-        addView(disc, LinearLayout.LayoutParams(dp(DISC_DP), dp(DISC_DP)))
+        addView(disc, hueDiscParams(context, side = false))
         addView(title, LinearLayout.LayoutParams(WRAP_CONTENT, WRAP_CONTENT).apply { marginStart = dp(12) })
     }
     private val text = label(22f).apply { gravity = Gravity.CENTER_VERTICAL }
@@ -61,6 +47,7 @@ class NoteWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidget(
         view.orientation = if (shape.side) LinearLayout.HORIZONTAL else LinearLayout.VERTICAL
         view.gravity = if (shape.side) Gravity.CENTER_VERTICAL else Gravity.NO_GRAVITY
         title.isVisible = shape.title
+        disc.layoutParams = hueDiscParams(context, shape.side)
         // Colonne : le texte part sous l'icône ; ailleurs il se centre dans la place qui reste.
         text.gravity = if (placed.size.family == ShapeFamily.COLUMN) Gravity.TOP else Gravity.CENTER_VERTICAL
         text.layoutParams = if (shape.side) {
@@ -112,11 +99,6 @@ class NoteWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidget(
     }
 
     private companion object {
-        /** Comme l'anneau de la tête des cartes à liste : Note et Échéance côte à côte s'alignent. */
-        const val DISC_DP = 56
-
-        /** Fond du disque : la teinte à 18 %. */
-        const val DISC_ALPHA = 0x2E
         const val MAX_CHARS = 200
     }
 }
