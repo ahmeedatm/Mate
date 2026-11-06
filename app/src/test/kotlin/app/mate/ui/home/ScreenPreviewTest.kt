@@ -55,4 +55,19 @@ class ScreenPreviewTest {
         assertTrue(WidgetType.SCREEN.computer)
         assertEquals("screen", WidgetType.SCREEN.key)
     }
+
+    @Test
+    fun `recadree, l'image garde assez de pixels pour remplir la vue`() {
+        // Colonne de 140 × 400 px : l'image de 640 × 360 est agrandie pour la hauteur, aucune réduction.
+        assertEquals(1, ScreenPreview.sampleSize(640, 360, viewWidth = 140, viewHeight = 400, crop = true))
+        // Pastille de 150 × 85 px : remplie par une image de 151 × 85, réduite par 4 au plus.
+        assertEquals(4, ScreenPreview.sampleSize(640, 360, viewWidth = 150, viewHeight = 85, crop = true))
+        // Bande de 600 × 100 px : la largeur commande, une réduction de 2 laisserait 320 px.
+        assertEquals(1, ScreenPreview.sampleSize(640, 360, viewWidth = 600, viewHeight = 100, crop = true))
+    }
+
+    @Test
+    fun `seules Pastille, Ligne et Colonne recadrent l'image`() {
+        assertEquals(setOf(ShapeFamily.PILL, ShapeFamily.ROW, ShapeFamily.COLUMN), ShapeFamily.entries.filter { ScreenPreview.crops(it) }.toSet())
+    }
 }

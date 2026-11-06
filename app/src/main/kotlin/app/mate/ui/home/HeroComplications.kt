@@ -20,15 +20,25 @@ import kotlin.math.roundToInt
  * par ⚙ en mode Modifier (toucher la météo sans ville la demande), toucher l'eau = la boîte Eau (l'appui long appartient
  * à la grille, pour le mode Modifier).
  */
-class HeroComplications(private val context: Context, private val host: HomeHost, private val placed: Placed, root: View) {
+class HeroComplications(
+    private val context: Context,
+    private val host: HomeHost,
+    private val placed: Placed,
+    root: View,
+    /** La météo déjà lue par le bloc d'avant (le widget a changé de forme) : pas de nouvelle lecture. */
+    previous: HeroComplications? = null,
+) {
     private val wxTemp = root.findViewById<TextView>(R.id.hero_wx_temp)
     private val wxLabel = root.findViewById<TextView>(R.id.hero_wx_label)
     private val glasses = root.findViewById<GlassBars>(R.id.hero_glasses)
     private val glassesCount = root.findViewById<RollingText>(R.id.hero_glasses_count)
     private val glassesLabel = root.findViewById<TextView>(R.id.hero_glasses_label)
     private val waterListener: (Water.State) -> Unit = { renderWater(it, animate = true) }
-    private var forecast: Weather.Forecast? = null
-    private var fetchedAt = 0L
+    private var forecast: Weather.Forecast? = previous?.forecast
+    private var fetchedAt: Long = previous?.fetchedAt ?: 0L
+
+    /** Aperçu du catalogue : la ville de l'exemple, sans réseau ni réglage écrit. */
+    private var sampleCity: String? = previous?.sampleCity
 
     init {
         val sp = TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_SP, 14f, context.resources.displayMetrics)
@@ -51,7 +61,8 @@ class HeroComplications(private val context: Context, private val host: HomeHost
 
     private fun renderWeather() {
         val f = forecast
-        val named = placed.config.optString("city").isNotBlank()
+        val city = sampleCity ?: placed.config.optString("city")
+        val named = city.isNotBlank()
         if (f == null) {
             wxTemp.setCompoundDrawablesRelative(null, null, null, null)
             wxTemp.text = ""
@@ -62,7 +73,7 @@ class HeroComplications(private val context: Context, private val host: HomeHost
         wxTemp.setCompoundDrawablesRelativeWithIntrinsicBounds(sky.icon, 0, 0, 0)
         wxTemp.text = context.getString(R.string.widget_weather_temp, f.temperature.roundToInt())
         // La ville d'abord : trouvée seule par la position, elle doit se voir pour pouvoir être corrigée.
-        wxLabel.text = context.getString(R.string.hero_wx_label, placed.config.optString("city"), context.getString(sky.text), f.max.roundToInt())
+        wxLabel.text = context.getString(R.string.hero_wx_label, city, context.getString(sky.text), f.max.roundToInt())
     }
 
     private fun renderWater(state: Water.State, animate: Boolean) {
@@ -71,7 +82,15 @@ class HeroComplications(private val context: Context, private val host: HomeHost
         glassesLabel.text = context.resources.getQuantityString(R.plurals.hero_glasses, state.glasses, state.goal)
     }
 
+    /** Aperçu : la météo d'exemple, et l'eau telle qu'elle est (elle est sur la tablette). */
+    fun showSample(sample: WeatherSample) {
+        sampleCity = context.getString(sample.city)
+        forecast = sample.forecast
+        render(animate = false)
+    }
+
     suspend fun load() {
+        if (sampleCity != null) return
         // Pas encore de ville : celle de la position de la tablette, sinon « Choisir ma ville ».
         if (!placed.config.has("lat") && Weather.autoCity(context, placed.config)) host.save()
         if (!placed.config.has("lat")) return renderWeather()

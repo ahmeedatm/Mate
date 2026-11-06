@@ -14,6 +14,14 @@ class CallMembersTest {
     private val david = member("d", "david")
 
     @Test
+    fun `colonne, une seule place, un visage, celui qui a parle en dernier, jamais un +N seul`() {
+        assertEquals(MemberRowPlan(listOf(carole), more = 0), planMembers(listOf(alice, bob, carole), mapOf("c" to 300L, "a" to 100L), max = 1, faceFirst = true))
+        assertEquals(MemberRowPlan(listOf(alice), more = 0), planMembers(listOf(alice, bob), emptyMap(), max = 1, faceFirst = true))
+        assertEquals(MemberRowPlan(emptyList(), more = 0), planMembers(listOf(alice, bob), emptyMap(), max = 0, faceFirst = true))
+        assertEquals(MemberRowPlan(listOf(alice, bob), more = 0), planMembers(listOf(alice, bob), emptyMap(), max = 2, faceFirst = true))
+    }
+
+    @Test
     fun `tous tiennent, ordre d'arrivée sans personne qui a parlé`() {
         assertEquals(MemberRowPlan(listOf(alice, bob, carole), more = 0), planMembers(listOf(alice, bob, carole), emptyMap(), max = 5))
     }
