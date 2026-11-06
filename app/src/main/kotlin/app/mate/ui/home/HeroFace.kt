@@ -23,7 +23,8 @@ data class HeroFace(
             ShapeFamily.PILL -> HeroFace(band = false, track = true)
             ShapeFamily.COLUMN -> HeroFace(band = false, dial = true, date = true, compl = true, complDown = true)
             ShapeFamily.BLOCK -> HeroFace(band = false, date = true, next = true, track = true, compl = true)
-            ShapeFamily.LARGE -> HeroFace(band = false, date = true, next = true, track = true, trackTitles = true, compl = true)
+            // Sous 3 colonnes, les titres de la journée seraient coupés en miettes.
+            ShapeFamily.LARGE -> HeroFace(band = false, date = true, next = true, track = true, trackTitles = size.w >= 3, compl = true)
             ShapeFamily.FULL -> HeroFace(band = false, date = true, track = true, trackTitles = true, ring = true, compl = true)
         }
     }

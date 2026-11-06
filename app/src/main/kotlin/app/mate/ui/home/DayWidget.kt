@@ -148,12 +148,19 @@ class DayWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidget(c
         }
         column.addView(heart, LinearLayout.LayoutParams(MATCH, WRAP).apply { if (face.greeting) topMargin = dp(GAP_DP * 3) })
         if (face.actions) {
-            actions.orientation = if (family == ShapeFamily.COLUMN) LinearLayout.VERTICAL else LinearLayout.HORIZONTAL
+            val down = family == ShapeFamily.COLUMN
+            actions.orientation = if (down) LinearLayout.VERTICAL else LinearLayout.HORIZONTAL
+            // Empilés : Ne pas déranger sous Focus, sur le même axe, avec 8 dp entre les deux cibles.
+            (dndButton.layoutParams as? LinearLayout.LayoutParams)?.apply {
+                marginStart = if (down) 0 else marginStart
+                topMargin = if (down) dp(STACK_GAP_DP) else 0
+            }
             column.addView(actions, LinearLayout.LayoutParams(WRAP, WRAP).apply { topMargin = dp(GAP_DP * 3) })
         }
         if (face.track) {
             track.across = true
-            track.titles = true
+            // Sous 3 colonnes, les titres seraient coupés en miettes : la ligne seule.
+            track.titles = placed.size.w >= 3
             column.addView(track, LinearLayout.LayoutParams(MATCH, dp(TRACK_DP)).apply { topMargin = dp(GAP_DP * 3) })
         }
         if (face.compl) {
@@ -167,6 +174,7 @@ class DayWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidget(c
         if (face.band) {
             actions.visibility = if (roomForMore) View.VISIBLE else View.GONE
             renderFocus()
+            bandFold()
             return
         }
         val w = view.width.toFloat()
@@ -258,6 +266,11 @@ class DayWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidget(c
                 whenText.setTextColor(color(if (focus.line is NextLine.At) R.attr.c_text_dim else R.attr.c_accent))
                 // Pastille : le temps est dans l'anneau.
                 whenText.visibility = if (family == ShapeFamily.PILL) View.GONE else View.VISIBLE
+                // Colonne étroite : l'heure de fin passe à la ligne plutôt que d'être coupée.
+                if (!face.band) {
+                    whenText.isSingleLine = false
+                    whenText.maxLines = 2
+                }
                 if (!face.band) {
                     ring.visibility = View.VISIBLE
                     ring.showNext(focus.event, now)
@@ -309,6 +322,19 @@ class DayWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidget(c
         if (dndButton.visibility != shown) refold()
         dndButton.visibility = shown
         dndButton.isSelected = on == true
+    }
+
+    /**
+     * Bandeau : sur une rangée moyenne (plus haute que la fine, trop basse pour tout), les boutons du bas recouvraient la
+     * réunion ; après la mise en page, s'ils la touchent, ils s'effacent.
+     */
+    private fun bandFold() {
+        val root = view.getChildAt(0) as? ViewGroup ?: return
+        val texts = root.getChildAt(0) ?: return
+        root.doOnNextLayout {
+            if (actions.visibility == View.VISIBLE && texts.bottom > actions.top) actions.visibility = View.GONE
+        }
+        root.requestLayout()
     }
 
     /** Un repli attendu à la fois ; une demande pendant l'attente est rejouée ensuite (la taille a pu changer entre-temps). */
@@ -378,6 +404,7 @@ class DayWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidget(c
         const val GAP_DP = 6
         const val TRACK_DP = 56
         const val MIN_RING_DP = 72
+        const val STACK_GAP_DP = 8
 
         const val GREETING_SP = 26f
         const val BIG_GREETING_SP = 34f

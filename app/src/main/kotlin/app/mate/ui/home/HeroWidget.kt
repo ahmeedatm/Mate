@@ -119,8 +119,12 @@ class HeroWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidget(
     private val ringWhen = label(18f, R.attr.c_text_dim).apply { isSingleLine = true; ellipsize = TextUtils.TruncateAt.END }
     private val ringRow = LinearLayout(context).apply { gravity = Gravity.CENTER_VERTICAL }
 
+    /** « Ensuite » au-dessus du titre, seulement si la réunion n'a pas commencé. */
+    private val ringPrefix = label(15f, R.attr.c_text_faint).apply { setText(R.string.next_prefix) }
+
     private val dateFormat = SimpleDateFormat("EEEE d MMMM", Locale.FRANCE)
     private val clockFormat = SimpleDateFormat("HH:mm", Locale.FRANCE)
+    private val shortDate = SimpleDateFormat("EEE d MMM", Locale.FRANCE)
     private val minuteFormat = SimpleDateFormat("m", Locale.FRANCE)
     private var active = false
 
@@ -181,7 +185,7 @@ class HeroWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidget(
 
     /** Les pièces du bandeau, rangées pour la forme : de haut en bas, centrées en Pastille et en Colonne. */
     private fun stack(): View {
-        for (part in listOf(clock, date, next, complView, dial, dialFrame, track, ring, ringTitle, ringWhen, ringRow)) (part.parent as? ViewGroup)?.removeView(part)
+        for (part in listOf(clock, date, next, complView, dial, dialFrame, track, ring, ringPrefix, ringTitle, ringWhen, ringRow)) (part.parent as? ViewGroup)?.removeView(part)
         dialFrame.removeAllViews()
         ringRow.removeAllViews()
         val centered = family == ShapeFamily.PILL || face.dial
@@ -201,7 +205,7 @@ class HeroWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidget(
         if (face.next) column.addView(next, LinearLayout.LayoutParams(WRAP, WRAP).apply { topMargin = dp(GAP_DP) })
         if (face.ring) {
             val texts = LinearLayout(context).apply { orientation = LinearLayout.VERTICAL }
-            texts.addView(label(15f, R.attr.c_text_faint).apply { setText(R.string.next_prefix) })
+            texts.addView(ringPrefix)
             texts.addView(ringTitle)
             texts.addView(ringWhen)
             ringRow.addView(ring, LinearLayout.LayoutParams(0, 0).apply { marginEnd = dp(GAP_DP * 2) })
@@ -285,7 +289,8 @@ class HeroWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidget(
     private fun render(animate: Boolean) {
         val now = System.currentTimeMillis()
         clock.set(clockFormat.format(Date(now)), animate)
-        val text = dateFormat.format(Date(now)).replaceFirstChar { it.uppercase() }
+        // Colonne : la date longue serait coupée (« Vendredi 6 nove… ») ; la courte tient.
+        val text = (if (face.dial) shortDate else dateFormat).format(Date(now)).replaceFirstChar { it.uppercase() }
         if (date.text.toString() != text) date.text = text
         if (face.dial) dial.show(ClockFace.lit(minuteFormat.format(Date(now)).toInt()))
         renderNext(animate)
@@ -347,7 +352,9 @@ class HeroWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidget(
         if (event == null) return
         ring.showNext(event, now)
         ringTitle.text = event.title
-        val whenText = nextLine(event, now).whenText(context)
+        val line = nextLine(event, now)
+        ringPrefix.visibility = if (line is NextLine.Now) View.GONE else View.VISIBLE
+        val whenText = line.whenText(context)
         ringWhen.text = if (event.location.isBlank()) whenText else "$whenText · ${event.location}"
     }
 
