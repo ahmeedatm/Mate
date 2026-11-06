@@ -39,7 +39,8 @@ import kotlin.math.roundToInt
  * Une mise en page par famille de formes (`planCall`, #184). Télécommande (Réunion, Appel) : la Pastille est la touche
  * de l'état, la Ligne et la Colonne des touches en rangée ou en grille, le Bloc ajoute les participants et le son propre
  * à l'appli, Grand et Plein écran agrandissent les touches. Îlot (Discord) : un gros rond pour la touche de l'état, les
- * autres en petits ronds, un halo d'accent autour du gros rond quand quelqu'un parle ; les photos en colonne dès la
+ * autres en petits ronds, un halo couleur du texte autour du gros rond quand quelqu'un parle (lisible même sur la touche
+ * rouge du micro coupé, quel que soit l'accent du thème) ; les photos en colonne dès la
  * Colonne, celui qui parle en grand en Plein écran. Les tailles des touches suivent la hauteur réelle de la carte.
  *
  * Discord avec le RPC de l'ordinateur autorisé : les participants sont des photos, avec un anneau autour de qui parle
@@ -382,7 +383,7 @@ abstract class CallWidget(
             if (island) {
                 halo.background = GradientDrawable().apply {
                     shape = GradientDrawable.OVAL
-                    setStroke(dp(CallKeyMetrics.HALO_RING_DP), color(R.attr.c_accent))
+                    setStroke(dp(CallKeyMetrics.HALO_RING_DP), color(R.attr.c_text))
                 }
                 mainFrame.addView(halo, FrameLayout.LayoutParams(dp(ring), dp(ring), Gravity.CENTER))
             }
