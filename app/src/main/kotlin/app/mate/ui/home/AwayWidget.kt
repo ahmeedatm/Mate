@@ -151,10 +151,7 @@ class AwayWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidget(
         for (b in listOf(leave, back)) view.addView(b, LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, dp(56)))
     }
 
-    /**
-     * Colonne, bloc carré, grand en hauteur, plein écran : titre et durée en haut ; la liste en bas, juste au-dessus du
-     * bouton qu'elle explique.
-     */
+    /** Colonne, bloc carré, grand en hauteur, plein écran : titre, durée et la liste en un bloc, le bouton en bas. */
     private fun stacked(durationSp: Float, buttonDp: Int) {
         stackedLayout = true
         view.gravity = Gravity.NO_GRAVITY
@@ -164,8 +161,8 @@ class AwayWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidget(
         buttons(textSp = if (buttonDp > 56) 22f else 18f, icon = family != ShapeFamily.COLUMN)
         view.addView(title)
         view.addView(duration, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT).apply { topMargin = dp(8) })
-        view.addView(View(context), LinearLayout.LayoutParams(0, 0, 1f))
         view.addView(list, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT).apply { topMargin = dp(12) })
+        view.addView(View(context), LinearLayout.LayoutParams(0, 0, 1f))
         for (b in listOf(leave, back)) view.addView(b, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, dp(buttonDp)).apply { topMargin = dp(8) })
     }
 
@@ -185,8 +182,8 @@ class AwayWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidget(
         }
         val right = LinearLayout(context).apply {
             orientation = LinearLayout.VERTICAL
-            // En bas, à hauteur du bouton : la liste se lit avec lui.
-            gravity = Gravity.BOTTOM
+            // À hauteur du titre, qui dit de quoi parle la liste.
+            gravity = Gravity.TOP
             addView(list)
         }
         view.addView(left, LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.MATCH_PARENT, 1f))
