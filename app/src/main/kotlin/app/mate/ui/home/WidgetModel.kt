@@ -107,7 +107,7 @@ enum class WidgetType(
     DAYLINE("dayline", R.string.widget_dayline, R.string.widget_dayline_desc, R.drawable.ic_alarm, listOf(WidgetSize.W), false),
     AGENTS("agents", R.string.widget_agents, R.string.widget_agents_desc, R.drawable.ic_agents, listOf(WidgetSize.M) + (WidgetSize.entries - WidgetSize.M), true),
     MIXER("mixer", R.string.widget_mixer, R.string.widget_mixer_desc, R.drawable.ic_wave, listOf(WidgetSize.XL, WidgetSize.L3, WidgetSize.XL3, WidgetSize.T3, WidgetSize.FULL, WidgetSize.S, WidgetSize.V, WidgetSize.M, WidgetSize.M3, WidgetSize.W, WidgetSize.V3, WidgetSize.V4, WidgetSize.L, WidgetSize.L23, WidgetSize.L33, WidgetSize.T), true),
-    OPEN("open", R.string.widget_open, R.string.widget_open_desc, R.drawable.ic_display, listOf(WidgetSize.XL, WidgetSize.L, WidgetSize.L3, WidgetSize.T3, WidgetSize.FULL), true),
+    OPEN("open", R.string.widget_open, R.string.widget_open_desc, R.drawable.ic_display, listOf(WidgetSize.XL) + (WidgetSize.entries - WidgetSize.XL), true),
     APPS("apps", R.string.widget_apps, R.string.widget_apps_desc, R.drawable.ic_tabs, listOf(WidgetSize.L) + (WidgetSize.entries - WidgetSize.L), true),
     DISCORD("discord", R.string.widget_discord, R.string.widget_discord_desc, R.drawable.ic_call, listOf(WidgetSize.M, WidgetSize.L, WidgetSize.S), true),
     MEETING("meeting", R.string.widget_meeting, R.string.widget_meeting_desc, R.drawable.ic_videocam, listOf(WidgetSize.M, WidgetSize.L, WidgetSize.S), true),
@@ -129,7 +129,7 @@ enum class WidgetType(
     METRICS("metrics", R.string.widget_metrics, R.string.widget_metrics_desc, R.drawable.ic_tile_bar_chart, listOf(WidgetSize.L) + (WidgetSize.entries - WidgetSize.L), true),
     MEALS("meals", R.string.widget_meals, R.string.widget_meals_desc, R.drawable.ic_tile_restaurant, listOf(WidgetSize.L, WidgetSize.XL, WidgetSize.T), true),
     VALORANT("valorant", R.string.widget_valorant, R.string.widget_valorant_desc, R.drawable.ic_gamepad, listOf(WidgetSize.XL, WidgetSize.L, WidgetSize.T).let { it + (WidgetSize.entries - it) }, true),
-    SCREEN("screen", R.string.widget_screen, R.string.widget_screen_desc, R.drawable.ic_display, listOf(WidgetSize.L, WidgetSize.XL, WidgetSize.M), true);
+    SCREEN("screen", R.string.widget_screen, R.string.widget_screen_desc, R.drawable.ic_display, listOf(WidgetSize.L) + (WidgetSize.entries - WidgetSize.L), true);
 
     /** Taille de l'exemplaire agrandi (widget maintenu, [WidgetZoom]) : la plus grande, la plus large à surface égale. */
     val zoomSize get() = sizes.maxWith(compareBy<WidgetSize>({ it.w * it.h }, { it.w }))
