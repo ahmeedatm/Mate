@@ -2,6 +2,11 @@ package app.mate.ui.home
 
 import android.annotation.SuppressLint
 import android.content.Context
+import android.graphics.Bitmap
+import android.graphics.Canvas
+import android.graphics.Paint
+import android.graphics.RectF
+import android.graphics.drawable.BitmapDrawable
 import android.os.SystemClock
 import android.text.InputType
 import android.view.Gravity
@@ -13,11 +18,13 @@ import android.webkit.WebView
 import android.webkit.WebViewClient
 import android.widget.EditText
 import android.widget.FrameLayout
+import android.widget.ImageView
 import android.widget.LinearLayout
 import android.widget.Toast
 import androidx.appcompat.app.AlertDialog
 import app.mate.R
 import app.mate.ui.showForTyping
+import app.mate.ui.themeColor
 
 /**
  * Une page web choisie (tableau de bord, graphique), rechargée seule. Affichage seulement : un toucher ouvre les
@@ -26,7 +33,7 @@ import app.mate.ui.showForTyping
  */
 class WebWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidget(context, host, placed) {
     private val frame = FrameLayout(context)
-    private val empty = label(18f, R.attr.c_text_faint).apply {
+    private val empty = label(EMPTY_SP, R.attr.c_text_faint).apply {
         gravity = Gravity.CENTER
         setText(R.string.widget_web_empty)
     }
@@ -41,6 +48,25 @@ class WebWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidget(c
 
     override val hasSettings get() = true
 
+    /** Aperçu du catalogue : une page dessinée, jamais de WebView ni de réseau. */
+    private var sample = false
+
+    /** En Pastille, Ligne et Colonne, la phrase « choisis une page » rapetisse pour tenir. */
+    override fun applySize() {
+        empty.textSize = if (OpenWindowsSummary.compact(family)) SMALL_EMPTY_SP else EMPTY_SP
+    }
+
+    override fun showPreview(sample: WidgetSample) {
+        if (sample !is WebSample) return
+        this.sample = true
+        empty.visibility = View.GONE
+        frame.addView(ImageView(context).apply {
+            scaleType = ImageView.ScaleType.CENTER_CROP
+            setImageDrawable(WebSample.drawable(context))
+            importantForAccessibility = View.IMPORTANT_FOR_ACCESSIBILITY_NO
+        }, 0, FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT))
+    }
+
     private val url get() = placed.config.optString("url").takeIf { it.isNotBlank() }
 
     init {
@@ -53,6 +79,7 @@ class WebWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidget(c
     }
 
     override fun setActive(active: Boolean) {
+        if (sample) return
         this.active = active
         if (active) show() else release()
     }
@@ -140,5 +167,35 @@ class WebWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidget(c
         host.save()
         release()
         if (active) show()
+    }
+
+    private companion object {
+        const val EMPTY_SP = 18f
+        const val SMALL_EMPTY_SP = 14f
+    }
+}
+
+/** Exemple de la Page web pour le catalogue : un tableau de bord dessiné aux couleurs du thème (bandeau, trois cartes), sans réseau. */
+object WebSample : WidgetSample {
+    private const val WIDTH = 320
+    private const val HEIGHT = 200
+
+    fun drawable(context: Context): BitmapDrawable {
+        val bitmap = Bitmap.createBitmap(WIDTH, HEIGHT, Bitmap.Config.ARGB_8888)
+        val canvas = Canvas(bitmap)
+        val paint = Paint(Paint.ANTI_ALIAS_FLAG)
+        fun rect(attr: Int, left: Float, top: Float, right: Float, bottom: Float, radius: Float = 6f) {
+            paint.color = themeColor(context, attr)
+            canvas.drawRoundRect(RectF(left, top, right, bottom), radius, radius, paint)
+        }
+        canvas.drawColor(themeColor(context, R.attr.c_bg))
+        rect(R.attr.c_accent, 0f, 0f, 320f, 28f, 0f)
+        rect(R.attr.c_text_faint, 16f, 44f, 104f, 120f)
+        rect(R.attr.c_text_faint, 116f, 44f, 204f, 120f)
+        rect(R.attr.c_text_faint, 216f, 44f, 304f, 120f)
+        rect(R.attr.c_text_dim, 16f, 136f, 240f, 146f, 3f)
+        rect(R.attr.c_text_dim, 16f, 156f, 200f, 166f, 3f)
+        rect(R.attr.c_text_dim, 16f, 176f, 260f, 186f, 3f)
+        return BitmapDrawable(context.resources, bitmap)
     }
 }

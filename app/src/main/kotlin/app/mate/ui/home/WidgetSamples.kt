@@ -64,10 +64,10 @@ object WidgetSamples {
             ),
         )
         WidgetType.OPEN -> OpenWindowsSample
-        WidgetType.PAD -> null
+        WidgetType.PAD -> PadSample
         WidgetType.SCREEN -> ScreenSample
         WidgetType.PERF -> null
-        WidgetType.WEB -> null
+        WidgetType.WEB -> WebSample
 
         // #184 Appels
         WidgetType.DISCORD -> null

@@ -177,6 +177,12 @@
     <string name="pad_hint">Un doigt pour bouger, deux pour défiler · pince pour zoomer · 3 doigts : fenêtres · touche pour cliquer</string>
     <string name="pad_left_click">Clic gauche</string>
     <string name="pad_right_click">Clic droit</string>
+    <string name="pad_click">Clic</string>
+    <string name="pad_click_desc">Clic : toucher pour le clic gauche, maintenir pour le clic droit</string>
+    <string name="pad_scroll_hint_v">Glisser pour défiler</string>
+    <string name="pad_scroll_hint_h">Glisser pour défiler de côté</string>
+    <string name="pad_scroll_desc_v">Bande de défilement : glisser de haut en bas fait défiler l\'ordinateur</string>
+    <string name="pad_scroll_desc_h">Bande de défilement : glisser de côté fait défiler l\'ordinateur</string>
     <string name="pad_record">Enregistrer</string>
     <string name="pad_record_stop">Terminer (%1$d)</string>
     <string name="pad_record_label">Macro du Pavé</string>
