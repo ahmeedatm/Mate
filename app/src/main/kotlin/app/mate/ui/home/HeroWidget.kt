@@ -17,7 +17,6 @@ import app.mate.net.CalendarEvent
 import app.mate.ui.RollingText
 import app.mate.ui.themeFont
 import java.text.SimpleDateFormat
-import java.util.Calendar
 import java.util.Date
 import java.util.Locale
 import kotlin.math.roundToInt
@@ -121,6 +120,8 @@ class HeroWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidget(
     private val ringRow = LinearLayout(context).apply { gravity = Gravity.CENTER_VERTICAL }
 
     private val dateFormat = SimpleDateFormat("EEEE d MMMM", Locale.FRANCE)
+    private val clockFormat = SimpleDateFormat("HH:mm", Locale.FRANCE)
+    private val minuteFormat = SimpleDateFormat("m", Locale.FRANCE)
     private var active = false
 
     /** Aperçu du catalogue : la journée d'exemple à la place de l'agenda de l'ordinateur. */
@@ -161,7 +162,8 @@ class HeroWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidget(
             view.addView(stack(), FrameLayout.LayoutParams(MATCH, MATCH))
         }
         compl?.setActive(false)
-        compl = HeroComplications(context, host, placed, complView, compl).also { it.setActive(active) }
+        // Météo et eau seulement là où elles se voient : pas de lecture de position ni de réseau pour rien.
+        compl = if (face.band || face.compl) HeroComplications(context, host, placed, complView, compl).also { it.setActive(active) } else null
         render(animate = false)
         view.post(::fit)
     }
@@ -272,10 +274,10 @@ class HeroWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidget(
 
     private fun render(animate: Boolean) {
         val now = System.currentTimeMillis()
-        clock.set(SimpleDateFormat("HH:mm", Locale.FRANCE).format(Date(now)), animate)
+        clock.set(clockFormat.format(Date(now)), animate)
         val text = dateFormat.format(Date(now)).replaceFirstChar { it.uppercase() }
         if (date.text.toString() != text) date.text = text
-        dial.show(ClockFace.lit(Calendar.getInstance().apply { timeInMillis = now }.get(Calendar.MINUTE)))
+        if (face.dial) dial.show(ClockFace.lit(minuteFormat.format(Date(now)).toInt()))
         renderNext(animate)
         compl?.render(animate)
     }
@@ -292,7 +294,12 @@ class HeroWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidget(
         renderRing(now, down)
         val line = if (down == null) nextLine(events, now, host.chosenId) else null
         band?.nextWanted = down != null || line != null
-        if (band == null) next.visibility = if (face.next && (down != null || line != null)) View.VISIBLE else View.GONE
+        if (band == null) {
+            val shown = if (face.next && (down != null || line != null)) View.VISIBLE else View.GONE
+            // « Ensuite » qui apparaît ou disparaît change la place de l'heure.
+            if (next.visibility != shown) view.post(::fit)
+            next.visibility = shown
+        }
         nextDown.visibility = if (down != null) View.VISIBLE else View.GONE
         if (down != null) {
             val since = down.since()
@@ -324,7 +331,9 @@ class HeroWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidget(
     private fun renderRing(now: Long, down: Down?) {
         if (!face.ring) return
         val event = if (down == null) nextEvent(events, now, host.chosenId) else null
-        ringRow.visibility = if (event == null) View.GONE else View.VISIBLE
+        val shown = if (event == null) View.GONE else View.VISIBLE
+        if (ringRow.visibility != shown) view.post(::fit)
+        ringRow.visibility = shown
         if (event == null) return
         ring.showNext(event, now)
         ringTitle.text = event.title

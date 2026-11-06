@@ -96,7 +96,8 @@ class DayWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidget(c
         dndButton.setOnClickListener { toggleDnd() }
         view.addView(if (face.band) root else stack(), FrameLayout.LayoutParams(MATCH, MATCH))
         compl?.setActive(false)
-        compl = HeroComplications(context, host, placed, complView, compl).also { it.setActive(active) }
+        // Météo et eau seulement là où elles se voient : pas de lecture de position ni de réseau pour rien.
+        compl = if (face.band || face.compl) HeroComplications(context, host, placed, complView, compl).also { it.setActive(active) } else null
         pill = null
         renderFocusPill(DayBrief.focusPill(FocusTimer.state))
         render(animate = false)
@@ -109,7 +110,7 @@ class DayWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidget(c
         actions.removeView(join)
         meeting.orientation = LinearLayout.VERTICAL
         (whenText.layoutParams as? ViewGroup.MarginLayoutParams)?.marginStart = 0
-        val pill = family == ShapeFamily.PILL
+        val isPill = family == ShapeFamily.PILL
         val column = LinearLayout(context).apply {
             orientation = LinearLayout.VERTICAL
             gravity = if (face.ringBeside) Gravity.CENTER_VERTICAL or Gravity.START else Gravity.CENTER
@@ -128,10 +129,10 @@ class DayWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidget(c
             addView(note, LinearLayout.LayoutParams(WRAP, WRAP))
             addView(join, LinearLayout.LayoutParams(WRAP, WRAP).apply { topMargin = dp(GAP_DP) })
         }
-        title.maxLines = if (pill) 2 else 3
-        title.textSize = if (pill) PILL_TITLE_SP else TITLE_SP
-        note.textSize = if (pill) PILL_NOTE_SP else NOTE_SP
-        join.text = if (pill) "" else context.getString(R.string.join_meeting)
+        title.maxLines = if (isPill) 2 else 3
+        title.textSize = if (isPill) PILL_TITLE_SP else TITLE_SP
+        note.textSize = if (isPill) PILL_NOTE_SP else NOTE_SP
+        join.text = if (isPill) "" else context.getString(R.string.join_meeting)
         join.contentDescription = context.getString(R.string.join_meeting)
         join.minWidth = 0
         join.minimumWidth = 0
@@ -184,7 +185,6 @@ class DayWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidget(c
     private fun fold(w: Int, h: Int) {
         val content = view.getChildAt(0) ?: return
         for (part in listOf(complView, actions, greeting, date)) if (part.parent != null) part.visibility = View.VISIBLE
-        renderDnd()
         for (part in listOf(listOf(complView), listOf(actions), listOf(greeting, date))) {
             content.measure(View.MeasureSpec.makeMeasureSpec(w, View.MeasureSpec.AT_MOST), View.MeasureSpec.makeMeasureSpec(0, View.MeasureSpec.UNSPECIFIED))
             if (content.measuredHeight <= h) return
@@ -214,13 +214,15 @@ class DayWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidget(c
         )
         val text = dateFormat.format(Date(now)).replaceFirstChar { it.uppercase() }
         if (date.text.toString() != text) date.text = text
-        if (face.track) track.show(events, now)
         renderFocus()
         compl?.render(animate)
     }
 
     private fun renderFocus() {
         val now = System.currentTimeMillis()
+        if (face.track) track.show(events, now)
+        // Rejoindre, la note ou Ne pas déranger peuvent apparaître : le repli se refait après.
+        refold()
         // Ordinateur injoignable : seul message, les rendez-vous peuvent dater.
         renderDnd()
         val down = if (sample == null) host.unreachable else null
@@ -285,8 +287,22 @@ class DayWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidget(c
     /** Ne pas déranger : seulement lisible et ordinateur joignable ; rouge quand il est actif. */
     private fun renderDnd() {
         val on = dnd
-        dndButton.visibility = if (on != null && host.unreachable == null) View.VISIBLE else View.GONE
+        val shown = if (on != null && host.unreachable == null) View.VISIBLE else View.GONE
+        if (dndButton.visibility != shown) refold()
+        dndButton.visibility = shown
         dndButton.isSelected = on == true
+    }
+
+    /** Un repli posté à la fois, après la mise en page en cours. */
+    private var foldPosted = false
+
+    private fun refold() {
+        if (face.band || foldPosted) return
+        foldPosted = true
+        view.post {
+            foldPosted = false
+            if (view.width > 0) fold(view.width, view.height)
+        }
     }
 
     private fun toggleDnd() {
