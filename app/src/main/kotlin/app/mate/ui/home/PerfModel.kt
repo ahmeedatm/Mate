@@ -1,6 +1,9 @@
 package app.mate.ui.home
 
 import app.mate.R
+import app.mate.net.GpuPerf
+import app.mate.net.PcPerf
+import kotlin.math.sin
 
 /** Gravité d'une mesure du widget Performances : au-delà de NORMAL, la valeur passe au rouge d'alerte. */
 enum class PerfLevel { NORMAL, WARN, CRITICAL }
@@ -85,4 +88,56 @@ class PerfHistory(val capacity: Int = 150) {
         gpuValues.clear()
         ramValues.clear()
     }
+}
+
+/** Mise en page du widget Performances : un anneau, des chiffres et la courbe, des barres, ou trois anneaux. */
+enum class PerfLayout { PILL, FIGURES, BARS, GAUGES }
+
+/**
+ * Mise en page par famille de formes (#183) : Pastille = un anneau ; Ligne = les chiffres en 2 × 1, des barres au-delà ;
+ * Colonne = les barres empilées ; Bloc = les anneaux ; Grand et Plein écran = les chiffres et la courbe, en grand.
+ * Les formes d'avant gardent la leur (Moyen = chiffres, Grand = anneaux, Large = barres).
+ */
+fun perfLayout(size: WidgetSize): PerfLayout = when (size.family) {
+    ShapeFamily.PILL -> PerfLayout.PILL
+    ShapeFamily.ROW -> if (size.w == 2) PerfLayout.FIGURES else PerfLayout.BARS
+    ShapeFamily.COLUMN -> PerfLayout.BARS
+    ShapeFamily.BLOCK -> PerfLayout.GAUGES
+    ShapeFamily.LARGE, ShapeFamily.FULL -> PerfLayout.FIGURES
+}
+
+/** La mesure de la Pastille : sa série et son pourcentage. */
+data class PillReading(val series: PerfSeries, val percent: Int)
+
+/**
+ * Ce que montre la Pastille (variante B choisie par Ahmed) : la plus chargée des trois mesures cochées et lisibles
+ * (processeur, carte graphique, mémoire) ; à égalité, la première dans cet ordre. Null : aucune des trois.
+ */
+fun pillReading(perf: PcPerf, choice: Set<PerfOption>): PillReading? = listOfNotNull(
+    PillReading(PerfSeries.CPU, perf.cpu).takeIf { PerfOption.CPU in choice },
+    perf.gpu?.let { PillReading(PerfSeries.GPU, it.usage) }?.takeIf { PerfOption.GPU in choice },
+    PillReading(PerfSeries.RAM, perf.ramPercent).takeIf { PerfOption.RAM in choice },
+).maxByOrNull { it.percent }
+
+/** Exemple de Performances pour le catalogue : un PC qui travaille un peu (processeur 42 %, carte graphique 71 %), sans ordinateur. */
+object PerfSample : WidgetSample {
+    val perf = PcPerf(
+        cpu = 42,
+        ramPercent = 63,
+        ramUsedGb = 20.1,
+        ramTotalGb = 32.0,
+        gpu = GpuPerf("GPU", usage = 71, dedicated = true, tempC = 64, fanRpm = 1450),
+    )
+
+    /** Cinq minutes de relevés qui ondulent autour de la mesure d'exemple, pour la courbe. */
+    fun fill(history: PerfHistory) {
+        history.clear()
+        repeat(history.capacity) { i ->
+            val wave = (sin(i / WAVE_STEPS) * WAVE_PERCENT).toInt()
+            history.add(perf.cpu + wave, perf.gpu?.usage?.minus(wave / 2), perf.ramPercent + wave / 4)
+        }
+    }
+
+    private const val WAVE_STEPS = 9.0
+    private const val WAVE_PERCENT = 12
 }
