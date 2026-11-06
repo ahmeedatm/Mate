@@ -59,9 +59,15 @@ data class MealsShape(val meals: Int, val side: Boolean, val title: Boolean, val
     }
 }
 
-/** Les `count` repas à montrer : tous s'il y a la place, sinon à partir du repas en cours (les passés s'en vont d'abord). */
-fun visibleMeals(lines: List<MealLine>, count: Int): List<MealLine> =
-    if (count >= lines.size) lines else lines.filter { it.state != MealState.PAST }.take(count)
+/**
+ * Les `count` repas à montrer : tous s'il y a la place, sinon à partir du repas en cours (un repas vide qui le précède
+ * ne passe pas devant lui) ; sans repas en cours, à partir du premier qui n'est pas passé.
+ */
+fun visibleMeals(lines: List<MealLine>, count: Int): List<MealLine> {
+    if (count >= lines.size) return lines
+    val start = lines.indexOfFirst { it.state == MealState.CURRENT }.takeIf { it >= 0 } ?: lines.indexOfFirst { it.state != MealState.PAST }
+    return lines.drop(start.coerceAtLeast(0)).take(count)
+}
 
 /** Un jour de la semaine affichée : `offset` 0 aujourd'hui, `weekday` 0 lundi … 6 dimanche. */
 data class WeekDay(val offset: Int, val weekday: Int, val day: MenuDay)

@@ -68,6 +68,12 @@ class NewsWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidget(
     private var news: News? = null
     private var shape = NewsShape.of(placed.size)
 
+    /** Phrase de l'échec de la dernière lecture ; les derniers titres reçus restent affichés dessous. */
+    private var error: String? = null
+
+    /** Ce qui est dessiné : une relecture qui ne change rien ne refait pas les vues. */
+    private var drawn: List<Any?>? = null
+
     /** Aperçu du catalogue : ses titres restent affichés, sans réseau ni ouverture. */
     private var preview = false
 
@@ -78,8 +84,8 @@ class NewsWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidget(
     override suspend fun load() {
         if (preview) return
         runCatchingCancellable { BackendClient(context).news.latest() }
-            .onSuccess { news = it; forgetGone(it); render(null) }
-            .onFailure { render(context.errorText(it)) }
+            .onSuccess { news = it; error = null; forgetGone(it); render() }
+            .onFailure { error = context.errorText(it); render() }
     }
 
     override fun applySize() {
@@ -94,20 +100,26 @@ class NewsWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidget(
             LinearLayout.LayoutParams(MATCH_PARENT, 0, 1f).apply { topMargin = dp(8) }
         }
         rows.orientation = if (shape.side) LinearLayout.HORIZONTAL else LinearLayout.VERTICAL
-        render(null)
+        render()
     }
 
     override fun showPreview(sample: WidgetSample) {
         val example = sample as? NewsSample ?: return
         val titles = context.resources.getStringArray(example.titles).toList()
         preview = true
-        seen = titles.takeLast(example.seen).toSet()
+        previewSeen = titles.takeLast(example.seen).toSet()
         news = News(feed = "", title = context.getString(example.feed), items = titles.map { NewsItem(it) })
-        render(null)
+        render()
     }
 
-    /** Titres déjà ouverts d'ici, gardés dans la config du widget (l'aperçu n'y écrit pas). */
-    private var seen: Set<String> = readSeen()
+    /** Titres vus de l'aperçu : il n'écrit pas dans la config. */
+    private var previewSeen: Set<String> = emptySet()
+
+    /**
+     * Titres déjà ouverts d'ici, relus dans la config du widget à chaque fois : le zoom de la tuile est un second
+     * widget sur la même config, une copie gardée ici se périmerait.
+     */
+    private val seen: Set<String> get() = if (preview) previewSeen else readSeen()
 
     private fun readSeen(): Set<String> {
         val array = placed.config.optJSONArray(SEEN) ?: return emptySet()
@@ -116,18 +128,24 @@ class NewsWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidget(
 
     private fun keepSeen(next: Set<String>) {
         if (next == seen) return
-        seen = next
-        if (preview) return
+        if (preview) {
+            previewSeen = next
+            return
+        }
         placed.config.put(SEEN, JSONArray(next.toList()))
         host.save()
     }
 
-    /** Un titre sorti du flux n'a plus besoin d'être retenu. */
-    private fun forgetGone(current: News) = keepSeen(seenAfter(seen, current.titles, opened = null))
+    /** Un titre sorti du flux n'a plus besoin d'être retenu (un flux vu vide une fois n'efface rien). */
+    private fun forgetGone(current: News) {
+        if (current.titles.isNotEmpty()) keepSeen(seenAfter(seen, current.titles, opened = null))
+    }
 
-    /** `error` : phrase de l'échec de la dernière lecture ; les derniers titres reçus restent affichés dessous. */
-    private fun render(error: String?) {
+    private fun render() {
         val current = news
+        val next = listOf(current, seen, shape, placed.size, error)
+        if (next == drawn) return
+        drawn = next
         rows.removeAllViews()
         title.text = current?.title ?: context.getString(R.string.widget_news)
         val note = when (newsNote(current, error != null)) {
@@ -141,7 +159,11 @@ class NewsWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidget(
         val titles = current?.titles.orEmpty()
         if (shape.titles == 0) {
             if (note == null) rows.addView(unseenView(titles), LinearLayout.LayoutParams(MATCH_PARENT, MATCH_PARENT))
+            // La carte est l'élément touché : c'est elle qui dit le nombre et le geste.
+            view.contentDescription = if (note == null) rows.getChildAt(0)?.contentDescription else note
         } else {
+            // Chaque titre se dit lui-même.
+            view.contentDescription = null
             titles.take(shape.titles).forEachIndexed { index, text ->
                 val lp = if (shape.side) {
                     LinearLayout.LayoutParams(0, MATCH_PARENT, 1f).apply { if (index > 0) marginStart = dp(16) }
@@ -183,7 +205,7 @@ class NewsWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidget(
     /** Un titre : estompé une fois ouvert d'ici ; plus de lignes quand la forme est grande. */
     private fun row(index: Int, text: String) = TextView(context).apply {
         this.text = text
-        textSize = if (shape.maxLines >= 3) 20f else if (placed.size == WidgetSize.M) 15f else 17f
+        textSize = shape.sp
         setTextColor(color(if (text in seen) R.attr.c_text_dim else R.attr.c_text))
         maxLines = shape.maxLines
         ellipsize = TextUtils.TruncateAt.END
@@ -194,7 +216,7 @@ class NewsWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidget(
     private fun open(index: Int) {
         val current = news ?: return
         keepSeen(seenAfter(seen, current.titles, opened = current.titles.getOrNull(index)))
-        render(null)
+        render()
         if (preview) return
         host.scope.launch {
             runCatchingCancellable { BackendClient(context).news.open(index) }

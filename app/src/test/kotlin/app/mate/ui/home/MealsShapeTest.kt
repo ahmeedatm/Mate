@@ -60,4 +60,13 @@ class MealsShapeTest {
         assertEquals(listOf(5, 6, 0, 1, 2, 3, 4), days.map { it.weekday })
         assertEquals("midi 5", days.first().day.lunch)
     }
+
+    @Test
+    fun `un repas vide avant le repas en cours ne passe pas devant lui`() {
+        val week = List(7) { MenuDay("", "soir $it") }
+        // Mardi à 10 h : le midi est vide, le soir est le repas en cours.
+        val lines = mealLines(week, weekday = 1, minuteOfDay = 10 * 60)
+        assertEquals(listOf("soir 1"), visibleMeals(lines, 1).map { it.dish })
+        assertEquals(listOf("soir 1", ""), visibleMeals(lines, 2).map { it.dish })
+    }
 }

@@ -38,21 +38,24 @@ class MealsWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidget
     }
     private val status = label(14f, R.attr.c_text_dim)
     private val body = LinearLayout(context)
+    private val content = LinearLayout(context).apply {
+        orientation = LinearLayout.VERTICAL
+        gravity = Gravity.CENTER_VERTICAL
+        addView(status, LinearLayout.LayoutParams(MATCH_PARENT, WRAP_CONTENT))
+        addView(body, LinearLayout.LayoutParams(MATCH_PARENT, 0, 1f))
+    }
 
     override val view = LinearLayout(context).asCard(16).apply {
         addView(head, LinearLayout.LayoutParams(WRAP_CONTENT, WRAP_CONTENT))
-        addView(LinearLayout(context).apply {
-            orientation = LinearLayout.VERTICAL
-            gravity = Gravity.CENTER_VERTICAL
-            addView(status, LinearLayout.LayoutParams(MATCH_PARENT, WRAP_CONTENT))
-            addView(body, LinearLayout.LayoutParams(MATCH_PARENT, 0, 1f))
-        })
+        addView(content)
     }
-    private val content get() = view.getChildAt(1)
 
     private var week: List<MenuDay>? = null
     private var error: String? = null
     private var shape = MealsShape.of(placed.size)
+
+    /** Ce qui est dessiné (note, forme, repas) : une minute qui ne change rien ne refait pas les vues. */
+    private var drawn: List<Any?>? = null
 
     /** Aperçu du catalogue : son menu reste affiché, sans réseau. */
     private var preview = false
@@ -93,25 +96,31 @@ class MealsWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidget
     }
 
     /** Chaque minute : le repas en cours change avec l'heure, sans repasser par le réseau. */
-    override fun onMinute() = render()
+    override fun onMinute() {
+        if (view.isShown) render()
+    }
 
     private fun render() {
         val current = week
-        body.removeAllViews()
         val unset = current != null && current.all { it.lunch.isEmpty() && it.dinner.isEmpty() }
         val note = when {
             error != null -> error
             unset -> context.getString(R.string.meals_unset)
             else -> null
         }
-        status.text = note
-        status.isVisible = note != null
-        if (current == null || unset) return
         val now = Calendar.getInstance()
         val weekday = (now.get(Calendar.DAY_OF_WEEK) + 5) % 7 // lundi = 0
-        if (shape.week) return renderWeek(current, weekday)
         val minuteOfDay = now.get(Calendar.HOUR_OF_DAY) * 60 + now.get(Calendar.MINUTE)
-        val lines = visibleMeals(mealLines(current, weekday, minuteOfDay), shape.meals)
+        val days = if (current == null || unset || !shape.week) null else weekFrom(current, weekday)
+        val lines = if (current == null || unset || shape.week) null else visibleMeals(mealLines(current, weekday, minuteOfDay), shape.meals)
+        val next = listOf(note, shape, placed.size, days, lines)
+        if (next == drawn) return
+        drawn = next
+        body.removeAllViews()
+        status.text = note
+        status.isVisible = note != null
+        if (days != null) return renderWeek(days)
+        if (lines == null) return
         when {
             // Ligne : un repas par case en plus, côte à côte.
             shape.side -> {
@@ -168,11 +177,11 @@ class MealsWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidget
     }
 
     /** Plein écran : la semaine, aujourd'hui d'abord ; une ligne par jour, le midi puis le soir. */
-    private fun renderWeek(current: List<MenuDay>, weekday: Int) {
+    private fun renderWeek(days: List<WeekDay>) {
         body.orientation = LinearLayout.VERTICAL
         body.addView(weekRow(null, context.getString(R.string.meals_lunch), context.getString(R.string.meals_dinner), header = true))
         val names = context.resources.getStringArray(R.array.meals_weekdays)
-        weekFrom(current, weekday).forEach { day ->
+        days.forEach { day ->
             val name = when (day.offset) {
                 0 -> context.getString(R.string.meals_week_today)
                 1 -> context.getString(R.string.meals_week_tomorrow)

@@ -40,4 +40,10 @@ class NewsShapeTest {
         // On ne garde que les titres encore dans le flux.
         assertEquals(setOf("b", "c"), seenAfter(setOf("b", "z"), listOf("a", "b", "c"), opened = "c"))
     }
+
+    @Test
+    fun `la taille du texte des titres suit la forme`() {
+        assertTrue(NewsShape.of(WidgetSize.M).sp < NewsShape.of(WidgetSize.L).sp)
+        assertTrue(NewsShape.of(WidgetSize.L).sp < NewsShape.of(WidgetSize.FULL).sp)
+    }
 }
