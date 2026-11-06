@@ -212,9 +212,9 @@ class WidgetModelTest {
     }
 
     @Test
-    fun `le heros et la ligne du jour n'ont besoin que de la largeur de la grille`() {
-        assertEquals(listOf(WidgetSize.W), WidgetType.HERO.sizes)
-        assertEquals(listOf(WidgetSize.W), WidgetType.DAYLINE.sizes)
+    fun `le heros et la ligne du jour se posent d'abord sur toute la largeur de la grille`() {
+        assertEquals(WidgetSize.W, WidgetType.HERO.sizes.first())
+        assertEquals(WidgetSize.W, WidgetType.DAYLINE.sizes.first())
         assertFalse(WidgetType.HERO.computer)
         assertFalse(WidgetType.DAYLINE.computer)
     }
