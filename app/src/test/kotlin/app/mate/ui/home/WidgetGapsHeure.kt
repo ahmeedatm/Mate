@@ -5,5 +5,4 @@ val GAPS_HEURE = listOf(
     WidgetGap(WidgetType.HERO, shapes = true, preview = true, reason = "formes et aperçu à faire (#180)"),
     WidgetGap(WidgetType.DAY, shapes = true, preview = true, reason = "formes et aperçu à faire (#180)"),
     WidgetGap(WidgetType.DAYLINE, shapes = true, preview = true, reason = "formes et aperçu à faire (#180)"),
-    WidgetGap(WidgetType.AGENDA, shapes = true, preview = true, reason = "formes et aperçu à faire (#180)"),
 )

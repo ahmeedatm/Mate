@@ -22,7 +22,7 @@ object WidgetSamples {
         WidgetType.DAYLINE -> null
         WidgetType.WEATHER -> WeatherSample.paris()
         WidgetType.NEXT -> CalendarSample
-        WidgetType.AGENDA -> null
+        WidgetType.AGENDA -> CalendarSample
 
         // #181 Listes et notes
         WidgetType.TASKS -> null
