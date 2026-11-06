@@ -346,6 +346,7 @@ class MainActivity : AppCompatActivity() {
             when {
                 welcome.visibility == View.VISIBLE || plugins.visibility == View.VISIBLE -> Unit
                 agentAsk.isOpen -> agentAsk.close()
+                current == Mode.HOME && homeFragment()?.closeCatalogue() == true -> Unit
                 current == Mode.HOME && homeFragment()?.cancelEdit() == true -> Unit
                 current == Mode.HOME && homeFragment()?.closeZoom() == true -> Unit
                 documentPanel.visibility == View.VISIBLE -> documentPanel.close()

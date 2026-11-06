@@ -168,7 +168,7 @@ Fait et testé sur la Gen2 (APK debug, compagnon lancé depuis le dépôt) :
 
 ## À faire, dans l'ordre
 
-**Widgets en 16 formes** (suivi #187) : la règle est posée (#178 : 16 formes, familles `ShapeFamily`, aperçu `WidgetSamples`, `WidgetRulesTest`). Faits : Son de l'ordi, Table de mixage, Lecture et YouTube Music (#182). Reste à vider les listes d'exceptions `app/src/test/.../ui/home/WidgetGaps*.kt`, une par famille de widgets (#180 à #186), et le catalogue d'ajout (#179).
+**Widgets en 16 formes** (suivi #187) : la règle est posée (#178 : 16 formes, familles `ShapeFamily`, aperçu `WidgetSamples`, `WidgetRulesTest`). Faits : Son de l'ordi, Table de mixage, Lecture et YouTube Music (#182) ; catalogue d'ajout (#179, PR #188 : liste par rayon, fiche à droite, choix de la forme). Reste à vider les listes d'exceptions `app/src/test/.../ui/home/WidgetGaps*.kt`, une par famille de widgets (#180 à #186) ; chaque aperçu ajouté apparaît tout seul dans le catalogue.
 
 **Heure et journée en 16 formes** (#180) : Horloge (cadran des minutes) et Météo (courbe des prochaines heures) ont leurs 16 formes et leur aperçu (PR #195). Vu sur l'émulateur, pas sur la tablette 4.2 (vitesse du dessin à mesurer). Restent Prochain rendez-vous, Agenda, Héros, Journée, Ligne du jour (`WidgetGapsHeure.kt`).
 Famille Dev (#185) faite : Agents, Jira, GitLab, Pipelines, GitHub, Actions et Chiffres ont les 16 formes et leur aperçu ; en Pastille, Ligne et Colonne, un résumé (compteur puis éléments). Pas encore essayé sur une vraie 4.2.
