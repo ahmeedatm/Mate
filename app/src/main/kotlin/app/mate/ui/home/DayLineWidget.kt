@@ -56,9 +56,12 @@ class DayLineWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidg
                 ShapeFamily.FULL, ShapeFamily.LARGE -> BIG_TITLE_SP
                 else -> TITLE_SP
             }
-            stack.gravity = if (pill) Gravity.CENTER_VERTICAL else Gravity.TOP
+            // Couchée, la ligne et son en-tête se centrent dans la carte au lieu de laisser le bas vide.
+            stack.gravity = if (face.line == DayLineFace.Line.DOWN) Gravity.TOP else Gravity.CENTER_VERTICAL
             // Pastille sur la rangée fine (92 dp) : un titre sur deux lignes pousserait la piste dehors.
             nowTitle.maxLines = if (pill) 1 else 2
+            // Pastille sur la rangée fine : « jusqu'à » plus petit, piste plus basse, pour rester dans 92 dp.
+            nowUntil.textSize = if (pill) PILL_UNTIL_SP else UNTIL_SP
             stack.addView(nowTitle, LinearLayout.LayoutParams(MATCH, WRAP))
             stack.addView(nowUntil, LinearLayout.LayoutParams(MATCH, WRAP))
             track.across = face.line != DayLineFace.Line.DOWN
@@ -146,9 +149,10 @@ class DayLineWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidg
         const val PILL_TITLE_SP = 20f
         const val BIG_TITLE_SP = 32f
         const val UNTIL_SP = 16f
-        const val MINI_DP = 28
+        const val MINI_DP = 22
+        const val PILL_UNTIL_SP = 14f
         const val ACROSS_DP = 64
         const val GAP_DP = 16
-        const val PILL_GAP_DP = 8
+        const val PILL_GAP_DP = 4
     }
 }

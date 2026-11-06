@@ -6,8 +6,8 @@ import java.util.Calendar
 /**
  * Ce que la Ligne du jour montre dans une forme (#180, direction Cadran). [band] : la Ligne garde la ligne animée
  * ([DayLineView]). Ailleurs, un en-tête « maintenant » ([DayNow]) et la journée en ligne de temps ([DayTrack]) : petite et
- * sans titres en Pastille, couchée avec les titres (Bloc, Grand large), debout avec l'heure et le titre de chaque
- * rendez-vous (Colonne, Grand étroit, Plein écran).
+ * sans titres en Pastille, couchée avec les titres sur 2 rangées (2 × 2, 3 × 2, 4 × 2), debout avec l'heure et le titre
+ * de chaque rendez-vous dès 3 rangées (Colonne, Bloc et Grand hauts, Plein écran).
  */
 data class DayLineFace(val band: Boolean, val line: Line) {
     enum class Line { MINI, ACROSS, DOWN }
@@ -17,8 +17,8 @@ data class DayLineFace(val band: Boolean, val line: Line) {
             ShapeFamily.ROW -> DayLineFace(band = true, line = Line.ACROSS)
             ShapeFamily.PILL -> DayLineFace(band = false, line = Line.MINI)
             ShapeFamily.COLUMN -> DayLineFace(band = false, line = Line.DOWN)
-            ShapeFamily.BLOCK -> DayLineFace(band = false, line = Line.ACROSS)
-            ShapeFamily.LARGE -> DayLineFace(band = false, line = if (size.w > size.h) Line.ACROSS else Line.DOWN)
+            ShapeFamily.BLOCK -> DayLineFace(band = false, line = if (size.h >= 3) Line.DOWN else Line.ACROSS)
+            ShapeFamily.LARGE -> DayLineFace(band = false, line = if (size.h < 3 && size.w > size.h) Line.ACROSS else Line.DOWN)
             ShapeFamily.FULL -> DayLineFace(band = false, line = Line.DOWN)
         }
     }

@@ -31,10 +31,11 @@ class DayLineFaceTest {
     @Test
     fun `pastille = petite ligne sans titres, colonne et grand etroit = ligne debout, bloc et grand large = ligne couchee`() {
         assertEquals(DayLineFace.Line.MINI, DayLineFace.of(WidgetSize.S).line)
-        for (size in listOf(WidgetSize.V, WidgetSize.V4, WidgetSize.T, WidgetSize.T3, WidgetSize.FULL)) {
+        // Dès 3 rangées, la ligne debout remplit la hauteur au lieu de laisser la carte creuse.
+        for (size in listOf(WidgetSize.V, WidgetSize.V4, WidgetSize.T, WidgetSize.T3, WidgetSize.FULL, WidgetSize.L23, WidgetSize.L33, WidgetSize.XL3)) {
             assertEquals(size.name, DayLineFace.Line.DOWN, DayLineFace.of(size).line)
         }
-        for (size in listOf(WidgetSize.L, WidgetSize.L3, WidgetSize.XL, WidgetSize.XL3)) {
+        for (size in listOf(WidgetSize.L, WidgetSize.L3, WidgetSize.XL)) {
             assertEquals(size.name, DayLineFace.Line.ACROSS, DayLineFace.of(size).line)
         }
     }
