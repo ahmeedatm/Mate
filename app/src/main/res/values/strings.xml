@@ -1302,12 +1302,18 @@
     <string name="widget_hero_desc">L\'heure en grand, le prochain rendez-vous, la météo et l\'eau</string>
     <string name="widget_jira">Jira</string>
     <string name="widget_jira_desc">Tes tickets en colonnes ; toucher un ticket pour le faire avancer</string>
+    <plurals name="glance_open">
+        <item quantity="one">ouvert</item>
+        <item quantity="other">ouverts</item>
+    </plurals>
     <string name="widget_gitlab">GitLab</string>
     <string name="widget_gitlab_desc">Tes MR par colonne (prête à merger, à fixer, brouillon…), celles à relire, pipeline et fusion</string>
     <string name="widget_github">GitHub</string>
     <string name="widget_github_desc">Tes pull requests et celles à relire, contrôles et fusion</string>
+    <string name="glance_to_review">à relire</string>
     <string name="widget_actions">Actions</string>
     <string name="widget_actions_desc">Le dernier run GitHub Actions de tes dépôts : en cours, échecs, durée</string>
+    <string name="glance_failed">en échec</string>
     <string name="widget_ytmusic">YouTube Music</string>
     <string name="widget_ytmusic_desc">YouTube Music qui joue sur l\'ordi, piloté d\'ici : titre, file d\'attente, j\'aime</string>
     <string name="ytmusic_empty">Rien ne joue dans YouTube Music</string>
@@ -1391,6 +1397,12 @@
     <string name="widget_media_sites">Sites</string>
     <string name="widget_media_remove_confirm">Retirer le site « %1$s » ?</string>
     <string name="widget_media_desc">Musique ou vidéo de l\'ordi, avec ses commandes</string>
+    <string name="widget_media_sample_title" translatable="false">Midnight City</string>
+    <string name="widget_media_sample_artist" translatable="false">M83</string>
+    <string name="widget_media_sample_album" translatable="false">Hurry Up, We\'re Dreaming</string>
+    <string name="widget_media_sample_app" translatable="false">Spotify</string>
+    <string name="widget_media_sample_next" translatable="false">Reunion</string>
+    <string name="widget_media_sample_after" translatable="false">Wait</string>
     <string name="widget_agents">Agents Claude</string>
     <string name="widget_agents_desc">Qui travaille, qui a fini, qui t\'attend</string>
     <string name="widget_mixer">Console de mixage</string>
@@ -1550,6 +1562,10 @@
     <string name="widget_weather_temp">%1$d°</string>
     <string name="widget_weather_range">min %1$d° · max %2$d°</string>
     <string name="widget_weather_day">%1$d° / %2$d°</string>
+    <string name="widget_weather_hour">%1$d h : %2$d°</string>
+    <string name="widget_weather_hour_short">%1$dh</string>
+    <string name="widget_weather_city_range">%1$s · %2$d° / %3$d°</string>
+    <string name="widget_weather_sample_city">Paris</string>
     <string name="widget_weather_city_hint">Ville (ex. Paris)</string>
     <string name="widget_weather_search">Chercher</string>
     <string name="widget_weather_locate">Ma position</string>

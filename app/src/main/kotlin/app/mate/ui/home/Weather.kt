@@ -50,8 +50,25 @@ object Weather {
     /** Aujourd'hui et les 4 jours suivants. */
     private const val DAYS = 5
 
-    /** Temps actuel et min / max du jour ; [days] : les jours suivants (grand widget). */
-    class Forecast(val temperature: Double, val code: Int, val min: Double, val max: Double, val days: List<Day> = emptyList())
+    /** Prochaines heures gardées pour la courbe des températures (widget Météo). */
+    const val HOURS = 12
+    private const val HOUR_MS = 3_600_000L
+
+    /** Temps actuel et min / max du jour ; [days] : les jours suivants ; [hours] : les prochaines heures, maintenant compris. */
+    class Forecast(
+        val temperature: Double,
+        val code: Int,
+        val min: Double,
+        val max: Double,
+        val days: List<Day> = emptyList(),
+        val hours: List<Hour> = emptyList(),
+    )
+
+    /** Une heure de la courbe : début (ms), heure de la tablette (0 à 23), température et temps de l'heure qui suit. */
+    class Hour(val at: Long, val hour: Int, val temperature: Double, val code: Int)
+
+    /** Les heures pas encore finies à [now] (ms) : une prévision gardée faute de réseau ne montre pas le passé. */
+    fun upcoming(hours: List<Hour>, now: Long) = hours.filter { it.at + HOUR_MS > now }
 
     /** Un jour suivant : date (« 2026-10-29 », jour de la tablette), temps, min et max. */
     class Day(val date: String, val code: Int, val min: Double, val max: Double)
@@ -68,21 +85,22 @@ object Weather {
     /**
      * Réponse de MET Norway : une suite d'échéances en UTC (heure par heure, puis toutes les 6 h), chacune avec la
      * température et le temps de l'heure ou des 6 h suivantes. Regroupées par jour de la tablette : min / max du jour,
-     * temps de la mi-journée ; la première échéance donne le temps actuel.
+     * temps de la mi-journée ; la première échéance donne le temps actuel. Les échéances d'heure en heure du début
+     * donnent les prochaines heures ([HOURS] au plus), jusqu'au premier écart de plus d'une heure.
      */
     fun parse(json: JSONObject, zone: TimeZone = TimeZone.getDefault()): Forecast {
         val series = json.getJSONObject("properties").getJSONArray("timeseries")
         val utc = SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss'Z'", Locale.ROOT).apply { timeZone = TimeZone.getTimeZone("UTC") }
         val day = SimpleDateFormat("yyyy-MM-dd", Locale.ROOT).apply { timeZone = zone }
         val hour = SimpleDateFormat("H", Locale.ROOT).apply { timeZone = zone }
-        class Step(val date: String, val hour: Int, val temperature: Double, val symbol: String?)
+        class Step(val at: Long, val date: String, val hour: Int, val temperature: Double, val symbol: String?)
         val steps = (0 until series.length()).map { i ->
             val t = series.getJSONObject(i)
             val time = utc.parse(t.getString("time"))!!
             val data = t.getJSONObject("data")
             val symbol = listOf("next_1_hours", "next_6_hours", "next_12_hours")
                 .firstNotNullOfOrNull { data.optJSONObject(it)?.optJSONObject("summary")?.optString("symbol_code")?.ifEmpty { null } }
-            Step(day.format(time), hour.format(time).toInt(), data.getJSONObject("instant").getJSONObject("details").getDouble("air_temperature"), symbol)
+            Step(time.time, day.format(time), hour.format(time).toInt(), data.getJSONObject("instant").getJSONObject("details").getDouble("air_temperature"), symbol)
         }
         val byDay = steps.groupBy { it.date }.entries.take(DAYS)
         fun dayOf(date: String, list: List<Step>) = Day(
@@ -92,7 +110,9 @@ object Weather {
             list.maxOf { it.temperature },
         )
         val today = dayOf(byDay[0].key, byDay[0].value)
-        return Forecast(steps[0].temperature, codeOf(steps[0].symbol), today.min, today.max, byDay.drop(1).map { dayOf(it.key, it.value) })
+        val gap = steps.zipWithNext().indexOfFirst { (a, b) -> b.at - a.at > HOUR_MS }
+        val hours = (if (gap < 0) steps else steps.take(gap + 1)).take(HOURS).map { Hour(it.at, it.hour, it.temperature, codeOf(it.symbol)) }
+        return Forecast(steps[0].temperature, codeOf(steps[0].symbol), today.min, today.max, byDay.drop(1).map { dayOf(it.key, it.value) }, hours)
     }
 
     /**

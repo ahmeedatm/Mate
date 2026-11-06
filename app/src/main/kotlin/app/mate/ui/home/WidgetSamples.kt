@@ -4,6 +4,7 @@ import app.mate.R
 import app.mate.focus.FocusTimer
 import app.mate.focus.NoisePlayer
 import app.mate.focus.Water
+import app.mate.github.Forge
 import java.util.Calendar
 
 /**
@@ -16,11 +17,11 @@ interface WidgetSample
 object WidgetSamples {
     fun of(type: WidgetType): WidgetSample? = when (type) {
         // #180 Heure et journée
-        WidgetType.CLOCK -> null
+        WidgetType.CLOCK -> ClockSample
         WidgetType.HERO -> null
         WidgetType.DAY -> null
         WidgetType.DAYLINE -> null
-        WidgetType.WEATHER -> null
+        WidgetType.WEATHER -> WeatherSample.paris()
         WidgetType.NEXT -> null
         WidgetType.AGENDA -> null
 
@@ -35,9 +36,9 @@ object WidgetSamples {
 
         // #182 Son et musique
         WidgetType.AUDIO -> AudioSample
-        WidgetType.MEDIA -> null
+        WidgetType.MEDIA -> MediaSample
         WidgetType.MIXER -> MixerSample
-        WidgetType.YTMUSIC -> null
+        WidgetType.YTMUSIC -> YtMusicSample
 
         // #183 Piloter l'ordinateur
         WidgetType.KEYS -> KeysSample(
@@ -75,13 +76,13 @@ object WidgetSamples {
         WidgetType.PRESENT -> null
 
         // #185 Dev
-        WidgetType.AGENTS -> null
-        WidgetType.JIRA -> null
-        WidgetType.GITLAB -> null
-        WidgetType.PIPELINES -> null
-        WidgetType.GITHUB -> null
-        WidgetType.ACTIONS -> null
-        WidgetType.METRICS -> null
+        WidgetType.AGENTS -> AgentsSample(sampleAgents())
+        WidgetType.JIRA -> JiraSample(sampleJira())
+        WidgetType.GITLAB -> MrsSample(sampleMrs())
+        WidgetType.PIPELINES -> PipelinesSample(samplePipelines(Forge.GITLAB))
+        WidgetType.GITHUB -> MrsSample(sampleMrs())
+        WidgetType.ACTIONS -> PipelinesSample(samplePipelines(Forge.GITHUB))
+        WidgetType.METRICS -> MetricsSample(sampleMetrics())
 
         // #186 Perso, maison et jeux
         WidgetType.FOCUS -> FocusSample(FocusTimer.State(FocusTimer.Phase.FOCUS, 25 * MINUTE, 18 * MINUTE + 42_000, running = true, completed = 2), NoisePlayer.Kind.FOREST)
