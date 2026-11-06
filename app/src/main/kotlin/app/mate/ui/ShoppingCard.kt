@@ -143,7 +143,9 @@ class ShoppingCard @JvmOverloads constructor(
         shown = items
         doneCount = items.count { it.done }
         val left = items.size - doneCount
-        val caption = if (items.isNotEmpty() && left == 0) {
+        val caption = if (items.isEmpty()) {
+            context.getString(R.string.shopping_none_caption)
+        } else if (left == 0) {
             context.getString(R.string.shopping_all_done)
         } else {
             context.resources.getQuantityString(R.plurals.shopping_left_caption, left)

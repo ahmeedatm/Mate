@@ -51,6 +51,9 @@ class SoundList(context: Context, private val scope: CoroutineScope) : LinearLay
         }
     }
 
+    /** Aperçu du catalogue : un état d'exemple, sans relecture. */
+    fun showSample(state: MixerState) = render(state)
+
     private fun render(state: MixerState) {
         val channels = listOf(state.master, state.mic) + state.apps.orEmpty()
         if (channels.map { it.id } != rows.keys.toList()) {

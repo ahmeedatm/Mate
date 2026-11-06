@@ -1,5 +1,7 @@
 package app.mate.ui
 
+import android.graphics.Rect
+import android.view.TouchDelegate
 import android.view.View
 import android.view.ViewGroup
 import android.view.ViewGroup.LayoutParams.MATCH_PARENT
@@ -30,12 +32,17 @@ class ListCardViews(private val card: LinearLayout) {
     val status: TextView = card.findViewById(R.id.tasks_status)
     val addRow: View = card.findViewById(R.id.tasks_add_row)
 
+    /** Ce que fait un toucher sur la tête, ajouté à sa description pour TalkBack (Tâches : les récurrentes). */
+    var headAction: String? = null
+
     /** Forme rangée ; null tant que [apply] n'est pas passé (gabarit tel que dans le XML : Bloc). */
     private var applied: ListShape? = null
     val shape get() = applied ?: ListShape.of(WidgetSize.L)
 
     init {
         ring.color = themeColor(context, R.attr.c_ok)
+        // Piste en `c_stroke` (3:1 testé) : la part restante se voit aussi en Rétro et en Contraste élevé.
+        ring.trackColor = themeColor(context, R.attr.c_stroke)
         number.typeface = themeFont(context, R.attr.c_font_light)
         // Pastille et Ligne : la tête suit la hauteur réelle de la carte (92 dp au profil de rangées le plus serré).
         card.addOnLayoutChangeListener { _, _, top, _, bottom, _, oldTop, _, oldBottom ->
@@ -59,13 +66,14 @@ class ListCardViews(private val card: LinearLayout) {
             LinearLayout.LayoutParams(MATCH_PARENT, card.dp(1)).apply { topMargin = card.dp(12) }
         }
         scroll.isVisible = shape.list
+        // Ligne : une seule rangée visible, un fondu la pâlirait toute ; le fondu ne sert qu'aux listes en hauteur.
+        scroll.isVerticalFadingEdgeEnabled = !side
         scroll.layoutParams = if (side) {
             LinearLayout.LayoutParams(0, MATCH_PARENT, 1f).apply { marginStart = card.dp(HEAD_GAP_DP) }
         } else {
             LinearLayout.LayoutParams(MATCH_PARENT, 0, 1f).apply { topMargin = card.dp(8) }
         }
         addRow.isVisible = shape.addRow
-        caption.isVisible = !side
         fitHead()
         return true
     }
@@ -77,8 +85,10 @@ class ListCardViews(private val card: LinearLayout) {
         this.number.setTextColor(themeColor(context, if (urgent) R.attr.c_ko else R.attr.c_text))
         this.caption.text = caption
         ring.progress = if (total == 0) 0f else done.toFloat() / total
-        ringText.text = if (total == 0) "" else context.getString(R.string.list_ring_progress, done, total)
-        title.contentDescription = if (number.isEmpty()) caption else "$number $caption"
+        // Au-delà de 99, « faits/total » ne tient plus dans l'anneau : l'arc seul le dit.
+        ringText.text = if (total == 0 || total > MAX_RING_TOTAL) "" else context.getString(R.string.list_ring_progress, done, total)
+        val said = if (number.isEmpty()) caption else "$number $caption"
+        title.contentDescription = headAction?.let { "$said. $it" } ?: said
     }
 
     /** Range les lignes, ligne par ligne, en [ListShape.columns] colonnes ; sans cases, toucher la ligne coche. */
@@ -108,7 +118,8 @@ class ListCardViews(private val card: LinearLayout) {
         if (shape.checks) return
         val check = row.findViewById<View>(R.id.task_check)
         check.visibility = View.GONE
-        row.setOnClickListener { check.performClick() }
+        // Une case sans écouteur (tâche cochée par Jira) : la ligne garde son propre toucher, rien de muet.
+        if (check.hasOnClickListeners()) row.setOnClickListener { check.performClick() }
     }
 
     /** Tête compacte quand la carte est basse (Pastille, Ligne) : anneau, chiffre et légende tiennent dans la hauteur. */
@@ -124,18 +135,40 @@ class ListCardViews(private val card: LinearLayout) {
             }
         }
         number.textSize = if (compact) 24f else 34f
+        ringText.textSize = if (compact) 10f else 13f
+        widenRingTarget(compact)
         caption.maxLines = if (compact) 1 else 2
         // Compacte : « 5 tâches restantes » sur une ligne, la légende alignée sur le pied du chiffre.
         (title as LinearLayout).orientation = if (compact) LinearLayout.HORIZONTAL else LinearLayout.VERTICAL
         caption.layoutParams = if (compact) {
-            LinearLayout.LayoutParams(0, WRAP_CONTENT, 1f).apply { marginStart = card.dp(8) }
+            // Ligne : la tête est à sa largeur, la légende aussi ; Pastille : la légende prend la place qui reste.
+            LinearLayout.LayoutParams(if (shape.sideHead) WRAP_CONTENT else 0, WRAP_CONTENT, if (shape.sideHead) 0f else 1f)
+                .apply { marginStart = card.dp(8) }
         } else {
-            LinearLayout.LayoutParams(MATCH_PARENT, WRAP_CONTENT).apply { topMargin = card.dp(4) }
+            // Ligne : la tête est à sa largeur, la légende sous le chiffre aussi (sinon coupée à la largeur du chiffre).
+            LinearLayout.LayoutParams(if (shape.sideHead) WRAP_CONTENT else MATCH_PARENT, WRAP_CONTENT).apply { topMargin = card.dp(4) }
+        }
+    }
+
+    /** Anneau resserré (moins de 48 dp) : sa zone de toucher s'étend à 48 dp autour de lui. */
+    private fun widenRingTarget(compact: Boolean) {
+        if (!compact) {
+            head.touchDelegate = null
+            return
+        }
+        head.post {
+            val hit = Rect()
+            ringBox.getHitRect(hit)
+            val extra = ((card.dp(MIN_TARGET_DP) - hit.height()) / 2).coerceAtLeast(0)
+            hit.inset(-extra, -extra)
+            head.touchDelegate = TouchDelegate(hit, ringBox)
         }
     }
 
     private companion object {
         const val RING_DP = 56
+        const val MIN_TARGET_DP = 48
+        const val MAX_RING_TOTAL = 99
         const val HEAD_GAP_DP = 16
         const val COLUMN_GAP_DP = 16
     }

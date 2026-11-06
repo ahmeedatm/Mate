@@ -190,6 +190,14 @@ class GitLabView @JvmOverloads constructor(
         }
     }
 
+    /** Aperçu du catalogue : l'exemple, sans réseau ni boucle. */
+    fun showSample(mrs: GitLabMrs) {
+        visibility = VISIBLE
+        status.visibility = GONE
+        showConnected(true)
+        render(mrs)
+    }
+
     private suspend fun refresh() {
         val id = ++lastRead
         try {
@@ -241,20 +249,8 @@ class GitLabView @JvmOverloads constructor(
     private fun showHeaders(counts: List<Pair<MrColumn, Int>>) {
         for ((header, pair) in headers.zip(counts)) {
             val (column, count) = pair
-            header.text = context.getString(R.string.gitlab_col_header, context.getString(columnTitle(column)), count)
+            header.text = context.getString(R.string.gitlab_col_header, context.getString(mrColumnTitle(column, forge)), count)
             header.setTextColor(themeColor(context, if (count == 0) R.attr.c_text_faint else R.attr.c_text))
-        }
-    }
-
-    private fun columnTitle(c: MrColumn) = when {
-        forge == Forge.GITHUB -> if (c == MrColumn.REVIEW) R.string.gitlab_review else texts.mine
-        else -> when (c) {
-            MrColumn.DRAFT -> R.string.gitlab_col_draft
-            MrColumn.FIX -> R.string.gitlab_col_fix
-            MrColumn.MERGE -> R.string.gitlab_col_merge
-            MrColumn.RUNNING -> R.string.gitlab_col_running
-            MrColumn.READY -> R.string.gitlab_col_ready
-            MrColumn.REVIEW -> R.string.gitlab_col_review
         }
     }
 
@@ -387,5 +383,18 @@ class GitLabView @JvmOverloads constructor(
         const val POLL_MS = 30_000L
         const val CONNECT_POLL_MS = 3_000L
         const val DISABLED_ALPHA = 0.4f
+    }
+}
+
+/** Nom d'une colonne de MR : GitHub n'en a que deux (mes PR, à relire). Sert au tableau et aux petites formes du widget. */
+internal fun mrColumnTitle(c: MrColumn, forge: Forge) = when {
+    forge == Forge.GITHUB -> if (c == MrColumn.REVIEW) R.string.gitlab_review else forgeTexts(forge).mine
+    else -> when (c) {
+        MrColumn.DRAFT -> R.string.gitlab_col_draft
+        MrColumn.FIX -> R.string.gitlab_col_fix
+        MrColumn.MERGE -> R.string.gitlab_col_merge
+        MrColumn.RUNNING -> R.string.gitlab_col_running
+        MrColumn.READY -> R.string.gitlab_col_ready
+        MrColumn.REVIEW -> R.string.gitlab_col_review
     }
 }

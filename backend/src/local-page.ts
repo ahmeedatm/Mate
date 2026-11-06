@@ -139,7 +139,7 @@ ${FAVICON}
   .twin-grid { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.05fr); gap: 28px; align-items: start; }
   .twin { margin: 0; position: sticky; top: 32px; }
   .device { background: #0E0F11; border-radius: 26px; padding: 18px; box-shadow: 0 24px 48px -28px rgba(0, 0, 0, .5), 0 0 0 1px var(--line); }
-  .screen { --t-bg: #17181B; --t-tile: #23252A; --t-ink: #ECEDEF; --t-ink2: #B4B8C0; --t-now: #B8F34A; --t-line: #3A3D44; --t-on: #16210A;
+  .screen { --t-bg: #FAF9F5; --t-tile: #FFFFFF; --t-ink: #141413; --t-ink2: #3D3D3A; --t-now: #A34A2B; --t-line: #E8E6DC; --t-on: #FFFFFF;
     aspect-ratio: 16 / 10; border-radius: 8px; overflow: hidden; background: var(--t-bg); color: var(--t-ink); container-type: inline-size;
     display: grid; grid-template-columns: 9% 1fr; transition: background 300ms, color 300ms, filter 250ms; }
   .screen .rl { display: flex; flex-direction: column; align-items: center; gap: 5cqw; padding-top: 4.5cqw; }
@@ -321,7 +321,7 @@ ${FAVICON}
         <div id="tabletsettings">
           <div class="label">Thème</div>
           <div class="themes">
-            <button data-theme="CONSOLE"><span></span>Console</button><button data-theme="CONSOLE_JOUR"><span></span>Console jour</button><button data-theme="CLAIR"><span></span>Clair</button><button data-theme="SOMBRE"><span></span>Sombre</button><button data-theme="CADRAN"><span></span>Cadran</button><button data-theme="CADRAN_NUIT"><span></span>Cadran nuit</button><button data-theme="RETRO"><span></span>Rétro</button><button data-theme="HUSH"><span></span>Hush</button><button data-theme="SPIDERMAN"><span></span>Spider-Verse</button><button data-theme="REGISTRE"><span></span>Registre</button><button data-theme="STUDIO"><span></span>Studio</button><button data-theme="MAISON"><span></span>Maison</button><button data-theme="TABLEAU"><span></span>Tableau</button><button data-theme="TERMINAL"><span></span>Terminal</button><button data-theme="CONTRASTE"><span></span>Contraste élevé</button>
+            <button data-theme="CHALEUR"><span></span>Chaleur</button><button data-theme="CONSOLE"><span></span>Console</button><button data-theme="CONSOLE_JOUR"><span></span>Console jour</button><button data-theme="CLAIR"><span></span>Clair</button><button data-theme="SOMBRE"><span></span>Sombre</button><button data-theme="CADRAN"><span></span>Cadran</button><button data-theme="CADRAN_NUIT"><span></span>Cadran nuit</button><button data-theme="RETRO"><span></span>Rétro</button><button data-theme="HUSH"><span></span>Hush</button><button data-theme="SPIDERMAN"><span></span>Spider-Verse</button><button data-theme="REGISTRE"><span></span>Registre</button><button data-theme="STUDIO"><span></span>Studio</button><button data-theme="MAISON"><span></span>Maison</button><button data-theme="TABLEAU"><span></span>Tableau</button><button data-theme="TERMINAL"><span></span>Terminal</button><button data-theme="CONTRASTE"><span></span>Contraste élevé</button>
           </div>
           <div class="row"><label for="brightness">Luminosité de l'écran</label><input type="range" id="brightness" min="5" max="100"><span class="value" id="brightnessvalue"></span></div>
           <div class="row"><label for="volume">Volume du haut-parleur</label><input type="range" id="volume" min="0" max="100"><span class="value" id="volumevalue"></span></div>
@@ -1035,6 +1035,7 @@ ${FAVICON}
 
   // Aperçu de la tablette : couleurs des thèmes (fond, tuile, texte, texte 2, accent, filet, texte sur l'accent), d'après palettes.xml.
   const THEMES = {
+    CHALEUR: ["#FAF9F5", "#FFFFFF", "#141413", "#3D3D3A", "#A34A2B", "#E8E6DC", "#FFFFFF"],
     CONSOLE: ["#17181B", "#23252A", "#ECEDEF", "#B4B8C0", "#B8F34A", "#3A3D44", "#16210A"],
     CONSOLE_JOUR: ["#F4F2EE", "#FFFFFF", "#1B1C1F", "#474B54", "#3F6B00", "#D8D3CA", "#FFFFFF"],
     CLAIR: ["#FAF2F1", "#FFFFFF", "#1E1B1B", "#4D4545", "#CA0538", "#D0C4C3", "#FFFFFF"],
@@ -1059,7 +1060,7 @@ ${FAVICON}
     if (c) btn.querySelector("span").style.background = "linear-gradient(135deg, " + c[0] + " 0 42%, " + c[2] + " 42% 68%, " + c[4] + " 68%)";
   }
   function showTwin(theme) {
-    const c = THEMES[theme] || THEMES.CONSOLE, twin = document.getElementById("twin");
+    const c = THEMES[theme] || THEMES.CHALEUR, twin = document.getElementById("twin");
     VARS.forEach((v, i) => twin.style.setProperty("--t-" + v, c[i]));
     const btn = document.querySelector('.themes button[data-theme="' + theme + '"]');
     document.getElementById("twintheme").textContent = btn ? btn.textContent : "";

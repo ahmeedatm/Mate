@@ -97,7 +97,9 @@ class WidgetModelTest {
         assertEquals(WidgetType.JIRA, WidgetType.of("jira"))
         assertEquals(WidgetType.GITLAB, WidgetType.of("gitlab"))
         for (type in listOf(WidgetType.JIRA, WidgetType.GITLAB)) {
-            assertEquals(listOf(WidgetSize.XL, WidgetSize.L, WidgetSize.L3, WidgetSize.T3, WidgetSize.FULL), type.sizes)
+            // Ajouté en Très grand ; le tableau tient en Grand, 3 × 2, 3 × 4 et plein écran (les petites formes : #185).
+            assertEquals(WidgetSize.XL, type.sizes.first())
+            assertTrue(type.sizes.containsAll(listOf(WidgetSize.L, WidgetSize.L3, WidgetSize.T3, WidgetSize.FULL)))
             assertTrue(type.computer)
         }
         assertFalse(WidgetType.JIRA.offered(HomeFeatures()))
@@ -131,7 +133,8 @@ class WidgetModelTest {
     @Test
     fun `Pipelines, console de GitLab en tableau, proposee seulement quand GitLab l'est`() {
         assertEquals(WidgetType.PIPELINES, WidgetType.of("pipelines"))
-        assertEquals(listOf(WidgetSize.XL, WidgetSize.L, WidgetSize.L3, WidgetSize.T3, WidgetSize.FULL), WidgetType.PIPELINES.sizes)
+        assertEquals(WidgetSize.XL, WidgetType.PIPELINES.sizes.first())
+        assertTrue(WidgetType.PIPELINES.sizes.containsAll(listOf(WidgetSize.L, WidgetSize.L3, WidgetSize.T3, WidgetSize.FULL)))
         assertTrue(WidgetType.PIPELINES.computer)
         assertFalse(WidgetType.PIPELINES.offered(HomeFeatures()))
         assertFalse(WidgetType.PIPELINES.offered(HomeFeatures(jira = true)))
@@ -326,8 +329,8 @@ class WidgetModelTest {
         assertEquals(WidgetSize.L3, layout.pick(jira, 3f, 2f))
         assertEquals(WidgetSize.FULL, layout.pick(jira, 4f, 4f))
         assertEquals(WidgetSize.T3, layout.pick(jira, 3.1f, 3.7f))
-        assertEquals(WidgetSize.XL, layout.pick(jira, 3.6f, 1.2f))
-        assertEquals(WidgetSize.L, layout.pick(jira, 0.5f, 0.5f))
+        assertEquals(WidgetSize.W, layout.pick(jira, 3.6f, 1.2f))
+        assertEquals(WidgetSize.S, layout.pick(jira, 0.5f, 0.5f))
         // Taille refusée par le widget : jamais choisie (une horloge n'a pas de plein écran).
         val clock = Placed(WidgetType.CLOCK, WidgetSize.L, 0, 0, 2)
         layout.widgets += clock
