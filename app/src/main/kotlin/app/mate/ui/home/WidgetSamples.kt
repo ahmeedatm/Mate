@@ -26,8 +26,8 @@ object WidgetSamples {
         WidgetType.AGENDA -> null
 
         // #181 Listes et notes
-        WidgetType.TASKS -> null
-        WidgetType.SHOPPING -> null
+        WidgetType.TASKS -> TasksSample(R.array.widget_tasks_sample, done = 2)
+        WidgetType.SHOPPING -> ShoppingSample(R.array.widget_shopping_sample, done = 1)
         WidgetType.CHECKLIST -> null
         WidgetType.NOTE -> NoteSample(R.string.widget_note_sample)
         WidgetType.MEALS -> null

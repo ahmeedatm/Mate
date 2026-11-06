@@ -635,19 +635,26 @@
 
     <!-- Tâches (carte de l'Accueil) -->
     <string name="tasks_all_done">Tout est fait</string>
-    <plurals name="tasks_remaining">
-        <item quantity="one">%1$d restante</item>
-        <item quantity="other">%1$d restantes</item>
+    <!-- Légende sous le nombre de la tête (#181) : « 3 » puis « tâches restantes ». -->
+    <plurals name="tasks_left_caption">
+        <item quantity="one">tâche restante</item>
+        <item quantity="other">tâches restantes</item>
     </plurals>
+    <string name="tasks_reload">Relire les tâches</string>
+    <!-- Dans l'anneau des cartes à liste : faits / total. -->
+    <string name="list_ring_progress">%1$d/%2$d</string>
     <string name="tasks_empty">Rien à faire pour l\'instant</string>
+    <string name="tasks_none_caption">Rien à faire</string>
+    <string name="tasks_head_action">Ouvre les tâches récurrentes</string>
     <string name="tasks_unavailable">Tâches indisponibles</string>
     <!-- Courses (widget de l'Accueil) -->
     <string name="shopping_all_done">Tout est pris</string>
-    <plurals name="shopping_remaining">
-        <item quantity="one">%1$d à prendre</item>
-        <item quantity="other">%1$d à prendre</item>
+    <plurals name="shopping_left_caption">
+        <item quantity="one">article à prendre</item>
+        <item quantity="other">articles à prendre</item>
     </plurals>
     <string name="shopping_empty">La liste est vide. Dis « ajoute du lait à la liste de courses ».</string>
+    <string name="shopping_none_caption">Liste vide</string>
     <string name="shopping_unavailable">Courses indisponibles</string>
     <string name="shopping_add">Ajouter un article</string>
     <string name="shopping_add_confirm">Ajouter</string>
@@ -1382,6 +1389,23 @@
     <string name="widget_tasks_desc">Les tâches du jour et leurs rappels</string>
     <string name="widget_shopping">Courses</string>
     <string name="widget_shopping_desc">La liste de courses : se coche d\'un toucher, se remplit à la voix</string>
+    <!-- Aperçus du catalogue (#181) : les dernières lignes sont cochées (TasksSample.done, ShoppingSample.done). -->
+    <string-array name="widget_tasks_sample">
+        <item>Appeler le garage</item>
+        <item>Sortir les poubelles</item>
+        <item>Payer la cantine</item>
+        <item>Arroser les plantes</item>
+        <item>Lancer une lessive</item>
+    </string-array>
+    <string-array name="widget_shopping_sample">
+        <item>Lait</item>
+        <item>Pain</item>
+        <item>Œufs</item>
+        <item>Tomates</item>
+        <item>Café</item>
+        <item>Riz</item>
+        <item>Beurre</item>
+    </string-array>
     <string name="widget_focus">Focus</string>
     <string name="widget_focus_desc">Le minuteur Pomodoro</string>
     <string name="widget_water">Eau</string>
