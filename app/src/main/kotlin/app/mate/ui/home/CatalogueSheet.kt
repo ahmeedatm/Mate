@@ -163,6 +163,8 @@ class CatalogueSheet(context: Context, private val host: HomeHost) : LinearLayou
         placeDetail.text = when {
             choice.atCase -> null
             choice.spot != null -> context.getString(R.string.catalogue_no_room_here_detail)
+            // Aucune forme ne tient : « essaie plus petit » mentirait.
+            choices.none { it.spot != null } -> context.getString(R.string.catalogue_page_full)
             else -> context.getString(R.string.catalogue_no_room_page)
         }
         placeDetail.visibility = if (choice.atCase) GONE else VISIBLE
