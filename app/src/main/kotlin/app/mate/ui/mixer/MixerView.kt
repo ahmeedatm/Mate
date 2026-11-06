@@ -29,13 +29,11 @@ import androidx.core.view.ViewCompat
 import androidx.core.widget.ImageViewCompat
 import androidx.core.widget.doAfterTextChanged
 import app.mate.R
-import app.mate.net.AudioOutput
 import app.mate.net.BackendClient
 import app.mate.net.HttpException
 import app.mate.net.MixerChannel
 import app.mate.net.MixerScene
 import app.mate.net.MixerState
-import app.mate.net.currentOutputIndex
 import app.mate.ui.IconCache
 import app.mate.ui.LatestSender
 import app.mate.ui.dp
@@ -63,6 +61,7 @@ class MixerView @JvmOverloads constructor(
 ) : LinearLayout(context, attrs) {
 
     private val sceneScroll: HorizontalScrollView
+    private val stripScroll: HorizontalScrollView
     private val sceneRow: LinearLayout
     private val strips: LinearLayout
     private val note: TextView
@@ -123,6 +122,7 @@ class MixerView @JvmOverloads constructor(
         }
         stripScroll.addView(strips, ViewGroup.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.MATCH_PARENT))
         addView(stripScroll, LayoutParams(LayoutParams.MATCH_PARENT, 0, 1f))
+        this.stripScroll = stripScroll
 
         note = engraved(R.string.mixer_no_apps).apply {
             gravity = Gravity.CENTER
@@ -144,6 +144,10 @@ class MixerView @JvmOverloads constructor(
         this.scope = scope
     }
 
+    private val outputs by lazy {
+        AudioOutputChooser(context, scope, onError = { showStatus(it, ERROR) }, onSwitched = { refresh { mixer() } })
+    }
+
     /** Onglet affiché et deck à l'écran : on relit la console ; sinon rien ne tourne. */
     fun setActive(active: Boolean) {
         if (this.active == active) return
@@ -154,10 +158,16 @@ class MixerView @JvmOverloads constructor(
             if (editing) leaveEditing()
             return
         }
+        startPolling()
+    }
+
+    /** Scènes lues si elles sont montrées ; tranches relues seulement si elles le sont (petites formes du widget). */
+    private fun startPolling() {
+        poll?.cancel()
         stopped = false
         poll = scope.launch {
-            loadScenes()
-            while (isActive && !stopped) {
+            if (scenesShown) loadScenes()
+            while (isActive && !stopped && stripsShown) {
                 val ok = refresh { mixer() }
                 delay(if (ok) POLL_MS else ERROR_POLL_MS)
             }
@@ -184,6 +194,31 @@ class MixerView @JvmOverloads constructor(
     /** Applis à montrer (table d'un profil : son choix, `MixerApps`) ; null : toutes. Rend null sans volume par appli (Mac). */
     var appFilter: ((MixerState) -> List<MixerChannel>?)? = null
 
+    /** Petites formes du widget : voies gardées parmi sortie, micro et applis (dans cet ordre) ; null : toutes. */
+    var channelFilter: ((List<MixerChannel>) -> List<MixerChannel>)? = null
+
+    /** Rangée des scènes montrée ; faux : les tranches seules (petites formes). */
+    var scenesShown = true
+        set(value) {
+            field = value
+            sceneScroll.visibility = if (value) VISIBLE else GONE
+            invalidate()
+            if (active) startPolling()
+        }
+
+    /** Tranches montrées ; faux : les scènes seules, sur toute la hauteur (forme Ligne). */
+    var stripsShown = true
+        set(value) {
+            field = value
+            stripScroll.visibility = if (value) VISIBLE else GONE
+            sceneScroll.layoutParams = (sceneScroll.layoutParams as LayoutParams).apply {
+                height = if (value) sceneHeight() else 0
+                weight = if (value) 0f else 1f
+            }
+            invalidate()
+            if (active) startPolling()
+        }
+
     /** Applis à régler ensemble quand on touche la voie `id` (groupe de la table) ; null : une voie simple. */
     var groupMembers: (String) -> List<String>? = { null }
 
@@ -199,6 +234,13 @@ class MixerView @JvmOverloads constructor(
     /** Un état a été lu (sinon : pas encore, ou ordinateur injoignable ; `liveApps` null ne veut alors pas dire Mac). */
     val hasState: Boolean get() = state != null
 
+    /** Aperçu du catalogue : une table et des scènes d'exemple, sans relecture ni réseau. */
+    fun showSample(sample: MixerState, sampleScenes: List<MixerScene>) {
+        scenes = sampleScenes
+        renderScenes()
+        render(sample)
+    }
+
     /** Choix d'applis changé (⚙ du widget) : les voies suivent tout de suite, sans attendre la relecture. */
     fun refreshApps() {
         state?.let(::render)
@@ -207,7 +249,7 @@ class MixerView @JvmOverloads constructor(
     private fun render(next: MixerState) {
         state = next
         val apps = appFilter?.invoke(next) ?: next.apps
-        val channels = listOf(next.master, next.mic) + apps.orEmpty()
+        val channels = (listOf(next.master, next.mic) + apps.orEmpty()).let { all -> channelFilter?.invoke(all) ?: all }
         val ids = channels.map { it.id }
         if (ids != views.keys.toList()) {
             val reuse = HashMap(views)
@@ -216,11 +258,14 @@ class MixerView @JvmOverloads constructor(
             channels.forEach { c -> views[c.id] = reuse[c.id] ?: newStrip(c) }
             views.values.forEach { strips.addView(it, LinearLayout.LayoutParams(dp(MIN_STRIP_DP), ViewGroup.LayoutParams.MATCH_PARENT)) }
             // La note du Mac (« Volume par appli… ») n'est pas une voie : pas de trait avant elle sur une table nue.
-            views.values.forEachIndexed { i, strip -> strip.last = i == views.size - 1 }
-            if (next.apps == null) strips.addView(note, LinearLayout.LayoutParams(dp(320), ViewGroup.LayoutParams.MATCH_PARENT))
+            views.values.forEachIndexed { i, strip ->
+                strip.last = i == views.size - 1
+                strip.alone = views.size == 1
+            }
+            if (next.apps == null && channelFilter == null) strips.addView(note, LinearLayout.LayoutParams(dp(320), ViewGroup.LayoutParams.MATCH_PARENT))
             fitStrips()
         }
-        note.visibility = if (next.apps == null) VISIBLE else GONE
+        note.visibility = if (next.apps == null && channelFilter == null) VISIBLE else GONE
         val now = SystemClock.uptimeMillis()
         channels.forEach { c ->
             val strip = views[c.id] ?: return@forEach
@@ -278,7 +323,7 @@ class MixerView @JvmOverloads constructor(
                 scope.launch { runCatching { IconCache.loadApp(BackendClient(context), c.name) }.getOrNull()?.let { icon = it } }
             }
         }
-        if (c.id == "master") onTitle = { chooseOutput() }
+        if (c.id == "master") onTitle = { outputs.show() }
         onValue = { askVolume(this) }
         if (onHide != null && MixerApps.canHide(c.id)) onLongPress = { confirmHide(MixerApps.App(c.id, titleOf(c))) }
         onVolume = { volume, final ->
@@ -334,42 +379,6 @@ class MixerView @JvmOverloads constructor(
             .setNegativeButton(R.string.cancel, null)
             .setPositiveButton(R.string.mixer_hide_ok) { _, _ -> onHide?.invoke(app) }
             .showImmersive()
-    }
-
-    /** Liste les sorties audio de l'ordinateur (enceinte, casque, carte son) et passe sur celle qu'on touche. */
-    private fun chooseOutput() {
-        // Un seul choix à la fois : un second toucher pendant la lecture de la liste ne doit pas empiler une 2e boîte.
-        if (choosing?.isActive == true) return
-        choosing = scope.launch {
-            val outputs = try {
-                BackendClient(context).system.audioOutputs()
-            } catch (e: Exception) {
-                return@launch showStatus(context.errorText(e), ERROR)
-            }
-            if (outputs.isEmpty()) return@launch showStatus(context.getString(R.string.mixer_output_none), ERROR)
-            AlertDialog.Builder(context)
-                .setTitle(R.string.mixer_output_title)
-                .setSingleChoiceItems(outputs.map { it.name }.toTypedArray(), currentOutputIndex(outputs)) { dialog, which ->
-                    dialog.dismiss()
-                    if (!outputs[which].current) switchOutput(outputs[which])
-                }
-                .setNegativeButton(R.string.cancel, null)
-                .showImmersive()
-        }
-    }
-
-    private var choosing: Job? = null
-
-    private fun switchOutput(output: AudioOutput) {
-        scope.launch {
-            try {
-                BackendClient(context).system.setAudioOutput(output.id)
-                // Le volume et le Muet sont ceux de la nouvelle sortie : relire tout de suite.
-                refresh { mixer() }
-            } catch (e: Exception) {
-                showStatus(context.errorText(e), ERROR)
-            }
-        }
     }
 
     private fun hold(id: String) {
@@ -659,7 +668,7 @@ class MixerView @JvmOverloads constructor(
         val low = h < dp(FaderStrip.TIGHT_DP)
         if (low != tight) {
             tight = low
-            sceneScroll.layoutParams = sceneScroll.layoutParams.apply { height = sceneHeight() }
+            if (stripsShown) sceneScroll.layoutParams = sceneScroll.layoutParams.apply { height = sceneHeight() }
             strips.setPadding(dp(16), 0, dp(16), if (tight) 0 else dp(10))
             if (!dragging) renderScenes()
         }
@@ -670,6 +679,7 @@ class MixerView @JvmOverloads constructor(
         val w = width.toFloat()
         val h = height.toFloat()
         canvas.drawRect(0f, 0f, w, h, plate)
+        if (!scenesShown || !stripsShown) return
         // Rainure sous les scènes.
         brush.alpha = 255
         brush.color = cShadow
