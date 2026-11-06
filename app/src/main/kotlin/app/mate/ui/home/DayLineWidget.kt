@@ -57,6 +57,8 @@ class DayLineWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidg
                 else -> TITLE_SP
             }
             stack.gravity = if (pill) Gravity.CENTER_VERTICAL else Gravity.TOP
+            // Pastille sur la rangée fine (92 dp) : un titre sur deux lignes pousserait la piste dehors.
+            nowTitle.maxLines = if (pill) 1 else 2
             stack.addView(nowTitle, LinearLayout.LayoutParams(MATCH, WRAP))
             stack.addView(nowUntil, LinearLayout.LayoutParams(MATCH, WRAP))
             track.across = face.line != DayLineFace.Line.DOWN
@@ -70,6 +72,8 @@ class DayLineWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidg
             view.addView(stack, FrameLayout.LayoutParams(MATCH, MATCH))
         }
         render(animate = false)
+        // Le voile dépend de la forme (le bandeau s'atténue seul) : le reposer après chaque changement de forme.
+        setUnavailable(unavailable)
     }
 
     override fun onCalendar() = render(animate = false)
@@ -85,32 +89,48 @@ class DayLineWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidg
     private fun render(animate: Boolean) {
         val now = System.currentTimeMillis()
         if (face.band) return line.show(events, now, animate)
+        val events = events
         track.show(events, now)
-        when (val state = DayNow.of(events, now)) {
-            is DayNow.Busy -> {
-                nowTitle.text = state.title
-                nowUntil.text = context.getString(R.string.dayline_until, clock.format(Date(state.untilMs)))
-                nowUntil.setTextColor(color(R.attr.c_accent))
-            }
-            is DayNow.Free -> {
-                nowTitle.setText(R.string.dayline_free)
-                nowUntil.text = state.untilMs?.let { context.getString(R.string.dayline_until, clock.format(Date(it))) }
-                    ?: context.getString(R.string.dayline_free_rest)
-                nowUntil.setTextColor(color(R.attr.c_text_dim))
-            }
+        // Rien de lu (ordinateur muet, agenda en erreur ou pas relié) : on ne sait pas, on ne dit pas « Libre ».
+        if (sample == null && events.isEmpty() && (host.unreachable != null || !host.features.linked || host.calendarNote.isNotBlank())) {
+            show(context.getString(R.string.agenda_unknown), "", R.attr.c_text_dim)
+            return
         }
+        when (val state = DayNow.of(events, now)) {
+            is DayNow.Busy -> show(state.title, context.getString(R.string.dayline_until, clock.format(Date(state.untilMs))), R.attr.c_accent)
+            is DayNow.Free -> show(
+                context.getString(R.string.dayline_free),
+                state.untilMs?.let { context.getString(R.string.dayline_until, clock.format(Date(it))) } ?: context.getString(R.string.dayline_free_rest),
+                R.attr.c_text_dim,
+            )
+        }
+    }
+
+    /** Même texte, même couleur : pas de nouvelle mise en page (une fois par minute sur la tablette). */
+    private fun show(title: String, until: String, untilColor: Int) {
+        if (nowTitle.text.toString() != title) nowTitle.text = title
+        if (nowUntil.text.toString() != until) nowUntil.text = until
+        val c = color(untilColor)
+        if (nowUntil.currentTextColor != c) nowUntil.setTextColor(c)
     }
 
     /** Bandeau : pas de voile, la ligne atténue elle-même ses rendez-vous ; ailleurs, le voile commun. */
     override fun setUnavailable(on: Boolean) {
+        unavailable = on
         line.stale = on
-        if (!face.band) super.setUnavailable(on)
+        super.setUnavailable(on && !face.band)
     }
+
+    /** L'ordinateur ne répond plus (gardé pour reposer le voile quand la forme change). */
+    private var unavailable = false
 
     /** Arrivée de l'Accueil : la ligne se dessine, sauf si l'arrivée des widgets est coupée (Réglages > Animations). */
     fun arrive() {
         if (face.band && Look.on(line.context, AnimFamily.HOME)) line.arrive()
     }
+
+    /** En bandeau, la ligne a son arrivée à elle ([arrive]) ; ailleurs, l'Accueil fait monter le widget comme les autres. */
+    val ownArrival get() = face.band
 
     override fun showPreview(sample: WidgetSample) {
         if (sample !is CalendarSample) return

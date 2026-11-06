@@ -207,7 +207,9 @@ class HomeFragment : Fragment(), HomeHost, WidgetGrid.Listener {
             val widget = widgets[placed] ?: continue
             when (placed.type) {
                 WidgetType.HERO, WidgetType.DAY -> Look.enterSpring(widget.view, 0, -8)
-                WidgetType.DAYLINE -> (widget as? DayLineWidget)?.arrive()
+                WidgetType.DAYLINE ->
+                    // En bandeau, la ligne se dessine ; ailleurs, elle monte comme une tuile.
+                    if ((widget as? DayLineWidget)?.ownArrival == true) widget.arrive() else Look.enterSpring(widget.view, 160L + 50L * tiles++, 24)
                 else -> Look.enterSpring(widget.view, 160L + 50L * tiles++, 24)
             }
         }

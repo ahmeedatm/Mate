@@ -1,6 +1,7 @@
 package app.mate.ui.home
 
 import app.mate.net.CalendarEvent
+import java.util.Calendar
 
 /**
  * Ce que la Ligne du jour montre dans une forme (#180, direction Cadran). [band] : la Ligne garde la ligne animée
@@ -30,11 +31,20 @@ sealed interface DayNow {
     data class Free(val untilMs: Long?) : DayNow
 
     companion object {
-        /** Les journées entières ne rendent pas occupé. */
+        /** Les journées entières ne rendent pas occupé ; deux rendez-vous en même temps : le premier à finir. */
         fun of(events: List<CalendarEvent>, now: Long): DayNow {
             val timed = events.filter { !it.allDay }
-            timed.firstOrNull { it.startMs <= now && now < it.endMs }?.let { return Busy(it.title, it.endMs) }
-            val next = timed.filter { it.startMs > now && daysFrom(now, it.startMs) == 0 }.minByOrNull { it.startMs }
+            timed.filter { it.startMs <= now && now < it.endMs }.minByOrNull { it.endMs }?.let { return Busy(it.title, it.endMs) }
+            // Fin du jour calculée une fois (pas deux calendriers par rendez-vous, chaque minute).
+            val tomorrow = Calendar.getInstance().apply {
+                timeInMillis = now
+                add(Calendar.DAY_OF_YEAR, 1)
+                set(Calendar.HOUR_OF_DAY, 0)
+                set(Calendar.MINUTE, 0)
+                set(Calendar.SECOND, 0)
+                set(Calendar.MILLISECOND, 0)
+            }.timeInMillis
+            val next = timed.filter { it.startMs in (now + 1) until tomorrow }.minByOrNull { it.startMs }
             return Free(next?.startMs)
         }
     }

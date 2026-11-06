@@ -57,4 +57,10 @@ class DayLineFaceTest {
         val now = DayNow.of(listOf(event("Congé", 0.0, 24.0, allDay = true)), h(12.0))
         assertEquals(DayNow.Free(null), now)
     }
+
+    @Test
+    fun `deux rendez-vous en meme temps, le premier a finir`() {
+        val now = DayNow.of(listOf(event("Long", 9.0, 12.0), event("Court", 10.0, 10.75)), h(10.5))
+        assertEquals(DayNow.Busy("Court", h(10.75)), now)
+    }
 }
