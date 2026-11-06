@@ -34,6 +34,7 @@ import app.mate.agents.waitingKind
 import app.mate.agents.without
 import app.mate.net.AgentSession
 import app.mate.net.AgentState
+import app.mate.net.AgentsState
 import app.mate.net.BackendClient
 import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
@@ -236,6 +237,12 @@ class AgentsView @JvmOverloads constructor(context: Context, attrs: AttributeSet
         val listener: (AgentsFeed.Snapshot) -> Unit = ::render
         observer = listener
         AgentsFeed.observe(context, listener)
+    }
+
+    /** Aperçu du catalogue : l'exemple, sans réseau ni abonnement. */
+    fun showSample(state: AgentsState) {
+        visibility = VISIBLE
+        render(AgentsFeed.Snapshot(state, null, System.currentTimeMillis()))
     }
 
     /** Le message seul prend la place des colonnes (rien à lire), ou reprend sa hauteur d'une ligne. */

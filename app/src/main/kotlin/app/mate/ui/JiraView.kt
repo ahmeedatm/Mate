@@ -184,6 +184,13 @@ class JiraView @JvmOverloads constructor(context: Context, attrs: AttributeSet? 
         status.visibility = if (text == null) GONE else VISIBLE
     }
 
+    /** Aperçu du catalogue : l'exemple, sans réseau ni boucle. */
+    fun showSample(issues: JiraIssues) {
+        visibility = VISIBLE
+        showConnected(true)
+        render(issues)
+    }
+
     private suspend fun refresh() {
         try {
             val issues = BackendClient(context).jira.issues()

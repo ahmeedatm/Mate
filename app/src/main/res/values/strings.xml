@@ -1302,12 +1302,18 @@
     <string name="widget_hero_desc">L\'heure en grand, le prochain rendez-vous, la météo et l\'eau</string>
     <string name="widget_jira">Jira</string>
     <string name="widget_jira_desc">Tes tickets en colonnes ; toucher un ticket pour le faire avancer</string>
+    <plurals name="glance_open">
+        <item quantity="one">ouvert</item>
+        <item quantity="other">ouverts</item>
+    </plurals>
     <string name="widget_gitlab">GitLab</string>
     <string name="widget_gitlab_desc">Tes MR par colonne (prête à merger, à fixer, brouillon…), celles à relire, pipeline et fusion</string>
     <string name="widget_github">GitHub</string>
     <string name="widget_github_desc">Tes pull requests et celles à relire, contrôles et fusion</string>
+    <string name="glance_to_review">à relire</string>
     <string name="widget_actions">Actions</string>
     <string name="widget_actions_desc">Le dernier run GitHub Actions de tes dépôts : en cours, échecs, durée</string>
+    <string name="glance_failed">en échec</string>
     <string name="widget_ytmusic">YouTube Music</string>
     <string name="widget_ytmusic_desc">YouTube Music qui joue sur l\'ordi, piloté d\'ici : titre, file d\'attente, j\'aime</string>
     <string name="ytmusic_empty">Rien ne joue dans YouTube Music</string>
