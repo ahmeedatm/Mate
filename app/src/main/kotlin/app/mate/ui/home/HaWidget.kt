@@ -81,6 +81,20 @@ class HaWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidget(co
     private var reads = 0
     private var preview = false
 
+    /** Ligne posée sur une rangée haute (232 dp) : des tuiles hautes à grande icône au lieu de lignes perdues dans le vide. */
+    private var tallRow = false
+
+    init {
+        view.addOnLayoutChangeListener { _, _, top, _, bottom, _, _, _, _ ->
+            val tall = family == ShapeFamily.ROW && bottom - top >= dp(TALL_ROW_DP)
+            if (tall != tallRow) {
+                tallRow = tall
+                drawn = null
+                view.post { render() }
+            }
+        }
+    }
+
     override fun applySize() {
         for (v in listOf(title, status)) (v.parent as? ViewGroup)?.removeView(v)
         view.removeAllViews()
@@ -105,9 +119,20 @@ class HaWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidget(co
                 else -> LinearLayout(context).apply { orientation = LinearLayout.VERTICAL }
             }
             val scroll = if (family == ShapeFamily.ROW) {
-                HorizontalScrollView(context).apply { isHorizontalScrollBarEnabled = false; addView(body) }
+                HorizontalScrollView(context).apply {
+                    isHorizontalScrollBarEnabled = false
+                    // Fondu au bord : l'entité coupée annonce qu'il y en a d'autres, au lieu d'un bord franc qui fait bug.
+                    isHorizontalFadingEdgeEnabled = true
+                    setFadingEdgeLength(dp(FADE_DP))
+                    addView(body)
+                }
             } else {
-                ScrollView(context).apply { isVerticalScrollBarEnabled = false; addView(body, ViewGroup.LayoutParams(match, wrap)) }
+                ScrollView(context).apply {
+                    isVerticalScrollBarEnabled = false
+                    isVerticalFadingEdgeEnabled = true
+                    setFadingEdgeLength(dp(FADE_DP))
+                    addView(body, ViewGroup.LayoutParams(match, wrap))
+                }
             }
             view.addView(scroll, LinearLayout.LayoutParams(match, 0, 1f).apply { if (!row) topMargin = dp(8) })
         }
@@ -174,7 +199,7 @@ class HaWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidget(co
             ShapeFamily.PILL -> haPick(entities, placed.config.optString("entity").ifEmpty { null })?.let {
                 body.addView(pill(it), LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT))
             }
-            ShapeFamily.ROW -> for (e in entities) body.addView(row(e), LinearLayout.LayoutParams(dp(ROW_ITEM_DP), ViewGroup.LayoutParams.MATCH_PARENT).apply { marginEnd = dp(8) })
+            ShapeFamily.ROW -> for (e in entities) body.addView(if (tallRow) tile(e) else row(e), LinearLayout.LayoutParams(dp(ROW_ITEM_DP), ViewGroup.LayoutParams.MATCH_PARENT).apply { marginEnd = dp(8) })
             ShapeFamily.COLUMN -> for (e in entities) body.addView(row(e), LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT).apply { bottomMargin = dp(8) })
             ShapeFamily.BLOCK -> body.addView(grid(entities))
             ShapeFamily.LARGE, ShapeFamily.FULL -> {
@@ -221,6 +246,25 @@ class HaWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidget(co
                 addView(text(stateText(e), 13f, if (on) R.attr.c_accent else R.attr.c_text_dim))
             }
             addView(texts, LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f).apply { marginStart = dp(12) })
+            touchable(e)
+            Look.pressSpring(this)
+        }
+    }
+
+    /** Tuile haute (Ligne sur une rangée haute) : grande icône en haut, nom et état en bas, comme la Pastille. */
+    private fun tile(e: HaEntity): View {
+        val on = e.on && !e.isScene
+        return LinearLayout(context).apply {
+            orientation = LinearLayout.VERTICAL
+            background = GradientDrawable().apply {
+                setColor(color(R.attr.c_surface_raised))
+                cornerRadius = dp(16).toFloat()
+            }
+            setPadding(dp(16), dp(14), dp(16), dp(14))
+            addView(icon(e, 36, if (on) R.attr.c_accent else R.attr.c_text_dim))
+            addView(View(context), LinearLayout.LayoutParams(0, 0, 1f))
+            addView(text(e.name, 18f, R.attr.c_text))
+            addView(text(stateText(e), 14f, if (on) R.attr.c_accent else R.attr.c_text_dim))
             touchable(e)
             Look.pressSpring(this)
         }
@@ -311,6 +355,10 @@ class HaWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidget(co
 
     private companion object {
         const val ROW_ITEM_DP = 220
+        const val FADE_DP = 24
+
+        /** Hauteur de Ligne à partir de laquelle les entités passent en tuiles hautes. */
+        const val TALL_ROW_DP = 150
 
         /** Hauteur sous laquelle la Pastille ne montre plus l'état (rangée basse de l'Accueil). */
         const val PILL_STATE_DP = 104

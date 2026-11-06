@@ -3,6 +3,7 @@ package app.mate.ui.home
 import android.content.Context
 import android.content.res.ColorStateList
 import android.text.TextUtils
+import android.util.TypedValue
 import android.view.Gravity
 import android.view.View
 import android.view.ViewGroup
@@ -48,7 +49,6 @@ class AwayWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidget(
         setTextColor(color(R.attr.c_text))
         maxLines = 1
     }
-    private val listLabel = label(13f, R.attr.c_text_dim)
     private val list = LinearLayout(context).apply { orientation = LinearLayout.VERTICAL }
     private val leave = button(R.style.ActionButton, R.string.away_leave) { leave() }
     private val back = button(R.style.PrimaryButton, R.string.away_resume) { resume() }
@@ -85,15 +85,16 @@ class AwayWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidget(
     private fun listFits(lines: Int): Boolean {
         if (shownHeight == 0 || duration.height == 0) return true
         val button = maxOf(back.height, dp(56))
-        val used = view.paddingTop + view.paddingBottom + title.height + dp(8) + duration.height + dp(12) + dp(LABEL_DP) + dp(8) + button
-        return shownHeight - used >= lines * dp(EFFECT_ROW_DP)
+        val used = view.paddingTop + view.paddingBottom + title.height + dp(8) + duration.height + dp(12) + dp(8) + button
+        return shownHeight - used >= lines * dp(effectRowDp)
     }
 
     override fun applySize() {
-        for (v in listOf(title, status, duration, listLabel, list, leave, back)) (v.parent as? ViewGroup)?.removeView(v)
+        for (v in listOf(title, status, duration, list, leave, back)) (v.parent as? ViewGroup)?.removeView(v)
         view.removeAllViews()
         view.orientation = LinearLayout.VERTICAL
         listed = family != ShapeFamily.PILL && family != ShapeFamily.ROW
+        title.setText(R.string.widget_away)
         drawnList = null
         stackedLayout = false
         when (family) {
@@ -119,7 +120,15 @@ class AwayWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidget(
         // Une ligne et un bouton bas : la case tient dans la rangée basse de l'Accueil (92 dp), même absent.
         status.maxLines = 1
         buttons(textSp = 14f, icon = false)
-        for (b in listOf(leave, back)) b.minHeight = dp(44)
+        for (b in listOf(leave, back)) {
+            b.minHeight = dp(44)
+            // Case haute (rangées de 184 et 232 dp) : le texte du bouton suit la taille du bouton.
+            b.addOnLayoutChangeListener { v, _, top, _, bottom, _, _, _, _ ->
+                val sp = if (bottom - top >= dp(PILL_BIG_DP)) 18f else 14f
+                val px = TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_SP, sp, v.resources.displayMetrics)
+                if ((v as Button).textSize != px) v.post { v.textSize = sp }
+            }
+        }
         view.addView(status, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT))
         for (b in listOf(leave, back)) view.addView(b, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, 0, 1f))
     }
@@ -130,7 +139,8 @@ class AwayWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidget(
         view.gravity = Gravity.CENTER_VERTICAL
         view.setPadding(dp(20), dp(10), dp(16), dp(10))
         status.textSize = 14f
-        status.maxLines = if (placed.size.w >= 3) 2 else 1
+        // Deux lignes : la phrase de ce que fait le bouton reste entière même en 2 × 1, et tient dans 92 dp.
+        status.maxLines = 2
         buttons(textSp = 18f, icon = true)
         val texts = LinearLayout(context).apply {
             orientation = LinearLayout.VERTICAL
@@ -141,7 +151,10 @@ class AwayWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidget(
         for (b in listOf(leave, back)) view.addView(b, LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, dp(56)))
     }
 
-    /** Colonne, bloc carré, grand en hauteur, plein écran : titre, durée, la liste, puis le bouton en bas. */
+    /**
+     * Colonne, bloc carré, grand en hauteur, plein écran : titre et durée en haut ; la liste en bas, juste au-dessus du
+     * bouton qu'elle explique.
+     */
     private fun stacked(durationSp: Float, buttonDp: Int) {
         stackedLayout = true
         view.gravity = Gravity.NO_GRAVITY
@@ -151,9 +164,8 @@ class AwayWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidget(
         buttons(textSp = if (buttonDp > 56) 22f else 18f, icon = family != ShapeFamily.COLUMN)
         view.addView(title)
         view.addView(duration, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT).apply { topMargin = dp(8) })
-        view.addView(listLabel, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT).apply { topMargin = dp(12) })
-        view.addView(list)
         view.addView(View(context), LinearLayout.LayoutParams(0, 0, 1f))
+        view.addView(list, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT).apply { topMargin = dp(12) })
         for (b in listOf(leave, back)) view.addView(b, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, dp(buttonDp)).apply { topMargin = dp(8) })
     }
 
@@ -173,8 +185,8 @@ class AwayWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidget(
         }
         val right = LinearLayout(context).apply {
             orientation = LinearLayout.VERTICAL
-            gravity = Gravity.CENTER_VERTICAL
-            addView(listLabel)
+            // En bas, à hauteur du bouton : la liste se lit avec lui.
+            gravity = Gravity.BOTTOM
             addView(list)
         }
         view.addView(left, LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.MATCH_PARENT, 1f))
@@ -221,19 +233,21 @@ class AwayWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidget(
         status.visibility = if (away == null && family == ShapeFamily.PILL) View.GONE else View.VISIBLE
         duration.text = durationText(minutes)
         duration.visibility = if (away == null) View.GONE else View.VISIBLE
-        if (listed) renderList(away)
+        // Avec la liste, le titre dit de quoi elle parle : « En partant », puis « Pendant l'absence » (le bouton dit « Je m'absente »).
+        if (listed) {
+            title.setText(if (away == null) R.string.away_will_label else R.string.away_done_label)
+            renderList(away)
+        }
     }
 
-    /** « En partant » et tout ce que fera le bouton ; pendant l'absence, ce qui a vraiment été fait. */
+    /** Tout ce que fera le bouton ; pendant l'absence, ce qui a vraiment été fait. */
     private fun renderList(away: AwayState?) {
         // Empilé et trop bas pendant l'absence : la durée et Reprendre prennent la place de la liste.
         val room = !(stackedLayout && away != null) || listFits(maxOf(AwayLogic.effects(away).size, 1))
         if (drawnList == away?.copy(sinceMs = 0) to room) return
         drawnList = away?.copy(sinceMs = 0) to room
-        listLabel.setText(if (away == null) R.string.away_will_label else R.string.away_done_label)
         list.removeAllViews()
         val effects = AwayLogic.effects(away)
-        listLabel.visibility = if (room) View.VISIBLE else View.GONE
         if (!room) return
         if (effects.isEmpty()) list.addView(effectRow(0, context.getString(R.string.away_nothing_done), away != null))
         for (effect in effects) {
@@ -252,7 +266,7 @@ class AwayWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidget(
     /** Une ligne de la liste : icône et texte ; l'icône prend l'accent quand c'est fait. */
     private fun effectRow(icon: Int, text: String, done: Boolean) = LinearLayout(context).apply {
         gravity = Gravity.CENTER_VERTICAL
-        minimumHeight = dp(EFFECT_ROW_DP)
+        minimumHeight = dp(effectRowDp)
         if (icon != 0) {
             addView(
                 ImageView(context).apply {
@@ -260,10 +274,10 @@ class AwayWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidget(
                     imageTintList = ColorStateList.valueOf(color(if (done) R.attr.c_accent else R.attr.c_text_dim))
                     importantForAccessibility = View.IMPORTANT_FOR_ACCESSIBILITY_NO
                 },
-                LinearLayout.LayoutParams(dp(22), dp(22)).apply { marginEnd = dp(12) },
+                LinearLayout.LayoutParams(dp(if (bigList) 28 else 22), dp(if (bigList) 28 else 22)).apply { marginEnd = dp(if (bigList) 16 else 12) },
             )
         }
-        addView(label(15f).apply { this.text = text; maxLines = 2 }, LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f))
+        addView(label(if (bigList) 18f else 15f).apply { this.text = text; maxLines = 2 }, LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f))
     }
 
     private fun durationText(minutes: Int) =
@@ -327,10 +341,15 @@ class AwayWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidget(
         }
     }
 
-    private companion object {
-        const val EFFECT_ROW_DP = 36
+    /** Grand et Plein écran : la liste prend du poids (lignes, icônes et texte plus grands) pour remplir la place. */
+    private val bigList get() = family == ShapeFamily.LARGE || family == ShapeFamily.FULL
+    private val effectRowDp get() = if (bigList) BIG_ROW_DP else EFFECT_ROW_DP
 
-        /** Hauteur du libellé « Pendant l'absence » au-dessus de la liste. */
-        const val LABEL_DP = 18
+    private companion object {
+        const val EFFECT_ROW_DP = 32
+        const val BIG_ROW_DP = 48
+
+        /** Hauteur d'un bouton de Pastille à partir de laquelle son texte grandit. */
+        const val PILL_BIG_DP = 110
     }
 }
