@@ -62,12 +62,29 @@ class AwayWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidget(
     /** Dernière liste dessinée : rien n'est refait chaque minute tant qu'elle ne change pas. */
     private var drawnList: Pair<AwayState?, Boolean>? = null
 
+    /** Empilé : la vue est assez haute pour la durée, la liste et le bouton à la fois (mesuré, suit le profil de rangées). */
+    private var tallEnough = true
+
+    /** Mise en page empilée (colonne, bloc carré, grand en hauteur, plein écran) : seule à manquer de hauteur. */
+    private var stackedLayout = false
+
+    init {
+        view.addOnLayoutChangeListener { _, _, top, _, bottom, _, _, _, _ ->
+            val tall = bottom - top >= dp(ROOM_DP)
+            if (tall != tallEnough) {
+                tallEnough = tall
+                view.post { render() }
+            }
+        }
+    }
+
     override fun applySize() {
         for (v in listOf(title, status, duration, listLabel, list, leave, back)) (v.parent as? ViewGroup)?.removeView(v)
         view.removeAllViews()
         view.orientation = LinearLayout.VERTICAL
         listed = family != ShapeFamily.PILL && family != ShapeFamily.ROW
         drawnList = null
+        stackedLayout = false
         when (family) {
             ShapeFamily.PILL -> pill()
             ShapeFamily.ROW -> row()
@@ -115,10 +132,12 @@ class AwayWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidget(
 
     /** Colonne, bloc carré, grand en hauteur, plein écran : titre, durée, la liste, puis le bouton en bas. */
     private fun stacked(durationSp: Float, buttonDp: Int) {
+        stackedLayout = true
         view.gravity = Gravity.NO_GRAVITY
         view.setPadding(dp(20), dp(16), dp(20), dp(16))
         duration.textSize = durationSp
-        buttons(textSp = if (buttonDp > 56) 22f else 18f, icon = true)
+        // Colonne : une seule case de large, trop étroite pour l'icône et « Je m'absente » sur une ligne (polices larges).
+        buttons(textSp = if (buttonDp > 56) 22f else 18f, icon = family != ShapeFamily.COLUMN)
         view.addView(title)
         view.addView(duration, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT).apply { topMargin = dp(8) })
         view.addView(listLabel, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT).apply { topMargin = dp(12) })
@@ -174,7 +193,7 @@ class AwayWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidget(
         setText(text)
         minHeight = dp(56)
         gravity = Gravity.CENTER
-        maxLines = 1
+        maxLines = 2
         setOnClickListener { onClick() }
     }
 
@@ -196,8 +215,8 @@ class AwayWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidget(
 
     /** « En partant » et tout ce que fera le bouton ; pendant l'absence, ce qui a vraiment été fait. */
     private fun renderList(away: AwayState?) {
-        // Deux cases de haut, empilé, pendant l'absence : la durée et Reprendre prennent la place de la liste.
-        val room = !(placed.size.h == 2 && placed.size.w <= placed.size.h && away != null)
+        // Empilé et trop bas pendant l'absence : la durée et Reprendre prennent la place de la liste.
+        val room = !(stackedLayout && away != null && !tallEnough)
         if (drawnList == away?.copy(sinceMs = 0) to room) return
         drawnList = away?.copy(sinceMs = 0) to room
         listLabel.setText(if (away == null) R.string.away_will_label else R.string.away_done_label)
@@ -299,5 +318,8 @@ class AwayWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidget(
 
     private companion object {
         const val EFFECT_ROW_DP = 36
+
+        /** Hauteur où la durée, la liste de trois lignes et le bouton tiennent ensemble. */
+        const val ROOM_DP = 320
     }
 }
