@@ -66,6 +66,8 @@ class ListCardViews(private val card: LinearLayout) {
             LinearLayout.LayoutParams(MATCH_PARENT, card.dp(1)).apply { topMargin = card.dp(12) }
         }
         scroll.isVisible = shape.list
+        // Ligne : une seule rangée visible, un fondu la pâlirait toute ; le fondu ne sert qu'aux listes en hauteur.
+        scroll.isVerticalFadingEdgeEnabled = !side
         scroll.layoutParams = if (side) {
             LinearLayout.LayoutParams(0, MATCH_PARENT, 1f).apply { marginStart = card.dp(HEAD_GAP_DP) }
         } else {
@@ -142,7 +144,8 @@ class ListCardViews(private val card: LinearLayout) {
             LinearLayout.LayoutParams(if (shape.sideHead) WRAP_CONTENT else 0, WRAP_CONTENT, if (shape.sideHead) 0f else 1f)
                 .apply { marginStart = card.dp(8) }
         } else {
-            LinearLayout.LayoutParams(MATCH_PARENT, WRAP_CONTENT).apply { topMargin = card.dp(4) }
+            // Ligne : la tête est à sa largeur, la légende sous le chiffre aussi (sinon coupée à la largeur du chiffre).
+            LinearLayout.LayoutParams(if (shape.sideHead) WRAP_CONTENT else MATCH_PARENT, WRAP_CONTENT).apply { topMargin = card.dp(4) }
         }
     }
 
