@@ -1243,7 +1243,7 @@
     <string name="profile_icon_default">Par défaut</string>
     <string name="profile_icon_row">Icône de « %1$s » : changer</string>
     <string name="profile_icon_chosen">%1$s, choisie</string>
-    <string name="home_empty_hint">Maintiens ton doigt sur l\'écran pour ajouter un widget</string>
+    <string name="home_empty_hint">Maintiens ton doigt sur l\'écran pour le modifier et ajouter un widget</string>
     <string name="home_edit_open">Modifier cet écran</string>
     <string name="home_edit_narrow">Ferme le document pour modifier l\'écran.</string>
     <string name="widget_zoom_close">Fermer</string>

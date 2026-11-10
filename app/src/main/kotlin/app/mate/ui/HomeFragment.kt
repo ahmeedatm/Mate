@@ -97,7 +97,7 @@ class HomeFragment : Fragment(), HomeHost, WidgetGrid.Listener {
 
     private var deckOverlays: DeckOverlays? = null
 
-    /** Widget agrandi, par-dessus la grille et les panneaux du Deck ; créé au premier appui long. */
+    /** Widget agrandi, par-dessus la grille et les panneaux du Deck ; créé au premier appui sur la loupe du mode Modifier. */
     private var zoomView: WidgetZoom? = null
     private val zoom: WidgetZoom
         get() = zoomView ?: WidgetZoom(requireContext()).also {

@@ -129,7 +129,7 @@ class WidgetGrid @JvmOverloads constructor(context: Context, attrs: AttributeSet
     private val removeIcon = ContextCompat.getDrawable(context, R.drawable.ic_close)!!.mutate()
     private val settingsIcon = ContextCompat.getDrawable(context, R.drawable.ic_settings)!!.mutate()
     private val resizeIcon = ContextCompat.getDrawable(context, R.drawable.ic_resize)!!.mutate()
-    private val expandIcon = ContextCompat.getDrawable(context, R.drawable.ic_fullscreen)!!.mutate()
+    private val expandIcon = ContextCompat.getDrawable(context, R.drawable.ic_tile_zoom_in)!!.mutate()
     private val accent = themeColor(context, R.attr.c_accent)
     private val raised = themeColor(context, R.attr.c_surface_raised)
     private val ko = themeColor(context, R.attr.c_ko)

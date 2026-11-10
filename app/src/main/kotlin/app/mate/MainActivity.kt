@@ -240,6 +240,7 @@ class MainActivity : AppCompatActivity() {
         topBar.attach(topHost)
         topBar.onLinkTap = { showComputerPicker() }
         topBar.onEditDone = { if (current == Mode.HOME && homeFragment()?.isEditing() == true) homeFragment()?.finishEdit() }
+        topBar.onEditRequest = { current == Mode.HOME && homeFragment()?.run { onEditRequest(); isEditing() } == true }
         // Tablette verrouillée : le mot de réveil ne lance rien.
         wake = WakeWord(this, topBar.wakeMic) { if (!lockScreen.isShown) voice.start() }
         presence = Presence(
