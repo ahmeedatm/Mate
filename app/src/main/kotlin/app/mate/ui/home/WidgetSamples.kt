@@ -23,6 +23,7 @@ object WidgetSamples {
         WidgetType.DAY -> CalendarSample
         WidgetType.DAYLINE -> CalendarSample
         WidgetType.WEATHER -> WeatherSample.paris()
+        WidgetType.TRANSPORT -> TransportSample(R.string.widget_transport_sample_stop, R.array.widget_transport_sample, listOf(3, 7, 12))
         WidgetType.NEXT -> CalendarSample
         WidgetType.AGENDA -> CalendarSample
 

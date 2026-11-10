@@ -161,6 +161,7 @@ abstract class HomeWidget(val context: Context, val host: HomeHost, val placed: 
                 WidgetType.PERF -> PerfWidget(context, host, placed)
                 WidgetType.KEYS -> KeysWidget(context, host, placed)
                 WidgetType.WEATHER -> WeatherWidget(context, host, placed)
+                WidgetType.TRANSPORT -> TransportWidget(context, host, placed)
                 WidgetType.NOTE -> NoteWidget(context, host, placed)
                 WidgetType.HERO -> HeroWidget(context, host, placed)
                 WidgetType.DAY -> DayWidget(context, host, placed)

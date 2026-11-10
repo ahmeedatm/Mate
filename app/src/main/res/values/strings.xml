@@ -1725,7 +1725,13 @@
     <string name="widget_transport_choose">Choisir un arrêt</string>
     <string name="widget_transport_empty">Aucun passage prévu</string>
     <string name="widget_transport_wait">%1$d min</string>
+    <string name="widget_transport_unit">min</string>
     <string name="widget_transport_now">à quai</string>
+    <string-array name="widget_transport_sample">
+        <item>Boissy-Saint-Léger</item>
+        <item>Marne-la-Vallée</item>
+        <item>Boissy-Saint-Léger</item>
+    </string-array>
     <string name="widget_transport_sample_stop">Nation</string>
     <string name="widget_transport_sample_dir">Boissy-Saint-Léger</string>
     <string name="sky_clear">Ciel dégagé</string>

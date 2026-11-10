@@ -101,6 +101,7 @@ enum class WidgetType(
     PERF("perf", R.string.widget_perf, R.string.widget_perf_desc, R.drawable.ic_speed, listOf(WidgetSize.M) + (WidgetSize.entries - WidgetSize.M), true),
     KEYS("keys", R.string.widget_keys, R.string.widget_keys_desc, R.drawable.ic_deck, listOf(WidgetSize.M) + (WidgetSize.entries - WidgetSize.M), true),
     WEATHER("weather", R.string.widget_weather, R.string.widget_weather_desc, R.drawable.ic_cloud, listOf(WidgetSize.M, WidgetSize.L, WidgetSize.S).let { it + (WidgetSize.entries - it) }, false),
+    TRANSPORT("transport", R.string.widget_transport, R.string.widget_transport_desc, R.drawable.ic_transport, listOf(WidgetSize.M, WidgetSize.L, WidgetSize.V, WidgetSize.S).let { it + (WidgetSize.entries - it) }, false),
     NOTE("note", R.string.widget_note, R.string.widget_note_desc, R.drawable.ic_edit, listOf(WidgetSize.M, WidgetSize.S, WidgetSize.L).let { it + (WidgetSize.entries - it) }, false),
     HERO("hero", R.string.widget_hero, R.string.widget_hero_desc, R.drawable.ic_clock, listOf(WidgetSize.W).let { it + (WidgetSize.entries - it) }, false),
     DAY("day", R.string.widget_day, R.string.widget_day_desc, R.drawable.ic_event, listOf(WidgetSize.W).let { it + (WidgetSize.entries - it) }, false),
