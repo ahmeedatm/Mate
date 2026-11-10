@@ -56,7 +56,11 @@ class TransportWidget(context: Context, host: HomeHost, placed: Placed) : HomeWi
         addView(bigDest)
     }
 
-    private val status = label(14f, R.attr.c_text_dim).apply { maxLines = 2 }
+    /** Invite centrée (clé absente, aucun arrêt réglé, aucun passage), à la place du contenu, comme l'invite de Météo. */
+    private val status = label(14f, R.attr.c_text_dim).apply {
+        maxLines = 2
+        gravity = Gravity.CENTER
+    }
     private val rows = LinearLayout(context).apply { orientation = LinearLayout.VERTICAL }
 
     override val view = LinearLayout(context).asCard(16)
@@ -64,6 +68,9 @@ class TransportWidget(context: Context, host: HomeHost, placed: Placed) : HomeWi
     override val hasSettings get() = true
 
     private var shape = TransportShape.of(placed.size)
+
+    /** Gravité de la carte quand elle montre son contenu (centrée verticalement en ligne, en haut sinon). */
+    private var normalGravity = Gravity.TOP
     private var departures: List<Transport.Departure> = emptyList()
 
     /** Horloge de la tablette à la dernière lecture : les minutes se recalculent dessus sans refaire d'appel. */
@@ -94,18 +101,17 @@ class TransportWidget(context: Context, host: HomeHost, placed: Placed) : HomeWi
         shape = TransportShape.of(placed.size)
         for (part in listOf(head, lead, rows, status, disc, title)) (part.parent as? ViewGroup)?.removeView(part)
         view.removeAllViews()
+        normalGravity = if (shape.side) Gravity.CENTER_VERTICAL else Gravity.TOP
         if (shape.side) {
             view.orientation = LinearLayout.HORIZONTAL
-            view.gravity = Gravity.CENTER_VERTICAL
             view.addView(lead)
             if (shape.rows > 0 && !pill()) view.addView(rows, LinearLayout.LayoutParams(0, MATCH_PARENT, 1f).apply { marginStart = dp(16) })
-            view.addView(status)
         } else {
             view.orientation = LinearLayout.VERTICAL
             if (shape.title) view.addView(head)
-            view.addView(status)
             view.addView(rows, LinearLayout.LayoutParams(MATCH_PARENT, 0, 1f).apply { topMargin = if (shape.title) dp(8) else 0 })
         }
+        view.addView(status, LinearLayout.LayoutParams(MATCH_PARENT, WRAP_CONTENT))
         render()
     }
 
@@ -132,11 +138,16 @@ class TransportWidget(context: Context, host: HomeHost, placed: Placed) : HomeWi
             live.isEmpty() -> context.getString(R.string.widget_transport_empty)
             else -> null
         }
+        val showMsg = message != null
         status.text = message.orEmpty()
-        status.visibility = if (message == null) View.GONE else View.VISIBLE
+        status.visibility = if (showMsg) View.VISIBLE else View.GONE
+        head.visibility = if (!showMsg && !shape.side && shape.title) View.VISIBLE else View.GONE
+        lead.visibility = if (!showMsg && shape.side) View.VISIBLE else View.GONE
+        rows.visibility = if (showMsg) View.GONE else View.VISIBLE
+        view.gravity = if (showMsg) Gravity.CENTER else normalGravity
+        if (showMsg) return
 
         if (shape.side) {
-            lead.visibility = if (message == null) View.VISIBLE else View.GONE
             renderLead(live, now)
             renderRows(live.drop(1).take(shape.rows), now)
         } else {
