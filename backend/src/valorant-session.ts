@@ -89,5 +89,10 @@ export function todayOf(updates: Update[], now = Date.now()): Today {
 export function mapStatsOf(updates: Update[], map: string | null | undefined): MapStats | null {
   if (!map) return null;
   const here = updates.filter((u) => u.mapId?.toLowerCase() === map.toLowerCase()).reverse();
-  return { wins: here.filter((u) => u.rr > 0).length, games: here.length, window: updates.length, results: here.map((u) => resultOf(u.rr)) };
+  return {
+    wins: here.filter((u) => u.rr > 0).length,
+    games: here.length,
+    window: updates.length,
+    results: here.map((u) => resultOf(u.rr)),
+  };
 }
