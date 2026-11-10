@@ -57,6 +57,7 @@ object ProfileIcons {
         Icon("cloud", R.drawable.ic_cloud, R.string.icon_cloud),
         Icon("night", R.drawable.ic_tile_bedtime, R.string.icon_night),
         Icon("star", R.drawable.ic_star, R.string.icon_star),
+        Icon("valorant", R.drawable.ic_valorant, R.string.icon_valorant),
         Icon("heart", R.drawable.ic_favorite, R.string.icon_heart),
         Icon("lock", R.drawable.ic_lock, R.string.icon_lock),
     )

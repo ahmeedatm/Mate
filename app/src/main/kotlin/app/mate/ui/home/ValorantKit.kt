@@ -100,6 +100,14 @@ class ValorantKit(val context: Context, private val scope: CoroutineScope, priva
         if (cached != null) setImageBitmap(cached) else if (online) scope.launch { IconCache.loadRank(client, t)?.let(::setImageBitmap) }
     }
 
+    /** Image de la carte, recadrée pour remplir le bandeau ; vide le temps du téléchargement (le fond sombre reste). */
+    fun mapImage(id: String): ImageView = ImageView(context).apply {
+        scaleType = ImageView.ScaleType.CENTER_CROP
+        importantForAccessibility = View.IMPORTANT_FOR_ACCESSIBILITY_NO
+        val cached = IconCache.peekMap(id)
+        if (cached != null) setImageBitmap(cached) else if (online) scope.launch { IconCache.loadMap(client, id)?.let(::setImageBitmap) }
+    }
+
     /** Nom du rang d'un tier Riot (0 à 2 non classé, 3 à 26 par trois, 27 Radiant), comme `rankName` du compagnon. */
     fun rankName(tier: Int?): String = when {
         (tier ?: 0) >= RADIANT -> string(R.string.valorant_radiant)

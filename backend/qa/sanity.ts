@@ -827,6 +827,9 @@ export async function runSanity(opts: { url: string; token: string; os?: Os; hoo
         // Champs de la refonte (stats de tracker) : ajoutés, jamais absents.
         expect(Array.isArray(res.json.history), "historique absent");
         expect("end" in res.json, "tableau de fin absent");
+        // Ajouts du 10/11 (rounds, carte, journée, bilan sur la carte) : ajoutés, jamais absents.
+        expect(Array.isArray(res.json.rounds), "rounds absents");
+        for (const key of ["mapId", "today", "mapStats"]) expect(key in res.json, `${key} absent`);
         return res.json.state === "off" ? "client Riot fermé" : `${res.json.state}, ${res.json.players.length} joueur(s)`;
       },
     },
@@ -845,6 +848,23 @@ export async function runSanity(opts: { url: string; token: string; os?: Os; hoo
         const side = body.readUInt32BE(16);
         expect(side <= 128, `logo trop grand pour la tablette : ${side} px`);
         return `PNG de ${side} px`;
+      },
+    },
+    {
+      name: "Valorant (image de carte servie par l'ordinateur)",
+      run: async () => {
+        // Lecture seule : Ascent, téléchargée une fois depuis valorant-api.com, réduite, puis gardée dans .cache.
+        const res = await fetch(`${base}/valorant/map?id=7eaecc1b-4337-bbf6-6ab9-04b8f06b3319`, {
+          headers: { authorization: `Bearer ${opts.token}` },
+          signal: AbortSignal.timeout(30_000),
+        });
+        const body = Buffer.from(await res.arrayBuffer());
+        if (res.status === 404) throw new Skip("valorant-api.com injoignable depuis l'ordinateur");
+        expect(res.status === 200, `/valorant/map : ${res.status} au lieu de 200`);
+        expect(body.subarray(1, 4).toString("ascii") === "PNG", "la réponse n'est pas un PNG");
+        const width = body.readUInt32BE(16);
+        expect(width <= 960, `image de carte trop grande pour la tablette : ${width} px`);
+        return `PNG de ${width} px de large`;
       },
     },
     {

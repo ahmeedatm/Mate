@@ -136,4 +136,59 @@ class ValorantApiTest {
         assertEquals(listOf("Kinj#EUW"), v.players.map { it.name })
         assertEquals(listOf(12), v.history.map { it.rr })
     }
+
+    @Test
+    fun readsRoundsMapTodayAndMapStats() {
+        val v = ValorantApi.parse(
+            """{"state":"ingame","queue":"Compétition","map":"Ascent","score":{"ally":2,"enemy":1},"me":null,"players":[],
+                "mapId":"7eaecc1b-4337-bbf6-6ab9-04b8f06b3319","rounds":[true,false,null],
+                "today":{"rr":-6,"wins":1,"losses":2,"results":[false,true,null,false]},
+                "mapStats":{"wins":5,"games":8,"window":40,"results":[true,false,null]}}""",
+        )
+        assertEquals("7eaecc1b-4337-bbf6-6ab9-04b8f06b3319", v.mapId)
+        assertEquals(listOf(true, false, null), v.rounds.map { it.won })
+        assertTrue(v.rounds.all { it.end == null })
+        assertEquals(ValorantToday(-6, 1, 2, listOf(false, true, null, false)), v.today)
+        assertEquals(ValorantMapStats(5, 8, 40, listOf(true, false, null)), v.mapStats)
+    }
+
+    @Test
+    fun readsEachRoundOfTheEndWithHowItEnded() {
+        val v = ValorantApi.parse(
+            """{"state":"menu","queue":null,"map":null,"score":null,"me":null,"players":[],
+                "end":{"status":"ready","map":"Ascent","mapId":"7eaecc1b-4337-bbf6-6ab9-04b8f06b3319","queue":"Compétition",
+                  "mode":"teams","won":true,"score":{"ally":13,"enemy":9},"players":[],"rr":21,
+                  "rounds":[{"won":true,"end":"detonate"},{"won":false,"end":"elimination"},{"won":true,"end":"defuse"},
+                            {"won":false,"end":"time"},{"won":null,"end":null},{"won":true,"end":"inconnue"}]}}""",
+        )
+        val end = v.end!!
+        assertEquals(21, end.rr)
+        assertEquals("7eaecc1b-4337-bbf6-6ab9-04b8f06b3319", end.mapId)
+        assertEquals(
+            listOf(
+                ValorantRound(true, ValorantRoundEnd.DETONATE),
+                ValorantRound(false, ValorantRoundEnd.ELIMINATION),
+                ValorantRound(true, ValorantRoundEnd.DEFUSE),
+                ValorantRound(false, ValorantRoundEnd.TIME),
+                ValorantRound(null, null),
+                ValorantRound(true, null),
+            ),
+            end.rounds,
+        )
+    }
+
+    @Test
+    fun olderCompanionHasNoRoundsMapNorDay() {
+        val v = ValorantApi.parse(
+            """{"state":"ingame","queue":null,"map":"Ascent","score":{"ally":1,"enemy":0},"me":null,"players":[],
+                "end":{"status":"ready","map":"Ascent","queue":null,"mode":"teams","won":true,"score":null,"players":[]}}""",
+        )
+        assertNull(v.mapId)
+        assertTrue(v.rounds.isEmpty())
+        assertNull(v.today)
+        assertNull(v.mapStats)
+        assertTrue(v.end!!.rounds.isEmpty())
+        assertNull(v.end!!.rr)
+        assertNull(v.end!!.mapId)
+    }
 }

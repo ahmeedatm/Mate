@@ -49,6 +49,18 @@ data class ValorantMatch(
 
 enum class ValorantEndStatus { LOADING, READY, MISSING }
 
+/** Fin d'un round : élimination, spike explosé, spike désamorcé, temps écoulé. */
+enum class ValorantRoundEnd { ELIMINATION, DETONATE, DEFUSE, TIME }
+
+/** Un round vu de mon équipe : `won` null si l'ordre est inconnu (en partie) ou sans gagnant ; `end` null en partie. */
+data class ValorantRound(val won: Boolean?, val end: ValorantRoundEnd?)
+
+/** Mes classées d'aujourd'hui : RR gagnés ou perdus, victoires, défaites ; résultats de la plus ancienne (null : nul). */
+data class ValorantToday(val rr: Int, val wins: Int, val losses: Int, val results: List<Boolean?>)
+
+/** Mon bilan sur la carte jouée parmi mes `window` dernières classées ; résultats de la plus ancienne. */
+data class ValorantMapStats(val wins: Int, val games: Int, val window: Int, val results: List<Boolean?>)
+
 data class ValorantEndPlayer(
     val name: String?,
     val agent: String?,
@@ -76,6 +88,11 @@ data class ValorantEnd(
     val won: Boolean?,
     val score: ValorantScore?,
     val players: List<ValorantEndPlayer>,
+    /** Identifiant de la carte (image : /valorant/map) ; null pour un compagnon d'avant le 10/11. */
+    val mapId: String? = null,
+    val rounds: List<ValorantRound> = emptyList(),
+    /** RR que cette partie m'a rapportés ; null tant que Riot ne l'a pas compté. */
+    val rr: Int? = null,
 )
 
 data class Valorant(
@@ -87,6 +104,11 @@ data class Valorant(
     val players: List<ValorantPlayer>,
     val history: List<ValorantMatch> = emptyList(),
     val end: ValorantEnd? = null,
+    /** Ajouts du 10/11, absents d'un compagnon plus ancien : carte, rounds en cours, journée, bilan sur la carte. */
+    val mapId: String? = null,
+    val rounds: List<ValorantRound> = emptyList(),
+    val today: ValorantToday? = null,
+    val mapStats: ValorantMapStats? = null,
 ) {
     /** Dans l'ordre du compagnon : du meilleur rang au plus bas. */
     val allies get() = players.filter { it.ally }
@@ -101,6 +123,9 @@ class ValorantApi(private val http: Http) {
     /** Icône carrée d'un agent (128 px), téléchargée par l'ordinateur ; null s'il ne la connaît pas. */
     suspend fun agentIcon(id: String): ByteArray? = http.io { http.bytesOrNull("/valorant/agent?id=" + http.encode(id), timeoutMs = 15_000) }
 
+    /** Image de la carte (960 px de large), téléchargée et réduite par l'ordinateur ; null s'il ne la connaît pas. */
+    suspend fun mapImage(id: String): ByteArray? = http.io { http.bytesOrNull("/valorant/map?id=" + http.encode(id), timeoutMs = 20_000) }
+
     /** Logo d'un rang (0 à 27, 128 px). */
     suspend fun rankIcon(tier: Int): ByteArray? = http.io { http.bytesOrNull("/valorant/rank?tier=$tier", timeoutMs = 15_000) }
 
@@ -112,6 +137,21 @@ class ValorantApi(private val http: Http) {
         private fun JSONObject.score(key: String) = optJSONObject(key)?.let { ValorantScore(it.optInt("ally"), it.optInt("enemy")) }
         /** Éléments d'une liste ; un élément qui n'est pas un objet est sauté (le reste du widget s'affiche). */
         private fun <T> JSONArray?.items(read: (JSONObject) -> T) = (0 until (this?.length() ?: 0)).mapNotNull { this!!.optJSONObject(it)?.let(read) }
+
+        /** Liste de booléens où null garde sa place (résultat inconnu). */
+        private fun JSONArray?.results(): List<Boolean?> = (0 until (this?.length() ?: 0)).map { if (this!!.isNull(it)) null else optBoolean(it) }
+
+        private val ROUND_ENDS = mapOf(
+            "elimination" to ValorantRoundEnd.ELIMINATION,
+            "detonate" to ValorantRoundEnd.DETONATE,
+            "defuse" to ValorantRoundEnd.DEFUSE,
+            "time" to ValorantRoundEnd.TIME,
+        )
+
+        private fun today(t: JSONObject) = ValorantToday(t.optInt("rr"), t.optInt("wins"), t.optInt("losses"), t.optJSONArray("results").results())
+
+        private fun mapStats(m: JSONObject) =
+            ValorantMapStats(m.optInt("wins"), m.optInt("games"), m.optInt("window"), m.optJSONArray("results").results())
 
         fun parse(json: String): Valorant {
             val o = JSONObject(json)
@@ -158,7 +198,20 @@ class ValorantApi(private val http: Http) {
                     m.optInt("rr"),
                 )
             }
-            return Valorant(state, o.text("queue"), o.text("map"), o.score("score"), me, players, history, o.optJSONObject("end")?.let(::end))
+            return Valorant(
+                state,
+                o.text("queue"),
+                o.text("map"),
+                o.score("score"),
+                me,
+                players,
+                history,
+                o.optJSONObject("end")?.let(::end),
+                mapId = o.text("mapId"),
+                rounds = o.optJSONArray("rounds").results().map { ValorantRound(it, null) },
+                today = o.optJSONObject("today")?.let(::today),
+                mapStats = o.optJSONObject("mapStats")?.let(::mapStats),
+            )
         }
 
         private fun end(e: JSONObject): ValorantEnd {
@@ -186,7 +239,19 @@ class ValorantApi(private val http: Http) {
                     p.optBoolean("mvp"),
                 )
             }
-            return ValorantEnd(status, e.text("map"), e.text("queue"), e.optString("mode") == "ffa", e.bool("won"), e.score("score"), players)
+            val rounds = e.optJSONArray("rounds").items { r -> ValorantRound(r.bool("won"), ROUND_ENDS[r.optString("end")]) }
+            return ValorantEnd(
+                status,
+                e.text("map"),
+                e.text("queue"),
+                e.optString("mode") == "ffa",
+                e.bool("won"),
+                e.score("score"),
+                players,
+                mapId = e.text("mapId"),
+                rounds = rounds,
+                rr = e.int("rr"),
+            )
         }
     }
 }

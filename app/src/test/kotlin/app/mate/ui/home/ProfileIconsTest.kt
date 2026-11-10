@@ -20,6 +20,11 @@ class ProfileIconsTest {
     }
 
     @Test
+    fun `l'icone Valorant est dans la boite`() {
+        assertEquals(app.mate.R.drawable.ic_valorant, ProfileIcons.drawable("valorant"))
+    }
+
+    @Test
     fun `une icone retiree du choix n'a plus de dessin`() {
         assertNull(ProfileIcons.drawable("game"))
     }

@@ -1,4 +1,4 @@
-import { agentId, agentName } from "./valorant-assets.ts";
+import { agentId, agentName, mapIdOf } from "./valorant-assets.ts";
 import { QUEUES, mapName, rankName } from "./valorant-names.ts";
 import { paced, remote, type Remote } from "./valorant-riot.ts";
 
@@ -25,12 +25,17 @@ export type MatchLine = {
   firstKills: number;
 };
 
+/** Fin d'un round : élimination, spike explosé, spike désamorcé, temps écoulé (abandon et inconnu : null). */
+export type RoundEnd = "elimination" | "detonate" | "defuse" | "time";
+
 export type ParsedMatch = {
   id: string;
   mapId: string | undefined;
   queueId: string;
   teams: { id: string; won: boolean; rounds: number }[];
   players: MatchLine[];
+  /** Rounds dans l'ordre : équipe gagnante (vide si aucune) et fin. */
+  rounds: { winner: string; end: RoundEnd | null }[];
 };
 
 export type BoardPlayer = {
@@ -54,12 +59,22 @@ export type BoardPlayer = {
 /** Tableau des scores : `ffa` (combat à mort) classe par kills, sans équipe ni MVP. */
 export type Board = {
   map: string | null;
+  /** Identifiant de la carte chez valorant-api.com (image : /valorant/map?id=) ; null si inconnue. */
+  mapId: string | null;
   queue: string | null;
   mode: "teams" | "ffa";
   won: boolean | null;
   score: { ally: number; enemy: number } | null;
   players: BoardPlayer[];
+  /** Rounds vus de mon équipe (gagné, perdu, null si aucun gagnant), avec leur fin ; vide en combat à mort. */
+  rounds: { won: boolean | null; end: RoundEnd | null }[];
 };
+
+const ENDS: Record<string, RoundEnd> = { Elimination: "elimination", Detonate: "detonate", Defuse: "defuse" };
+
+/** Fin d'un round de match-details : `roundResultCode`, vide quand le temps est écoulé (`roundResult` le dit). */
+const roundEnd = (round: any): RoundEnd | null =>
+  ENDS[String(round?.roundResultCode ?? "")] ?? (round?.roundResult === "Round timer expired" ? "time" : null);
 
 const num = (v: unknown) => Number(v) || 0;
 export const hsPercent = (headshots: number, hits: number) => (hits > 0 ? Math.round((100 * headshots) / hits) : null);
@@ -110,6 +125,7 @@ export function parseMatch(raw: any): ParsedMatch {
     queueId: String(raw?.matchInfo?.queueID ?? ""),
     teams: (Array.isArray(raw?.teams) ? raw.teams : []).map((t: any) => ({ id: String(t.teamId), won: !!t.won, rounds: num(t.roundsWon) })),
     players,
+    rounds: rounds.map((r) => ({ winner: String(r?.winningTeam ?? ""), end: roundEnd(r) })),
   };
 }
 
@@ -153,7 +169,16 @@ export function boardOf(m: ParsedMatch, me: string, incognito: Set<string>): Boa
       if (best && best.acs > 0) best.mvp = true;
     }
   }
-  return { map: mapName(m.mapId), queue: QUEUES[m.queueId] ?? null, mode: ffa ? "ffa" : "teams", ...resultFor(m, me), players: rows };
+  const rounds = ffa ? [] : m.rounds.map((r) => ({ won: r.winner ? r.winner === myTeam : null, end: r.end }));
+  return {
+    map: mapName(m.mapId),
+    mapId: mapIdOf(m.mapId),
+    queue: QUEUES[m.queueId] ?? null,
+    mode: ffa ? "ffa" : "teams",
+    ...resultFor(m, me),
+    players: rows,
+    rounds,
+  };
 }
 
 /** Parties déjà lues (100 au plus : de quoi couvrir les 3 dernières des 10 joueurs et mes 5 dernières). */

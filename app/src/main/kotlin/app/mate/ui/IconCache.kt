@@ -7,6 +7,8 @@ import android.util.LruCache
 import app.mate.net.BackendClient
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CompletableDeferred
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 
 /**
  * Icônes des tuiles, gardées en mémoire (96 à 128 px chacune, 64 Ko au plus) : quelques dizaines pour le Deck, et jusqu'à
@@ -14,6 +16,9 @@ import kotlinx.coroutines.CompletableDeferred
  */
 object IconCache {
     private val bitmaps = LruCache<String, Bitmap>(96)
+
+    /** Images de carte Valorant (960 × 540, ~1 Mo chacune en 16 bits) : la carte jouée et la précédente seulement. */
+    private val maps = LruCache<String, Bitmap>(2)
     /** Absentes (404) jusqu'à l'instant noté : pour toujours pour le Deck, 5 min pour Valorant (compagnon pas encore à jour). */
     private val missing = HashMap<String, Long>()
 
@@ -43,6 +48,13 @@ object IconCache {
 
     fun peekRank(tier: Int): Bitmap? = peek(rankKey(tier))
 
+    /** Image de fond d'une carte Valorant : décodée sans transparence (moitié moins de mémoire), à part des icônes. */
+    suspend fun loadMap(client: BackendClient, id: String): Bitmap? = load(mapKey(id), VALORANT_MISS_MS, maps, Bitmap.Config.RGB_565) { client.valorant.mapImage(id) }
+
+    fun peekMap(id: String): Bitmap? = maps.get(mapKey(id))
+
+    private fun mapKey(id: String) = "valorant-map:$id"
+
     private fun agentKey(id: String) = "valorant-agent:$id"
 
     private fun rankKey(tier: Int) = "valorant-rank:$tier"
@@ -52,8 +64,14 @@ object IconCache {
     private fun appKey(name: String) = "app:$name"
 
     /** Appelé depuis le fil principal (les tables ne sont pas partagées entre fils) ; `fetch` passe par `Http.io`. */
-    private suspend fun load(id: String, missFor: Long = Long.MAX_VALUE, fetch: suspend () -> ByteArray?): Bitmap? {
-        bitmaps.get(id)?.let { return it }
+    private suspend fun load(
+        id: String,
+        missFor: Long = Long.MAX_VALUE,
+        cache: LruCache<String, Bitmap> = bitmaps,
+        config: Bitmap.Config? = null,
+        fetch: suspend () -> ByteArray?,
+    ): Bitmap? {
+        cache.get(id)?.let { return it }
         if ((missing[id] ?: 0L) > SystemClock.elapsedRealtime()) return null
         loading[id]?.let { return it.await() }
         val result = CompletableDeferred<Bitmap?>()
@@ -65,8 +83,9 @@ object IconCache {
                 missing[id] = if (missFor == Long.MAX_VALUE) Long.MAX_VALUE else SystemClock.elapsedRealtime() + missFor
                 return null
             }
-            val bitmap = BitmapFactory.decodeByteArray(bytes, 0, bytes.size)
-            if (bitmap != null) bitmaps.put(id, bitmap)
+            // Icônes (128 px) : sur place. Carte (`config`, 960 px, ~1 Mo) : hors du fil principal, réduite si plus large.
+            val bitmap = if (config == null) BitmapFactory.decodeByteArray(bytes, 0, bytes.size) else withContext(Dispatchers.Default) { decodeLarge(bytes, config) }
+            if (bitmap != null) cache.put(id, bitmap)
             result.complete(bitmap)
             return bitmap
         } finally {
@@ -74,6 +93,15 @@ object IconCache {
             result.complete(null)
             loading.remove(id)
         }
+    }
+
+    /** Image large décodée en `config`, divisée par 2 tant qu'elle dépasse [MAX_WIDTH] (un compagnon qui ne l'a pas réduite). */
+    private fun decodeLarge(bytes: ByteArray, config: Bitmap.Config): Bitmap? {
+        val bounds = BitmapFactory.Options().apply { inJustDecodeBounds = true }
+        BitmapFactory.decodeByteArray(bytes, 0, bytes.size, bounds)
+        var sample = 1
+        while (bounds.outWidth / sample > MAX_WIDTH) sample *= 2
+        return BitmapFactory.decodeByteArray(bytes, 0, bytes.size, BitmapFactory.Options().apply { inPreferredConfig = config; inSampleSize = sample })
     }
 
     /** Une touche perso reprogrammée change d'icône sans changer d'identifiant. */
@@ -89,4 +117,5 @@ object IconCache {
     }
 
     private const val VALORANT_MISS_MS = 5 * 60_000L
+    private const val MAX_WIDTH = 960
 }

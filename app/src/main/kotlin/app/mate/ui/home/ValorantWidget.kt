@@ -5,16 +5,20 @@ import android.text.TextUtils
 import android.view.Gravity
 import android.view.View
 import android.view.ViewGroup
+import android.widget.FrameLayout
 import android.widget.LinearLayout
 import android.widget.ScrollView
 import app.mate.R
 import app.mate.net.BackendClient
 import app.mate.net.Valorant
 import app.mate.net.ValorantEndStatus
+import app.mate.net.ValorantMapStats
 import app.mate.net.ValorantMe
 import app.mate.net.ValorantPlayer
+import app.mate.net.ValorantRound
 import app.mate.net.ValorantScore
 import app.mate.net.ValorantState
+import app.mate.net.ValorantToday
 import app.mate.net.runCatchingCancellable
 import app.mate.ui.errorText
 import kotlinx.coroutines.Job
@@ -30,8 +34,9 @@ class ValorantSample(val valorant: Valorant) : WidgetSample
  * une ligne par joueur (agent, nom, niveau, rang et RR, meilleur rang, K/D, % tête, % de victoires, groupe), ton équipe
  * puis l'équipe d'en face, côte à côte quand le widget est large ; pendant la sélection, ton équipe seulement (Riot ne
  * donne l'autre qu'au début de la partie). Après la partie : le tableau des scores, 2 min. Au menu : ton rang et tes
- * dernières classées. Pastille, ligne et colonne : ton rang et le score seulement ([ValorantShape]). Relu toutes les 5 s
- * pendant une file ou une partie, toutes les 15 s sinon, seulement quand le widget est affiché.
+ * dernières classées. Pastille, ligne et colonne : ton rang et le score seulement ([ValorantShape]). Bandeau de la carte
+ * ([ValorantBand]) : mini à la place du score, fin à côté du titre, moyen ou plein au-dessus du tableau. Relu toutes les
+ * 5 s pendant une file ou une partie, toutes les 15 s sinon, seulement quand le widget est affiché.
  */
 class ValorantWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidget(context, host, placed) {
     private val title = cardTitle(R.string.widget_valorant)
@@ -47,10 +52,23 @@ class ValorantWidget(context: Context, host: HomeHost, placed: Placed) : HomeWid
         addView(body, ViewGroup.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT))
     }
 
+    /** Bandeau fin de la carte, à droite du titre et de la ligne d'état (blocs et grands widgets). */
+    private val slot = FrameLayout(context).apply { visibility = View.GONE }
+
     override val view = LinearLayout(context).asCard(16).apply {
         orientation = LinearLayout.VERTICAL
-        addView(title, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT))
-        addView(status, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT).apply { topMargin = dp(4) })
+        val words = LinearLayout(context).apply {
+            orientation = LinearLayout.VERTICAL
+            addView(title, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT))
+            addView(status, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT).apply { topMargin = dp(4) })
+        }
+        val head = LinearLayout(context).apply {
+            orientation = LinearLayout.HORIZONTAL
+            gravity = Gravity.CENTER_VERTICAL
+            addView(words, LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f))
+            addView(slot, LinearLayout.LayoutParams(0, dp(ValorantBand.Size.THIN.heightDp), 1f).apply { marginStart = dp(12) })
+        }
+        addView(head, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT))
         addView(scroll, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, 0, 1f).apply { topMargin = dp(8) })
     }
 
@@ -113,25 +131,43 @@ class ValorantWidget(context: Context, host: HomeHost, placed: Placed) : HomeWid
         if (drawn == v to placed.size) return
         drawn = v to placed.size
         body.removeAllViews()
+        slot.removeAllViews()
         val shape = ValorantShape.of(placed.size)
         // Un kit par rendu : ses images partent vers l'ordinateur actif du moment, avec un seul client.
         val kit = ValorantKit(context, host.scope, online = !preview)
         val fill = LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT)
         val end = v?.end?.takeIf { it.status == ValorantEndStatus.READY }
-        body.addView(
-            when {
-                v == null || v.state == ValorantState.OFF -> center(context.getString(R.string.valorant_off_hint))
-                shape.summary -> ValorantTable.summary(v, kit, family)
-                end != null -> ValorantTable.end(end, kit, shape)
-                v.state == ValorantState.MENU || v.state == ValorantState.QUEUE -> ValorantTable.menu(v, kit, shape)
-                else -> ValorantTable.match(v, kit, shape)
-            },
-            fill,
-        )
+        val size = ValorantBand.Size.of(placed.size)
+        // Sans mon rang, la forme résumée n'écrit qu'un conseil : pas de bandeau (ni d'image demandée) pour rien.
+        val band = v?.takeIf { ValorantBand.shows(it, size) && !(shape.summary && it.me == null) }?.let { ValorantBand.view(it, kit, size) }
+        slot.visibility = if (size == ValorantBand.Size.THIN && band != null) View.VISIBLE else View.GONE
+        if (size == ValorantBand.Size.THIN && band != null) slot.addView(band, FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT))
+        val main = when {
+            v == null || v.state == ValorantState.OFF -> center(context.getString(R.string.valorant_off_hint))
+            shape.summary -> ValorantTable.summary(v, kit, family, band.takeIf { size == ValorantBand.Size.MINI })
+            end != null -> ValorantTable.end(end, kit, shape)
+            v.state == ValorantState.MENU || v.state == ValorantState.QUEUE -> ValorantTable.menu(v, kit, shape)
+            else -> ValorantTable.match(v, kit, shape)
+        }
+        if (band == null || (size != ValorantBand.Size.MEDIUM && size != ValorantBand.Size.FULL)) {
+            body.addView(main, fill)
+            return
+        }
+        // Moyen et plein : le bandeau en haut, le tableau dessous (centré dans la place qui reste), la légende de la frise à la fin.
+        body.addView(band, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, dp(ValorantBand.heightDp(v, size))))
+        body.addView(main, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, 0, 1f).apply { topMargin = dp(14) })
+        if (end != null && size == ValorantBand.Size.FULL) body.addView(ValorantBand.legend(kit), LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT).apply { topMargin = dp(10) })
     }
 
     private fun statusLine(v: Valorant?): String {
         if (v == null || v.state == ValorantState.OFF) return context.getString(R.string.valorant_off)
+        val full = fullLine(v)
+        // Grand bandeau : la carte, la file et le score y sont déjà ; la ligne d'état garde le moment.
+        val big = ValorantBand.Size.of(placed.size).let { it == ValorantBand.Size.MEDIUM || it == ValorantBand.Size.FULL }
+        return if (big && ValorantBand.shows(v, ValorantBand.Size.of(placed.size))) full.substringBefore(" · ") else full
+    }
+
+    private fun fullLine(v: Valorant): String {
         v.end?.let { end ->
             return when (end.status) {
                 ValorantEndStatus.READY -> listOfNotNull(
@@ -177,7 +213,7 @@ class ValorantWidget(context: Context, host: HomeHost, placed: Placed) : HomeWid
             Valorant(
                 ValorantState.INGAME,
                 null,
-                null,
+                "Ascent",
                 ValorantScore(7, 5),
                 ValorantMe("Eliot#EUW", 14, "", 42, 214, 17),
                 listOf(
@@ -192,6 +228,9 @@ class ValorantWidget(context: Context, host: HomeHost, placed: Placed) : HomeWid
                     player("Gigi#Ok", 15, 44, false, 98, 15, 0.73, 16, 44, party = 2),
                     player("PasDeChance#404", 12, 95, false, 311, 14, 1.02, 23, 52),
                 ),
+                rounds = "WWLWLLWWWLWL".map { ValorantRound(it == 'W', null) },
+                today = ValorantToday(6, 2, 2, listOf(true, false, true, false)),
+                mapStats = ValorantMapStats(5, 8, 40, listOf(true, true, false, true, false, true, false, true)),
             ),
         )
     }
