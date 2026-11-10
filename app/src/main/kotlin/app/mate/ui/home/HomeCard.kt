@@ -5,7 +5,6 @@ import android.graphics.Color
 import android.graphics.drawable.Drawable
 import android.graphics.drawable.DrawableContainer
 import android.graphics.drawable.GradientDrawable
-import android.graphics.drawable.StateListDrawable
 import android.widget.Button
 import android.widget.LinearLayout
 import androidx.core.content.ContextCompat
@@ -24,7 +23,7 @@ enum class HomeCardStyle(val label: Int) {
     /** La carte du thème, filet retiré. */
     FLAT(R.string.home_card_flat),
 
-    /** Ni fond ni filet ; l'appui allume un halo. */
+    /** Ni fond ni filet ; l'appui du thème allume un halo. */
     BARE(R.string.home_card_bare),
 }
 
@@ -33,36 +32,33 @@ enum class HomeCardStyle(val label: Int) {
  * thème. Une carte de la couleur du fond (Contraste élevé) n'existe que par son filet : elle reste telle quelle.
  */
 object HomeCard {
-    /** Opacité du voile au repos (0x6B : 42 %) et à l'appui (0xB3 : 70 %), sur `c_surface` et `c_surface_pressed`. */
+    /** Opacité du voile au repos, sur `c_surface` (0x6B : 42 %). */
     const val VEIL_ALPHA = 0x6B
-    const val PRESSED_ALPHA = 0xB3
 
     /** Style appliqué, ou `null` quand la tuile du thème est gardée (carte de la couleur du fond). */
     fun look(style: HomeCardStyle, bg: Int, surface: Int): HomeCardStyle? = style.takeIf { surface != bg }
 
+    /**
+     * La tuile du thème, filet retiré partout ; Voile et À même le fond ne changent que sa forme au repos. L'appui garde
+     * celle du thème (halo rose de Hush, translucide du Rétro).
+     */
     fun background(context: Context): Drawable {
         val tile = ContextCompat.getDrawable(context, themeRes(context, R.attr.c_home_card_bg))!!.mutate()
+        val surface = themeColor(context, R.attr.c_surface)
+        val style = look(Prefs.homeCardStyle(context), themeColor(context, R.attr.c_bg), surface) ?: return tile
         val shapes = (tile.constantState as? DrawableContainer.DrawableContainerState)?.children?.filterIsInstance<GradientDrawable>()
             ?: listOfNotNull(tile as? GradientDrawable)
-        val radius = shapes.maxOfOrNull { it.cornerRadius } ?: 0f
-        val pressed = ColorUtils.setAlphaComponent(themeColor(context, R.attr.c_surface_pressed), PRESSED_ALPHA)
-        val surface = themeColor(context, R.attr.c_surface)
-        return when (look(Prefs.homeCardStyle(context), themeColor(context, R.attr.c_bg), surface)) {
-            null -> tile
-            HomeCardStyle.FLAT -> tile.also { shapes.forEach { it.setStroke(0, Color.TRANSPARENT) } }
-            HomeCardStyle.VEIL -> states(radius, pressed, ColorUtils.setAlphaComponent(surface, VEIL_ALPHA))
-            HomeCardStyle.BARE -> states(radius, pressed, Color.TRANSPARENT)
+        shapes.forEach { it.setStroke(0, Color.TRANSPARENT) }
+        tile.state = intArrayOf()
+        val rest = tile.current as? GradientDrawable ?: return tile
+        // Forme au repos sans coins (Hush) : le rayon de l'appui, pour que le voile ait la forme du halo.
+        if (rest.cornerRadius == 0f) rest.cornerRadius = shapes.maxOf { it.cornerRadius }
+        when (style) {
+            HomeCardStyle.FLAT -> Unit
+            HomeCardStyle.VEIL -> rest.setColor(ColorUtils.setAlphaComponent(surface, VEIL_ALPHA))
+            HomeCardStyle.BARE -> rest.setColor(Color.TRANSPARENT)
         }
-    }
-
-    private fun states(radius: Float, pressed: Int, rest: Int) = StateListDrawable().apply {
-        addState(intArrayOf(android.R.attr.state_pressed), shape(radius, pressed))
-        addState(intArrayOf(), shape(radius, rest))
-    }
-
-    private fun shape(radius: Float, color: Int) = GradientDrawable().apply {
-        cornerRadius = radius
-        setColor(color)
+        return tile
     }
 
     /** Pastilles des Réglages, une par style ; un choix recrée l'écran, comme le thème. */

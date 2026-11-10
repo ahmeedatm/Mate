@@ -28,8 +28,7 @@ class HomeCardTest {
     }
 
     @Test
-    fun `le voile laisse voir le fond, l'appui se voit davantage`() {
-        assertTrue(HomeCard.VEIL_ALPHA in 1 until HomeCard.PRESSED_ALPHA)
-        assertTrue(HomeCard.PRESSED_ALPHA < 0xFF)
+    fun `le voile laisse voir le fond`() {
+        assertTrue(HomeCard.VEIL_ALPHA in 1 until 0xFF)
     }
 }
