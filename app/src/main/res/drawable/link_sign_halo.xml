@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Halo du signe d'état posé sur l'icône de l'ordinateur (barre de gauche) : teinte de la barre posée dans le code. -->
+<!-- Halo du signe d'état posé sur l'icône de l'ordinateur (barre de gauche) : fond de l'écran, remplacé dans le code par la teinte de la barre quand elle est opaque. -->
 <shape xmlns:android="http://schemas.android.com/apk/res/android" android:shape="oval">
-    <solid android:color="#FFFFFFFF" />
+    <solid android:color="?attr/c_bg" />
 </shape>
