@@ -89,13 +89,12 @@
                 android:textColor="?attr/c_text"
                 android:textSize="160sp" />
 
-            <TextClock
+            <TextView
+                android:id="@+id/home_empty_date"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="8dp"
                 android:fontFamily="?attr/c_font_regular"
-                android:format12Hour="EEEE d MMMM"
-                android:format24Hour="EEEE d MMMM"
                 android:textColor="?attr/c_text_dim"
                 android:textSize="24sp" />
         </LinearLayout>

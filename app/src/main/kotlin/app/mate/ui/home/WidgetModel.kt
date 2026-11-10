@@ -185,7 +185,6 @@ class Placed(
 
 /** Noms automatiques d'avant « Accueil » et « Écran N » (dispositions v1 relues, 29/10). */
 private val LEGACY_NAME = Regex("Profil (\\d+)")
-private const val LEGACY_FIRST = "Bureau"
 
 /**
  * Disposition complète : widgets et profils. Un profil = une page ; `names[i]` null = pas encore de nom ([nameMissing]
@@ -335,14 +334,10 @@ class HomeLayout(val widgets: MutableList<Placed>, val names: MutableList<String
     /**
      * Donne un nom à chaque profil qui n'en a pas : `first` au premier, aux autres le plus petit numéro libre (Écran 1
      * et 2 supprimés, le suivant créé reprend « Écran 1 », pas la place dans la liste où comptent Deck et Réunion). Renomme aussi les noms automatiques d'avant : « Profil 2 »
-     * au modèle `pattern`, même numéro, et « Bureau » de l'Accueil en `first`. Vrai si un nom a été posé.
+     * au modèle `pattern`, même numéro. Vrai si un nom a été posé.
      */
     fun nameMissing(first: String, pattern: String): Boolean {
         var named = false
-        if (rolesSet && names.getOrNull(homeProfile) == LEGACY_FIRST && first !in names) {
-            names[homeProfile] = first
-            named = true
-        }
         for (i in names.indices) {
             val old = names[i]?.let { LEGACY_NAME.matchEntire(it) }?.groupValues?.get(1)?.toInt()
             if (old != null && pattern.format(old) != names[i] && pattern.format(old) !in names) {

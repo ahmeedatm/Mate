@@ -159,11 +159,13 @@ class ProfilesTest {
     }
 
     @Test
-    fun `l Accueil nomme Bureau par l ancien format devient Accueil`() {
-        val layout = HomeLayout(mutableListOf(), mutableListOf("Bureau", "Profil 2"))
-        layout.rolesSet = true
-        assertTrue(layout.nameMissing("Accueil", "Écran %d"))
-        assertEquals(listOf<String?>("Accueil", "Écran 2"), layout.names)
+    fun `un ecran Bureau recree sans aucun ecran garde son nom`() {
+        val layout = layoutOf(1)
+        layout.ensureRoles("Réunion")
+        layout.removeProfile(layout.homeProfile)
+        val bureau = layout.addFromTemplate(Template.WORK_CADRAN, "Bureau")
+        layout.nameMissing("Accueil", "Écran %d")
+        assertEquals("Bureau", layout.names[bureau])
     }
 
     @Test
