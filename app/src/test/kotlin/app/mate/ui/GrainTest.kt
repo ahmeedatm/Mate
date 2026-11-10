@@ -16,6 +16,13 @@ class GrainTest {
     }
 
     @Test
+    fun `reglage eteint, pas de grain meme si le theme a ses couleurs`() {
+        assertFalse(Grain.shown(false, light, dark))
+        assertTrue(Grain.shown(true, light, dark))
+        assertFalse(Grain.shown(true, 0, 0))
+    }
+
+    @Test
     fun `une seule couleur visible suffit`() {
         assertTrue(Grain.active(light, 0))
         assertTrue(Grain.active(0, dark))

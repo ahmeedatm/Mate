@@ -22,7 +22,7 @@ enum class ThemeGroup(val label: Int) {
 /**
  * Thèmes de Mate (docs/ui-ux/da) et ceux d'UnoMate, choisis dans Réglages en six groupes ([ThemeGroup]) : Chaleur (par
  * défaut : crème, terre cuite et serif de livre, d'après claude.ai) ; Console (nuit, et Console jour) ; Sobres (Clair et Sombre : la DA Cadran en blanc et noir francs) ; Rétro
- * (Cadran, Cadran nuit et Rétro : grain par-dessus l'écran et tube qui coule à droite, c_flow, c_grain_*) ; Ambiances (Hush :
+ * (Cadran, Cadran nuit et Rétro : tube qui coule à droite, c_flow ; grain plus chaud, c_grain_*, posé sur tous les thèmes si Réglages > Thème > Grain est allumé) ; Ambiances (Hush :
  * nuit noire, reflets rose et violet animés derrière les écrans, tuiles en verre, ui/HushBackdrop ; Spider-Verse : son logo
  * en fond fixe, c_wallpaper, contenu rangé autour, c_spine ; Registre, Studio, Maison, Tableau et Terminal : chacun sa police,
  * ses couleurs et son motif, c_pattern) ; Accessibilité (Contraste élevé : Console jour en lisibilité maximale, grandes

@@ -74,6 +74,7 @@ object Prefs {
     private const val KEY_TRIAL_FRESH = "trial_fresh"
     private const val KEY_LEGIBLE_FONT = "legible_font"
     private const val KEY_REDUCE_MOTION = "reduce_motion"
+    private const val KEY_GRAIN = "grain"
     private const val KEY_READ_BANNERS = "read_banners"
     private const val KEY_TTS_VOICE = "tts_voice"
     private const val KEY_TTS_RATE = "tts_rate"
@@ -380,6 +381,13 @@ object Prefs {
 
     fun setLegibleFont(context: Context, value: Boolean) {
         prefs(context).edit().putBoolean(KEY_LEGIBLE_FONT, value).apply()
+    }
+
+    /** Réglages > Thème : grain par-dessus l'écran, quel que soit le thème (ui/Grain). Éteint par défaut. */
+    fun grain(context: Context): Boolean = prefs(context).getBoolean(KEY_GRAIN, false)
+
+    fun setGrain(context: Context, value: Boolean) {
+        prefs(context).edit().putBoolean(KEY_GRAIN, value).apply()
     }
 
     /** Accessibilité : ni animations continues ni ressorts (Look.still). Désactivé par défaut. */

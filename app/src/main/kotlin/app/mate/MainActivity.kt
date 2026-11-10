@@ -218,8 +218,8 @@ class MainActivity : AppCompatActivity() {
         // Plein écran : sans cela la fenêtre garde vide la place des barres système cachées (bandes noires).
         WindowCompat.setDecorFitsSystemWindows(window, false)
         setContentView(R.layout.activity_main)
-        Grain.applyTo(findViewById(android.R.id.content))
         ThemePattern.applyTo(findViewById(android.R.id.content))
+        Grain.applyTo(findViewById(android.R.id.content))
         Speaker.init(this)
         Prefs.focusPreset(this).let { FocusTimer.restore(it.focus, it.pause) }
         NoisePlayer.init(this)

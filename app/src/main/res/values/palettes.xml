@@ -93,8 +93,8 @@
         <item name="c_flow_red">#00000000</item>
         <item name="c_flow_orange">#00000000</item>
         <item name="c_flow_cream">#00000000</item>
-        <item name="c_grain_light">#00000000</item>
-        <item name="c_grain_dark">#00000000</item>
+        <item name="c_grain_light">#0AFFFFFF</item>
+        <item name="c_grain_dark">#26000000</item>
         <item name="c_pattern">none</item>
         <item name="c_pattern_color">#00000000</item>
     </style>
@@ -187,8 +187,8 @@
         <item name="c_flow_red">#00000000</item>
         <item name="c_flow_orange">#00000000</item>
         <item name="c_flow_cream">#00000000</item>
-        <item name="c_grain_light">#00000000</item>
-        <item name="c_grain_dark">#00000000</item>
+        <item name="c_grain_light">#33FFFFFF</item>
+        <item name="c_grain_dark">#14000000</item>
         <item name="c_pattern">none</item>
         <item name="c_pattern_color">#00000000</item>
     </style>
@@ -386,8 +386,8 @@
         <item name="c_flow_red">#00000000</item>
         <item name="c_flow_orange">#00000000</item>
         <item name="c_flow_cream">#00000000</item>
-        <item name="c_grain_light">#00000000</item>
-        <item name="c_grain_dark">#00000000</item>
+        <item name="c_grain_light">#0AFFFFFF</item>
+        <item name="c_grain_dark">#26000000</item>
         <item name="c_pattern">none</item>
         <item name="c_pattern_color">#00000000</item>
     </style>
@@ -486,8 +486,8 @@
         <item name="c_flow_red">#00000000</item>
         <item name="c_flow_orange">#00000000</item>
         <item name="c_flow_cream">#00000000</item>
-        <item name="c_grain_light">#00000000</item>
-        <item name="c_grain_dark">#00000000</item>
+        <item name="c_grain_light">#0AFFFFFF</item>
+        <item name="c_grain_dark">#26000000</item>
         <item name="c_pattern">none</item>
         <item name="c_pattern_color">#00000000</item>
     </style>
@@ -583,13 +583,13 @@
         <item name="c_flow_red">#00000000</item>
         <item name="c_flow_orange">#00000000</item>
         <item name="c_flow_cream">#00000000</item>
-        <item name="c_grain_light">#00000000</item>
-        <item name="c_grain_dark">#00000000</item>
+        <item name="c_grain_light">#33FFFFFF</item>
+        <item name="c_grain_dark">#14000000</item>
         <item name="c_pattern">none</item>
         <item name="c_pattern_color">#00000000</item>
     </style>
 
-    <!-- Clair et Sombre : la DA Cadran sans texture (blanc et noir francs, sans grain ni tubes), rouge Unowhy en accent, Outfit.
+    <!-- Clair et Sombre : la DA Cadran sans texture (blanc et noir francs, sans tubes, grain seulement par le réglage), rouge Unowhy en accent, Outfit.
          Venus d'UnoMate (palettes Cadran clair et Cadran sombre). Textes au moins 4,5:1 sur le fond, la tuile et le relief (ThemePalettesTest). -->
     <style name="Palette.CadranClair" parent="">
         <item name="c_card_bg">@drawable/cadran_tile_bg</item>
@@ -679,8 +679,8 @@
         <item name="c_flow_red">#00000000</item>
         <item name="c_flow_orange">#00000000</item>
         <item name="c_flow_cream">#00000000</item>
-        <item name="c_grain_light">#00000000</item>
-        <item name="c_grain_dark">#00000000</item>
+        <item name="c_grain_light">#33FFFFFF</item>
+        <item name="c_grain_dark">#14000000</item>
         <item name="c_pattern">none</item>
         <item name="c_pattern_color">#00000000</item>
     </style>
@@ -773,8 +773,8 @@
         <item name="c_flow_red">#00000000</item>
         <item name="c_flow_orange">#00000000</item>
         <item name="c_flow_cream">#00000000</item>
-        <item name="c_grain_light">#00000000</item>
-        <item name="c_grain_dark">#00000000</item>
+        <item name="c_grain_light">#0AFFFFFF</item>
+        <item name="c_grain_dark">#26000000</item>
         <item name="c_pattern">none</item>
         <item name="c_pattern_color">#00000000</item>
     </style>
@@ -1170,8 +1170,8 @@
         <item name="c_flow_red">#00000000</item>
         <item name="c_flow_orange">#00000000</item>
         <item name="c_flow_cream">#00000000</item>
-        <item name="c_grain_light">#00000000</item>
-        <item name="c_grain_dark">#00000000</item>
+        <item name="c_grain_light">#33FFFFFF</item>
+        <item name="c_grain_dark">#14000000</item>
     </style>
 
     <!-- Studio : Cadran éditorial. Fond blanc légèrement lilas, indigo vif (c_primary) et teintes de fonction franches mais au ton 40
@@ -1267,8 +1267,8 @@
         <item name="c_flow_red">#00000000</item>
         <item name="c_flow_orange">#00000000</item>
         <item name="c_flow_cream">#00000000</item>
-        <item name="c_grain_light">#00000000</item>
-        <item name="c_grain_dark">#00000000</item>
+        <item name="c_grain_light">#33FFFFFF</item>
+        <item name="c_grain_dark">#14000000</item>
     </style>
 
     <!-- Maison : Cadran doux et chaud. Crème, bleu ardoise calme (c_primary), teintes de fonction atténuées, brique = maintenant
@@ -1462,8 +1462,8 @@
         <item name="c_flow_red">#00000000</item>
         <item name="c_flow_orange">#00000000</item>
         <item name="c_flow_cream">#00000000</item>
-        <item name="c_grain_light">#00000000</item>
-        <item name="c_grain_dark">#00000000</item>
+        <item name="c_grain_light">#33FFFFFF</item>
+        <item name="c_grain_dark">#14000000</item>
     </style>
 
     <!-- Terminal : Cadran nuit (base Theme.Companion), noir teinté de vert, texte clair, vert phosphore (c_primary, c_ok) et ambre =
@@ -1558,8 +1558,8 @@
         <item name="c_flow_red">#00000000</item>
         <item name="c_flow_orange">#00000000</item>
         <item name="c_flow_cream">#00000000</item>
-        <item name="c_grain_light">#00000000</item>
-        <item name="c_grain_dark">#00000000</item>
+        <item name="c_grain_light">#0AFFFFFF</item>
+        <item name="c_grain_dark">#26000000</item>
     </style>
 
     <!-- Ombre légère sous les textes de Hush (0 1px 6px #000c), puisque sans tuile ils passent devant les reflets. -->
