@@ -540,9 +540,9 @@ class HomeFragment : Fragment(), HomeHost, WidgetGrid.Listener {
 
     // --- Widget agrandi
 
-    /** Widget maintenu : un second exemplaire dans sa plus grande taille, par-dessus l'écran, à jour tant qu'il est ouvert. */
+    /** Bouton Agrandir du mode Modifier : le mode se termine (en gardant), puis un second exemplaire dans sa plus grande taille, par-dessus l'écran, à jour tant qu'il est ouvert. */
     override fun onExpand(placed: Placed) {
-        if (grid.editing) return
+        if (grid.editing) endEdit(keep = true)
         // Même réglages (objet partagé) : ce qui est changé dans le grand vaut pour le widget de la grille.
         val big = Placed(placed.type, placed.type.zoomSize, placed.page, placed.col, placed.row, placed.config)
         val widget = HomeWidget.create(requireContext(), this, big, noComputer)
@@ -574,12 +574,9 @@ class HomeFragment : Fragment(), HomeHost, WidgetGrid.Listener {
         return true
     }
 
-    /** Crayon de la barre : commence le mode Modifier, ou le termine (en gardant) s'il est en cours. */
-    fun toggleEdit() {
-        if (grid.editing) {
-            endEdit(keep = true)
-            return
-        }
+    /** Appui long sur la grille : commence le mode Modifier. */
+    override fun onEditRequest() {
+        if (grid.editing) return
         // Panneau document ouvert (2 colonnes) : pas de mode Modifier, comme avant à l'appui long.
         if (grid.narrow) {
             main?.showBanner(getString(R.string.home_edit_narrow), 4)
@@ -607,6 +604,9 @@ class HomeFragment : Fragment(), HomeHost, WidgetGrid.Listener {
     }
 
     fun isEditing() = view != null && grid.editing
+
+    /** OK du bandeau : termine le mode Modifier en gardant les changements. */
+    fun finishEdit() = endEdit(keep = true)
 
     private fun endEdit(keep: Boolean) {
         // Le catalogue pose dans la disposition en cours de modification : il ne survit pas à la fin du mode Modifier.

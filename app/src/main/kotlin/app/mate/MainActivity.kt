@@ -239,7 +239,7 @@ class MainActivity : AppCompatActivity() {
         topBar = findViewById(R.id.top_bar)
         topBar.attach(topHost)
         topBar.onLinkTap = { showComputerPicker() }
-        topBar.onEditDone = { if (current == Mode.HOME && homeFragment()?.isEditing() == true) homeFragment()?.toggleEdit() }
+        topBar.onEditDone = { if (current == Mode.HOME && homeFragment()?.isEditing() == true) homeFragment()?.finishEdit() }
         // Tablette verrouillée : le mot de réveil ne lance rien.
         wake = WakeWord(this, topBar.wakeMic) { if (!lockScreen.isShown) voice.start() }
         presence = Presence(
@@ -297,7 +297,6 @@ class MainActivity : AppCompatActivity() {
         banner = Banner(findViewById(R.id.remote_banner), lifecycleScope)
         alerts = TabletAlerts(this, banner)
         findViewById<View>(R.id.rail_settings).setOnClickListener { show(Mode.SETTINGS) }
-        findViewById<View>(R.id.rail_edit).setOnClickListener { editProfile() }
         findViewById<View>(R.id.rail_lock).setOnClickListener { lockScreen.lockTablet() }
         signals.onMinute {
             Screen.apply(this@MainActivity)
@@ -514,25 +513,11 @@ class MainActivity : AppCompatActivity() {
                 }
             },
             onSettings = { show(Mode.SETTINGS) },
-            onClosed = {
-                pickerOpen = false
-                renderEditButton()
-            },
         ).show()
-        pickerOpen = true
-        renderEditButton()
     }
-
-    /** Liste des ordinateurs ouverte (pied de barre) : le crayon est grisé pendant ce temps. */
-    private var pickerOpen = false
 
     /** Notifications de Depuis l'ordi affichées (la cloche est marquée). */
     private var notificationsShown = false
-
-    /** Crayon affiché seulement sur l'Accueil (les profils à widgets) : ailleurs il n'y a rien à modifier, il est masqué. */
-    private fun renderEditButton() {
-        findViewById<View>(R.id.rail_edit).visibility = if (current == Mode.HOME && !pickerOpen) View.VISIBLE else View.GONE
-    }
 
     private val focusListener: (FocusTimer.State) -> Unit = { state ->
         nav.showFocus(state)
@@ -920,7 +905,6 @@ class MainActivity : AppCompatActivity() {
     fun onNotificationsShown(shown: Boolean) {
         if (::nav.isInitialized) nav.showNotifications(shown)
         notificationsShown = shown
-        renderEditButton()
         if (::topBar.isInitialized) topBar.notificationsChanged()
     }
 
@@ -1173,7 +1157,6 @@ class MainActivity : AppCompatActivity() {
 
         nav.select(mode, changed)
         showWallpaper()
-        renderEditButton()
         if (::topBar.isInitialized) topBar.notificationsChanged()
         // L'Accueil a son propre balayage (WidgetGrid) ; Réglages n'est pas dans la barre.
         // Caméra : hors barre, et ses gestes (zoom) restent à elle.
@@ -1273,17 +1256,8 @@ class MainActivity : AppCompatActivity() {
     /** Caméra arrêtée : retour à Ordi, d'où elle s'ouvre. */
     fun backToComputer() = show(Mode.COMPUTER)
 
-    /** Crayon de la barre : le profil affiché (ou le dernier vu) passe en mode Modifier, ou en sort. */
-    private fun editProfile() {
-        if (current != Mode.HOME) show(Mode.HOME)
-        supportFragmentManager.executePendingTransactions()
-        homeFragment()?.toggleEdit()
-    }
-
-    /** Mode Modifier commencé ou fini : le crayon de la barre est plein pendant ce temps. */
+    /** Mode Modifier commencé ou fini : le bandeau du haut se modifie avec l'Accueil ; Terminé de l'Accueil le referme. */
     fun onEditingChanged(editing: Boolean) {
-        findViewById<View>(R.id.rail_edit).isSelected = editing
-        // Le crayon modifie aussi le bandeau du haut ; Terminé de l'Accueil le referme.
         topBar.edit(editing)
     }
 

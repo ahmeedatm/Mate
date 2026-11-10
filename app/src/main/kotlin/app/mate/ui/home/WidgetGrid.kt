@@ -32,11 +32,12 @@ import kotlin.math.roundToInt
 
 /**
  * Grille de l'Accueil : place chaque widget (vue dont le `tag` est son [Placed]) sur ses cases. Seule la page
- * affichée est visible. Appui long sur un widget : il s'agrandit (le mode Modifier vient du crayon de la barre) ; balayage vertical : profil suivant (vers le haut) ou
+ * affichée est visible. Appui long sur un widget ou le fond : mode Modifier ; balayage vertical : profil suivant (vers le haut) ou
  * précédent (vers le bas), sauf si ce qui est sous le doigt défile encore dans ce sens (liste d'un widget).
  *
  * Mode Modifier : les widgets ne reçoivent plus les touchers. Chacun a un ✕ (retirer), une poignée dans le coin bas-droit
- * (la tirer : il prend la taille permise la plus proche de la zone tirée) et, s'il en a, ⚙ (réglages) ; on le glisse vers
+ * (la tirer : il prend la taille permise la plus proche de la zone tirée), s'il en a, ⚙ (réglages) et, s'il s'agrandit,
+ * un bouton dans le coin bas-gauche (agrandi par-dessus l'écran, [EditButtons]) ; on le glisse vers
  * d'autres cases ; une case vide (+) ajoute un widget à cet endroit.
  *
  * Étroit (panneau document ouvert) : 2 colonnes, les widgets se suivent dans l'ordre de lecture (la page défile).
@@ -45,6 +46,9 @@ class WidgetGrid @JvmOverloads constructor(context: Context, attrs: AttributeSet
 
     interface Listener {
         fun onExpand(placed: Placed)
+
+        /** Appui long hors mode Modifier, sur un widget ou le fond : le mode Modifier commence. */
+        fun onEditRequest()
         fun onPageSwipe(delta: Int)
 
         /** Balayage en cours, doigt à `dy` px du départ : l'écran le suit (SwipeFollow). */
@@ -125,6 +129,7 @@ class WidgetGrid @JvmOverloads constructor(context: Context, attrs: AttributeSet
     private val removeIcon = ContextCompat.getDrawable(context, R.drawable.ic_close)!!.mutate()
     private val settingsIcon = ContextCompat.getDrawable(context, R.drawable.ic_settings)!!.mutate()
     private val resizeIcon = ContextCompat.getDrawable(context, R.drawable.ic_resize)!!.mutate()
+    private val expandIcon = ContextCompat.getDrawable(context, R.drawable.ic_fullscreen)!!.mutate()
     private val accent = themeColor(context, R.attr.c_accent)
     private val raised = themeColor(context, R.attr.c_surface_raised)
     private val ko = themeColor(context, R.attr.c_ko)
@@ -143,39 +148,59 @@ class WidgetGrid @JvmOverloads constructor(context: Context, attrs: AttributeSet
         removeIcon.setTint(textColor)
         settingsIcon.setTint(textColor)
         resizeIcon.setTint(textColor)
+        expandIcon.setTint(textColor)
     }
 
-    /** TalkBack : la poignée de chaque widget redimensionnable (description, un appui = taille suivante). */
+    /**
+     * TalkBack : la poignée de chaque widget redimensionnable (description, un appui = taille suivante) et son bouton
+     * Agrandir (id décalé de [EXPAND_ID]).
+     */
     private val a11y = object : ExploreByTouchHelper(this) {
-        private fun resizable() = (0 until childCount).filter { i ->
+        private fun ids() = (0 until childCount).flatMap { i ->
             val child = getChildAt(i)
-            editing && child.isVisible && (placedOf(child)?.type?.sizes?.size ?: 0) > 1
+            val placed = placedOf(child)?.takeIf { editing && child.isVisible } ?: return@flatMap emptyList()
+            val buttons = buttonsOf(placed)
+            listOfNotNull(i.takeIf { EditButton.RESIZE in buttons }, (EXPAND_ID + i).takeIf { EditButton.EXPAND in buttons })
+        }
+
+        private fun rectOf(id: Int): RectF? {
+            val child = getChildAt(id % EXPAND_ID) ?: return null
+            return if (id >= EXPAND_ID) expandRect(child) else resizeRect(child)
         }
 
         override fun getVirtualViewAt(x: Float, y: Float): Int =
-            resizable().firstOrNull { resizeRect(getChildAt(it)).touchable().contains(x, y) } ?: HOST_ID
+            ids().firstOrNull { rectOf(it)?.touchable()?.contains(x, y) == true } ?: HOST_ID
 
         override fun getVisibleVirtualViews(ids: MutableList<Int>) {
-            ids += resizable()
+            ids += ids()
         }
 
         override fun onPopulateNodeForVirtualView(id: Int, node: AccessibilityNodeInfoCompat) {
-            val child = getChildAt(id)
+            val child = getChildAt(id % EXPAND_ID)
             val placed = child?.let { placedOf(it) }
             if (child == null || placed == null) {
                 node.contentDescription = ""
                 node.setBoundsInParent(Rect(0, 0, 1, 1))
                 return
             }
-            node.contentDescription = context.getString(R.string.widget_resize_cd, context.getString(placed.type.title), context.getString(placed.size.label))
-            val r = resizeRect(child).touchable()
+            val title = context.getString(placed.type.title)
+            node.contentDescription = if (id >= EXPAND_ID) {
+                context.getString(R.string.widget_expand_cd, title)
+            } else {
+                context.getString(R.string.widget_resize_cd, title, context.getString(placed.size.label))
+            }
+            val r = rectOf(id)!!.touchable()
             node.setBoundsInParent(Rect(r.left.toInt(), r.top.toInt(), r.right.toInt(), r.bottom.toInt()))
             node.addAction(AccessibilityNodeInfoCompat.AccessibilityActionCompat.ACTION_CLICK)
         }
 
         override fun onPerformActionForVirtualView(id: Int, action: Int, arguments: android.os.Bundle?): Boolean {
             if (action != AccessibilityNodeInfoCompat.ACTION_CLICK) return false
-            val placed = getChildAt(id)?.let { placedOf(it) } ?: return false
+            val placed = getChildAt(id % EXPAND_ID)?.let { placedOf(it) } ?: return false
+            if (id >= EXPAND_ID) {
+                listener?.onExpand(placed)
+                return true
+            }
             listener?.onCycleSize(placed)
             invalidateVirtualView(id)
             return true
@@ -313,18 +338,13 @@ class WidgetGrid @JvmOverloads constructor(context: Context, attrs: AttributeSet
     private var owner: GestureOwner? = null
     private var ignoreUntilUp = false
 
-    /** Widget maintenu : il s'agrandit ([Listener.onExpand]). Le mode Modifier s'ouvre par le crayon de la barre. */
-    private val expand = Runnable {
-        val placed = placedAt(downX, downY)?.takeIf { it.type.zoomable && !blocked(it) } ?: return@Runnable
+    /** Widget ou fond maintenu : le mode Modifier commence ([Listener.onEditRequest]). */
+    private val editRequest = Runnable {
         performHapticFeedback(HapticFeedbackConstants.LONG_PRESS)
         cancelChildren()
         ignoreUntilUp = true
-        listener?.onExpand(placed)
+        listener?.onEditRequest()
     }
-
-    private fun placedAt(x: Float, y: Float): Placed? = (childCount - 1 downTo 0).map(::getChildAt).firstOrNull { child ->
-        child.isVisible && x >= child.left && x < child.right && y >= child.top && y < child.bottom && placedOf(child) != null
-    }?.let(::placedOf)
 
     override fun dispatchTouchEvent(ev: MotionEvent): Boolean {
         if (editing) {
@@ -339,12 +359,12 @@ class WidgetGrid @JvmOverloads constructor(context: Context, attrs: AttributeSet
                 stolen = false; swiping = false; ignoreUntilUp = false
                 onSlider = sliderAt(ev.x, ev.y)
                 owner = ownerAt(ev.x, ev.y)
-                if (GestureRules.allowLongPress(owner, onSlider)) postDelayed(expand, longPress)
+                if (GestureRules.allowLongPress(owner, onSlider)) postDelayed(editRequest, longPress)
             }
             MotionEvent.ACTION_MOVE -> {
                 val dx = ev.x - downX
                 val dy = ev.y - downY
-                if (abs(dx) > slop || abs(dy) > slop) removeCallbacks(expand)
+                if (abs(dx) > slop || abs(dy) > slop) removeCallbacks(editRequest)
                 if (!stolen && GestureRules.allowSwipe(owner, onSlider, narrow) && abs(dy) > slop * 2 && abs(dy) > abs(dx) * 2 &&
                     !scrollsAt(downX, downY, if (dy < 0) 1 else -1)
                 ) {
@@ -355,7 +375,7 @@ class WidgetGrid @JvmOverloads constructor(context: Context, attrs: AttributeSet
                 if (swiping) listener?.onPageDrag(dy)
             }
             MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> {
-                removeCallbacks(expand)
+                removeCallbacks(editRequest)
                 if (swiping && ev.actionMasked == MotionEvent.ACTION_UP) {
                     val dy = ev.y - downY
                     // Vers le haut : profil suivant, qui arrive par le bas (Look.sharedAxis de HomeFragment.showProfile).
@@ -483,6 +503,7 @@ class WidgetGrid @JvmOverloads constructor(context: Context, attrs: AttributeSet
         class Remove(val placed: Placed) : Hit()
         class Resize(val view: View, val placed: Placed) : Hit()
         class Settings(val placed: Placed) : Hit()
+        class Expand(val placed: Placed) : Hit()
         class Body(val view: View, val placed: Placed) : Hit()
         class Empty(val col: Int, val row: Int) : Hit()
     }
@@ -537,6 +558,7 @@ class WidgetGrid @JvmOverloads constructor(context: Context, attrs: AttributeSet
                         is Hit.Remove -> listener?.onRemove(hit.placed)
                         is Hit.Resize -> Unit
                         is Hit.Settings -> listener?.onSettings(hit.placed)
+                        is Hit.Expand -> listener?.onExpand(hit.placed)
                         is Hit.Empty -> listener?.onAddAt(hit.col, hit.row)
                         is Hit.Body -> if (listener?.hasSettings(hit.placed) == true) listener?.onSettings(hit.placed)
                     }
@@ -598,9 +620,13 @@ class WidgetGrid @JvmOverloads constructor(context: Context, attrs: AttributeSet
             val child = getChildAt(i)
             val placed = placedOf(child) ?: continue
             if (child.visibility != View.VISIBLE) continue
-            if (removeRect(child).touchable().contains(x, y)) return Hit.Remove(placed)
-            if (listener?.hasSettings(placed) == true && settingsRect(child).touchable().contains(x, y)) return Hit.Settings(placed)
-            if (placed.type.sizes.size > 1 && resizeRect(child).touchable().contains(x, y)) return Hit.Resize(child, placed)
+            val button = buttonsOf(placed).firstOrNull { buttonRect(child, it).touchable().contains(x, y) } ?: continue
+            return when (button) {
+                EditButton.REMOVE -> Hit.Remove(placed)
+                EditButton.SETTINGS -> Hit.Settings(placed)
+                EditButton.RESIZE -> Hit.Resize(child, placed)
+                EditButton.EXPAND -> Hit.Expand(placed)
+            }
         }
         for (i in childCount - 1 downTo 0) {
             val child = getChildAt(i)
@@ -631,6 +657,23 @@ class WidgetGrid @JvmOverloads constructor(context: Context, attrs: AttributeSet
     /** Poignée de redimensionnement : coin bas-droit, dans le widget. */
     private fun resizeRect(v: View) = RectF((v.right - inset - button).toFloat(), (v.bottom - inset - button).toFloat(), (v.right - inset).toFloat(), (v.bottom - inset).toFloat())
 
+    /** Agrandir : coin bas-gauche, dans le widget. */
+    private fun expandRect(v: View) = RectF((v.left + inset).toFloat(), (v.bottom - inset - button).toFloat(), (v.left + inset + button).toFloat(), (v.bottom - inset).toFloat())
+
+    private fun buttonRect(v: View, b: EditButton) = when (b) {
+        EditButton.REMOVE -> removeRect(v)
+        EditButton.SETTINGS -> settingsRect(v)
+        EditButton.RESIZE -> resizeRect(v)
+        EditButton.EXPAND -> expandRect(v)
+    }
+
+    /** Un widget voilé (ordinateur injoignable) ne s'agrandit pas : son grand exemplaire n'aurait rien à montrer. */
+    private fun buttonsOf(placed: Placed) = EditButtons.of(
+        expandable = placed.type.zoomable && !blocked(placed),
+        hasSettings = listener?.hasSettings(placed) == true,
+        resizable = placed.type.sizes.size > 1,
+    )
+
     /** Cadre des cases de `size` à partir de (`col`, `row`) : la taille calée sur la grille, pour le dépôt et le redimensionnement. */
     private fun cellFrame(col: Int, row: Int, size: WidgetSize): RectF {
         val left = columns.left(col)
@@ -657,9 +700,15 @@ class WidgetGrid @JvmOverloads constructor(context: Context, attrs: AttributeSet
             stroke.color = accent
             val radius = 20 * density
             canvas.drawRoundRect(RectF(child.left.toFloat(), child.top.toFloat(), child.right.toFloat(), child.bottom.toFloat()), radius, radius, stroke)
-            drawRound(canvas, removeRect(child), ko) { r -> drawIcon(canvas, removeIcon, r) }
-            if (placed.type.sizes.size > 1) drawRound(canvas, resizeRect(child), raised) { r -> drawIcon(canvas, resizeIcon, r) }
-            if (listener?.hasSettings(placed) == true) drawRound(canvas, settingsRect(child), raised) { r -> drawIcon(canvas, settingsIcon, r) }
+            for (b in buttonsOf(placed)) {
+                val icon = when (b) {
+                    EditButton.REMOVE -> removeIcon
+                    EditButton.SETTINGS -> settingsIcon
+                    EditButton.RESIZE -> resizeIcon
+                    EditButton.EXPAND -> expandIcon
+                }
+                drawRound(canvas, buttonRect(child, b), if (b == EditButton.REMOVE) ko else raised) { r -> drawIcon(canvas, icon, r) }
+            }
             canvas.restore()
         }
         if (dragging) {
@@ -715,3 +764,6 @@ class WidgetGrid @JvmOverloads constructor(context: Context, attrs: AttributeSet
         }
     }
 }
+
+/** Décalage des ids TalkBack des boutons Agrandir (ceux des poignées sont l'indice du widget, toujours plus petit). */
+private const val EXPAND_ID = 10_000
