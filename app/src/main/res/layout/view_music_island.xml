@@ -1,15 +1,18 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Îlot du lecteur ouvert (MusicIsland), posé par-dessus l'écran sous la pastille : pochette, titre et artiste en entier,
-     barre d'avancement, grands boutons Précédent, Lecture / Pause, Suivant. Place et découpe posées par le code. -->
+<!-- Îlot du lecteur ouvert (MusicIsland), posé par-dessus l'écran sous la pastille, à la manière de la Dynamic Island :
+     pochette, titre et artiste en entier, barres qui dansent, avancement, boutons sans fond. Fond, couleurs, place et
+     découpe posés par le code (encre foncée du thème, MiniPlayerLogic.islandInverted). -->
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:id="@+id/island_panel"
     android:layout_width="@dimen/music_island_width"
     android:layout_height="wrap_content"
-    android:background="@drawable/music_island_bg"
     android:clickable="true"
     android:focusable="false"
     android:orientation="vertical"
-    android:padding="20dp">
+    android:paddingStart="24dp"
+    android:paddingTop="20dp"
+    android:paddingEnd="24dp"
+    android:paddingBottom="12dp">
 
     <LinearLayout
         android:id="@+id/island_content"
@@ -25,8 +28,8 @@
 
             <ImageView
                 android:id="@+id/island_thumb"
-                android:layout_width="72dp"
-                android:layout_height="72dp"
+                android:layout_width="64dp"
+                android:layout_height="64dp"
                 android:background="@drawable/cover_bg"
                 android:importantForAccessibility="no"
                 android:scaleType="centerCrop" />
@@ -35,6 +38,7 @@
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
                 android:layout_marginStart="16dp"
+                android:layout_marginEnd="16dp"
                 android:layout_weight="1"
                 android:orientation="vertical">
 
@@ -44,68 +48,67 @@
                     android:layout_height="wrap_content"
                     android:ellipsize="end"
                     android:fontFamily="?attr/c_font_medium"
-                    android:maxLines="3"
-                    android:textColor="?attr/c_text"
+                    android:maxLines="2"
                     android:textSize="20sp" />
 
                 <TextView
                     android:id="@+id/island_artist"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:layout_marginTop="4dp"
+                    android:layout_marginTop="2dp"
                     android:ellipsize="end"
                     android:fontFamily="?attr/c_font_regular"
-                    android:maxLines="2"
-                    android:textColor="?attr/c_text_dim"
-                    android:textSize="14sp" />
+                    android:maxLines="1"
+                    android:textSize="15sp" />
             </LinearLayout>
+
+            <app.mate.ui.IslandBars
+                android:id="@+id/island_bars"
+                android:layout_width="25dp"
+                android:layout_height="22dp"
+                android:importantForAccessibility="no" />
         </LinearLayout>
 
         <LinearLayout
             android:id="@+id/island_timeline"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginTop="12dp"
-            android:orientation="vertical">
+            android:layout_marginTop="8dp"
+            android:gravity="center_vertical"
+            android:orientation="horizontal">
+
+            <TextView
+                android:id="@+id/island_position"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:fontFamily="?attr/c_font_regular"
+                android:fontFeatureSettings="tnum"
+                android:minWidth="40dp"
+                android:textSize="14sp" />
 
             <SeekBar
                 android:id="@+id/island_progress"
                 style="@style/Slider"
-                android:layout_width="match_parent"
+                android:layout_width="0dp"
+                android:layout_weight="1"
                 android:contentDescription="@string/media_seek"
-                android:paddingStart="8dp"
-                android:paddingEnd="8dp" />
+                android:paddingStart="12dp"
+                android:paddingEnd="12dp" />
 
-            <LinearLayout
-                android:layout_width="match_parent"
+            <TextView
+                android:id="@+id/island_duration"
+                android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:orientation="horizontal">
-
-                <TextView
-                    android:id="@+id/island_position"
-                    android:layout_width="0dp"
-                    android:layout_height="wrap_content"
-                    android:layout_weight="1"
-                    android:fontFamily="?attr/c_font_regular"
-                    android:fontFeatureSettings="tnum"
-                    android:textColor="?attr/c_text_dim"
-                    android:textSize="14sp" />
-
-                <TextView
-                    android:id="@+id/island_duration"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:fontFamily="?attr/c_font_regular"
-                    android:fontFeatureSettings="tnum"
-                    android:textColor="?attr/c_text_dim"
-                    android:textSize="14sp" />
-            </LinearLayout>
+                android:fontFamily="?attr/c_font_regular"
+                android:fontFeatureSettings="tnum"
+                android:gravity="end"
+                android:minWidth="40dp"
+                android:textSize="14sp" />
         </LinearLayout>
 
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginTop="12dp"
             android:gravity="center"
             android:orientation="horizontal">
 
@@ -114,19 +117,21 @@
                 style="@style/IconButton"
                 android:layout_width="56dp"
                 android:layout_height="56dp"
+                android:background="@null"
                 android:contentDescription="@string/media_previous"
-                android:padding="15dp"
+                android:padding="14dp"
                 android:src="@drawable/ic_skip_previous" />
 
             <ImageButton
                 android:id="@+id/island_play"
-                style="@style/IconButton.Primary"
+                style="@style/IconButton"
                 android:layout_width="64dp"
                 android:layout_height="64dp"
-                android:layout_marginStart="24dp"
-                android:layout_marginEnd="24dp"
+                android:layout_marginStart="32dp"
+                android:layout_marginEnd="32dp"
+                android:background="@null"
                 android:contentDescription="@string/media_play_pause"
-                android:padding="17dp"
+                android:padding="14dp"
                 android:src="@drawable/ic_pause" />
 
             <ImageButton
@@ -134,8 +139,9 @@
                 style="@style/IconButton"
                 android:layout_width="56dp"
                 android:layout_height="56dp"
+                android:background="@null"
                 android:contentDescription="@string/media_next"
-                android:padding="15dp"
+                android:padding="14dp"
                 android:src="@drawable/ic_skip" />
         </LinearLayout>
     </LinearLayout>

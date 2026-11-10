@@ -94,7 +94,7 @@ class PadCompact(context: Context, private val family: ShapeFamily) : LinearLayo
         val density = resources.displayMetrics.density
         val gestures = ScrollStrip(vertical, emit = ::send, slopPx = TAP_SLOP_PX * density, pxPerNotch = PX_PER_NOTCH * density).also { strip = it }
         return FrameLayout(context).apply {
-            setBackgroundResource(themeRes(context, R.attr.c_home_card_bg))
+            background = HomeCard.background(context)
             contentDescription = context.getString(if (vertical) R.string.pad_scroll_desc_v else R.string.pad_scroll_desc_h)
             addView(TextView(context).apply {
                 setText(if (vertical) R.string.pad_scroll_hint_v else R.string.pad_scroll_hint_h)

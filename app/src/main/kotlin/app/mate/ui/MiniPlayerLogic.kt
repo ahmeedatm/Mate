@@ -45,4 +45,15 @@ object MiniPlayerLogic {
 
     /** Opacité du contenu à l'avancement `t` de l'ouverture (0 : pastille, 1 : îlot ouvert). */
     fun contentAlpha(t: Float): Float = ((t - CONTENT_FROM) / (1f - CONTENT_FROM)).coerceIn(0f, 1f)
+
+    /** Opacité du bandeau (heure, cloche, titre…) à l'avancement `t` : effacé avant que le contenu de l'îlot n'apparaisse. */
+    fun barAlpha(t: Float): Float = (1f - t / CONTENT_FROM).coerceIn(0f, 1f)
+
+    /**
+     * Îlot à l'encre foncée du thème, comme la Dynamic Island : fond clair (luminance de `c_bg` au-dessus de
+     * [LIGHT_BG]), l'îlot prend la couleur du texte et son texte celle du fond ; fond sombre, il garde le fond.
+     */
+    fun islandInverted(bgLuminance: Double): Boolean = bgLuminance > LIGHT_BG
+
+    private const val LIGHT_BG = 0.5
 }

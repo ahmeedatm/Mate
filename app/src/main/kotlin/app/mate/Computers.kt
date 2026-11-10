@@ -43,7 +43,8 @@ data class Computer(
 
 /**
  * Ordinateurs connus de la tablette (bureau, maison…) et celui qu'elle pilote. Chaque ordinateur garde ses
- * propres données (agenda, tâches, deck, applis, écrans) : la tablette ne stocke que cette liste.
+ * propres données (agenda, tâches, deck, applis) ; la tablette garde cette liste et, pour chacun, ses écrans, son
+ * bandeau et sa barre ([ComputerConfig]).
  */
 object Computers {
     private const val FILE = "companion"
@@ -67,6 +68,7 @@ object Computers {
     /** Ajoute ou remplace (même `id`) ; remplace aussi un ordinateur provisoire de même adresse. */
     fun save(context: Context, computer: Computer, makeActive: Boolean = false) {
         val list = all(context).filterNot { it.id == computer.id || (it.provisional && it.url == computer.url && !computer.provisional) }
+        all(context).filter { it.provisional && it.url == computer.url && !computer.provisional }.forEach { ComputerConfig.move(context, it.id, computer.id) }
         val saved = if (makeActive) computer.copy(lastUsedMs = System.currentTimeMillis()) else computer
         write(context, list + saved)
         if (makeActive) prefs(context).edit().putString(KEY_ACTIVE, saved.id).apply()
@@ -82,12 +84,14 @@ object Computers {
 
     fun remove(context: Context, id: String) {
         write(context, all(context).filterNot { it.id == id })
+        ComputerConfig.forget(context, id)
         if (prefs(context).getString(KEY_ACTIVE, null) == id) prefs(context).edit().remove(KEY_ACTIVE).apply()
     }
 
     /** Un ordinateur provisoire a répondu avec son vrai identifiant : on l'adopte (l'adresse pourra changer). */
     fun adopt(context: Context, old: Computer, id: String, name: String, os: String): Computer {
         val wasActive = active(context)?.id == old.id
+        ComputerConfig.move(context, old.id, id)
         remove(context, old.id)
         val known = all(context).firstOrNull { it.id == id }
         val adopted = (known ?: old).copy(id = id, name = if (known != null) known.name else name, os = os, url = old.url, token = old.token, pin = old.pin)

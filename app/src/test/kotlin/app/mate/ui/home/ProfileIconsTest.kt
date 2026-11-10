@@ -3,6 +3,7 @@ package app.mate.ui.home
 import app.mate.FakeContext
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
+import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class ProfileIconsTest {
@@ -110,5 +111,31 @@ class ProfileIconsTest {
     fun `cles et icones de la grille sont uniques`() {
         assertEquals(ProfileIcons.ALL.size, ProfileIcons.ALL.map { it.key }.toSet().size)
         assertEquals(ProfileIcons.ALL.size, ProfileIcons.ALL.map { it.drawable }.toSet().size)
+    }
+
+    @Test
+    fun `les cles deja enregistrees gardent leur icone`() {
+        val before = listOf(
+            "home", "work", "dashboard", "widgets", "apps", "sound", "laptop", "display", "tablet", "keyboard", "code", "agents",
+            "chat", "mail", "call", "video", "mic", "present", "event", "tasks", "doc", "timer", "alarm", "book", "school", "idea",
+            "music", "note", "headphones", "camera", "palette", "image", "folder", "speed", "bolt", "fitness", "cafe", "water",
+            "cart", "flight", "place", "sun", "cloud", "night", "star", "valorant", "heart", "lock",
+        )
+        assertEquals(emptyList<String>(), before.filter { ProfileIcons.drawable(it) == null })
+    }
+
+    @Test
+    fun `la grille est rangee par themes, chaque icone dans un seul`() {
+        assertEquals(ProfileIcons.GROUPS.flatMap { it.icons }, ProfileIcons.ALL)
+        assertTrue(ProfileIcons.GROUPS.size >= 6)
+        assertTrue(ProfileIcons.GROUPS.all { it.icons.isNotEmpty() })
+        assertTrue(ProfileIcons.ALL.size >= 100)
+    }
+
+    @Test
+    fun `maison, sport, voyage, medias et nature ont leurs icones`() {
+        for (key in listOf("bed", "run", "train", "gamepad", "movie", "forest", "pets", "trophy")) {
+            assertTrue(key, ProfileIcons.drawable(key) != null)
+        }
     }
 }

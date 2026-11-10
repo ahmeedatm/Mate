@@ -15,7 +15,7 @@ import androidx.core.graphics.ColorUtils
 import app.mate.R
 
 /**
- * Vignette d'un thème dans Réglages > Personnalisation : un petit écran peint avec ses propres couleurs (fond, barre de
+ * Vignette d'un thème dans Réglages > Apparence : un petit écran peint avec ses propres couleurs (fond, barre de
  * gauche, carte avec « Aa » dans sa police de titres, pastille d'accent). Choisi : cadre de l'accent du thème
  * affiché. Thème à tubes (Cadran, Cadran nuit, Rétro, c_flow) : trois bandes de leurs couleurs à droite. Thème à fond
  * animé (Hush, c_backdrop) : un reflet violet et un rose sous la carte en verre. Thème à image de fond (Spider-Verse,
