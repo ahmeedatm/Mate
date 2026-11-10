@@ -208,6 +208,14 @@ class SettingsFragment :
         tabletInfo = view.findViewById(R.id.settings_tablet_info)
         setUpTablet()
         setUpThemes(view.findViewById(R.id.settings_themes))
+        view.findViewById<SwitchCompat>(R.id.settings_grain).apply {
+            isChecked = Prefs.grain(context)
+            // Le grain se pose à la création de l'activité (ui/Grain), comme le thème : la recréer.
+            setOnCheckedChangeListener { _, on ->
+                Prefs.setGrain(context, on)
+                requireActivity().recreate()
+            }
+        }
         setUpRail(view)
         setUpAccessibility(view)
         setUpReadingAids(view)

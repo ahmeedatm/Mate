@@ -593,7 +593,7 @@
                         android:text="@string/schedule_open" />
                 </LinearLayout>
 
-                <!-- Thème : ambiances prédéfinies (ui/Themes.kt), pastilles ajoutées par SettingsFragment. -->
+                <!-- Thème : ambiances prédéfinies (ui/Themes.kt), pastilles ajoutées par SettingsFragment, puis le grain (ui/Grain). -->
                 <LinearLayout
                     style="@style/Card"
                     android:layout_width="match_parent"
@@ -612,6 +612,22 @@
                         android:layout_height="wrap_content"
                         android:layout_marginTop="14dp"
                         android:orientation="vertical" />
+
+                    <androidx.appcompat.widget.SwitchCompat
+                        android:id="@+id/settings_grain"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="16dp"
+                        android:minHeight="48dp"
+                        android:text="@string/theme_grain"
+                        android:textSize="16sp" />
+
+                    <TextView
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:text="@string/theme_grain_hint"
+                        android:textColor="?attr/c_text_dim"
+                        android:textSize="14sp" />
                 </LinearLayout>
 
                 <!-- Barre de gauche : noms sous les icônes, bouton Parler, outils affichés (Prefs.railLabels, railTalk, railTools). -->

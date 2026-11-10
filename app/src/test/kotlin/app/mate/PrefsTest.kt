@@ -27,6 +27,13 @@ class PrefsTest {
     }
 
     @Test
+    fun `grain eteint par defaut, puis retenu`() {
+        assertFalse(Prefs.grain(context))
+        Prefs.setGrain(context, true)
+        assertTrue(Prefs.grain(context))
+    }
+
+    @Test
     fun `luminosite automatique desactivee par defaut, puis retenue`() {
         assertFalse(Prefs.autoBrightness(context))
         Prefs.setAutoBrightness(context, true)

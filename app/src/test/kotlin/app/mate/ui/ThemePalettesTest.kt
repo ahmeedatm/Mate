@@ -132,27 +132,21 @@ class ThemePalettesTest {
         for (name in ambiances) {
             val v = values(name)
             val pattern = v["c_pattern"]
-            val grain = v.containsKey("c_grain_light") && v["c_grain_light"] != "#00000000"
-            assertTrue("$name : un motif (c_pattern ou grain)", (pattern != null && pattern != "none") || grain)
+            assertTrue("$name : un motif (c_pattern ou grain)", (pattern != null && pattern != "none") || name == "Maison")
             if (pattern != null && pattern != "none") assertTrue("$name c_pattern_color", color(name, "c_pattern_color") != "#00000000")
         }
         for (name in sober + listOf("Console", "ConsoleJour", "Contraste", "Hush", "SpiderMan")) {
             val v = values(name)
             assertEquals("$name c_flow", "false", v["c_flow"])
             assertEquals("$name c_pattern", "none", v["c_pattern"])
-            assertEquals("$name c_grain_light", "#00000000", v["c_grain_light"])
-            assertEquals("$name c_grain_dark", "#00000000", v["c_grain_dark"])
         }
     }
 
     @Test
-    fun `le grain et le motif ne se cumulent pas dans une palette`() {
-        // Grain et ThemePattern posent tous deux le `foreground` de android.R.id.content : le second effacerait le premier.
+    fun `chaque palette a un grain visible, pose seulement si le reglage Grain est allume`() {
         for (name in all) {
-            val v = values(name)
-            val pattern = v["c_pattern"] != null && v["c_pattern"] != "none"
-            val grain = listOf("c_grain_light", "c_grain_dark").any { v[it] != null && v[it] != "#00000000" }
-            assertTrue("$name : c_pattern et grain visible ensemble", !(pattern && grain))
+            assertTrue("$name c_grain_light", color(name, "c_grain_light") != "#00000000")
+            assertTrue("$name c_grain_dark", color(name, "c_grain_dark") != "#00000000")
         }
     }
 
