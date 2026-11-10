@@ -148,7 +148,7 @@ class SettingsFragment :
             R.id.settings_tab_computers to R.id.settings_page_computers,
             R.id.settings_tab_system to R.id.settings_page_system,
         ).map { (tab, page) -> view.findViewById<View>(tab) to view.findViewById(page) }
-        tabs.forEachIndexed { i, (tab, _) -> tab.setOnClickListener { showTab(SettingsTab.entries[i]) } }
+        tabs.forEachIndexed { i, (chip, _) -> chip.setOnClickListener { showTab(SettingsTab.entries[i]) } }
         showTab(SettingsTab.fromSaved(state?.getString(KEY_TAB)))
         computers = view.findViewById(R.id.settings_computers)
         view.findViewById<Button>(R.id.settings_add_computer).setOnClickListener { adder.search() }
