@@ -19,6 +19,11 @@ val updateToken = (findProperty("updateToken") as String?) ?: ""
 // Serveur HTTP simple à la place de GitHub, pour un essai local : -PupdateUrl=http://10.0.2.2:8099 (essais sous /essais).
 val updateUrl = (findProperty("updateUrl") as String?) ?: ""
 
+// Clé de lecture de l'API temps réel d'IDFM (widget Transports), lecture seule, gratuite, limitée en débit : même niveau
+// de risque que le jeton de mise à jour. Dans l'APK, jamais dans le dépôt : la CI release passe le secret IDFM_TOKEN
+// (-PidfmToken=…), vide en debug et en essai (aucun passage lu). Créée sur prim.iledefrance-mobilites.fr.
+val idfmToken = (findProperty("idfmToken") as String?) ?: ""
+
 // Version : celle du tag vX.Y.Z en CI (-PappVersion=X.Y.Z). versionCode = (X × 10000 + Y × 100 + Z) × 1000, toujours croissant.
 // Essai depuis une PR : -PappVersion=X.Y.Z-essai.N, X.Y.Z = dernier tag de la branche, N = numéro
 // d'exécution de la CI ; code = celui du tag + 1 + N mod 999 : au-dessus du tag, sous le suivant.
@@ -58,6 +63,7 @@ android {
         buildConfigField("String", "UPDATE_URL", "\"$updateUrl\"")
         buildConfigField("String", "UPDATE_REPO", "\"$updateRepo\"")
         buildConfigField("String", "UPDATE_TOKEN", "\"$updateToken\"")
+        buildConfigField("String", "IDFM_TOKEN", "\"$idfmToken\"")
         // Bibliothèques natives de Vosk (10 Mo par ABI) : la tablette (arm64-v8a), les lots 32 bits (armeabi-v7a) et
         // l'émulateur (x86_64) ; x86, armeabi et mips n'ont pas de Vosk de toute façon.
         ndk { abiFilters += listOf("arm64-v8a", "armeabi-v7a", "x86_64") }

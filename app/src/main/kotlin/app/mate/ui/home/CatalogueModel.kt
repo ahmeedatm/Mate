@@ -70,7 +70,7 @@ val SUGGESTED = listOf(WidgetType.CLOCK, WidgetType.WEATHER, WidgetType.NEXT)
 /** Rayons du catalogue, ceux des issues #180 à #186 (et des blocs de [WidgetSamples]). */
 enum class CatalogueShelf(@StringRes val title: Int, val types: List<WidgetType>) {
     SUGGESTIONS(R.string.catalogue_shelf_suggestions, SUGGESTED),
-    DAY(R.string.catalogue_shelf_day, listOf(WidgetType.CLOCK, WidgetType.HERO, WidgetType.DAY, WidgetType.DAYLINE, WidgetType.WEATHER, WidgetType.NEXT, WidgetType.AGENDA)),
+    DAY(R.string.catalogue_shelf_day, listOf(WidgetType.CLOCK, WidgetType.HERO, WidgetType.DAY, WidgetType.DAYLINE, WidgetType.WEATHER, WidgetType.TRANSPORT, WidgetType.NEXT, WidgetType.AGENDA)),
     LISTS(R.string.catalogue_shelf_lists, listOf(WidgetType.TASKS, WidgetType.SHOPPING, WidgetType.CHECKLIST, WidgetType.NOTE, WidgetType.MEALS, WidgetType.NEWS, WidgetType.MAIL)),
     SOUND(R.string.catalogue_shelf_sound, listOf(WidgetType.AUDIO, WidgetType.MEDIA, WidgetType.MIXER, WidgetType.YTMUSIC)),
     COMPUTER(R.string.catalogue_shelf_computer, listOf(WidgetType.KEYS, WidgetType.APPS, WidgetType.OPEN, WidgetType.PAD, WidgetType.SCREEN, WidgetType.PERF, WidgetType.WEB)),

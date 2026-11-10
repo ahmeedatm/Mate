@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Train stylisé (viewport Material 960), teinté par le code comme les autres icônes de widget. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp"
+    android:height="24dp"
+    android:viewportWidth="960"
+    android:viewportHeight="960">
+    <path
+        android:fillColor="#FFFFFFFF"
+        android:fillType="evenOdd"
+        android:pathData="M280,120 L680,120 Q720,120 720,160 L720,560 Q720,600 680,600 L280,600 Q240,600 240,560 L240,160 Q240,120 280,120 Z M300,200 L450,200 L450,320 L300,320 Z M510,200 L660,200 L660,320 L510,320 Z M300,600 L370,600 L330,720 L270,720 Z M590,600 L660,600 L690,720 L630,720 Z" />
+</vector>
