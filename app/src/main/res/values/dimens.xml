@@ -3,6 +3,6 @@
     <!-- Bandeau du haut (ui/topbar/TopBar) : l'écran du mode commence dessous. -->
     <dimen name="top_bar_height">60dp</dimen>
     <!-- Îlot du lecteur (ui/MusicIsland) : largeur et rayon, repris par le code pour la découpe animée. -->
-    <dimen name="music_island_width">460dp</dimen>
-    <dimen name="music_island_radius">28dp</dimen>
+    <dimen name="music_island_width">520dp</dimen>
+    <dimen name="music_island_radius">40dp</dimen>
 </resources>

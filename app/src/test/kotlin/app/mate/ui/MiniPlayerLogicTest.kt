@@ -73,4 +73,23 @@ class MiniPlayerLogicTest {
         assertEquals(1f, MiniPlayerLogic.contentAlpha(1.05f), 0f)
         assertTrue(MiniPlayerLogic.contentAlpha(0.7f) in 0.4f..0.6f)
     }
+
+    @Test
+    fun `le bandeau s'efface pendant que l'îlot s'ouvre et revient à la fermeture`() {
+        assertEquals(1f, MiniPlayerLogic.barAlpha(0f), 0f)
+        // Effacé avant que le contenu de l'îlot n'apparaisse : les deux textes ne se croisent pas.
+        assertEquals(0f, MiniPlayerLogic.barAlpha(0.4f), 0f)
+        assertEquals(0f, MiniPlayerLogic.barAlpha(1.05f), 0f)
+        assertTrue(MiniPlayerLogic.barAlpha(0.2f) in 0.4f..0.6f)
+        // Ressort qui repart un peu sous 0 à la fermeture : le bandeau reste plein.
+        assertEquals(1f, MiniPlayerLogic.barAlpha(-0.05f), 0f)
+    }
+
+    @Test
+    fun `l'îlot prend l'encre foncée du thème`() {
+        // Thème clair (fond crème) : l'îlot prend la couleur du texte, le texte de l'îlot celle du fond.
+        assertTrue(MiniPlayerLogic.islandInverted(0.95))
+        // Thème sombre : l'îlot garde le fond, déjà foncé.
+        assertFalse(MiniPlayerLogic.islandInverted(0.01))
+    }
 }

@@ -1,9 +1,11 @@
 package app.mate.ui
 
 import android.annotation.SuppressLint
+import android.content.res.ColorStateList
 import android.graphics.Outline
 import android.graphics.Rect
 import android.graphics.drawable.Drawable
+import android.graphics.drawable.GradientDrawable
 import android.view.LayoutInflater
 import android.view.MotionEvent
 import android.view.View
@@ -15,6 +17,8 @@ import android.widget.ImageButton
 import android.widget.ImageView
 import android.widget.SeekBar
 import android.widget.TextView
+import androidx.core.graphics.ColorUtils
+import androidx.core.widget.ImageViewCompat
 import androidx.dynamicanimation.animation.SpringAnimation
 import app.mate.AnimFamily
 import app.mate.R
@@ -22,8 +26,10 @@ import app.mate.net.MediaSession
 
 /**
  * Lecteur ouvert d'un toucher sur la pastille ([MusicChip]), à la manière de la Dynamic Island : la pastille s'étire
- * sur place en un îlot (découpe animée de ses bords à ceux de l'îlot, puis le contenu apparaît), posé par-dessus l'écran.
- * Titre et artiste en entier, barre d'avancement (toucher ou glisser pour avancer), grands boutons. Se referme après
+ * sur place en un îlot (découpe animée de ses bords à ceux de l'îlot, puis le contenu apparaît), posé par-dessus l'écran,
+ * à l'encre foncée du thème ([MiniPlayerLogic.islandInverted]) ; le bandeau du haut ([topBar]) s'efface le temps qu'il est
+ * ouvert. Titre et artiste en entier, barres qui dansent, avancement (toucher ou glisser pour avancer), temps restant,
+ * boutons sans fond. Se referme après
  * [MiniPlayerLogic.AUTO_CLOSE_MS] sans toucher, ou au premier toucher ailleurs (qui ne va pas à l'écran dessous).
  * La découpe et le fondu suivent un seul ressort : seuls le contour et l'opacité changent, rien n'est remis en page.
  */
@@ -32,6 +38,8 @@ class MusicIsland(
     private val control: (action: String, positionMs: Long?) -> Unit,
     /** Îlot retiré : la pastille décide de se remontrer ou non (cadre photo, mode Modifier, plus rien en lecture). */
     private val onClosed: () -> Unit,
+    /** Bandeau du haut, effacé pendant que l'îlot est ouvert (heure, cloche, titre de l'écran…). */
+    private val topBar: () -> View?,
 ) {
 
     private val context = chip.context
@@ -48,6 +56,7 @@ class MusicIsland(
     private val previous: ImageButton
     private val play: ImageButton
     private val next: ImageButton
+    private val bars: IslandBars
     private val autoClose = Runnable { close() }
 
     /** Bords de la pastille dans le repère de l'îlot, au moment de l'ouverture : point de départ de la découpe. */
@@ -83,6 +92,8 @@ class MusicIsland(
         previous = overlay.findViewById(R.id.island_previous)
         play = overlay.findViewById(R.id.island_play)
         next = overlay.findViewById(R.id.island_next)
+        bars = overlay.findViewById(R.id.island_bars)
+        paint()
         previous.setOnClickListener { control("previous", null) }
         next.setOnClickListener { control("next", null) }
         play.setOnClickListener {
@@ -93,7 +104,7 @@ class MusicIsland(
         progress.setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
             override fun onProgressChanged(bar: SeekBar, value: Int, fromUser: Boolean) {
                 if (!fromUser) return
-                position.text = MiniPlayerLogic.clock(value * 1000L)
+                showTime(value * 1000L, bar.max * 1000L)
                 // Sans glisser (TalkBack, touches) : pas de fin de glissé, on avance tout de suite.
                 if (!seeking) control("seek", value * 1000L)
             }
@@ -127,6 +138,7 @@ class MusicIsland(
             root.addView(overlay, ViewGroup.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT))
         }
         chip.visibility = View.INVISIBLE
+        bars.animated = Look.on(context, AnimFamily.DIALOGS)
         animateTo(1f) {}
         armAutoClose()
     }
@@ -162,6 +174,10 @@ class MusicIsland(
         overlay.removeCallbacks(autoClose)
         t = 0f
         seeking = false
+        topBar()?.apply {
+            alpha = 1f
+            setLayerType(View.LAYER_TYPE_NONE, null)
+        }
     }
 
     /** Lecture relue par la pastille : titre, avancement, boutons. Rien ne change pendant qu'on glisse la barre. */
@@ -174,6 +190,7 @@ class MusicIsland(
         setIfChanged(artist, subtitle)
         artist.visibility = if (subtitle == null) View.GONE else View.VISIBLE
         if (shown.playing != iconPlaying) showPlaying(shown.playing)
+        bars.playing = shown.playing
         enable(previous, shown.canPrevious)
         enable(play, shown.canPlayPause)
         enable(next, shown.canNext)
@@ -184,8 +201,38 @@ class MusicIsland(
         progress.isEnabled = MiniPlayerLogic.seekable(shown)
         progress.max = (total / 1000).toInt()
         progress.progress = ((shown.positionMs ?: 0) / 1000).toInt()
-        position.text = MiniPlayerLogic.clock(shown.positionMs ?: 0)
-        setIfChanged(duration, MiniPlayerLogic.clock(total))
+        showTime(shown.positionMs ?: 0, total)
+    }
+
+    /** Avancement à gauche, temps restant à droite (« -3:00 »), comme sur l'iPhone. */
+    private fun showTime(positionMs: Long, totalMs: Long) {
+        position.text = MiniPlayerLogic.clock(positionMs)
+        setIfChanged(duration, "-" + MiniPlayerLogic.clock((totalMs - positionMs).coerceAtLeast(0)))
+    }
+
+    /** Encre foncée du thème : fond de l'îlot, textes, boutons, barre d'avancement et barres qui dansent. */
+    private fun paint() {
+        val bg = themeColor(context, R.attr.c_bg)
+        val text = themeColor(context, R.attr.c_text)
+        val inverted = MiniPlayerLogic.islandInverted(ColorUtils.calculateLuminance(bg))
+        val fill = if (inverted) text else bg
+        val ink = if (inverted) bg else text
+        val dim = ColorUtils.setAlphaComponent(ink, DIM_ALPHA)
+        panel.background = GradientDrawable().apply {
+            setColor(fill)
+            cornerRadius = radius
+            // Thème sombre : l'îlot a la couleur du fond, un filet le détache.
+            if (!inverted) setStroke(context.dp(1), themeColor(context, R.attr.c_stroke))
+        }
+        title.setTextColor(ink)
+        for (view in listOf(artist, position, duration)) view.setTextColor(dim)
+        for (button in listOf(previous, play, next)) ImageViewCompat.setImageTintList(button, ColorStateList.valueOf(ink))
+        progress.progressTintList = ColorStateList.valueOf(ink)
+        progress.thumbTintList = ColorStateList.valueOf(ink)
+        progress.progressBackgroundTintList = ColorStateList.valueOf(ColorUtils.setAlphaComponent(ink, TRACK_ALPHA))
+        // L'accent du thème s'il se voit sur l'îlot (icône : 3:1), sinon l'encre.
+        val accent = themeColor(context, R.attr.c_accent)
+        bars.setColor(if (ColorUtils.calculateContrast(accent, fill) >= ICON_CONTRAST) accent else ink)
     }
 
     /** Sous la pastille, un peu plus haut qu'elle, centré sur elle ; et les bords de la pastille, d'où part la découpe. */
@@ -215,9 +262,11 @@ class MusicIsland(
         spring?.cancel()
         val animated = Look.on(context, AnimFamily.DIALOGS)
         content.setLayerType(View.LAYER_TYPE_HARDWARE, null)
+        topBar()?.setLayerType(View.LAYER_TYPE_HARDWARE, null)
         val token = if (target > t) Look.SPATIAL_DEFAULT else Look.SPATIAL_FAST
         val finish = {
             content.setLayerType(View.LAYER_TYPE_NONE, null)
+            topBar()?.setLayerType(View.LAYER_TYPE_NONE, null)
             onEnd()
         }
         if (!animated) {
@@ -231,6 +280,7 @@ class MusicIsland(
     private fun step(value: Float) {
         t = value
         content.alpha = MiniPlayerLogic.contentAlpha(value)
+        topBar()?.alpha = MiniPlayerLogic.barAlpha(value)
         panel.invalidateOutline()
     }
 
@@ -285,6 +335,13 @@ class MusicIsland(
         /** L'îlot monte un peu au-dessus de la pastille : il en sort, il ne pend pas dessous. */
         const val RISE_DP = 6
         const val DISABLED_ALPHA = 0.4f
+
+        /** Artiste et temps sur l'îlot : l'encre estompée (65 %). */
+        const val DIM_ALPHA = 166
+
+        /** Rail de la barre d'avancement : l'encre à 25 %. */
+        const val TRACK_ALPHA = 64
+        const val ICON_CONTRAST = 3.0
 
         fun lerp(a: Int, b: Int, k: Float): Int = (a + (b - a) * k).toInt()
         fun lerp(a: Float, b: Float, k: Float): Float = a + (b - a) * k
