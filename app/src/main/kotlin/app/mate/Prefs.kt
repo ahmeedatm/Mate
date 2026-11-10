@@ -266,7 +266,7 @@ object Prefs {
     }
 
     /**
-     * Ordinateur verrouillé : la tablette se bloque (écran plein de ui/LockScreen). Coupé (Réglages > Tablette), elle reste
+     * Ordinateur verrouillé : la tablette se bloque (écran plein de ui/LockScreen). Coupé (Réglages > Notifs et verrou), elle reste
      * utilisable et la pastille de la barre dit « verrouillé ». Activé par défaut.
      */
     fun blockOnComputerLock(context: Context): Boolean = prefs(context).getBoolean(KEY_BLOCK_ON_COMPUTER_LOCK, true)

@@ -7,8 +7,15 @@
     <string name="mode_focus">Focus</string>
     <string name="mode_camera">Caméra</string>
     <string name="mode_settings">Réglages</string>
-    <string name="settings_tab_setup">Configuration</string>
-    <string name="settings_tab_options">Personnalisation</string>
+    <string name="settings_tab_look">Apparence</string>
+    <string name="settings_tab_tablet">Tablette</string>
+    <string name="settings_tab_notifs">Notifs et verrou</string>
+    <string name="settings_tab_voice">Voix et accès</string>
+    <string name="settings_tab_computers">Ordinateurs</string>
+    <string name="settings_tab_system">Système</string>
+    <string name="settings_notifications">Notifications</string>
+    <string name="settings_lock">Verrou</string>
+    <string name="settings_voice_command">Commande vocale</string>
 
     <!-- Commun -->
     <string name="error_no_computer">Aucun ordinateur connecté : Réglages › Ordinateurs › Ajouter.</string>

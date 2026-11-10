@@ -81,8 +81,8 @@ class SettingsFragment :
     private lateinit var kioskCard: View
     private lateinit var tabs: List<Pair<View, View>>
 
-    /** Onglet Personnalisation affiché (sinon Configuration) ; gardé quand un thème recrée l'écran. */
-    private var optionsTab = true
+    /** Onglet affiché ; gardé quand un thème recrée l'écran. */
+    private var tab = SettingsTab.DEFAULT
     private lateinit var kioskStatus: TextView
     private lateinit var kioskActions: View
     private lateinit var allowInstalls: SwitchCompat
@@ -139,13 +139,17 @@ class SettingsFragment :
         // Interrupteurs rendus depuis Prefs ou l'appareil : sans état de vue gardé. Sinon, à la recréation (choix d'un
         // thème), Android y remet l'ancien état après le rendu et leur écouteur réécrit la valeur d'avant.
         forgetSwitchStates(view)
+        // Dans l'ordre de SettingsTab.entries : un onglet et sa page.
         tabs = listOf(
-            view.findViewById<View>(R.id.settings_tab_setup) to view.findViewById(R.id.settings_setup),
-            view.findViewById<View>(R.id.settings_tab_options) to view.findViewById(R.id.settings_options),
-        )
-        tabs.forEachIndexed { i, (tab, _) -> tab.setOnClickListener { showTab(options = i == 1) } }
-        // Personnalisation d'abord : c'est l'onglet qu'on ouvre le plus.
-        showTab(options = state?.getBoolean(KEY_OPTIONS_TAB) ?: true)
+            R.id.settings_tab_look to R.id.settings_page_look,
+            R.id.settings_tab_tablet to R.id.settings_page_tablet,
+            R.id.settings_tab_notifs to R.id.settings_page_notifs,
+            R.id.settings_tab_voice to R.id.settings_page_voice,
+            R.id.settings_tab_computers to R.id.settings_page_computers,
+            R.id.settings_tab_system to R.id.settings_page_system,
+        ).map { (tab, page) -> view.findViewById<View>(tab) to view.findViewById(page) }
+        tabs.forEachIndexed { i, (tab, _) -> tab.setOnClickListener { showTab(SettingsTab.entries[i]) } }
+        showTab(SettingsTab.fromSaved(state?.getString(KEY_TAB)))
         computers = view.findViewById(R.id.settings_computers)
         view.findViewById<Button>(R.id.settings_add_computer).setOnClickListener { adder.search() }
         view.findViewById<Button>(R.id.settings_plugins).setOnClickListener { main.showPlugins() }
@@ -262,15 +266,15 @@ class SettingsFragment :
 
     override fun onSaveInstanceState(outState: Bundle) {
         super.onSaveInstanceState(outState)
-        outState.putBoolean(KEY_OPTIONS_TAB, optionsTab)
+        outState.putString(KEY_TAB, tab.name)
     }
 
-    /** Configuration (ordinateurs, WiFi, plugins, démo, kiosque…) ou Personnalisation (thème, options) ; remonte en haut. */
-    private fun showTab(options: Boolean) {
-        optionsTab = options
-        tabs.forEachIndexed { i, (tab, cards) ->
-            val on = (i == 1) == options
-            tab.isSelected = on
+    /** Montre la page d'un onglet (ui/SettingsTab.kt), cache les autres ; remonte en haut. */
+    private fun showTab(shown: SettingsTab) {
+        tab = shown
+        tabs.forEachIndexed { i, (chip, cards) ->
+            val on = i == shown.ordinal
+            chip.isSelected = on
             cards.visibility = if (on) View.VISIBLE else View.GONE
         }
         view?.findViewById<ScrollView>(R.id.settings_scroll)?.scrollTo(0, 0)
@@ -798,7 +802,7 @@ class SettingsFragment :
     }
 
     /** Ouvre sur l'ordinateur la page du compagnon, carte Réglages de la tablette en avant. */
-    /** « Régler depuis l'ordi » en tête de Personnalisation, seulement avec un ordinateur appairé. */
+    /** « Régler depuis l'ordi » en tête de l'onglet Ordinateurs, seulement avec un ordinateur appairé. */
     private fun renderRemote() {
         val visibility = if (Computers.active(requireContext()) != null) View.VISIBLE else View.GONE
         view?.findViewById<View>(R.id.settings_remote_card)?.visibility = visibility
@@ -1207,7 +1211,7 @@ class SettingsFragment :
             if (input.text.toString() == BuildConfig.TECH_CODE) {
                 dialog.dismiss()
                 technician = true
-                showTab(options = false)
+                showTab(SettingsTab.TECHNICIAN)
                 kioskCard.visibility = View.VISIBLE
                 renderKiosk()
                 renderSwitchApp()
@@ -1310,7 +1314,7 @@ class SettingsFragment :
     }
 
     private companion object {
-        const val KEY_OPTIONS_TAB = "settings_options_tab"
+        const val KEY_TAB = "settings_tab"
 
         /** Vignettes de thème par rangée. */
         const val THEME_COLUMNS = 5
