@@ -118,7 +118,8 @@ class TransportWidget(context: Context, host: HomeHost, placed: Placed) : HomeWi
             if (shape.title) view.addView(head)
             view.addView(rows, LinearLayout.LayoutParams(MATCH_PARENT, 0, 1f).apply { topMargin = if (shape.title) dp(8) else 0 })
         }
-        view.addView(status, LinearLayout.LayoutParams(MATCH_PARENT, WRAP_CONTENT))
+        // Même marge haute que la liste quand il y a un en-tête, pour que le message ne colle pas au titre.
+        view.addView(status, LinearLayout.LayoutParams(MATCH_PARENT, WRAP_CONTENT).apply { if (!shape.side) topMargin = dp(8) })
         render()
     }
 
@@ -164,9 +165,9 @@ class TransportWidget(context: Context, host: HomeHost, placed: Placed) : HomeWi
 
         if (shape.side) {
             renderLead(live, now, stop)
-            renderRows(live.drop(1).take(shape.rows), now)
+            renderRows(live.drop(1).take(shape.rows), now, highlightFirst = false)
         } else {
-            renderRows(live.take(shape.rows), now)
+            renderRows(live.take(shape.rows), now, highlightFirst = true)
         }
     }
 
@@ -185,23 +186,31 @@ class TransportWidget(context: Context, host: HomeHost, placed: Placed) : HomeWi
             bigUnit.visibility = View.VISIBLE
             bigUnit.setText(R.string.widget_transport_unit)
         }
-        // Direction (destination) puis arrêt ; en Pastille, juste la direction, faute de place.
+        // Direction (destination) puis arrêt ; en Pastille, juste la direction, faute de place. Jamais sous 12 sp.
         val parts = if (pill()) listOf(next.destination) else listOf(next.destination, stop)
         bigDest.text = parts.filter { it.isNotBlank() }.joinToString(" · ")
-        bigDest.textSize = if (pill()) 10f else 13f
+        bigDest.textSize = if (pill()) 12f else 13f
         bigDest.visibility = if (bigDest.text.isBlank()) View.GONE else View.VISIBLE
+        // TalkBack lit une phrase entière, pas « 3 » « min » « … » détachés.
+        lead.contentDescription = if (mins <= 0) {
+            context.getString(R.string.widget_transport_talk_now, next.destination)
+        } else {
+            context.getString(R.string.widget_transport_talk, mins, next.destination)
+        }
     }
 
-    private fun renderRows(items: List<Transport.Departure>, now: Long) {
+    /** [highlightFirst] : la première rangée est le prochain passage (Colonne et plus), mise en avant ; sinon tout en retrait. */
+    private fun renderRows(items: List<Transport.Departure>, now: Long, highlightFirst: Boolean) {
         rows.removeAllViews()
-        for (d in items) {
+        items.forEachIndexed { i, d ->
             val mins = Transport.waitMinutes(remaining(d, now))
             val wait = if (mins <= 0) context.getString(R.string.widget_transport_now) else context.getString(R.string.widget_transport_wait, mins)
+            val next = highlightFirst && i == 0
             rows.addView(
                 LinearLayout(context).apply {
                     gravity = Gravity.CENTER_VERTICAL
                     addView(
-                        label(shape.sp).apply {
+                        label(shape.sp, if (next) R.attr.c_text else R.attr.c_text_dim).apply {
                             text = d.destination
                             isSingleLine = true
                             ellipsize = TextUtils.TruncateAt.END
@@ -209,7 +218,7 @@ class TransportWidget(context: Context, host: HomeHost, placed: Placed) : HomeWi
                         LinearLayout.LayoutParams(0, WRAP_CONTENT, 1f),
                     )
                     addView(
-                        label(shape.sp, R.attr.c_accent).apply {
+                        label(shape.sp, if (next) R.attr.c_accent else R.attr.c_text_dim).apply {
                             text = wait
                             isSingleLine = true
                         },
