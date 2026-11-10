@@ -475,9 +475,13 @@ class HomeFragment : Fragment(), HomeHost, WidgetGrid.Listener {
         activate()
     }
 
-    /** Profil affiché ; -1 (plus aucun écran) : la grille laisse place à l'heure seule. */
+    /**
+     * Profil affiché ; -1 (plus aucun écran) : la grille laisse place à l'heure seule. Sans profil demandé (écran vide puis
+     * disposition reçue de l'ordinateur), l'écran de départ.
+     */
     private fun setPage(index: Int) {
-        page = if (index < 0 || layout.pages == 0) -1 else index.coerceAtMost(layout.pages - 1)
+        val wanted = if (index < 0) layout.homeProfile else index
+        page = if (wanted < 0 || layout.pages == 0) -1 else wanted.coerceAtMost(layout.pages - 1)
         grid.page = page
         scroll.visibility = if (page < 0) View.GONE else View.VISIBLE
         empty.visibility = if (page < 0) View.VISIBLE else View.GONE

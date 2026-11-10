@@ -412,7 +412,8 @@ class ProfilesDialog(
                 }
                 if (layout.removeProfile(i)) {
                     current = when {
-                        wasShown -> layout.homeProfile
+                        // Le voisin visible qui a pris sa place, sinon le dernier ; plus aucun : -1 (l'heure seule).
+                        wasShown -> layout.profilesInOrder(inCall = false).let { order -> order.firstOrNull { it >= i } ?: order.lastOrNull() } ?: -1
                         current > i -> current - 1
                         else -> current
                     }

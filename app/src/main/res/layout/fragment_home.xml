@@ -87,7 +87,7 @@
                 android:format24Hour="HH:mm"
                 android:includeFontPadding="false"
                 android:textColor="?attr/c_text"
-                android:textSize="160sp" />
+                android:textSize="160dp" />
 
             <TextView
                 android:id="@+id/home_empty_date"
@@ -101,7 +101,7 @@
 
         <Button
             android:id="@+id/home_empty_add"
-            style="@style/ActionButton"
+            style="@style/PrimaryButton"
             android:layout_gravity="bottom|center_horizontal"
             android:layout_marginBottom="40dp"
             android:drawableStart="@drawable/ic_add"
