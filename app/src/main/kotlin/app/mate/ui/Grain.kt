@@ -13,7 +13,7 @@ import kotlin.random.Random
 /**
  * Grain « vintage » par-dessus tout l'écran, sur tous les thèmes quand Réglages > Thème > Grain est allumé (Prefs.grain,
  * éteint par défaut) : l'effet Noise de la maquette (deux couleurs, densité 73 %, grain d'un pixel). Chaque palette a ses
- * deux couleurs (`c_grain_*`). Une tuile de bruit fixe répétée en avant-plan de la vue : rien n'est recalculé ensuite.
+ * deux couleurs (`c_grain_*`), transparentes dans Contraste élevé (lisibilité d'abord : jamais de grain). Une tuile de bruit fixe répétée en avant-plan de la vue : rien n'est recalculé ensuite.
  * Posé après ThemePattern, il s'ajoute au motif du thème au lieu de l'effacer.
  */
 object Grain {

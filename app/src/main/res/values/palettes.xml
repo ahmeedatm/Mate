@@ -285,8 +285,8 @@
         <item name="c_flow_red">#00000000</item>
         <item name="c_flow_orange">#00000000</item>
         <item name="c_flow_cream">#00000000</item>
-        <item name="c_grain_light">#33FFFFFF</item>
-        <item name="c_grain_dark">#14000000</item>
+        <item name="c_grain_light">#00000000</item>
+        <item name="c_grain_dark">#00000000</item>
         <item name="c_pattern">none</item>
         <item name="c_pattern_color">#00000000</item>
     </style>

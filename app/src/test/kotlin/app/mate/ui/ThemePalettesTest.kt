@@ -144,10 +144,16 @@ class ThemePalettesTest {
 
     @Test
     fun `chaque palette a un grain visible, pose seulement si le reglage Grain est allume`() {
-        for (name in all) {
+        for (name in all - "Contraste") {
             assertTrue("$name c_grain_light", color(name, "c_grain_light") != "#00000000")
             assertTrue("$name c_grain_dark", color(name, "c_grain_dark") != "#00000000")
         }
+    }
+
+    @Test
+    fun `Contraste eleve n'a jamais de grain, meme reglage allume`() {
+        assertEquals("#00000000", color("Contraste", "c_grain_light"))
+        assertEquals("#00000000", color("Contraste", "c_grain_dark"))
     }
 
     @Test

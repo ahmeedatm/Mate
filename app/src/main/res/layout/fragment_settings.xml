@@ -593,7 +593,7 @@
                         android:text="@string/schedule_open" />
                 </LinearLayout>
 
-                <!-- Thème : ambiances prédéfinies (ui/Themes.kt), pastilles ajoutées par SettingsFragment, puis le grain (ui/Grain). -->
+                <!-- Thème : ambiances prédéfinies (ui/Themes.kt), le grain en tête (ui/Grain, tous les thèmes), puis les pastilles ajoutées par SettingsFragment. -->
                 <LinearLayout
                     style="@style/Card"
                     android:layout_width="match_parent"
@@ -606,18 +606,11 @@
                         android:drawableStart="@drawable/ic_palette"
                         android:text="@string/theme_title" />
 
-                    <LinearLayout
-                        android:id="@+id/settings_themes"
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:layout_marginTop="14dp"
-                        android:orientation="vertical" />
-
                     <androidx.appcompat.widget.SwitchCompat
                         android:id="@+id/settings_grain"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:layout_marginTop="16dp"
+                        android:layout_marginTop="8dp"
                         android:minHeight="48dp"
                         android:text="@string/theme_grain"
                         android:textSize="16sp" />
@@ -628,6 +621,13 @@
                         android:text="@string/theme_grain_hint"
                         android:textColor="?attr/c_text_dim"
                         android:textSize="14sp" />
+
+                    <LinearLayout
+                        android:id="@+id/settings_themes"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="14dp"
+                        android:orientation="vertical" />
                 </LinearLayout>
 
                 <!-- Barre de gauche : noms sous les icônes, bouton Parler, outils affichés (Prefs.railLabels, railTalk, railTools). -->
