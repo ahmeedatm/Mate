@@ -4,7 +4,7 @@ import { endOfMatch, shownMatchId, watchMatch, type EndView } from "./valorant-e
 import { QUEUES, mapName, rankName } from "./valorant-names.ts";
 import { local, readLock, remote, remoteFor, type Remote } from "./valorant-riot.ts";
 import { liveRounds } from "./valorant-rounds.ts";
-import { mapStatsOf, todayOf, updatesOf, type MapStats, type Today } from "./valorant-session.ts";
+import { expectMatch, mapStatsOf, todayOf, updatesOf, type MapStats, type Today } from "./valorant-session.ts";
 import { actWinRate, historyOf, peakTier, profileOf, recentOf, type HistoryEntry } from "./valorant-stats.ts";
 
 /**
@@ -223,6 +223,7 @@ async function read(): Promise<ValorantState> {
   // Avant les joueurs : mes classées passent en tête de la file au débit limité.
   const updates = r ? updatesOf(r, puuid) : null;
   const endId = end && shownMatchId();
+  if (endId) expectMatch(endId);
   const result: ValorantState = {
     state,
     queue: QUEUES[queueId] ?? null,
@@ -240,7 +241,8 @@ async function read(): Promise<ValorantState> {
   if (state === "ingame")
     result.score = { ally: Number(priv.partyOwnerMatchScoreAllyTeam) || 0, enemy: Number(priv.partyOwnerMatchScoreEnemyTeam) || 0 };
   if (!r || (state !== "ingame" && state !== "pregame")) return result;
-  let mapPath: string | undefined = priv.matchPresenceData?.matchMap;
+  const presenceMap: string | undefined = priv.matchPresenceData?.matchMap;
+  let mapPath = presenceMap;
   let matchId: string | null = null;
   // Combat à mort (chacun pour soi) : rang et agent seulement.
   const ctx = { me: puuid, pregame: state === "pregame", withStats: queueId !== "deathmatch", parties };
@@ -263,7 +265,7 @@ async function read(): Promise<ValorantState> {
   } catch {
     // Entre deux phases (la partie se termine, le jeu charge) : l'état seul, les joueurs reviennent au tour suivant.
   }
-  result.map = mapName(mapPath);
+  result.map = mapName(mapPath) ?? mapName(presenceMap);
   result.mapId = mapIdOf(mapPath);
   result.mapStats = updates && mapStatsOf(updates, mapPath);
   if (result.score) result.rounds = liveRounds(matchId, result.score);

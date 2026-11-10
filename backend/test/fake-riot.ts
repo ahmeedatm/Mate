@@ -42,6 +42,8 @@ export type Scene = {
   myRr: number | null;
   /** Score de la partie en cours dans la présence, s'il change (sinon celui du roster). */
   score: [number, number] | null;
+  /** Appels à mes competitiveupdates qui ne montrent pas encore ma dernière partie (Riot ne l'a pas encore comptée). */
+  updatesLate: number;
 };
 
 const freshScene = (): Scene => ({
@@ -55,6 +57,7 @@ const freshScene = (): Scene => ({
   mmrRefused: false,
   myRr: null,
   score: null,
+  updatesLate: 0,
 });
 
 export type Seen = { url: string; auth?: string; entitlements?: string; version?: string };
@@ -490,10 +493,11 @@ export async function startFakeRiot(roster: Roster = TEST_ROSTER): Promise<FakeR
         const from = Number(page.get("startIndex") ?? 0);
         const to = Number(page.get("endIndex") ?? 20);
         if (to - from > 20) return send(res, { message: "trop de parties demandées" }, 400);
+        const mine = updates[1] === ME && from === 0 && s.updatesLate-- > 0 ? roster.updates.slice(1) : roster.updates;
         return send(res, {
           Matches:
             updates[1] === ME
-              ? roster.updates.slice(from, to).map(([MatchID, RankedRatingEarned, map, start], i) => ({
+              ? mine.slice(from, to).map(([MatchID, RankedRatingEarned, map, start], i) => ({
                   MatchID,
                   MapID: map ?? roster.map,
                   RankedRatingEarned,
@@ -547,6 +551,7 @@ export async function startFakeRiot(roster: Roster = TEST_ROSTER): Promise<FakeR
       VALORANT_GAP_MS: "0",
       VALORANT_RETRY_MS: "20",
       VALORANT_END_MS: "1500",
+      VALORANT_UPDATES_RETRY_MS: "50",
     },
     reset() {
       fake.scene = freshScene();

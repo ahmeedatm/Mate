@@ -42,6 +42,8 @@ object ValorantBand {
         companion object {
             fun of(size: WidgetSize): Size = when {
                 size.family == ShapeFamily.PILL -> NONE
+                // Colonne de 2 de haut : pas la place sous le rang, le score reste écrit.
+                size.family == ShapeFamily.COLUMN && size.h < 3 -> NONE
                 size.family == ShapeFamily.ROW || size.family == ShapeFamily.COLUMN -> MINI
                 size == WidgetSize.FULL -> FULL
                 size == WidgetSize.XL3 -> MEDIUM
@@ -72,7 +74,7 @@ object ValorantBand {
     fun chips(v: Valorant, size: Size): List<Chip> {
         if (size != Size.FULL && size != Size.MEDIUM) return emptyList()
         val end = endOf(v)
-        val today = Chip.TODAY.takeIf { size == Size.FULL && v.today != null }
+        val today = Chip.TODAY.takeIf { size == Size.FULL && v.today?.results?.isNotEmpty() == true }
         return when {
             end != null -> listOfNotNull(Chip.MATCH_RR.takeIf { end.rr != null }, today)
             v.state == ValorantState.INGAME || v.state == ValorantState.PREGAME -> listOfNotNull(Chip.MAP.takeIf { v.mapStats != null }, today)
@@ -83,6 +85,11 @@ object ValorantBand {
     /** Cases de la frise : en partie, place gardée pour les 24 rounds (null : pas joué), prolongations en plus. */
     fun cells(rounds: List<ValorantRound>, live: Boolean): List<ValorantRound?> =
         if (live && rounds.size < ROUNDS) rounds + List(ROUNDS - rounds.size) { null } else rounds
+
+    /** Hauteur du bandeau : au menu, la bande « Aujourd'hui » ne prend que la place de son contenu. */
+    fun heightDp(v: Valorant, size: Size): Int = if (endOf(v) == null && v.state != ValorantState.INGAME && v.state != ValorantState.PREGAME) DAY_DP else size.heightDp
+
+    private const val DAY_DP = 116
 
     /** % de victoires sur la carte ; null sous 3 parties (un chiffre sur 1 ou 2 parties ne dit rien). */
     fun mapRate(stats: ValorantMapStats?): Int? = stats?.takeIf { it.games >= FEW_GAMES }?.let { (100f * it.wins / it.games).roundToInt() }
@@ -122,7 +129,8 @@ object ValorantBand {
         clipToOutline = true
         if (mapId != null) addView(kit.mapImage(mapId), FrameLayout.LayoutParams(MATCH_PARENT, MATCH_PARENT))
         val dark = kit.color(R.attr.c_frame_bg)
-        val veil = intArrayOf(ColorUtils.setAlphaComponent(dark, 0xDB), ColorUtils.setAlphaComponent(dark, 0x8C), ColorUtils.setAlphaComponent(dark, 0x1F))
+        // Assez sombre partout pour le score et la frise, qui peuvent être à droite (mini, moyen).
+        val veil = intArrayOf(ColorUtils.setAlphaComponent(dark, 0xDB), ColorUtils.setAlphaComponent(dark, 0xA6), ColorUtils.setAlphaComponent(dark, 0x66))
         addView(View(kit.context).apply { background = GradientDrawable(GradientDrawable.Orientation.LEFT_RIGHT, veil) }, FrameLayout.LayoutParams(MATCH_PARENT, MATCH_PARENT))
     }
 
@@ -130,7 +138,7 @@ object ValorantBand {
     private fun onPhoto(kit: ValorantKit, text: String, size: Float, font: Int = R.attr.c_font_regular) = kit.text(text, size, R.attr.c_frame_text, font)
 
     /** Teinte d'équipe éclaircie, lisible sur la photo sombre. */
-    private fun light(kit: ValorantKit, hue: Int) = ColorUtils.blendARGB(kit.color(hue), kit.color(R.attr.c_frame_text), 0.55f)
+    private fun light(kit: ValorantKit, hue: Int) = ColorUtils.blendARGB(kit.color(hue), kit.color(R.attr.c_frame_text), 0.3f)
 
     private fun scoreText(kit: ValorantKit, score: ValorantScore, size: Float, font: Int = R.attr.c_font_display) = onPhoto(kit, "", size, font).apply {
         val ally = score.ally.toString()
@@ -158,20 +166,21 @@ object ValorantBand {
             v.state == ValorantState.PREGAME -> listOfNotNull(v.queue, kit.string(R.string.valorant_pregame)).joinToString(" · ")
             else -> listOfNotNull(v.queue, score?.let { kit.string(R.string.valorant_band_round, it.ally + it.enemy + 1) }).joinToString(" · ")
         }
-        val column = kit.column(caption(kit, sub), mapName(kit, map, if (full) 44f else 28f))
+        val column = kit.column(caption(kit, sub), mapName(kit, map, if (full) 42f else 28f))
         val top = if (full) column else kit.row(column)
         if (score != null) {
-            val s = scoreText(kit, score, if (full) 38f else 26f)
+            val s = if (full) scoreText(kit, score, 36f) else scoreText(kit, score, 26f, R.attr.c_font_title)
             if (full) column.addView(s, kit.lp(WRAP_CONTENT).apply { topMargin = kit.dp(6) }) else top.addView(s, kit.lp(WRAP_CONTENT).apply { marginStart = kit.dp(20) })
         }
         val bottom: View? = when {
-            rounds.isNotEmpty() -> frieze(kit, rounds, if (end != null) (if (full) 28 else 20) else (if (full) 20 else 14), icons = end != null)
+            // Icônes de fin seulement en plein écran, où la légende est sous le tableau.
+            rounds.isNotEmpty() -> frieze(kit, rounds, if (end != null && full) 22 else if (full) 18 else 14, icons = end != null && full)
             v.state == ValorantState.PREGAME -> v.mapStats?.let { onMap(kit, it, v.map.orEmpty()) }
             else -> null
         }
         return LinearLayout(kit.context).apply {
             orientation = LinearLayout.VERTICAL
-            setPadding(kit.dp(22), kit.dp(if (full) 20 else 14), kit.dp(22), kit.dp(if (full) 20 else 14))
+            setPadding(kit.dp(22), kit.dp(if (full) 16 else 14), kit.dp(22), kit.dp(if (full) 16 else 14))
             addView(top, kit.lp(MATCH_PARENT))
             addView(View(context), kit.lp(MATCH_PARENT, 0, 1f))
             bottom?.let { addView(it, kit.lp(MATCH_PARENT)) }
@@ -197,16 +206,21 @@ object ValorantBand {
     private fun onMap(kit: ValorantKit, stats: ValorantMapStats, map: String): View {
         if (stats.games == 0) return caption(kit, kit.string(R.string.valorant_band_never, stats.window))
         val label = kit.context.resources.getQuantityString(R.plurals.valorant_band_on_map, stats.games, stats.games, map)
-        return kit.row(onPhoto(kit, label, 14f), kit.space(10)).apply { squares(kit, stats.results, 14).forEach(::addView) }
+        return kit.row(onPhoto(kit, label, 14f), kit.space(10), gravity = Gravity.BOTTOM).apply { squares(kit, stats.results, 14).forEach(::addView) }
     }
 
+    /** Résultats en cases : perdu plus bas que gagné (le sens ne tient pas qu'à la couleur), alignées en bas. */
     private fun squares(kit: ValorantKit, results: List<Boolean?>, sizeDp: Int) = results.map { won ->
         View(kit.context).apply {
             background = GradientDrawable().apply {
                 cornerRadius = kit.dp(3).toFloat()
                 setColor(kit.color(resultHue(won)))
             }
-            layoutParams = kit.lp(kit.dp(sizeDp), kit.dp(sizeDp)).apply { marginEnd = kit.dp(4) }
+            val height = if (won == true) sizeDp else (sizeDp * ValorantFrieze.LOST_SHARE).roundToInt()
+            layoutParams = kit.lp(kit.dp(sizeDp), kit.dp(height)).apply {
+                marginEnd = kit.dp(4)
+                gravity = Gravity.BOTTOM
+            }
         }
     }
 
@@ -233,7 +247,7 @@ object ValorantBand {
             }
         }
         return kit.column(
-            kit.text(label.uppercase(), 11f, R.attr.c_text_faint, R.attr.c_font_medium).apply { letterSpacing = 0.14f },
+            kit.text(label.uppercase(), 12f, R.attr.c_text_faint, R.attr.c_font_medium).apply { letterSpacing = 0.12f },
             kit.text(value, 24f, hue, R.attr.c_font_title),
             kit.text(detail, 13f, R.attr.c_text_dim),
         ).apply {
@@ -241,7 +255,6 @@ object ValorantBand {
                 cornerRadius = kit.dp(12).toFloat()
                 setColor(kit.color(R.attr.c_surface))
             }
-            elevation = kit.dp(6).toFloat()
             minimumWidth = kit.dp(176)
             setPadding(kit.dp(14), kit.dp(9), kit.dp(14), kit.dp(10))
             contentDescription = listOf(label, value, detail).joinToString(", ")
@@ -250,20 +263,21 @@ object ValorantBand {
 
     private data class Quad(val label: String, val value: String, val hue: Int, val detail: String)
 
-    /** Au menu, plein écran : ma journée, sur fond sombre teinté de l'accent (pas de carte jouée). */
+    /** Au menu, plein écran : ma journée, sur un aplat sombre à peine teinté de l'accent (pas de carte jouée). */
     private fun day(v: Valorant, kit: ValorantKit): View {
         val t = v.today ?: return View(kit.context)
         val dark = kit.color(R.attr.c_frame_bg)
         val rr = kit.string(R.string.valorant_rr_change, ValorantKit.signed(t.rr))
         val wl = kit.string(R.string.valorant_band_wl, t.wins, t.losses)
-        val line = kit.row(onPhoto(kit, wl, 15f), kit.space(12)).apply { squares(kit, t.results, 16).forEach(::addView) }
-        val big = mapName(kit, rr, 44f).apply { setTextColor(ColorUtils.blendARGB(kit.color(rrHue(t.rr)), kit.color(R.attr.c_frame_text), 0.45f)) }
-        return kit.column(caption(kit, kit.string(R.string.valorant_band_today)), big).apply {
-            addView(View(context), kit.lp(MATCH_PARENT, 0, 1f))
+        val big = onPhoto(kit, rr, 40f, R.attr.c_font_title).apply { setTextColor(light(kit, rrHue(t.rr))) }
+        val line = kit.row(onPhoto(kit, wl, 15f), kit.space(12), gravity = Gravity.BOTTOM).apply { squares(kit, t.results, 16).forEach(::addView) }
+        val words = kit.column(caption(kit, kit.string(R.string.valorant_band_today)), big)
+        return kit.row(words, kit.space(28)).apply {
             addView(line)
-            setPadding(kit.dp(22), kit.dp(20), kit.dp(22), kit.dp(20))
-            background = GradientDrawable(GradientDrawable.Orientation.TL_BR, intArrayOf(ColorUtils.blendARGB(kit.color(R.attr.c_accent), dark, 0.75f), dark)).apply {
+            setPadding(kit.dp(22), kit.dp(14), kit.dp(22), kit.dp(14))
+            background = GradientDrawable().apply {
                 cornerRadius = kit.dp(14).toFloat()
+                setColor(ColorUtils.blendARGB(dark, kit.color(R.attr.c_accent), 0.1f))
             }
             contentDescription = listOf(kit.string(R.string.valorant_band_today), rr, wl).joinToString(", ")
         }

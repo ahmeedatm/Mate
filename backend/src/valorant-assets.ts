@@ -54,7 +54,8 @@ async function load(): Promise<Assets> {
     listOf("/v1/agents?isPlayableCharacter=true&language=fr-FR"),
     listOf("/v1/competitivetiers"),
     listOf("/v1/seasons"),
-    listOf("/v1/maps"),
+    // Cartes en plus : leur liste en panne ne prive pas le widget des agents ni des rangs.
+    listOf("/v1/maps").catch(() => []),
   ]);
   const assets: Assets = { agents: new Map(), ranks: new Map(), acts: [], maps: new Map() };
   for (const a of agents) {
@@ -167,8 +168,10 @@ async function download(url: string, out: string, side: number, maxBytes: number
   const res = await fetch(url, { redirect: "error", signal: AbortSignal.timeout(10_000) });
   if (!res.ok) return false;
   const { data, truncated } = await readCapped(res, maxBytes);
-  // PNG d'un format que shrinkPng ne lit pas : gardé tel quel, la tablette le réduit au décodage.
-  const png = truncated ? null : (shrinkPng(data, side) ?? (data.subarray(1, 4).toString("ascii") === "PNG" ? data : null));
+  // PNG d'un format que shrinkPng ne lit pas : gardé tel quel pour une icône (la tablette la réduit au décodage) ; refusé
+  // pour une carte (1920 px et plus : trop lourd pour la tablette).
+  const raw = side === IMAGE_SIDE && data.subarray(1, 4).toString("ascii") === "PNG" ? data : null;
+  const png = truncated ? null : (shrinkPng(data, side) ?? raw);
   if (!png) return false;
   // Écrit à côté puis renommé : une lecture en même temps ne sert jamais une image à moitié écrite.
   const tmp = `${out}.${randomUUID()}.tmp`;

@@ -143,13 +143,13 @@ class ValorantApiTest {
             """{"state":"ingame","queue":"Compétition","map":"Ascent","score":{"ally":2,"enemy":1},"me":null,"players":[],
                 "mapId":"7eaecc1b-4337-bbf6-6ab9-04b8f06b3319","rounds":[true,false,null],
                 "today":{"rr":-6,"wins":1,"losses":2,"results":[false,true,null,false]},
-                "mapStats":{"wins":5,"games":8,"window":40,"results":[true,false,true]}}""",
+                "mapStats":{"wins":5,"games":8,"window":40,"results":[true,false,null]}}""",
         )
         assertEquals("7eaecc1b-4337-bbf6-6ab9-04b8f06b3319", v.mapId)
         assertEquals(listOf(true, false, null), v.rounds.map { it.won })
         assertTrue(v.rounds.all { it.end == null })
         assertEquals(ValorantToday(-6, 1, 2, listOf(false, true, null, false)), v.today)
-        assertEquals(ValorantMapStats(5, 8, 40, listOf(true, false, true)), v.mapStats)
+        assertEquals(ValorantMapStats(5, 8, 40, listOf(true, false, null)), v.mapStats)
     }
 
     @Test

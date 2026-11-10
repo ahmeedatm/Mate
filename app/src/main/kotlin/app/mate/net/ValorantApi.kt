@@ -59,7 +59,7 @@ data class ValorantRound(val won: Boolean?, val end: ValorantRoundEnd?)
 data class ValorantToday(val rr: Int, val wins: Int, val losses: Int, val results: List<Boolean?>)
 
 /** Mon bilan sur la carte jouée parmi mes `window` dernières classées ; résultats de la plus ancienne. */
-data class ValorantMapStats(val wins: Int, val games: Int, val window: Int, val results: List<Boolean>)
+data class ValorantMapStats(val wins: Int, val games: Int, val window: Int, val results: List<Boolean?>)
 
 data class ValorantEndPlayer(
     val name: String?,
@@ -151,7 +151,7 @@ class ValorantApi(private val http: Http) {
         private fun today(t: JSONObject) = ValorantToday(t.optInt("rr"), t.optInt("wins"), t.optInt("losses"), t.optJSONArray("results").results())
 
         private fun mapStats(m: JSONObject) =
-            ValorantMapStats(m.optInt("wins"), m.optInt("games"), m.optInt("window"), m.optJSONArray("results").results().map { it == true })
+            ValorantMapStats(m.optInt("wins"), m.optInt("games"), m.optInt("window"), m.optJSONArray("results").results())
 
         fun parse(json: String): Valorant {
             val o = JSONObject(json)

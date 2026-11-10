@@ -138,7 +138,8 @@ class ValorantWidget(context: Context, host: HomeHost, placed: Placed) : HomeWid
         val fill = LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT)
         val end = v?.end?.takeIf { it.status == ValorantEndStatus.READY }
         val size = ValorantBand.Size.of(placed.size)
-        val band = v?.takeIf { ValorantBand.shows(it, size) }?.let { ValorantBand.view(it, kit, size) }
+        // Sans mon rang, la forme résumée n'écrit qu'un conseil : pas de bandeau (ni d'image demandée) pour rien.
+        val band = v?.takeIf { ValorantBand.shows(it, size) && !(shape.summary && it.me == null) }?.let { ValorantBand.view(it, kit, size) }
         slot.visibility = if (size == ValorantBand.Size.THIN && band != null) View.VISIBLE else View.GONE
         if (size == ValorantBand.Size.THIN && band != null) slot.addView(band, FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT))
         val main = when {
@@ -153,13 +154,20 @@ class ValorantWidget(context: Context, host: HomeHost, placed: Placed) : HomeWid
             return
         }
         // Moyen et plein : le bandeau en haut, le tableau dessous (centré dans la place qui reste), la légende de la frise à la fin.
-        body.addView(band, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, dp(size.heightDp)))
+        body.addView(band, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, dp(ValorantBand.heightDp(v, size))))
         body.addView(main, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, 0, 1f).apply { topMargin = dp(14) })
         if (end != null && size == ValorantBand.Size.FULL) body.addView(ValorantBand.legend(kit), LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT).apply { topMargin = dp(10) })
     }
 
     private fun statusLine(v: Valorant?): String {
         if (v == null || v.state == ValorantState.OFF) return context.getString(R.string.valorant_off)
+        val full = fullLine(v)
+        // Grand bandeau : la carte, la file et le score y sont déjà ; la ligne d'état garde le moment.
+        val big = ValorantBand.Size.of(placed.size).let { it == ValorantBand.Size.MEDIUM || it == ValorantBand.Size.FULL }
+        return if (big && ValorantBand.shows(v, ValorantBand.Size.of(placed.size))) full.substringBefore(" · ") else full
+    }
+
+    private fun fullLine(v: Valorant): String {
         v.end?.let { end ->
             return when (end.status) {
                 ValorantEndStatus.READY -> listOfNotNull(

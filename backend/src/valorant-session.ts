@@ -8,7 +8,7 @@ import { paced, remote, type Remote } from "./valorant-riot.ts";
 
 export type Update = { id: string; mapId: string | undefined; rr: number; start: number };
 export type Today = { rr: number; wins: number; losses: number; results: (boolean | null)[] };
-export type MapStats = { wins: number; games: number; window: number; results: boolean[] };
+export type MapStats = { wins: number; games: number; window: number; results: (boolean | null)[] };
 
 /** 40 dernières, en deux pages de 20 (le plus que Riot rend d'un coup). */
 const PAGE = 20;
@@ -16,6 +16,8 @@ const PAGES = 2;
 /** Relues au plus toutes les 2 min, et à la fin de chaque partie. */
 const UPDATES_TTL = 2 * 60_000;
 const FAIL_TTL = 30_000;
+/** Partie finie pas encore comptée par Riot : relues plus souvent (`VALORANT_UPDATES_RETRY_MS` pour les tests). */
+const retryMs = () => Number(process.env.VALORANT_UPDATES_RETRY_MS) || 10_000;
 
 type Cached = { puuid: string; until: number; value: Update[] | null; pending: boolean };
 let cached: Cached | null = null;
@@ -37,6 +39,12 @@ export function updatesOf(r: Remote, puuid: string): Update[] | null {
 /** Fin de partie : relues (la partie qui vient de finir y entre). */
 export function forgetUpdates() {
   cached = null;
+}
+
+/** La partie `matchId` (tableau de fin affiché) manque encore : prochaine lecture dans 10 s plutôt que 2 min. */
+export function expectMatch(matchId: string) {
+  if (cached && !cached.pending && cached.value && !cached.value.some((u) => u.id === matchId))
+    cached = { ...cached, until: Math.min(cached.until, Date.now() + retryMs()) };
 }
 
 async function loadUpdates(r: Remote, puuid: string): Promise<Update[]> {
@@ -81,5 +89,5 @@ export function todayOf(updates: Update[], now = Date.now()): Today {
 export function mapStatsOf(updates: Update[], map: string | null | undefined): MapStats | null {
   if (!map) return null;
   const here = updates.filter((u) => u.mapId?.toLowerCase() === map.toLowerCase()).reverse();
-  return { wins: here.filter((u) => u.rr > 0).length, games: here.length, window: updates.length, results: here.map((u) => u.rr > 0) };
+  return { wins: here.filter((u) => u.rr > 0).length, games: here.length, window: updates.length, results: here.map((u) => resultOf(u.rr)) };
 }

@@ -7,6 +7,8 @@ import android.util.LruCache
 import app.mate.net.BackendClient
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CompletableDeferred
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 
 /**
  * Icônes des tuiles, gardées en mémoire (96 à 128 px chacune, 64 Ko au plus) : quelques dizaines pour le Deck, et jusqu'à
@@ -81,8 +83,8 @@ object IconCache {
                 missing[id] = if (missFor == Long.MAX_VALUE) Long.MAX_VALUE else SystemClock.elapsedRealtime() + missFor
                 return null
             }
-            val options = BitmapFactory.Options().apply { config?.let { inPreferredConfig = it } }
-            val bitmap = BitmapFactory.decodeByteArray(bytes, 0, bytes.size, options)
+            // Icônes (128 px) : sur place. Carte (`config`, 960 px, ~1 Mo) : hors du fil principal, réduite si plus large.
+            val bitmap = if (config == null) BitmapFactory.decodeByteArray(bytes, 0, bytes.size) else withContext(Dispatchers.Default) { decodeLarge(bytes, config) }
             if (bitmap != null) cache.put(id, bitmap)
             result.complete(bitmap)
             return bitmap
@@ -91,6 +93,15 @@ object IconCache {
             result.complete(null)
             loading.remove(id)
         }
+    }
+
+    /** Image large décodée en `config`, divisée par 2 tant qu'elle dépasse [MAX_WIDTH] (un compagnon qui ne l'a pas réduite). */
+    private fun decodeLarge(bytes: ByteArray, config: Bitmap.Config): Bitmap? {
+        val bounds = BitmapFactory.Options().apply { inJustDecodeBounds = true }
+        BitmapFactory.decodeByteArray(bytes, 0, bytes.size, bounds)
+        var sample = 1
+        while (bounds.outWidth / sample > MAX_WIDTH) sample *= 2
+        return BitmapFactory.decodeByteArray(bytes, 0, bytes.size, BitmapFactory.Options().apply { inPreferredConfig = config; inSampleSize = sample })
     }
 
     /** Une touche perso reprogrammée change d'icône sans changer d'identifiant. */
@@ -106,4 +117,5 @@ object IconCache {
     }
 
     private const val VALORANT_MISS_MS = 5 * 60_000L
+    private const val MAX_WIDTH = 960
 }

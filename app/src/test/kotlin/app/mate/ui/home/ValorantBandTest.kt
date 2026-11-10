@@ -25,7 +25,10 @@ class ValorantBandTest {
     private fun end(rr: Int? = 21) =
         ValorantEnd(ValorantEndStatus.READY, "Ascent", "Compétition", false, true, ValorantScore(13, 9), emptyList(), rounds = emptyList(), rr = rr)
 
-    /** Bandeau moyen seulement là où le tableau garde ses lignes : les formes à dix lignes empilées prennent le fin. */
+    /**
+     * Bandeau moyen seulement là où le tableau garde ses lignes : les formes à dix lignes empilées prennent le fin. Colonne
+     * de 2 de haut : pas la place sous le rang, le score reste écrit.
+     */
     @Test
     fun bandSizeFollowsTheShape() {
         val expected = mapOf(
@@ -33,7 +36,7 @@ class ValorantBandTest {
             WidgetSize.M to ValorantBand.Size.MINI,
             WidgetSize.M3 to ValorantBand.Size.MINI,
             WidgetSize.W to ValorantBand.Size.MINI,
-            WidgetSize.V to ValorantBand.Size.MINI,
+            WidgetSize.V to ValorantBand.Size.NONE,
             WidgetSize.V3 to ValorantBand.Size.MINI,
             WidgetSize.V4 to ValorantBand.Size.MINI,
             WidgetSize.L to ValorantBand.Size.THIN,
@@ -87,6 +90,8 @@ class ValorantBandTest {
         // Compagnon ancien : rien à poser.
         assertEquals(emptyList<ValorantBand.Chip>(), ValorantBand.chips(state(ValorantState.INGAME, today = null, stats = null), ValorantBand.Size.FULL))
         assertEquals(listOf(ValorantBand.Chip.TODAY), ValorantBand.chips(state(ValorantState.MENU, end = end(rr = null)), ValorantBand.Size.FULL))
+        // Pas encore de classée aujourd'hui : pas de carte « +0 RR ».
+        assertEquals(listOf(ValorantBand.Chip.MAP), ValorantBand.chips(state(ValorantState.INGAME, today = ValorantToday(0, 0, 0, emptyList())), ValorantBand.Size.FULL))
     }
 
     @Test

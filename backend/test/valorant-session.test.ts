@@ -97,6 +97,15 @@ describe("Valorant : fin de partie", () => {
     assert.equal(json.end.rr, 21);
     assert.equal(json.end.mapId, SUMMIT);
   });
+
+  it("Riot compte la partie finie un peu plus tard : ses RR arrivent quand même pendant le tableau", async () => {
+    riot.scene.loop = "INGAME";
+    await server.call("GET", "/valorant");
+    riot.scene.loop = "MENUS";
+    riot.scene.updatesLate = 2;
+    const json = await until(server, (j) => j.end?.rr != null);
+    assert.equal(json.end.rr, 21);
+  });
 });
 
 describe("Valorant : image de la carte", () => {
@@ -160,6 +169,7 @@ describe("Valorant : session du jour et bilan sur la carte", () => {
     assert.deepEqual(todayOf(updates, now), { rr: 8, wins: 1, losses: 1, results: [true, false, null] });
     assert.deepEqual(todayOf([], now), { rr: 0, wins: 0, losses: 0, results: [] });
     assert.deepEqual(mapStatsOf(updates, "/game/maps/plummet/plummet"), { wins: 2, games: 2, window: 4, results: [true, true] });
+    assert.deepEqual(mapStatsOf(updates, ASCENT_PATH), { wins: 0, games: 2, window: 4, results: [false, null] });
     assert.equal(mapStatsOf(updates, null), null);
   });
 });
