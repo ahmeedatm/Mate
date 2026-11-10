@@ -190,7 +190,8 @@ private const val LEGACY_FIRST = "Bureau"
 /**
  * Disposition complète : widgets et profils. Un profil = une page ; `names[i]` null = pas encore de nom ([nameMissing]
  * lui en donne un, l'interface passe les textes : le modèle ne touche à aucune ressource).
- * Rôles (Deck V2) : `homeProfile` (Accueil, jamais supprimé), `deckProfile` (Deck, -1 s'il a été supprimé), `callProfile`
+ * Rôles (Deck V2) : `homeProfile` (Accueil, l'écran de départ : supprimé, le premier écran restant hors Réunion le
+ * reprend ; -1 s'il n'en reste aucun), `deckProfile` (Deck, -1 s'il a été supprimé), `callProfile`
  * (Réunion : -1 s'il a été supprimé, absent de la barre et du balayage hors appel). `rolesSet` : rôles déjà posés une fois
  * ([ensureRoles] ne recrée pas un Deck supprimé).
  */
@@ -278,9 +279,13 @@ class HomeLayout(val widgets: MutableList<Placed>, val names: MutableList<String
         return true
     }
 
-    /** Le dernier profil reste ; une fois les rôles posés, l'Accueil aussi. Réunion se supprime (plus d'écran d'appel). */
-    fun canRemove(index: Int) =
-        names.size > 1 && index in names.indices && !(rolesSet && index == homeProfile)
+    /** Tout profil se supprime, l'Accueil et le dernier compris ([settleHome]). Réunion supprimé : plus d'écran d'appel. */
+    fun canRemove(index: Int) = index in names.indices
+
+    /** Sans Accueil valable, le premier écran hors Réunion le devient ; aucun : -1 (l'Accueil montre l'heure seule). */
+    fun settleHome() {
+        if (homeProfile !in names.indices || homeProfile == callProfile) homeProfile = profilesInOrder(inCall = false).firstOrNull() ?: -1
+    }
 
     /** Modèles proposés à la création : Réunion seulement tant qu'il n'y a pas d'écran d'appel. */
     fun offered(): List<Template> = Template.entries.filter { it.listed || (it == Template.CALL_CADRAN && callProfile < 0) }
@@ -289,6 +294,7 @@ class HomeLayout(val widgets: MutableList<Placed>, val names: MutableList<String
     fun addFromTemplate(template: Template, name: String): Int {
         val index = addProfile(uniqueName(name), template.widgets(pages))
         if (template == Template.CALL_CADRAN && callProfile < 0) callProfile = index
+        settleHome()
         return index
     }
 
@@ -389,6 +395,7 @@ class HomeLayout(val widgets: MutableList<Placed>, val names: MutableList<String
         homeProfile = after(homeProfile)
         deckProfile = after(deckProfile)
         callProfile = after(callProfile)
+        settleHome()
         return true
     }
 
@@ -478,15 +485,16 @@ class HomeLayout(val widgets: MutableList<Placed>, val names: MutableList<String
             val json = JSONObject(raw)
             val saved = json.optJSONArray("names")
             val names = if (saved != null) {
-                MutableList(saved.length().coerceAtLeast(1)) { i -> if (saved.isNull(i)) null else saved.getString(i) }
+                MutableList(saved.length()) { i -> if (saved.isNull(i)) null else saved.getString(i) }
             } else {
                 MutableList<String?>(json.getInt("pages").coerceAtLeast(1)) { null }
             }
             val layout = HomeLayout(mutableListOf(), names)
             json.optJSONArray("icons")?.let { saved -> names.indices.forEach { i -> if (i < saved.length() && !saved.isNull(i)) layout.setIcon(i, saved.getString(i)) } }
-            layout.homeProfile = json.optInt("home", 0).takeIf { it in names.indices } ?: 0
+            layout.homeProfile = json.optInt("home", 0)
             layout.deckProfile = json.optInt("deck", -1).takeIf { it in names.indices } ?: -1
             layout.callProfile = json.optInt("call", -1).takeIf { it in names.indices } ?: -1
+            layout.settleHome()
             layout.rolesSet = json.optBoolean("roles", false)
             LayoutConfig.readPageApps(json, layout)
             val list = json.getJSONArray("widgets")
