@@ -1178,6 +1178,7 @@
     <string name="profiles_subtitle">Chaque écran est une grille de widgets. Touche un nom pour l\'afficher.</string>
     <string name="profiles_yours">Tes écrans</string>
     <string name="profiles_add">Nouvel écran</string>
+    <string name="home_empty_add">Ajouter un écran</string>
     <string name="profile_shown">Affiché</string>
     <string name="profile_blank">Vide</string>
     <string name="profile_blank_desc">Une grille vide, à remplir de widgets.</string>

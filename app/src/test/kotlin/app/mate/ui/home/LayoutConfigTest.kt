@@ -83,8 +83,7 @@ class LayoutConfigTest {
     }
 
     @Test
-    fun `au moins un profil, avec un nom`() {
-        assertTrue(refused(json(names = "[]"), HomeLayout(mutableListOf(), 1)).contains("au moins un profil"))
+    fun `chaque profil a un nom`() {
         assertTrue(refused(json(names = """["Accueil","  "]""")).contains("n'a pas de nom"))
         assertTrue(refused(json(names = """["Accueil","${"x".repeat(31)}"]""")).contains("dépasse"))
     }
@@ -94,8 +93,16 @@ class LayoutConfigTest {
         val layout = LayoutConfig.parseLayout(json(extra = """"home":0,"roles":true"""), HomeLayout(mutableListOf(), 1).apply { ensureRoles("Réunion") })
         assertEquals(-1, layout.callProfile)
         assertTrue(refused(json(extra = """"home":0,"call":1,"roles":false""")).contains("rôles"))
-        assertTrue(refused(json(extra = """"call":1,"roles":true""")).contains("home"))
         assertTrue(refused(json(extra = """"home":1,"call":1,"roles":true""")).contains("différents"))
+    }
+
+    @Test
+    fun `sans Accueil, le premier ecran hors Reunion le devient, aucun ecran est accepte`() {
+        val first = LayoutConfig.parseLayout(json(names = """["Réunion","Maison"]""", extra = """"call":0,"roles":true"""), current())
+        assertEquals(1, first.homeProfile)
+        val none = LayoutConfig.parseLayout(json(names = "[]", extra = """"roles":true"""), current())
+        assertEquals(0, none.pages)
+        assertEquals(-1, none.homeProfile)
     }
 
     @Test

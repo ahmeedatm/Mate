@@ -71,7 +71,6 @@ object LayoutConfig {
      */
     fun parseLayout(json: JSONObject, current: HomeLayout): HomeLayout {
         val saved = json.optJSONArray("names") ?: fail("Disposition invalide : la liste des profils manque.")
-        if (saved.length() == 0) fail("Il faut au moins un profil.")
         val names = MutableList<String?>(saved.length()) { i ->
             if (saved.isNull(i)) return@MutableList null
             val name = (saved.opt(i) as? String)?.trim() ?: fail("Le nom du profil ${i + 1} n'est pas un texte.")
@@ -84,7 +83,7 @@ object LayoutConfig {
             for (i in names.indices) if (i < icons.length() && !icons.isNull(i)) layout.setIcon(i, icons.optString(i))
         }
 
-        layout.homeProfile = role(json, "home", names.size, required = true)
+        layout.homeProfile = role(json, "home", names.size, required = false)
         layout.deckProfile = role(json, "deck", names.size, required = false)
         layout.callProfile = role(json, "call", names.size, required = false)
         layout.rolesSet = json.optBoolean("roles", false)
@@ -94,6 +93,7 @@ object LayoutConfig {
         }
         val roleIndexes = listOf(layout.homeProfile, layout.deckProfile, layout.callProfile).filter { it >= 0 }
         if (roleIndexes.size != roleIndexes.toSet().size) fail("L'Accueil, le Deck et Réunion doivent être trois profils différents.")
+        layout.settleHome()
 
         val list = json.optJSONArray("widgets") ?: fail("Disposition invalide : la liste des widgets manque.")
         for (i in 0 until list.length()) {

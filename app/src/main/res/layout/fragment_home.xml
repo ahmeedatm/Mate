@@ -63,4 +63,48 @@
                 android:padding="24dp" />
         </ScrollView>
     </LinearLayout>
+
+    <!-- Plus aucun écran (tous supprimés, Accueil compris) : l'heure et la date seules, de quoi en ajouter un en bas. -->
+    <FrameLayout
+        android:id="@+id/home_empty"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:visibility="gone">
+
+        <LinearLayout
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_gravity="center"
+            android:gravity="center_horizontal"
+            android:orientation="vertical">
+
+            <TextClock
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:fontFamily="?attr/c_font_display"
+                android:fontFeatureSettings="tnum"
+                android:format12Hour="HH:mm"
+                android:format24Hour="HH:mm"
+                android:includeFontPadding="false"
+                android:textColor="?attr/c_text"
+                android:textSize="160dp" />
+
+            <TextView
+                android:id="@+id/home_empty_date"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="8dp"
+                android:fontFamily="?attr/c_font_regular"
+                android:textColor="?attr/c_text_dim"
+                android:textSize="24sp" />
+        </LinearLayout>
+
+        <Button
+            android:id="@+id/home_empty_add"
+            style="@style/PrimaryButton"
+            android:layout_gravity="bottom|center_horizontal"
+            android:layout_marginBottom="40dp"
+            android:drawableStart="@drawable/ic_add"
+            android:text="@string/home_empty_add" />
+    </FrameLayout>
 </FrameLayout>

@@ -82,10 +82,17 @@ class ProfilesTest {
     }
 
     @Test
-    fun `le dernier profil ne se supprime pas`() {
-        val layout = layoutOf(1)
-        assertFalse(layout.removeProfile(0))
-        assertEquals(1, layout.pages)
+    fun `le dernier profil se supprime, il ne revient pas a la relecture`() {
+        val context = FakeContext()
+        val layout = layoutOf(1, Placed(WidgetType.CLOCK, WidgetSize.L, 0, 0, 0))
+        assertTrue(layout.removeProfile(0))
+        assertEquals(0, layout.pages)
+        assertEquals(-1, layout.homeProfile)
+        assertTrue(layout.widgets.isEmpty())
+        HomeLayout.save(context, layout)
+        val back = HomeLayout.load(context)
+        assertEquals(0, back.pages)
+        assertEquals(-1, back.homeProfile)
     }
 
     @Test
@@ -152,11 +159,13 @@ class ProfilesTest {
     }
 
     @Test
-    fun `l Accueil nomme Bureau par l ancien format devient Accueil`() {
-        val layout = HomeLayout(mutableListOf(), mutableListOf("Bureau", "Profil 2"))
-        layout.rolesSet = true
-        assertTrue(layout.nameMissing("Accueil", "Écran %d"))
-        assertEquals(listOf<String?>("Accueil", "Écran 2"), layout.names)
+    fun `un ecran Bureau recree sans aucun ecran garde son nom`() {
+        val layout = layoutOf(1)
+        layout.ensureRoles("Réunion")
+        layout.removeProfile(layout.homeProfile)
+        val bureau = layout.addFromTemplate(Template.WORK_CADRAN, "Bureau")
+        layout.nameMissing("Accueil", "Écran %d")
+        assertEquals("Bureau", layout.names[bureau])
     }
 
     @Test
@@ -300,15 +309,40 @@ class ProfilesTest {
     }
 
     @Test
-    fun `l'Accueil ne se supprime pas, Reunion et un ecran ajoute si`() {
+    fun `l'Accueil se supprime, le premier ecran restant hors Reunion devient le depart`() {
         val layout = layoutOf(1)
         layout.ensureRoles("Réunion")
-        val maison = layout.addProfile("Maison")
-        assertFalse(layout.canRemove(layout.homeProfile))
-        assertTrue(layout.canRemove(layout.callProfile))
-        assertTrue(layout.canRemove(maison))
-        assertFalse(layout.removeProfile(layout.homeProfile))
-        assertEquals(3, layout.pages)
+        layout.addProfile("Maison")
+        assertTrue(layout.canRemove(layout.homeProfile))
+        assertTrue(layout.removeProfile(layout.homeProfile))
+        assertEquals(listOf<String?>("Réunion", "Maison"), layout.names)
+        assertEquals(1, layout.homeProfile)
+        assertEquals(0, layout.callProfile)
+    }
+
+    @Test
+    fun `plus aucun ecran hors Reunion, puis un ecran ajoute devient le depart`() {
+        val context = FakeContext()
+        val layout = layoutOf(1)
+        layout.ensureRoles("Réunion")
+        assertTrue(layout.removeProfile(layout.homeProfile))
+        assertEquals(-1, layout.homeProfile)
+        assertTrue(layout.profilesInOrder(inCall = false).isEmpty())
+        HomeLayout.save(context, layout)
+        val back = HomeLayout.load(context)
+        assertEquals(-1, back.homeProfile)
+        assertEquals(0, back.callProfile)
+        val bureau = back.addFromTemplate(Template.WORK_CADRAN, "Bureau")
+        assertEquals(bureau, back.homeProfile)
+    }
+
+    @Test
+    fun `Reunion recree sans aucun ecran ne devient pas le depart`() {
+        val layout = layoutOf(1)
+        layout.removeProfile(0)
+        val call = layout.addFromTemplate(Template.CALL_CADRAN, "Réunion")
+        assertEquals(call, layout.callProfile)
+        assertEquals(-1, layout.homeProfile)
     }
 
     @Test
