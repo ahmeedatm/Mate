@@ -169,15 +169,18 @@ class MusicIsland(
     }
 
     private fun stop() {
+        // Relue sans lecture, la pastille appelle dismiss à chaque fois : le bandeau n'est touché que s'il a été effacé.
+        if (isOpen || t != 0f) {
+            topBar()?.apply {
+                alpha = 1f
+                setLayerType(View.LAYER_TYPE_NONE, null)
+            }
+        }
         spring?.cancel()
         spring = null
         overlay.removeCallbacks(autoClose)
         t = 0f
         seeking = false
-        topBar()?.apply {
-            alpha = 1f
-            setLayerType(View.LAYER_TYPE_NONE, null)
-        }
     }
 
     /** Lecture relue par la pastille : titre, avancement, boutons. Rien ne change pendant qu'on glisse la barre. */
@@ -339,8 +342,8 @@ class MusicIsland(
         /** Artiste et temps sur l'îlot : l'encre estompée (65 %). */
         const val DIM_ALPHA = 166
 
-        /** Rail de la barre d'avancement : l'encre à 25 %. */
-        const val TRACK_ALPHA = 64
+        /** Rail de la barre d'avancement : l'encre à 50 % (3:1 au moins sur l'îlot). */
+        const val TRACK_ALPHA = 128
         const val ICON_CONTRAST = 3.0
 
         fun lerp(a: Int, b: Int, k: Float): Int = (a + (b - a) * k).toInt()

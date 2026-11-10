@@ -84,7 +84,7 @@
                 android:fontFamily="?attr/c_font_regular"
                 android:fontFeatureSettings="tnum"
                 android:minWidth="40dp"
-                android:textSize="13sp" />
+                android:textSize="14sp" />
 
             <SeekBar
                 android:id="@+id/island_progress"
@@ -103,7 +103,7 @@
                 android:fontFeatureSettings="tnum"
                 android:gravity="end"
                 android:minWidth="40dp"
-                android:textSize="13sp" />
+                android:textSize="14sp" />
         </LinearLayout>
 
         <LinearLayout

@@ -19,6 +19,7 @@ class IslandBars @JvmOverloads constructor(context: Context, attrs: AttributeSet
     /** Joue (et donc bouge) ; posé par l'îlot à chaque relecture. */
     var playing = false
         set(value) {
+            if (field == value) return
             field = value
             invalidate()
         }
