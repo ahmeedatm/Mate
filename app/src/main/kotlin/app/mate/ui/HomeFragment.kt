@@ -55,6 +55,7 @@ class HomeFragment : Fragment(), HomeHost, WidgetGrid.Listener {
     private lateinit var grid: WidgetGrid
     private lateinit var scroll: ScrollView
     private lateinit var editBar: View
+    private lateinit var empty: View
 
     private lateinit var layout: HomeLayout
     /** Disposition au moment d'entrer dans le mode Modifier : « Annuler » y revient. */
@@ -123,6 +124,8 @@ class HomeFragment : Fragment(), HomeHost, WidgetGrid.Listener {
         grid = view.findViewById(R.id.home_grid)
         scroll = view.findViewById(R.id.home_scroll)
         editBar = view.findViewById(R.id.home_edit_bar)
+        empty = view.findViewById(R.id.home_empty)
+        empty.findViewById<View>(R.id.home_empty_add).setOnClickListener { openProfiles() }
         grid.listener = this
         grid.blocked = { unreachable != null && dependsOnComputer(it) }
 
@@ -224,8 +227,7 @@ class HomeFragment : Fragment(), HomeHost, WidgetGrid.Listener {
         widgets.clear()
         grid.removeAllViews()
         layout.widgets.forEach { addWidget(it) }
-        page = page.coerceIn(0, layout.pages - 1)
-        grid.page = page
+        setPage(page)
         renderProfileBar()
         activate()
     }
@@ -463,10 +465,17 @@ class HomeFragment : Fragment(), HomeHost, WidgetGrid.Listener {
 
     /** Titre, pastilles et widgets actifs, sans rien relire de l'ordinateur. */
     private fun displayProfile(index: Int) {
-        page = index.coerceIn(0, layout.pages - 1)
-        grid.page = page
+        setPage(index)
         renderProfileBar()
         activate()
+    }
+
+    /** Profil affiché ; -1 (plus aucun écran) : la grille laisse place à l'heure seule. */
+    private fun setPage(index: Int) {
+        page = if (index < 0 || layout.pages == 0) -1 else index.coerceAtMost(layout.pages - 1)
+        grid.page = page
+        scroll.visibility = if (page < 0) View.GONE else View.VISIBLE
+        empty.visibility = if (page < 0) View.VISIBLE else View.GONE
     }
 
     /**
@@ -590,6 +599,8 @@ class HomeFragment : Fragment(), HomeHost, WidgetGrid.Listener {
     }
 
     private fun onEnterEdit() {
+        // Plus aucun écran : rien à modifier, on en crée un.
+        if (page < 0) return openProfiles()
         backup = layout.copy()
         grid.editing = true
         editBar.visibility = View.VISIBLE

@@ -404,9 +404,15 @@ class ProfilesDialog(
             .setNegativeButton(R.string.cancel, null)
             .setPositiveButton(R.string.profile_delete) { _, _ ->
                 val wasShown = current == i
+                // L'Accueil supprimé : le premier écran restant devient le départ et garde son icône (pas la maison).
+                if (i == layout.homeProfile) {
+                    layout.profilesInOrder(inCall = false).firstOrNull { it != i }?.let { next ->
+                        if (layout.iconOf(next) == null) layout.setIcon(next, ProfileIcons.keyOf(layout, next))
+                    }
+                }
                 if (layout.removeProfile(i)) {
                     current = when {
-                        wasShown -> i.coerceAtMost(layout.pages - 1)
+                        wasShown -> layout.homeProfile
                         current > i -> current - 1
                         else -> current
                     }
