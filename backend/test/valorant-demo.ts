@@ -6,7 +6,7 @@
  * Outil de développement : jamais lancé par l'appli ni par la CI.
  */
 import http from "node:http";
-import { ME, SAGE, SOVA, JETT, line, matchOf, startFakeRiot, type Line, type Roster, type SeasonRow } from "./fake-riot.ts";
+import { ME, SAGE, SOVA, JETT, line, matchOf, startFakeRiot, type Line, type RoundEnd, type Roster, type SeasonRow } from "./fake-riot.ts";
 import { startServer, TOKEN } from "./server.ts";
 
 const OMEN = "8e253930-4c05-31dd-1b6c-968525494517";
@@ -210,8 +210,38 @@ const MINE: [string, string, number, number, number, number, number, number, num
   ["Bonsai", SAGE, 14, 12, 16, 14, 12, 201, 18],
 ];
 
+/** Les 22 rounds de la partie (13 à 9, mon équipe en Blue) et leur fin : la frise du tableau de fin. */
+const DEMO_ROUNDS: RoundEnd[] = (
+  [
+    ["W", "Detonate"],
+    ["W", "Elimination"],
+    ["L", "Defuse"],
+    ["W", "Elimination"],
+    ["L", "Elimination"],
+    ["L", ""],
+    ["W", "Detonate"],
+    ["W", "Elimination"],
+    ["W", "Detonate"],
+    ["L", "Defuse"],
+    ["W", "Elimination"],
+    ["L", "Elimination"],
+    ["W", "Defuse"],
+    ["L", "Detonate"],
+    ["W", "Elimination"],
+    ["W", ""],
+    ["L", "Elimination"],
+    ["W", "Defuse"],
+    ["W", "Elimination"],
+    ["L", "Detonate"],
+    ["W", "Elimination"],
+    ["L", "Elimination"],
+  ] as const
+).map(([w, code]) => [w === "W" ? "Blue" : "Red", code]);
+/** Score de la partie en cours, round après round (7 à 5) : la frise se déduit comme en vrai. */
+const LIVE = "WWLWLLWWWLWL";
+
 const matches: Record<string, () => unknown> = {
-  "partie-demo": () => matchOf("partie-demo", "competitive", ROUNDS, "Blue", 13, PLAYERS.map(endLine), names, MAP),
+  "partie-demo": () => matchOf("partie-demo", "competitive", ROUNDS, "Blue", 13, PLAYERS.map(endLine), names, MAP, DEMO_ROUNDS),
 };
 for (const p of PLAYERS) {
   matches[`r-${p.puuid}`] = () => matchOf(`r-${p.puuid}`, "competitive", 24, "Blue", 13, [recentLine(p)], names, MAP);
@@ -246,7 +276,22 @@ const roster: Roster = {
   seasons: Object.fromEntries(PLAYERS.map((p) => [p.puuid, seasonsOf(p)])),
   history: Object.fromEntries(PLAYERS.map((p) => [p.puuid, [`r-${p.puuid}`]])),
   matches,
-  updates: MINE.map(([, , , , , , , , rr], i) => [`h${i}`, rr] as const),
+  // Mes 5 dernières (4 aujourd'hui), puis 20 plus anciennes : de quoi un bilan sur Ascent.
+  updates: [
+    ...MINE.map(
+      ([map, , , , , , , , rr], i) =>
+        [
+          i === 0 ? "partie-demo" : `h${i}`,
+          rr,
+          `/Game/Maps/${map}/${map}`,
+          Date.now() - (i < 4 ? (i + 1) * 50 * 60_000 : 30 * 3_600_000),
+        ] as const,
+    ),
+    ...Array.from({ length: 20 }, (_, i) => {
+      const map = MINE[i % MINE.length][0];
+      return [`old-${i}`, i % 3 === 1 ? -16 : 19, `/Game/Maps/${map}/${map}`, Date.now() - (i + 2) * 86_400_000] as const;
+    }),
+  ],
   map: MAP,
   score: [7, 5],
   matchId: "partie-demo",
@@ -281,7 +326,16 @@ const scenes: Record<string, () => Promise<void>> = {
     riot.scene.loop = "PREGAME";
   },
   async ingame() {
+    // Partie suivie dès 0 – 0 : le compagnon voit chaque round passer.
     riot.scene.loop = "INGAME";
+    const score: [number, number] = [0, 0];
+    riot.scene.score = [...score];
+    await read();
+    for (const r of LIVE) {
+      score[r === "W" ? 0 : 1]++;
+      riot.scene.score = [...score];
+      await read();
+    }
   },
   async end() {
     riot.scene.loop = "INGAME";

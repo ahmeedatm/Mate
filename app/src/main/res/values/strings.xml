@@ -1291,6 +1291,7 @@
     <string name="icon_cloud">Nuage</string>
     <string name="icon_night">Nuit</string>
     <string name="icon_star">Étoile</string>
+    <string name="icon_valorant">Valorant</string>
     <string name="icon_heart">Cœur</string>
     <string name="icon_lock">Cadenas</string>
     <string name="rail_add_desc">Ajouter un écran</string>
@@ -1821,6 +1822,23 @@
     <string name="valorant_hovered">%1$s, pas encore verrouillé</string>
     <string name="valorant_unranked">Non classé</string>
     <string name="valorant_radiant">Radiant</string>
+    <string name="valorant_band_round">round %1$d</string>
+    <string name="valorant_band_map">Sur %1$s</string>
+    <string name="valorant_band_map_games">de victoires · %1$d parties</string>
+    <string name="valorant_band_map_few">Pas assez de parties</string>
+    <string name="valorant_band_today">Aujourd\'hui</string>
+    <string name="valorant_band_match">Cette partie</string>
+    <string name="valorant_band_wl">%1$d V · %2$d D</string>
+    <string name="valorant_band_never">Pas jouée dans tes %1$d dernières</string>
+    <plurals name="valorant_band_on_map">
+        <item quantity="one">Ta dernière sur %2$s</item>
+        <item quantity="other">Tes %1$d dernières sur %2$s</item>
+    </plurals>
+    <string name="valorant_band_rounds">rounds : %1$d gagnés, %2$d perdus</string>
+    <string name="valorant_round_elimination">élimination</string>
+    <string name="valorant_round_detonate">spike explosé</string>
+    <string name="valorant_round_defuse">spike désamorcé</string>
+    <string name="valorant_round_time">temps écoulé</string>
     <string-array name="valorant_divisions">
         <item>Fer</item>
         <item>Bronze</item>

@@ -30,6 +30,9 @@ object ValorantTable {
     private const val FIRST = 40
     private const val PEAK = 30
 
+    /** Largeur du mini bandeau de la carte en ligne (2 × 1 à 4 × 1). */
+    private const val BAND_WIDTH = 230
+
     /** Hauteur d'une ligne quand elles ne s'étirent pas (grands widgets). */
     private const val ROW_DP = 52
 
@@ -240,9 +243,10 @@ object ValorantTable {
 
     /**
      * Pastille, ligne, colonne : mon rang (logo et nom), mes RR et la barre, et le score de la partie en cours (ou le
-     * résultat de celle qui vient de finir). Le reste se lit dans un widget plus grand.
+     * résultat de celle qui vient de finir) ; en ligne et en colonne, `band` (mini bandeau de la carte) le remplace. Le
+     * reste se lit dans un widget plus grand.
      */
-    fun summary(v: Valorant, kit: ValorantKit, family: ShapeFamily): View {
+    fun summary(v: Valorant, kit: ValorantKit, family: ShapeFamily, band: View? = null): View {
         val me = v.me ?: return kit.text(kit.string(R.string.valorant_off_hint), 14f, R.attr.c_text_dim)
         val end = v.end?.takeIf { it.status == ValorantEndStatus.READY }
         val result = end?.let { e -> listOfNotNull(kit.string(resultText(e.won)), e.score?.let { kit.string(R.string.valorant_score, it.ally, it.enemy) }).joinToString(" ") }
@@ -264,12 +268,20 @@ object ValorantTable {
                 rr?.let { info.addView(it) }
                 bar?.let { info.addView(it, kit.lp(MATCH_PARENT).apply { topMargin = kit.dp(6) }) }
                 addView(info, kit.lp(0, WRAP_CONTENT, 1f))
-                score?.let { addView(it, kit.lp(WRAP_CONTENT).apply { marginStart = kit.dp(12) }) }
+                if (band != null) {
+                    addView(band, kit.lp(kit.dp(BAND_WIDTH), kit.dp(ValorantBand.Size.MINI.heightDp)).apply { marginStart = kit.dp(12) })
+                } else {
+                    score?.let { addView(it, kit.lp(WRAP_CONTENT).apply { marginStart = kit.dp(12) }) }
+                }
             }
             else -> kit.column(kit.rank(me.tier, 72), name, gravity = Gravity.CENTER).apply {
                 rr?.let { addView(it) }
                 bar?.let { addView(it, kit.lp(MATCH_PARENT).apply { topMargin = kit.dp(6) }) }
-                score?.let { addView(it, kit.lp(WRAP_CONTENT).apply { topMargin = kit.dp(10) }) }
+                if (band != null) {
+                    addView(band, kit.lp(MATCH_PARENT, kit.dp(ValorantBand.Size.MINI.heightDp)).apply { topMargin = kit.dp(10) })
+                } else {
+                    score?.let { addView(it, kit.lp(WRAP_CONTENT).apply { topMargin = kit.dp(10) }) }
+                }
             }
         }.apply { contentDescription = listOfNotNull(me.rank, me.rr?.let { kit.string(R.string.valorant_rr, it) }, result ?: live).joinToString(", ") }
     }
