@@ -1048,6 +1048,11 @@
     <string name="theme_title">Thème</string>
     <string name="theme_grain">Grain</string>
     <string name="theme_grain_hint">Un grain de papier ancien par-dessus tout l\'écran, avec les couleurs du thème</string>
+    <string name="theme_home_cards">Widgets de l\'Accueil</string>
+    <string name="theme_home_cards_hint">Comment les widgets se posent sur le fond d\'écran</string>
+    <string name="home_card_veil">Voile</string>
+    <string name="home_card_flat">Sans filet</string>
+    <string name="home_card_bare">À même le fond</string>
     <string name="theme_chaleur">Chaleur</string>
     <string name="theme_console">Console</string>
     <string name="theme_console_jour">Console jour</string>

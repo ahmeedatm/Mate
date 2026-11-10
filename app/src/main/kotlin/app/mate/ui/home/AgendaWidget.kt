@@ -28,7 +28,9 @@ import java.util.Locale
  */
 class AgendaWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidget(context, host, placed) {
     /** Liste et semaine : la carte d'origine (titre, source, « Mes agendas », +). */
-    private val listCard: View = LayoutInflater.from(context).inflate(R.layout.widget_agenda, FrameLayout(context), false)
+    private val listCard: View = LayoutInflater.from(context).inflate(R.layout.widget_agenda, FrameLayout(context), false).apply {
+        background = HomeCard.background(context)
+    }
     private val list = listCard.findViewById<LinearLayout>(R.id.widget_events)
     private val source = listCard.findViewById<TextView>(R.id.widget_source)
     private val link = listCard.findViewById<TextView>(R.id.widget_agenda_link)

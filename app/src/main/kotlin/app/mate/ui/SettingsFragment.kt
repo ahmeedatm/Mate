@@ -61,6 +61,7 @@ import app.mate.presence.PresenceCamera
 import app.mate.trial.EssaiBackend
 import app.mate.trial.EssaiPlan
 import app.mate.trial.Trial
+import app.mate.ui.home.HomeCard
 import app.mate.ui.topbar.TopHeader
 import app.mate.voice.WakeModel
 import kotlinx.coroutines.CancellationException
@@ -221,6 +222,7 @@ class SettingsFragment :
                 requireActivity().recreate()
             }
         }
+        HomeCard.bindChoice(view.findViewById(R.id.settings_home_cards)) { requireActivity().recreate() }
         setUpRail(view)
         setUpAccessibility(view)
         setUpReadingAids(view)

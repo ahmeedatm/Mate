@@ -4,6 +4,7 @@ import android.content.Context
 import app.mate.audio.VoiceChoice
 import app.mate.away.AwayState
 import app.mate.focus.FocusPresets
+import app.mate.ui.home.HomeCardStyle
 
 /** Réglages locaux : ordinateur piloté (voir Computers), luminosité, thème, kiosque. Aucune clé d'API ici. */
 /** Familles d'animations qui se coupent une à une dans Réglages > Animations (`key` : préférence). */
@@ -75,6 +76,7 @@ object Prefs {
     private const val KEY_LEGIBLE_FONT = "legible_font"
     private const val KEY_REDUCE_MOTION = "reduce_motion"
     private const val KEY_GRAIN = "grain"
+    private const val KEY_HOME_CARD = "home_card"
     private const val KEY_READ_BANNERS = "read_banners"
     private const val KEY_TTS_VOICE = "tts_voice"
     private const val KEY_TTS_RATE = "tts_rate"
@@ -389,6 +391,14 @@ object Prefs {
 
     fun setGrain(context: Context, value: Boolean) {
         prefs(context).edit().putBoolean(KEY_GRAIN, value).apply()
+    }
+
+    /** Réglages > Thème : style des widgets de l'Accueil sur le fond (ui/home/HomeCard). Voile par défaut. */
+    fun homeCardStyle(context: Context): HomeCardStyle =
+        prefs(context).getString(KEY_HOME_CARD, null).let { v -> HomeCardStyle.entries.firstOrNull { it.name == v } } ?: HomeCardStyle.VEIL
+
+    fun setHomeCardStyle(context: Context, value: HomeCardStyle) {
+        prefs(context).edit().putString(KEY_HOME_CARD, value.name).apply()
     }
 
     /** Accessibilité : ni animations continues ni ressorts (Look.still). Désactivé par défaut. */
