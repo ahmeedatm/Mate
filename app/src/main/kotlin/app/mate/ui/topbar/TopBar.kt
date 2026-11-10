@@ -254,7 +254,10 @@ class TopBar @JvmOverloads constructor(context: Context, attrs: AttributeSet? = 
         row.removeAllViews()
         for (item in items) {
             val element = elements.getOrPut(item) {
-                TopElement.create(item, host).also { if (running) it.start() }
+                TopElement.create(item, host).also {
+                    if (running) it.start()
+                    (it as? MusicElement)?.chip?.topBar = this
+                }
             }
             (element.view.parent as? ViewGroup)?.removeView(element.view)
             row.addView(element.view)

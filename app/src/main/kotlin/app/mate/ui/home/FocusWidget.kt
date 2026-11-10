@@ -92,6 +92,7 @@ class FocusWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidget
     /** Une case : cadran réduit et bouton seulement (le titre « Focus » et l'ambiance ne tiennent pas à côté). */
     private fun pill(): View {
         val inner = LayoutInflater.from(context).inflate(R.layout.widget_focus, view, false)
+        inner.background = HomeCard.background(context)
         dial = inner.findViewById(R.id.widget_focus_dial)
         time = inner.findViewById(R.id.widget_focus_time)
         phase = inner.findViewById(R.id.widget_focus_phase)
@@ -125,7 +126,7 @@ class FocusWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidget
         val box = LinearLayout(context).apply {
             orientation = if (vertical) LinearLayout.VERTICAL else LinearLayout.HORIZONTAL
             gravity = if (vertical) Gravity.CENTER_HORIZONTAL else Gravity.CENTER_VERTICAL
-            setBackgroundResource(app.mate.ui.themeRes(context, R.attr.c_home_card_bg))
+            background = HomeCard.background(context)
             val pad = dp(if (vertical) 20 else 24)
             setPadding(pad, dp(12), pad, dp(12))
             isClickable = true
@@ -174,7 +175,7 @@ class FocusWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidget
         val extra = family != ShapeFamily.BLOCK
         val tile = LinearLayout(context).apply {
             orientation = if (wide) LinearLayout.HORIZONTAL else LinearLayout.VERTICAL
-            setBackgroundResource(app.mate.ui.themeRes(context, R.attr.c_home_card_bg))
+            background = HomeCard.background(context)
             setPadding(dp(24), dp(20), dp(24), dp(20))
             isClickable = true
         }

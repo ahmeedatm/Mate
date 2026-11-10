@@ -20,6 +20,7 @@ import app.mate.net.PointerGesture
 import app.mate.net.runCatchingCancellable
 import app.mate.ui.dp
 import app.mate.ui.errorText
+import app.mate.ui.home.HomeCard
 import app.mate.ui.themeColor
 import app.mate.ui.themeRes
 import kotlinx.coroutines.CoroutineScope
@@ -133,7 +134,9 @@ class PadView @JvmOverloads constructor(
     private fun toast(text: String) = Toast.makeText(context, text, Toast.LENGTH_LONG).show()
 
     /** Sur un profil, la surface prend le fond des cartes de l'Accueil, comme les autres widgets (translucide en Rétro). */
-    fun useHomeCard() = surface.setBackgroundResource(themeRes(context, R.attr.c_home_card_bg))
+    fun useHomeCard() {
+        surface.background = HomeCard.background(context)
+    }
 
     /** Aperçu du catalogue : le pavé visible, sans canal ni écran gardé allumé. */
     fun showSample() {

@@ -45,6 +45,9 @@ class MusicChip @JvmOverloads constructor(context: Context, attrs: AttributeSet?
     private var lastPlayingMs: Long? = null
     private var fastUntilMs = 0L
 
+    /** Bandeau qui porte la pastille, effacé pendant que l'îlot est ouvert : posé par TopBar. */
+    var topBar: View? = null
+
     /** Rien à relire ni à montrer (cadre photo par-dessus, aucun ordinateur) : posé par MainActivity. */
     var suppressed: () -> Boolean = { Computers.all(context).isEmpty() }
 
@@ -68,7 +71,7 @@ class MusicChip @JvmOverloads constructor(context: Context, attrs: AttributeSet?
         }
         setOnClickListener {
             val shown = session ?: return@setOnClickListener
-            val opened = island ?: MusicIsland(this, ::control, ::update).also { island = it }
+            val opened = island ?: MusicIsland(this, ::control, ::update) { topBar }.also { island = it }
             opened.open(shown, thumb.drawable)
         }
     }

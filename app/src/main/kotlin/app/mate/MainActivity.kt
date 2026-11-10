@@ -357,8 +357,6 @@ class MainActivity : AppCompatActivity() {
         // Recréation (changement de thème…) : on garde les ordinateurs dont les plugins ont été repoussés, sinon
         // l'écran « Tes plugins » reviendrait à chaque changement de thème.
         savedInstanceState?.getStringArrayList(STATE_PLUGINS_LATER)?.let { pluginsLater += it }
-        // Tablette déjà appairée avant les templates : pas de choix à lui proposer plus tard, sur une config à elle.
-        if (Computers.all(this).isNotEmpty()) Prefs.setTemplatesOffered(this)
         // Le choix était ouvert pendant une recréation (rotation, thème) : il revient.
         if (savedInstanceState?.getBoolean(STATE_TEMPLATE_PENDING) == true) {
             templatePending = true
@@ -414,14 +412,23 @@ class MainActivity : AppCompatActivity() {
 
     /**
      * L'ordinateur piloté a changé (choisi dans les Réglages, ou bascule automatique) : chaque écran est
-     * recréé pour relire deck, agenda, tâches et documents de cet ordinateur. Focus et sons continuent.
+     * recréé pour relire deck, agenda, tâches et documents de cet ordinateur ; ses écrans, son bandeau et sa barre
+     * ([ComputerConfig]) sont redessinés. Focus et sons continuent.
      */
     fun onComputerChanged(computer: Computer?, automatic: Boolean = false) {
         recreateScreens()
+        topBar.reload()
+        nav.applySettings()
+        refreshRail()
         showLink(Link(computer, Link.State.OFFLINE))
         remote.restart()
         topBar.restart()
         if (automatic && computer != null) showBanner(getString(R.string.computer_switched, computer.name), 6)
+        // Ordinateur appairé depuis la config par ordinateur : choix du modèle, une fois (Bienvenue le fait déjà lever).
+        if (computer != null && !automatic && !templatePending && !Prefs.templatesOffered(this)) {
+            templatePending = true
+            offerTemplates()
+        }
         offerPlugins()
     }
 

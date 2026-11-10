@@ -50,7 +50,6 @@ import app.mate.ui.themeColor
 import app.mate.ui.themeColorList
 import app.mate.ui.themeFont
 import app.mate.ui.themePx
-import app.mate.ui.themeRes
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
@@ -124,9 +123,9 @@ abstract class HomeWidget(val context: Context, val host: HomeHost, val placed: 
     protected fun color(id: Int) = themeColor(context, id)
     protected fun dp(value: Int) = context.dp(value)
 
-    /** Carte de fond commune (même style que les cartes de l'application, translucide en Rétro). */
+    /** Carte de fond commune : la tuile du thème au style choisi dans Réglages > Thème (HomeCard). */
     protected fun <T : View> T.asCard(padding: Int? = null): T = apply {
-        setBackgroundResource(themeRes(context, R.attr.c_home_card_bg))
+        background = HomeCard.background(context)
         val px = padding?.let { dp(it) } ?: themePx(context, R.attr.c_card_pad)
         setPadding(px, px, px, px)
     }
