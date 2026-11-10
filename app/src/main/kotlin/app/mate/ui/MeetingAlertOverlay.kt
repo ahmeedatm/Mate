@@ -20,7 +20,7 @@ import java.text.SimpleDateFormat
 import java.util.Locale
 
 /**
- * Alerte réunion (Réglages > Tablette) : 5 min avant le début d'un événement horaire de l'agenda, un plein écran par-dessus
+ * Alerte réunion (Réglages > Notifs et verrou) : 5 min avant le début d'un événement horaire de l'agenda, un plein écran par-dessus
  * tout avec le titre, l'heure et un compte à rebours qui passe au rouge sous 1 min. Un toucher le ferme pour cette
  * réunion ; il part seul au début. Le compte à rebours ne tourne que pendant l'affichage (une mise à jour par seconde).
  * L'agenda est relu au plus toutes les 5 min, la vérification se fait chaque minute (MainActivity.onMinute).

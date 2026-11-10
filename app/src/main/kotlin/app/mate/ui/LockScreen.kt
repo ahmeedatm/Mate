@@ -31,7 +31,7 @@ import app.mate.lock.LockLogic
  * préférences (tenus hors ligne et après une relance de l'appli) :
  * - à la main, par le cadenas de la barre : pavé à 4 chiffres, levé seulement par le code ;
  * - ordinateur actif verrouillé : ordre `lock` (backend/src/screen-lock.ts) ou réponse 423, levé quand l'ordinateur se
- *   dit déverrouillé. Ce blocage se coupe dans Réglages > Tablette (Prefs.blockOnComputerLock) : la tablette reste
+ *   dit déverrouillé. Ce blocage se coupe dans Réglages > Notifs et verrou (Prefs.blockOnComputerLock) : la tablette reste
  *   utilisable, la pastille de la barre dit « verrouillé ».
  *   Verrou renforcé (option, Prefs.lockAway) : ordinateur verrouillé injoignable plus de 30 s, la tablette passe au
  *   verrou à code ([lockAway]) ; son déverrouillage ailleurs ne la rouvre plus.
@@ -59,7 +59,7 @@ class LockScreen(private val activity: MainActivity) {
         render()
     }
 
-    /** Réglages > Tablette : coupé, l'écran plein de l'ordinateur verrouillé part tout de suite ; remis, il revient. */
+    /** Réglages > Notifs et verrou : coupé, l'écran plein de l'ordinateur verrouillé part tout de suite ; remis, il revient. */
     fun setBlockOnComputerLock(block: Boolean) {
         Prefs.setBlockOnComputerLock(activity, block)
         render()
@@ -81,7 +81,7 @@ class LockScreen(private val activity: MainActivity) {
         render()
     }
 
-    /** Choix du code (Réglages > Tablette, ou premier verrouillage) : 4 chiffres, tapés deux fois. */
+    /** Choix du code (Réglages > Notifs et verrou, ou premier verrouillage) : 4 chiffres, tapés deux fois. */
     fun chooseCode(then: (() -> Unit)? = null) {
         val number = InputType.TYPE_CLASS_NUMBER or InputType.TYPE_NUMBER_VARIATION_PASSWORD
         val column = LinearLayout(activity).apply { orientation = LinearLayout.VERTICAL; setPadding(dp(24), 0, dp(24), 0) }
