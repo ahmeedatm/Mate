@@ -12,11 +12,14 @@ import android.widget.TextView
 import androidx.appcompat.app.AlertDialog
 import app.mate.BuildConfig
 import app.mate.R
+import app.mate.net.runCatchingCancellable
 import app.mate.ui.dp
+import app.mate.ui.errorText
 import app.mate.ui.showForTyping
 import app.mate.ui.themeColor
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeout
@@ -32,12 +35,13 @@ import java.util.Locale
  * « stop-monitoring » au format SIRI). La clé entre au build ([BuildConfig.IDFM_TOKEN], secret Actions `IDFM_TOKEN` en
  * release, vide en debug : aucun passage lu), jamais dans le dépôt ni dans un échange en clair hors de la tablette.
  * L'arrêt se cherche par son nom chez IDFM (places navitia) ; une direction = une destination observée à cet arrêt.
- * Rien de lourd : un appel toutes les [REFRESH_MS], au plus [MAX] passages gardés ([tablette-4.2], 128 Mo de tas).
+ * Rien de lourd : un appel par minute (le `load()` de l'hôte), réponse analysée une fois ([tablette-4.2], 128 Mo de tas).
  */
 object Transport {
-    const val REFRESH_MS = 60_000L
-    private const val MAX = 12
     private const val BASE = "https://prim.iledefrance-mobilites.fr/marketplace"
+
+    /** Fraction de seconde des horodatages SIRI (« .000 »), retirée avant lecture ; compilée une fois. */
+    private val FRACTION = Regex("\\.\\d+")
 
     /** Un passage : la ligne (référence IDFM), sa destination affichée et l'attente en millisecondes. */
     class Departure(val lineRef: String, val destination: String, val waitMs: Long)
@@ -56,12 +60,16 @@ object Transport {
             ?.optJSONObject(0)
             ?.optJSONArray("MonitoredStopVisit")
             ?: return emptyList()
+        // Un seul format pour toute la réponse, pas un par passage (tablette à 4 cœurs A35, chaque minute).
+        val iso = SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ssXXX", Locale.ROOT)
         val out = ArrayList<Departure>(visits.length())
         for (i in 0 until visits.length()) {
             val mvj = visits.optJSONObject(i)?.optJSONObject("MonitoredVehicleJourney") ?: continue
             val call = mvj.optJSONObject("MonitoredCall") ?: continue
+            // Départ si connu, sinon arrivée (un terminus ne donne que l'arrivée) ; prévu avant théorique.
             val time = call.optString("ExpectedDepartureTime").ifBlank { call.optString("AimedDepartureTime") }
-            val at = epoch(time) ?: continue
+                .ifBlank { call.optString("ExpectedArrivalTime") }.ifBlank { call.optString("AimedArrivalTime") }
+            val at = epoch(iso, time) ?: continue
             val waitMs = at - now
             if (waitMs < -60_000L) continue
             out += Departure(
@@ -87,15 +95,17 @@ object Transport {
         obj.optJSONArray(field)?.optJSONObject(0)?.optString("value").orEmpty()
 
     /** Horodatage ISO 8601 d'IDFM (« 2026-11-10T14:03:00.000Z » ou avec décalage) → ms ; null si illisible. */
-    private fun epoch(iso: String): Long? {
-        if (iso.isBlank()) return null
-        val cleaned = iso.replace(Regex("\\.\\d+"), "")
-        return runCatching { SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ssXXX", Locale.ROOT).parse(cleaned)!!.time }.getOrNull()
+    private fun epoch(iso: SimpleDateFormat, time: String): Long? {
+        if (time.isBlank()) return null
+        return runCatching { iso.parse(time.replace(FRACTION, ""))!!.time }.getOrNull()
     }
 
-    /** Prochains passages de l'arrêt [stopId], lus chez IDFM. */
+    /**
+     * Tous les prochains passages de l'arrêt [stopId], lus chez IDFM, non filtrés : l'appelant filtre par ligne et
+     * direction ([pick]) puis coupe. Filtrer après une coupe perdrait la direction choisie à un arrêt à plusieurs lignes.
+     */
     suspend fun departures(stopId: String, now: Long): List<Departure> =
-        parse(get("$BASE/stop-monitoring?MonitoringRef=STIF:StopArea:SP:$stopId:"), now).take(MAX)
+        parse(get("$BASE/stop-monitoring?MonitoringRef=STIF:StopArea:SP:$stopId:"), now)
 
     /** Arrêts dont le nom ressemble à [query] (places navitia d'IDFM). */
     suspend fun searchStops(query: String): List<Stop> {
@@ -157,6 +167,9 @@ object Transport {
             .setPositiveButton(R.string.widget_transport_search, null)
             .create()
 
+        // Une recherche à la fois : la nouvelle annule l'ancienne, un vieux résultat n'écrase pas un récent.
+        var job: Job? = null
+
         fun row(label: String, onClick: () -> Unit) = text(17f, R.attr.c_text).apply {
             this.text = label
             setBackgroundResource(R.drawable.row_bg)
@@ -165,10 +178,11 @@ object Transport {
         }
         fun rowParams() = LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT)
             .apply { topMargin = context.dp(8) }
-        fun note(res: Int) {
+        fun noteText(message: String) {
             results.removeAllViews()
-            results.addView(text(15f, R.attr.c_text_dim).apply { setText(res); setPadding(0, context.dp(12), 0, 0) })
+            results.addView(text(15f, R.attr.c_text_dim).apply { text = message; setPadding(0, context.dp(12), 0, 0) })
         }
+        fun note(res: Int) = noteText(context.getString(res))
 
         fun save(stop: Stop, lineRef: String?, direction: String?) {
             hideKeyboard(context, input)
@@ -184,27 +198,35 @@ object Transport {
 
         fun chooseDirection(stop: Stop) {
             note(R.string.loading)
-            scope.launch {
-                val deps = runCatching { departures(stop.id, System.currentTimeMillis()) }.getOrNull()
+            job?.cancel()
+            job = scope.launch {
+                val deps = runCatchingCancellable { departures(stop.id, System.currentTimeMillis()) }
                 if (!dialog.isShowing) return@launch
                 results.removeAllViews()
                 results.addView(row(context.getString(R.string.widget_transport_all)) { save(stop, null, null) }, rowParams())
                 // Une direction = une destination distincte observée à l'arrêt ; sa ligne sert au filtre précis.
-                deps.orEmpty().distinctBy { it.destination }.filter { it.destination.isNotBlank() }
-                    .forEach { d -> results.addView(row("→ ${d.destination}") { save(stop, d.lineRef, d.destination) }, rowParams()) }
+                deps.getOrNull().orEmpty().distinctBy { it.destination }.filter { it.destination.isNotBlank() }
+                    .forEach { d -> results.addView(row(d.destination) { save(stop, d.lineRef, d.destination) }, rowParams()) }
+                deps.exceptionOrNull()?.let { results.addView(text(13f, R.attr.c_text_dim).apply { text = context.errorText(it); setPadding(0, context.dp(12), 0, 0) }, rowParams()) }
             }
         }
 
         fun search() {
+            if (keyless) return note(R.string.widget_transport_no_key)
             val query = input.text.toString().trim()
             if (query.length < 2) return
             note(R.string.loading)
-            scope.launch {
-                val stops = runCatching { searchStops(query) }.getOrNull()
+            job?.cancel()
+            job = scope.launch {
+                val stops = runCatchingCancellable { searchStops(query) }
+                if (!dialog.isShowing) return@launch
                 hideKeyboard(context, input)
                 results.removeAllViews()
-                if (stops.isNullOrEmpty()) return@launch note(R.string.widget_transport_none)
-                stops.forEach { stop -> results.addView(row(stop.name) { chooseDirection(stop) }, rowParams()) }
+                stops.onFailure { noteText(context.errorText(it)) }
+                    .onSuccess { list ->
+                        if (list.isEmpty()) note(R.string.widget_transport_none)
+                        else list.forEach { stop -> results.addView(row(stop.name) { chooseDirection(stop) }, rowParams()) }
+                    }
             }
         }
 
@@ -216,6 +238,7 @@ object Transport {
             dialog.getButton(AlertDialog.BUTTON_POSITIVE).setOnClickListener { search() }
             if (keyless) note(R.string.widget_transport_no_key)
         }
+        dialog.setOnDismissListener { job?.cancel() }
         dialog.showForTyping(input)
     }
 

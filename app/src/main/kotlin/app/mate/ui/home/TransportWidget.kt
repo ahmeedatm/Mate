@@ -37,10 +37,10 @@ class TransportWidget(context: Context, host: HomeHost, placed: Placed) : HomeWi
         addView(title, LinearLayout.LayoutParams(0, WRAP_CONTENT, 1f).apply { marginStart = dp(12) })
     }
 
-    /** Pastille et Ligne : le prochain passage en gros (minutes, unité) et sa destination. */
-    private val bigWait = label(40f, light = true).apply { isSingleLine = true }
+    /** Pastille et Ligne : le prochain passage en gros (minutes en accent, unité) et sa destination lisible. */
+    private val bigWait = label(40f, R.attr.c_accent).apply { isSingleLine = true }
     private val bigUnit = label(15f, R.attr.c_text_dim).apply { isSingleLine = true }
-    private val bigDest = label(14f, R.attr.c_text_faint).apply {
+    private val bigDest = label(13f, R.attr.c_text_dim).apply {
         isSingleLine = true
         ellipsize = TextUtils.TruncateAt.END
     }
@@ -78,6 +78,11 @@ class TransportWidget(context: Context, host: HomeHost, placed: Placed) : HomeWi
     private var error: String? = null
     private var preview = false
 
+    init {
+        // Pas encore d'arrêt réglé : un toucher ouvre le choix, comme le widget Météo sans ville.
+        view.setOnClickListener { if (!preview && !Transport.keyless && stopId().isBlank()) showSettings() }
+    }
+
     override fun setActive(active: Boolean) {
         if (active && !preview) host.scope.launch { load() }
     }
@@ -99,9 +104,11 @@ class TransportWidget(context: Context, host: HomeHost, placed: Placed) : HomeWi
 
     override fun applySize() {
         shape = TransportShape.of(placed.size)
-        for (part in listOf(head, lead, rows, status, disc, title)) (part.parent as? ViewGroup)?.removeView(part)
+        // Seulement les enfants directs de la carte : disc et title vivent dans head, ne pas les en détacher.
+        for (part in listOf(head, lead, rows, status)) (part.parent as? ViewGroup)?.removeView(part)
         view.removeAllViews()
         normalGravity = if (shape.side) Gravity.CENTER_VERTICAL else Gravity.TOP
+        rows.gravity = if (shape.side) Gravity.CENTER_VERTICAL else Gravity.NO_GRAVITY
         if (shape.side) {
             view.orientation = LinearLayout.HORIZONTAL
             view.addView(lead)
@@ -126,8 +133,8 @@ class TransportWidget(context: Context, host: HomeHost, placed: Placed) : HomeWi
     }
 
     private fun render() {
-        val stopName = placed.config.optString("stop")
-        if (!preview) title.text = stopName.ifBlank { context.getString(R.string.widget_transport) }
+        val stop = if (preview) title.text.toString() else placed.config.optString("stop")
+        if (!preview) title.text = stop.ifBlank { context.getString(R.string.widget_transport) }
         val now = System.currentTimeMillis()
         val live = departures.filter { remaining(it, now) >= -60_000L }
 
@@ -139,36 +146,50 @@ class TransportWidget(context: Context, host: HomeHost, placed: Placed) : HomeWi
             else -> null
         }
         val showMsg = message != null
+        // L'en-tête (titre + icône) reste sur les formes qui en ont un, même quand il n'y a qu'un message : jamais une
+        // carte nue. Sans en-tête (Pastille, Ligne), le message est centré.
+        val header = shape.title && !shape.side
         status.text = message.orEmpty()
         status.visibility = if (showMsg) View.VISIBLE else View.GONE
-        head.visibility = if (!showMsg && !shape.side && shape.title) View.VISIBLE else View.GONE
+        status.gravity = if (header) Gravity.START else Gravity.CENTER
+        head.visibility = if (header) View.VISIBLE else View.GONE
         lead.visibility = if (!showMsg && shape.side) View.VISIBLE else View.GONE
         rows.visibility = if (showMsg) View.GONE else View.VISIBLE
-        view.gravity = if (showMsg) Gravity.CENTER else normalGravity
+        view.gravity = when {
+            !showMsg -> normalGravity
+            header -> Gravity.TOP
+            else -> Gravity.CENTER
+        }
         if (showMsg) return
 
         if (shape.side) {
-            renderLead(live, now)
+            renderLead(live, now, stop)
             renderRows(live.drop(1).take(shape.rows), now)
         } else {
             renderRows(live.take(shape.rows), now)
         }
     }
 
-    /** Pastille et Ligne : le prochain passage en gros. */
-    private fun renderLead(live: List<Transport.Departure>, now: Long) {
+    /** Pastille et Ligne : le prochain passage en gros (attente en accent), puis sa direction et l'arrêt en sous-texte. */
+    private fun renderLead(live: List<Transport.Departure>, now: Long, stop: String) {
         val next = live.firstOrNull() ?: return
         val mins = Transport.waitMinutes(remaining(next, now))
+        val base = if (pill()) 30f else 40f
         if (mins <= 0) {
             bigWait.text = context.getString(R.string.widget_transport_now)
+            bigWait.textSize = base * 0.5f
             bigUnit.visibility = View.GONE
         } else {
             bigWait.text = mins.toString()
+            bigWait.textSize = base
             bigUnit.visibility = View.VISIBLE
             bigUnit.setText(R.string.widget_transport_unit)
         }
-        bigDest.text = next.destination
-        bigDest.visibility = if (next.destination.isBlank() || pill()) View.GONE else View.VISIBLE
+        // Direction (destination) puis arrêt ; en Pastille, juste la direction, faute de place.
+        val parts = if (pill()) listOf(next.destination) else listOf(next.destination, stop)
+        bigDest.text = parts.filter { it.isNotBlank() }.joinToString(" · ")
+        bigDest.textSize = if (pill()) 10f else 13f
+        bigDest.visibility = if (bigDest.text.isBlank()) View.GONE else View.VISIBLE
     }
 
     private fun renderRows(items: List<Transport.Departure>, now: Long) {

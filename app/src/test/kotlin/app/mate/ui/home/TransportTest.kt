@@ -59,6 +59,44 @@ class TransportTest {
     }
 
     @Test
+    fun `heure avec decalage horaire et heure sans fraction`() {
+        val json = monitoring(
+            // 15:05 +01:00 = 14:05 UTC → 5 min ; et une heure sans « .000 ».
+            visit("STIF:Line::C01742:", "Boissy", "2026-11-10T15:05:00.000+01:00"),
+            visit("STIF:Line::C01742:", "Boissy", "2026-11-10T14:06:00Z"),
+        )
+        assertEquals(listOf(5L, 6L), Transport.parse(json, now).map { it.waitMs / 60_000L })
+    }
+
+    @Test
+    fun `l'heure d'arrivee sert au terminus, faute d'heure de depart`() {
+        val json = JSONObject().put(
+            "Siri",
+            JSONObject().put(
+                "ServiceDelivery",
+                JSONObject().put(
+                    "StopMonitoringDelivery",
+                    JSONArray().put(
+                        JSONObject().put(
+                            "MonitoredStopVisit",
+                            JSONArray().put(
+                                JSONObject().put(
+                                    "MonitoredVehicleJourney",
+                                    JSONObject()
+                                        .put("LineRef", JSONObject().put("value", "STIF:Line::C01742:"))
+                                        .put("DestinationName", JSONArray().put(JSONObject().put("value", "Boissy")))
+                                        .put("MonitoredCall", JSONObject().put("ExpectedArrivalTime", "2026-11-10T14:04:00.000Z")),
+                                ),
+                            ),
+                        ),
+                    ),
+                ),
+            ),
+        )
+        assertEquals(4L, Transport.parse(json, now).single().waitMs / 60_000L)
+    }
+
+    @Test
     fun `filtrer par ligne et par direction`() {
         val all = listOf(
             Transport.Departure("STIF:Line::C01742:", "Boissy-Saint-Léger", 180_000L),
