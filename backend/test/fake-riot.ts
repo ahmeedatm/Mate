@@ -17,6 +17,8 @@ export const ENTITLEMENT = "droits-riot-secrets";
 export const SOVA = "320b2a48-4d9b-a075-30f1-1f93a9b638fa";
 export const SAGE = "569fdd95-4d10-43ab-ca70-79becc718b46";
 export const JETT = "add6443a-41bd-e414-f6ad-e58d267f4e95";
+/** Carte du roster de test (Plummet = Summit) chez valorant-api.com. */
+export const SUMMIT = "1c18ab1f-420d-0d8b-71d0-77ad3c439115";
 export const TIERS_UUID = "03621f52-342b-cf4e-4f86-9350a49c6d04";
 export const ACT_NOW = "acte-en-cours";
 /** Acte d'avant Ascendant (avant juin 2022) : ses rangs au-dessus de Diamant 3 se décalent de 3. */
@@ -38,6 +40,8 @@ export type Scene = {
   mmrRefused: boolean;
   /** Mes RR, s'ils changent (fin de partie). */
   myRr: number | null;
+  /** Score de la partie en cours dans la présence, s'il change (sinon celui du roster). */
+  score: [number, number] | null;
 };
 
 const freshScene = (): Scene => ({
@@ -50,6 +54,7 @@ const freshScene = (): Scene => ({
   historyRefused: false,
   mmrRefused: false,
   myRr: null,
+  score: null,
 });
 
 export type Seen = { url: string; auth?: string; entitlements?: string; version?: string };
@@ -92,8 +97,8 @@ function presence(puuid: string, scene: Scene, partyId: string, roster: Roster) 
         matchPresenceData: { sessionLoopState: scene.loop, matchMap: roster.map, queueId: scene.queueId },
         partyPresenceData: { partyState: scene.partyState, partyId, partyClientVersion: "release-13.09-shipping-18-5804228" },
         playerPresenceData: { competitiveTier: roster.ranks[ME]?.[0] ?? 0, accountLevel: 90 },
-        partyOwnerMatchScoreAllyTeam: roster.score[0],
-        partyOwnerMatchScoreEnemyTeam: roster.score[1],
+        partyOwnerMatchScoreAllyTeam: (scene.score ?? roster.score)[0],
+        partyOwnerMatchScoreEnemyTeam: (scene.score ?? roster.score)[1],
         queueId: scene.queueId,
       }),
     ).toString("base64"),
@@ -122,7 +127,13 @@ const TEST_NAMES: Record<string, [string, string]> = {
   ennemi: ["Adversaire", "1"],
 };
 
-/** Détail d'une partie terminée, au format de match-details : premiers kills répartis dans les premières manches. */
+/** Round d'une partie terminée : équipe gagnante et code de fin de Riot (`roundResultCode`, vide : temps écoulé). */
+export type RoundEnd = [team: string, code: string];
+
+/**
+ * Détail d'une partie terminée, au format de match-details : premiers kills répartis dans les premières manches ; rounds
+ * gagnés par élimination, d'abord ceux de Blue (sauf `ends` donnés).
+ */
 export function matchOf(
   id: string,
   queueID: string,
@@ -132,9 +143,18 @@ export function matchOf(
   lines: Line[],
   names = TEST_NAMES,
   mapId = "/Game/Maps/Plummet/Plummet",
+  ends?: RoundEnd[],
 ) {
   let next = 0;
-  const roundResults = Array.from({ length: rounds }, (_, i) => ({ roundNum: i, playerStats: [] as any[] }));
+  const endOf = (i: number): RoundEnd => ends?.[i] ?? [i < scoreBlue ? "Blue" : "Red", "Elimination"];
+  const roundResults = Array.from({ length: rounds }, (_, i) => ({
+    roundNum: i,
+    winningTeam: queueID === "deathmatch" ? "" : endOf(i)[0],
+    roundResult:
+      endOf(i)[1] === "" ? "Round timer expired" : endOf(i)[1] === "Elimination" ? "Eliminated" : `Bomb ${endOf(i)[1].toLowerCase()}d`,
+    roundResultCode: endOf(i)[1],
+    playerStats: [] as any[],
+  }));
   for (const l of lines) {
     const stats: any = {
       subject: l.puuid,
@@ -190,6 +210,24 @@ export const line = (puuid: string, team: string, agent: string, tier: number, o
  * Parties : m1 à m3 (historique récent de chacun), m4 et m5 (mes 5 dernières), jeu-1 (la partie suivie, 13 à 7).
  * Mes 3 dernières : 30 kills, 25 morts (K/D 1,2), 15 têtes sur 60 tirs touchés (25 %).
  */
+/** La partie suivie (jeu-1), 13 à 7 pour Blue (mon équipe). */
+const JEU_1: Line[] = [
+  line("ennemi", "Red", JETT, 18, { k: 25, d: 12, a: 2, score: 6000, head: 12, body: 28, damage: 3600, fk: 4 }),
+  line(ME, "Blue", SOVA, 10, { k: 20, d: 10, a: 5, score: 5000, head: 10, body: 30, damage: 3000, fk: 3 }),
+  line("cache", "Red", "inconnu", 9, { k: 8, d: 18, a: 3, score: 2000, head: 2, body: 18, damage: 1400 }),
+  line("ami", "Blue", SAGE, 12, { k: 12, d: 11, a: 9, score: 3000, head: 3, body: 27, damage: 2000, fk: 1 }),
+];
+/** Ses 20 rounds : spike explosé, désamorcé, temps écoulé, abandon ; le reste par élimination. */
+const JEU_1_ROUNDS: RoundEnd[] = [
+  ["Blue", "Detonate"],
+  ["Red", "Elimination"],
+  ["Blue", "Defuse"],
+  ["Red", ""],
+  ...Array.from({ length: 11 }, (): RoundEnd => ["Blue", "Elimination"]),
+  ...Array.from({ length: 4 }, (): RoundEnd => ["Red", "Elimination"]),
+  ["Red", "Surrendered"],
+];
+
 const TEST_MATCHES: Record<string, () => unknown> = {
   m1: () =>
     matchOf("m1", "competitive", 20, "Blue", 13, [
@@ -201,13 +239,7 @@ const TEST_MATCHES: Record<string, () => unknown> = {
   m3: () => matchOf("m3", "competitive", 24, null, 12, [line(ME, "Red", SOVA, 10, { k: 0, d: 5, a: 0, score: 1200 })]),
   m4: () => matchOf("m4", "competitive", 13, "Blue", 13, [line(ME, "Blue", SOVA, 9, { k: 15, d: 5, a: 3, score: 3900 })]),
   m5: () => matchOf("m5", "competitive", 13, "Red", 0, [line(ME, "Blue", JETT, 9, { k: 3, d: 13, a: 0, score: 1300 })]),
-  "jeu-1": () =>
-    matchOf("jeu-1", "competitive", 20, "Blue", 13, [
-      line("ennemi", "Red", JETT, 18, { k: 25, d: 12, a: 2, score: 6000, head: 12, body: 28, damage: 3600, fk: 4 }),
-      line(ME, "Blue", SOVA, 10, { k: 20, d: 10, a: 5, score: 5000, head: 10, body: 30, damage: 3000, fk: 3 }),
-      line("cache", "Red", "inconnu", 9, { k: 8, d: 18, a: 3, score: 2000, head: 2, body: 18, damage: 1400 }),
-      line("ami", "Blue", SAGE, 12, { k: 12, d: 11, a: 9, score: 3000, head: 3, body: 27, damage: 2000, fk: 1 }),
-    ]),
+  "jeu-1": () => matchOf("jeu-1", "competitive", 20, "Blue", 13, JEU_1, TEST_NAMES, undefined, JEU_1_ROUNDS),
   dm: () =>
     matchOf("dm", "deathmatch", 1, null, 0, [
       line(ME, "a", SOVA, 10, { k: 30, d: 20, score: 3000 }),
@@ -247,7 +279,8 @@ export type Roster = {
   seasons: Record<string, SeasonRow[]>;
   history: Record<string, string[]>;
   matches: Record<string, () => unknown>;
-  updates: readonly (readonly [string, number])[];
+  /** Mes classées, de la plus récente : partie, RR, carte (celle du roster sinon), début (il y a i + 1 minutes sinon). */
+  updates: readonly (readonly [string, number, string?, number?])[];
   map: string;
   /** Score de la partie en cours (mon équipe, l'autre). */
   score: [number, number];
@@ -274,7 +307,7 @@ function mmrOf(roster: Roster, puuid: string) {
   };
 }
 
-const TEST_ROSTER: Roster = {
+export const TEST_ROSTER: Roster = {
   names: TEST_NAMES,
   ranks: TEST_RANKS,
   seasons: TEST_SEASONS,
@@ -412,6 +445,19 @@ export async function startFakeRiot(roster: Roster = TEST_ROSTER): Promise<FakeR
           ],
         });
       }
+      if (url === "/v1/maps")
+        return send(res, {
+          data: [
+            {
+              uuid: SUMMIT,
+              displayName: "Summit",
+              mapUrl: "/Game/Maps/Plummet/Plummet",
+              splash: `${assetsBase}/maps/${SUMMIT}/splash.png`,
+            },
+            { uuid: "sans-image", displayName: "Range", mapUrl: "/Game/Maps/Poveglia/Range", splash: null },
+          ],
+        });
+      if (url === `/maps/${SUMMIT}/splash.png`) return res.end(pngOf(2048, [40, 90, 160, 255]));
       if (/^\/agents\/[^/]+\/displayicon\.png$/.test(url)) return res.end(pngOf(1024));
       if (/^\/competitivetiers\/[^/]+\/\d+\/smallicon\.png$/.test(url)) return res.end(pngOf(256, [20, 200, 120, 255]));
 
@@ -439,13 +485,23 @@ export async function startFakeRiot(roster: Roster = TEST_ROSTER): Promise<FakeR
           })),
         );
       const updates = url.match(/^\/mmr\/v1\/players\/([^/?]+)\/competitiveupdates\?/);
-      if (updates)
+      if (updates) {
+        const page = new URL(url, "http://x").searchParams;
+        const from = Number(page.get("startIndex") ?? 0);
+        const to = Number(page.get("endIndex") ?? 20);
+        if (to - from > 20) return send(res, { message: "trop de parties demandées" }, 400);
         return send(res, {
           Matches:
             updates[1] === ME
-              ? roster.updates.map(([MatchID, RankedRatingEarned]) => ({ MatchID, MapID: roster.map, RankedRatingEarned }))
+              ? roster.updates.slice(from, to).map(([MatchID, RankedRatingEarned, map, start], i) => ({
+                  MatchID,
+                  MapID: map ?? roster.map,
+                  RankedRatingEarned,
+                  MatchStartTime: start ?? Date.now() - (from + i + 1) * 60_000,
+                }))
               : [],
         });
+      }
       const mmr = url.match(/^\/mmr\/v1\/players\/([^/?]+)$/);
       if (mmr) {
         if (mmr[1] === "nouveau" || s.mmrRefused) return send(res, { message: "trop d'appels" }, mmr[1] === "nouveau" ? 503 : 429);

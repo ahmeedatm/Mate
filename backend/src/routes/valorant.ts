@@ -1,7 +1,7 @@
 import { createReadStream } from "node:fs";
 import type { FastifyInstance, FastifyReply } from "fastify";
 import { valorantState } from "../valorant.ts";
-import { agentIcon, rankIcon } from "../valorant-assets.ts";
+import { agentIcon, mapImage, rankIcon } from "../valorant-assets.ts";
 
 /**
  * Widget Valorant de la tablette : partie en cours, rangs, agents et stats (client Riot de l'ordinateur, Windows), et
@@ -24,6 +24,16 @@ export default async function valorantRoutes(app: FastifyInstance) {
       },
     },
     async (req, reply) => png(reply, await agentIcon(req.query.id)),
+  );
+
+  app.get<{ Querystring: { id: string } }>(
+    "/valorant/map",
+    {
+      schema: {
+        querystring: { type: "object", required: ["id"], properties: { id: { type: "string", pattern: "^[0-9a-f-]{36}$" } } },
+      },
+    },
+    async (req, reply) => png(reply, await mapImage(req.query.id)),
   );
 
   app.get<{ Querystring: { tier: number } }>(

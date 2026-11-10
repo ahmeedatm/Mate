@@ -1,8 +1,10 @@
 import { singleFlight } from "./single-flight.ts";
-import { agentId, agentName, refreshAssets } from "./valorant-assets.ts";
-import { endOfMatch, watchMatch, type EndView } from "./valorant-end.ts";
+import { agentId, agentName, mapIdOf, refreshAssets } from "./valorant-assets.ts";
+import { endOfMatch, shownMatchId, watchMatch, type EndView } from "./valorant-end.ts";
 import { QUEUES, mapName, rankName } from "./valorant-names.ts";
 import { local, readLock, remote, remoteFor, type Remote } from "./valorant-riot.ts";
+import { liveRounds } from "./valorant-rounds.ts";
+import { mapStatsOf, todayOf, updatesOf, type MapStats, type Today } from "./valorant-session.ts";
 import { actWinRate, historyOf, peakTier, profileOf, recentOf, type HistoryEntry } from "./valorant-stats.ts";
 
 /**
@@ -11,7 +13,8 @@ import { actWinRate, historyOf, peakTier, profileOf, recentOf, type HistoryEntry
  * Lu dans le client Riot de l'ordinateur (API locale, port et mot de passe du « lockfile ») puis, avec le jeton qu'il
  * donne, sur les serveurs Riot de la région (glz : partie en cours, pd : rangs, noms, historique). API non officielle,
  * sans clé : celle qu'utilisent les trackers. Le jeton Riot reste sur l'ordinateur ; la tablette ne reçoit que le résultat.
- * Les champs ajoutés par la refonte du 5/11/2026 s'ajoutent aux anciens : une tablette pas à jour lit le même JSON.
+ * Les champs ajoutés par la refonte du 5/11/2026 et le 10/11/2026 (rounds, carte, journée, bilan sur la carte) s'ajoutent
+ * aux anciens : une tablette pas à jour lit le même JSON.
  */
 
 export type ValorantPlayer = {
@@ -50,11 +53,32 @@ export type ValorantState = {
   players: ValorantPlayer[];
   /** Au menu et en file : mes 5 dernières classées. */
   history: HistoryEntry[];
-  /** Tableau des scores de la partie qui vient de finir (2 min). */
-  end: EndView | null;
+  /** Tableau des scores de la partie qui vient de finir (2 min), avec les RR qu'elle m'a rapportés. */
+  end: (EndView & { rr: number | null }) | null;
+  /** Identifiant de la carte chez valorant-api.com (image : /valorant/map?id=) ; null hors partie ou inconnue. */
+  mapId: string | null;
+  /** En partie : rounds joués vus de mon équipe (gagné, perdu, null si l'ordre est inconnu). */
+  rounds: (boolean | null)[];
+  /** Mes classées d'aujourd'hui ; null tant qu'elles ne sont pas lues. */
+  today: Today | null;
+  /** Sélection et partie : mon bilan sur la carte jouée parmi mes dernières classées ; null sinon. */
+  mapStats: MapStats | null;
 };
 
-const OFF: ValorantState = { state: "off", queue: null, map: null, score: null, me: null, players: [], history: [], end: null };
+const OFF: ValorantState = {
+  state: "off",
+  queue: null,
+  map: null,
+  score: null,
+  me: null,
+  players: [],
+  history: [],
+  end: null,
+  mapId: null,
+  rounds: [],
+  today: null,
+  mapStats: null,
+};
 
 /** Noms « Nom#TAG », gardés le temps du compagnon (un joueur change rarement de nom), 500 au plus. */
 const names = new Map<string, string>();
@@ -194,6 +218,11 @@ async function read(): Promise<ValorantState> {
     level: Number.isFinite(level) && level > 0 ? level : null,
     peakTier: peakTier(myProfile),
   };
+  // Fin de partie d'abord : elle fait relire mes dernières classées.
+  const end = endOfMatch(state, r);
+  // Avant les joueurs : mes classées passent en tête de la file au débit limité.
+  const updates = r ? updatesOf(r, puuid) : null;
+  const endId = end && shownMatchId();
   const result: ValorantState = {
     state,
     queue: QUEUES[queueId] ?? null,
@@ -202,25 +231,31 @@ async function read(): Promise<ValorantState> {
     me,
     players: [],
     history: r && (state === "menu" || state === "queue") ? historyOf(r, puuid) : [],
-    end: endOfMatch(state, r),
+    end: end && { ...end, rr: updates?.find((u) => u.id === endId)?.rr ?? null },
+    mapId: null,
+    rounds: [],
+    today: updates && todayOf(updates),
+    mapStats: null,
   };
   if (state === "ingame")
     result.score = { ally: Number(priv.partyOwnerMatchScoreAllyTeam) || 0, enemy: Number(priv.partyOwnerMatchScoreEnemyTeam) || 0 };
   if (!r || (state !== "ingame" && state !== "pregame")) return result;
-  result.map = mapName(priv.matchPresenceData?.matchMap);
+  let mapPath: string | undefined = priv.matchPresenceData?.matchMap;
+  let matchId: string | null = null;
   // Combat à mort (chacun pour soi) : rang et agent seulement.
   const ctx = { me: puuid, pregame: state === "pregame", withStats: queueId !== "deathmatch", parties };
   try {
     if (state === "pregame") {
       const { MatchID } = await remote(r, `${r.glz}/pregame/v1/players/${puuid}`);
       const match = await remote(r, `${r.glz}/pregame/v1/matches/${MatchID}`);
-      result.map = mapName(match.MapID) ?? result.map;
+      mapPath = match.MapID ?? mapPath;
       result.players = await players(r, match.AllyTeam?.Players ?? [], { ...ctx, myTeam: null });
     } else {
       const { MatchID } = await remote(r, `${r.glz}/core-game/v1/players/${puuid}`);
       const match = await remote(r, `${r.glz}/core-game/v1/matches/${MatchID}`);
       const list: RawPlayer[] = match.Players ?? [];
-      result.map = mapName(match.MapID) ?? result.map;
+      mapPath = match.MapID ?? mapPath;
+      if (typeof MatchID === "string") matchId = MatchID;
       result.players = await players(r, list, { ...ctx, myTeam: list.find((p) => p.Subject === puuid)?.TeamID ?? null });
       const incognito = new Set(list.filter((p) => p.PlayerIdentity?.Incognito).map((p) => p.Subject));
       if (typeof MatchID === "string") watchMatch({ matchId: MatchID, me: puuid, incognito });
@@ -228,6 +263,10 @@ async function read(): Promise<ValorantState> {
   } catch {
     // Entre deux phases (la partie se termine, le jeu charge) : l'état seul, les joueurs reviennent au tour suivant.
   }
+  result.map = mapName(mapPath);
+  result.mapId = mapIdOf(mapPath);
+  result.mapStats = updates && mapStatsOf(updates, mapPath);
+  if (result.score) result.rounds = liveRounds(matchId, result.score);
   return result;
 }
 

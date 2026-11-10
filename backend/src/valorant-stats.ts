@@ -2,6 +2,7 @@ import { beforeAscendant, currentAct, agentName } from "./valorant-assets.ts";
 import { hsPercent, knownMatch, matchDetails, resultFor } from "./valorant-match.ts";
 import { mapName } from "./valorant-names.ts";
 import { paced, remote, type Remote } from "./valorant-riot.ts";
+import { forgetUpdates, updatesOf, type Update } from "./valorant-session.ts";
 
 /**
  * Stats « tracker » d'un joueur, tirées de son historique classé (Riot ne donne rien par joueur pendant la partie) :
@@ -30,8 +31,6 @@ type Entry<T> = { until: number; value: T | null };
 const profileTtl = () => Number(process.env.VALORANT_PROFILE_MS) || 10 * 60_000;
 /** K/D récent : une fois par partie (l'historique ne bouge pas pendant qu'on joue). */
 const RECENT_TTL = 30 * 60_000;
-/** Mes 5 dernières : relues au plus toutes les 2 min, et à la fin de chaque partie. */
-const HISTORY_TTL = 2 * 60_000;
 /** Un échec est gardé 30 s : on ne relance pas dix appels refusés à chaque relecture. */
 const FAIL_TTL = 30_000;
 
@@ -114,8 +113,6 @@ async function loadRecent(r: Remote, puuid: string): Promise<Recent> {
   return { kd: Math.round((deaths > 0 ? kills / deaths : kills) * 100) / 100, hs: hsPercent(sum("headshots"), sum("hits")) };
 }
 
-type Update = { id: string; mapId: string | undefined; rr: number };
-let history: (Entry<Update[]> & { puuid: string; pending?: boolean }) | null = null;
 /** Détails de parties en échec : pas redemandés avant 30 s. */
 const failedMatches = new Map<string, number>();
 
@@ -123,29 +120,13 @@ const failedMatches = new Map<string, number>();
 export function historyOf(r: Remote, puuid: string): HistoryEntry[] {
   const now = Date.now();
   for (const [id, until] of failedMatches) if (now >= until) failedMatches.delete(id);
-  if (!history || history.puuid !== puuid || (!history.pending && now >= history.until)) {
-    const mine = { puuid, until: Infinity, value: history?.puuid === puuid ? history.value : null, pending: true };
-    history = mine;
-    loadUpdates(r, puuid).then(
-      (value) => history === mine && (history = { puuid, until: Date.now() + HISTORY_TTL, value }),
-      () => history === mine && (history = { puuid, until: Date.now() + FAIL_TTL, value: mine.value }),
-    );
-  }
-  return (history.value ?? []).map((u) => entryOf(r, puuid, u));
+  return (updatesOf(r, puuid) ?? []).slice(0, 5).map((u) => entryOf(r, puuid, u));
 }
 
 /** Fin de partie : mon historique et mon rang se relisent (la partie qui vient de finir y entre). */
 export function forgetMine(puuid: string) {
-  history = null;
+  forgetUpdates();
   profiles.delete(puuid);
-}
-
-async function loadUpdates(r: Remote, puuid: string): Promise<Update[]> {
-  const res = await paced(() => remote(r, `${r.pd}/mmr/v1/players/${puuid}/competitiveupdates?startIndex=0&endIndex=5&queue=competitive`));
-  return (res?.Matches ?? [])
-    .filter((m: any) => typeof m?.MatchID === "string")
-    .slice(0, 5)
-    .map((m: any) => ({ id: m.MatchID, mapId: m.MapID, rr: Number(m.RankedRatingEarned) || 0 }));
 }
 
 function entryOf(r: Remote, puuid: string, u: Update): HistoryEntry {

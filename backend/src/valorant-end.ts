@@ -10,12 +10,12 @@ import { forgetMine } from "./valorant-stats.ts";
 
 export type EndView = Board & { status: "loading" | "ready" | "missing" };
 type Watched = { matchId: string; me: string; incognito: Set<string> };
-type End = { status: EndView["status"]; until: number; board: Board | null };
+type End = { matchId: string; status: EndView["status"]; until: number; board: Board | null };
 
 const showMs = () => Number(process.env.VALORANT_END_MS) || 120_000;
 const retryMs = () => Number(process.env.VALORANT_RETRY_MS) || 5_000;
 const TRIES = 12;
-const EMPTY: Board = { map: null, queue: null, mode: "teams", won: null, score: null, players: [] };
+const EMPTY: Board = { map: null, mapId: null, queue: null, mode: "teams", won: null, score: null, players: [], rounds: [] };
 
 let watched: Watched | null = null;
 let end: End | null = null;
@@ -40,22 +40,26 @@ export function endOfMatch(state: string, r: Remote | null): EndView | null {
   return end && { ...(end.board ?? EMPTY), status: end.status };
 }
 
+/** Partie dont le tableau est montré, ou null. */
+export const shownMatchId = () => end?.matchId ?? null;
+
 function start(match: Watched, r: Remote) {
   forgetMine(match.me);
   const since = Date.now();
-  const mine: End = { status: "loading", until: Infinity, board: null };
+  const mine: End = { matchId: match.matchId, status: "loading", until: Infinity, board: null };
   end = mine;
   void (async () => {
     for (let i = 0; i < TRIES && end === mine; i++) {
       try {
         // Hors de la file des stats : le tableau de fin ne passe pas derrière quarante appels de K/D.
         const parsed = await matchDetails(r, match.matchId, { direct: true });
-        if (end === mine) end = { status: "ready", until: Date.now() + showMs(), board: boardOf(parsed, match.me, match.incognito) };
+        if (end === mine)
+          end = { ...mine, status: "ready", until: Date.now() + showMs(), board: boardOf(parsed, match.me, match.incognito) };
         return;
       } catch {
         await new Promise((resolve) => setTimeout(resolve, retryMs()));
       }
     }
-    if (end === mine) end = { status: "missing", until: since + showMs(), board: null };
+    if (end === mine) end = { ...mine, status: "missing", until: since + showMs() };
   })();
 }
