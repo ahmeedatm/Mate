@@ -68,6 +68,7 @@ object Computers {
     /** Ajoute ou remplace (même `id`) ; remplace aussi un ordinateur provisoire de même adresse. */
     fun save(context: Context, computer: Computer, makeActive: Boolean = false) {
         val list = all(context).filterNot { it.id == computer.id || (it.provisional && it.url == computer.url && !computer.provisional) }
+        all(context).filter { it.provisional && it.url == computer.url && !computer.provisional }.forEach { ComputerConfig.move(context, it.id, computer.id) }
         val saved = if (makeActive) computer.copy(lastUsedMs = System.currentTimeMillis()) else computer
         write(context, list + saved)
         if (makeActive) prefs(context).edit().putString(KEY_ACTIVE, saved.id).apply()

@@ -242,9 +242,10 @@ object Prefs {
     }
 
     fun setRailTool(context: Context, tool: Mode, shown: Boolean) {
-        val hidden = prefs(context).getStringSet(ComputerConfig.key(context, KEY_RAIL_HIDDEN), emptySet()).orEmpty().toMutableSet()
+        val key = ComputerConfig.key(context, KEY_RAIL_HIDDEN)
+        val hidden = prefs(context).getStringSet(key, emptySet()).orEmpty().toMutableSet()
         if (shown) hidden -= tool.key else hidden += tool.key
-        prefs(context).edit().putStringSet(ComputerConfig.key(context, KEY_RAIL_HIDDEN), hidden).apply()
+        prefs(context).edit().putStringSet(key, hidden).apply()
     }
 
     /** Outils que la barre de gauche peut montrer ; la Caméra s'ouvre depuis Ordi (ses deux cases), plus depuis la barre. */
@@ -438,10 +439,12 @@ object Prefs {
      */
     fun topBar(context: Context): String? {
         val prefs = prefs(context)
-        val saved = prefs.getString(ComputerConfig.key(context, KEY_TOP_BAR), null)
-        if (saved == null || prefs.getBoolean(ComputerConfig.key(context, KEY_TOP_BELL), false)) return saved
+        val bar = ComputerConfig.key(context, KEY_TOP_BAR)
+        val bell = ComputerConfig.key(context, KEY_TOP_BELL)
+        val saved = prefs.getString(bar, null)
+        if (saved == null || prefs.getBoolean(bell, false)) return saved
         val withBell = app.mate.ui.topbar.TopBarModel.run { serialize(withNotifications(parse(saved))) }
-        prefs.edit().putString(ComputerConfig.key(context, KEY_TOP_BAR), withBell).putBoolean(ComputerConfig.key(context, KEY_TOP_BELL), true).apply()
+        prefs.edit().putString(bar, withBell).putBoolean(bell, true).apply()
         return withBell
     }
 

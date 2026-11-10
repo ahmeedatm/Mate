@@ -85,4 +85,26 @@ class ComputerConfigTest {
         Computers.adopt(context, ancien, "id-bureau", "Bureau", "mac")
         assertEquals("paris", Prefs.topWeather(context))
     }
+
+    @Test
+    fun `oublier le seul ordinateur avant la migration garde la config commune`() {
+        prefs.edit().putString("top_weather", "paris").apply()
+        val list = """[{"id":"id-bureau","name":"Bureau","url":"${bureau.url}","token":"t","os":"mac"}]"""
+        prefs.edit().putString("computers", list).apply()
+        Computers.remove(context, "id-bureau")
+        assertEquals("paris", Prefs.topWeather(context))
+
+        Computers.save(context, maison, makeActive = true)
+        assertEquals("paris", Prefs.topWeather(context))
+    }
+
+    @Test
+    fun `un ordinateur provisoire remplace par l'appairage garde sa config`() {
+        val ancien = Computer(Computer.PROVISIONAL + bureau.url, "Mac", bureau.url, "jeton-b", "mac")
+        Computers.save(context, ancien, makeActive = true)
+        Prefs.setTopWeather(context, "paris")
+        Computers.save(context, bureau, makeActive = true)
+        assertEquals("paris", Prefs.topWeather(context))
+        assertTrue(prefs.all.keys.none { it.endsWith("@" + ancien.id) })
+    }
 }

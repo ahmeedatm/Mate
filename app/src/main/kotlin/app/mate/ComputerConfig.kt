@@ -28,6 +28,7 @@ object ComputerConfig {
 
     /** Ordinateur oublié : sa config part avec lui. */
     fun forget(context: Context, id: String) {
+        migrate(context)
         val edit = prefs(context).edit()
         KEYS.forEach { edit.remove(scoped(it, id)) }
         edit.apply()
@@ -35,6 +36,7 @@ object ComputerConfig {
 
     /** Ordinateur provisoire adopté sous son vrai `id` : sa config le suit, sauf si le vrai en a déjà une. */
     fun move(context: Context, from: String, to: String) {
+        migrate(context)
         val p = prefs(context)
         if (from == to || KEYS.any { p.contains(scoped(it, to)) }) return
         val edit = p.edit()
@@ -45,13 +47,15 @@ object ComputerConfig {
 
     /**
      * Une fois, au premier ordinateur connu : la config commune d'avant devient celle de chaque ordinateur déjà
-     * appairé. Un ordinateur appairé ensuite part de la config de base.
+     * appairé. Un ordinateur appairé ensuite part de la config de base. Sans ordinateur, la config commune attend.
      */
+    @Synchronized
     private fun migrate(context: Context) {
         val p = prefs(context)
         if (p.getBoolean(KEY_MIGRATED, false)) return
+        val computers = Computers.all(context).ifEmpty { return }
         val edit = p.edit()
-        for (computer in Computers.all(context)) KEYS.forEach { copy(p, edit, it, scoped(it, computer.id)) }
+        for (computer in computers) KEYS.forEach { copy(p, edit, it, scoped(it, computer.id)) }
         KEYS.forEach { edit.remove(it) }
         edit.putBoolean(KEY_MIGRATED, true).apply()
     }
