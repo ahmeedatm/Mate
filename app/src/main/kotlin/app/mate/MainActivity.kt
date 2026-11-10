@@ -238,7 +238,6 @@ class MainActivity : AppCompatActivity() {
         voice = VoiceControl(this, nav.talk, nav.talk.findViewById(R.id.rail_icon))
         topBar = findViewById(R.id.top_bar)
         topBar.attach(topHost)
-        topBar.onLinkTap = { showComputerPicker() }
         topBar.onEditDone = { if (current == Mode.HOME && homeFragment()?.isEditing() == true) homeFragment()?.finishEdit() }
         topBar.onEditRequest = { current == Mode.HOME && homeFragment()?.run { onEditRequest(); isEditing() } == true }
         // Tablette verrouillée : le mot de réveil ne lance rien.
@@ -399,7 +398,6 @@ class MainActivity : AppCompatActivity() {
         this.link = link
         linkWatch.onLink(link.computer?.id, link.state, System.currentTimeMillis())
         nav.showLink(link)
-        if (::topBar.isInitialized) topBar.showLink(link, unreachable())
         settings()?.onLinkChanged()
         (supportFragmentManager.findFragmentByTag(Mode.HOME.tag) as? HomeFragment)?.onLinkChanged()
     }

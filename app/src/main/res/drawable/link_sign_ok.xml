@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Signe de l'état de l'ordinateur, posé dans le coin de son icône (barre de gauche, choix de l'ordinateur) : en ligne : coche.
+     Disque percé du symbole (evenOdd) : une seule teinte, posée dans le code, et le fond se voit à travers le symbole. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="10dp"
+    android:height="10dp"
+    android:viewportWidth="10"
+    android:viewportHeight="10">
+    <path
+        android:fillColor="#FFFFFFFF"
+        android:fillType="evenOdd"
+        android:pathData="M5,0A5,5 0 1,1 5,10A5,5 0 1,1 5,0Z M1.93,5.67L4.2,7.93L8.07,4.07L6.93,2.93L4.2,5.67L3.07,4.53Z" />
+</vector>
