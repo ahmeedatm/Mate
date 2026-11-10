@@ -1,6 +1,7 @@
 package app.mate.ui
 
 import android.app.Activity
+import android.graphics.Color
 import android.view.View
 import android.widget.ImageView
 import android.widget.LinearLayout
@@ -31,7 +32,7 @@ class ProfileRail(
     private val indicator: View = activity.findViewById(R.id.rail_indicator)
     private val settings: View = activity.findViewById(R.id.rail_settings)
     private val items: View = activity.findViewById(R.id.rail_items)
-    private val statusDot: View = activity.findViewById(R.id.status_dot)
+    private val statusDot: ImageView = activity.findViewById(R.id.status_dot)
     private val statusName: TextView = activity.findViewById(R.id.status_name)
     private val statusState: TextView = activity.findViewById(R.id.status_state)
     override val status: View = activity.findViewById(R.id.status)
@@ -59,6 +60,10 @@ class ProfileRail(
         private set
 
     init {
+        // Halo du signe, couleur de la barre : le symbole percé ne laisse pas voir le trait de l'icône. Barre
+        // transparente (Hush, Spider-Verse) : le fond de l'écran.
+        val railColor = themeColor(activity, R.attr.c_rail)
+        statusDot.background.mutate().setTint(if (Color.alpha(railColor) == 255) railColor else themeColor(activity, R.attr.c_bg))
         render()
         // La fenêtre passe en plein écran après la première mise en page (barres d'Android retirées) : la barre grandit
         // et ses pieds descendent, le repère est recalé sur place.
@@ -118,7 +123,7 @@ class ProfileRail(
         entries.indexOfFirst { it is RailEntry.Profile && it.page == layout.homeProfile }.takeIf { it >= 0 }?.let { decorate(views[it], entries[it]) }
     }
 
-    /** Le rouge est réservé au « maintenant » : point vert si l'ordinateur répond, neutre sinon ; sa forme et l'état écrit disent le reste. */
+    /** Le rouge est réservé au « maintenant » : signe vert si l'ordinateur répond, neutre sinon ; son symbole et l'état écrit disent le reste. */
     override fun showLink(link: Link) {
         renderLink(activity, statusDot, statusName, statusState, status, link, offline = R.attr.c_text_faint)
         // L'état change (en ligne ↔ injoignable…) : la pastille gonfle une fois, pour qu'on le remarque.

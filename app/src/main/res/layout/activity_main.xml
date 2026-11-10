@@ -77,7 +77,7 @@
             android:minHeight="48dp"
             android:orientation="vertical">
 
-            <!-- Ordinateur et son état : le point (vert, orange, gris) posé sur le coin de l'icône, le nom centré dessous. -->
+            <!-- Ordinateur et son état : le signe (coche verte, « ! » orange, croix grise) posé sur le coin de l'icône, le nom centré dessous. -->
             <FrameLayout
                 android:layout_width="30dp"
                 android:layout_height="26dp">
@@ -90,12 +90,14 @@
                     android:src="@drawable/ic_laptop"
                     app:tint="?attr/c_text_dim" />
 
-                <View
+                <ImageView
                     android:id="@+id/status_dot"
-                    android:layout_width="9dp"
-                    android:layout_height="9dp"
+                    android:layout_width="14dp"
+                    android:layout_height="14dp"
                     android:layout_gravity="top|end"
-                    android:background="@drawable/dot" />
+                    android:background="@drawable/link_sign_halo"
+                    android:importantForAccessibility="no"
+                    android:padding="2dp" />
             </FrameLayout>
 
             <TextView

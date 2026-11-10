@@ -4,14 +4,16 @@ import app.mate.R
 import app.mate.net.Link
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
+import org.junit.Assert.assertTrue
 import org.junit.Test
+import java.io.File
 
 /** Pastille de connexion : chaque état a sa forme et son mot, lisibles sans distinguer le vert du rouge. */
 class LinkMarkTest {
     @Test
     fun `trois etats d un ordinateur trois formes`() {
         val shapes = listOf(Link.State.ONLINE, Link.State.UNAUTHORIZED, Link.State.OFFLINE).map { linkMark(it).shape }
-        assertEquals(listOf(LinkShape.FILLED, LinkShape.RING, LinkShape.CROSS), shapes)
+        assertEquals(listOf(LinkShape.OK, LinkShape.ALERT, LinkShape.CROSS), shapes)
     }
 
     @Test
@@ -37,9 +39,9 @@ class LinkMarkTest {
     }
 
     @Test
-    fun `ordinateur verrouille, anneau et mot verrouille`() {
+    fun `ordinateur verrouille, point d exclamation et mot verrouille`() {
         val mark = linkMark(Link.State.ONLINE, locked = true)
-        assertEquals(LinkShape.RING, mark.shape)
+        assertEquals(LinkShape.ALERT, mark.shape)
         assertEquals(R.string.link_state_locked, mark.label)
         assertEquals(R.string.computer_locked_spoken, mark.spoken)
     }
@@ -47,5 +49,13 @@ class LinkMarkTest {
     @Test
     fun `injoignable prime sur verrouille`() {
         assertEquals(linkMark(Link.State.OFFLINE), linkMark(Link.State.OFFLINE, locked = true))
+    }
+
+    @Test
+    fun `chaque signe est un disque perce de son symbole, teintable d une seule couleur`() {
+        for (name in listOf("link_sign_ok", "link_sign_alert", "link_sign_cross")) {
+            val xml = File("src/main/res/drawable/$name.xml").readText()
+            assertTrue("$name : le symbole doit etre perce dans le disque", "evenOdd" in xml)
+        }
     }
 }
