@@ -641,6 +641,7 @@
                     <TextView
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
+                        android:layout_marginTop="6dp"
                         android:text="@string/theme_home_cards_hint"
                         android:textColor="?attr/c_text_dim"
                         android:textSize="14sp" />
