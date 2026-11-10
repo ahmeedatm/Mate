@@ -177,7 +177,7 @@ class ProfileRail(
     }
 
     /**
-     * Hauteur des entrées : 60 dp avec les noms, 52 sans. Trop d'entrées pour la place (profils, outils, crayon et roue
+     * Hauteur des entrées : 60 dp avec les noms, 52 sans. Trop d'entrées pour la place (profils, outils, cadenas et roue
      * empilés) : elles se resserrent, sans les noms, jusqu'à [MIN_ENTRY_DP] (dessous, la fin est rognée).
      */
     private fun fit() {

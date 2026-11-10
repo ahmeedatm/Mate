@@ -63,7 +63,7 @@ interface TopBarHost {
 /**
  * Bandeau du haut, fixe au-dessus de l'écran du mode (rien ne défile dessous) : à gauche l'en-tête de l'écran (titre,
  * retour, boutons : la vue de l'écran lui-même, [setHeader]), à droite les éléments choisis (Prefs.topBar), dans l'ordre.
- * Place qui manque : ceux du début sautent ([TopBarModel.firstShown]). Mode Modifier ([edit]) : crayon de la barre ou
+ * Place qui manque : ceux du début sautent ([TopBarModel.firstShown]). Mode Modifier ([edit]) : appui long sur l'Accueil ou
  * appui long sur le bandeau ; chaque élément devient une pastille à glisser, avec ✕, et « Ajouter ».
  */
 class TopBar @JvmOverloads constructor(context: Context, attrs: AttributeSet? = null) : LinearLayout(context, attrs) {
@@ -115,8 +115,11 @@ class TopBar @JvmOverloads constructor(context: Context, attrs: AttributeSet? = 
     var editing = false
         private set
 
-    /** Fin du mode Modifier par « OK » : MainActivity rend le crayon de la barre. */
+    /** Fin du mode Modifier par « OK » : MainActivity termine aussi celui de l'Accueil. */
     var onEditDone: () -> Unit = {}
+
+    /** Appui long sur le bandeau : vrai si l'écran affiché est entré dans son propre mode Modifier (l'Accueil, bandeau compris). */
+    var onEditRequest: () -> Boolean = { false }
 
     init {
         orientation = HORIZONTAL
@@ -157,9 +160,10 @@ class TopBar @JvmOverloads constructor(context: Context, attrs: AttributeSet? = 
             },
             LayoutParams(LayoutParams.WRAP_CONTENT, dp(40)).apply { marginStart = dp(8) },
         )
-        // Appui long sur le bandeau (hors boutons) : le modifier.
+        // Appui long sur le bandeau (hors boutons) : le mode Modifier de l'Accueil (seul accès quand ses widgets gardent
+        // tous l'appui long), ailleurs le bandeau seul.
         setOnLongClickListener {
-            edit(true)
+            if (!onEditRequest()) edit(true)
             true
         }
         contentDescription = context.getString(R.string.top_edit_open)
