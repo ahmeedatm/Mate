@@ -212,6 +212,7 @@ class SettingsFragment :
             isChecked = Prefs.grain(context)
             // Le grain se pose à la création de l'activité (ui/Grain), comme le thème : la recréer.
             setOnCheckedChangeListener { _, on ->
+                if (on == Prefs.grain(context)) return@setOnCheckedChangeListener
                 Prefs.setGrain(context, on)
                 requireActivity().recreate()
             }
