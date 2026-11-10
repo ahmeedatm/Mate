@@ -213,10 +213,10 @@ object Prefs {
     fun tourDone(context: Context): Boolean = prefs(context).getBoolean(KEY_TOUR_DONE, false)
 
     /** Choix du template proposé une fois, au premier appairage (effacé par la remise à neuf, comme une tablette neuve). */
-    fun templatesOffered(context: Context): Boolean = prefs(context).getBoolean(KEY_TEMPLATES_OFFERED, false)
+    fun templatesOffered(context: Context): Boolean = prefs(context).getBoolean(ComputerConfig.key(context, KEY_TEMPLATES_OFFERED), false)
 
     fun setTemplatesOffered(context: Context) {
-        prefs(context).edit().putBoolean(KEY_TEMPLATES_OFFERED, true).apply()
+        prefs(context).edit().putBoolean(ComputerConfig.key(context, KEY_TEMPLATES_OFFERED), true).apply()
     }
 
     fun setTourDone(context: Context) {
@@ -224,29 +224,30 @@ object Prefs {
     }
 
     /** Barre de gauche : noms sous les icônes (Réglages > Barre de gauche). Affichés par défaut. */
-    fun railLabels(context: Context): Boolean = prefs(context).getBoolean(KEY_RAIL_LABELS, true)
+    fun railLabels(context: Context): Boolean = prefs(context).getBoolean(ComputerConfig.key(context, KEY_RAIL_LABELS), true)
 
     fun setRailLabels(context: Context, value: Boolean) {
-        prefs(context).edit().putBoolean(KEY_RAIL_LABELS, value).apply()
+        prefs(context).edit().putBoolean(ComputerConfig.key(context, KEY_RAIL_LABELS), value).apply()
     }
 
     /** Bouton Parler en tête de la barre de gauche (Réglages > Barre de gauche). Affiché par défaut. */
-    fun railTalk(context: Context): Boolean = prefs(context).getBoolean(KEY_RAIL_TALK, true)
+    fun railTalk(context: Context): Boolean = prefs(context).getBoolean(ComputerConfig.key(context, KEY_RAIL_TALK), true)
 
     fun setRailTalk(context: Context, value: Boolean) {
-        prefs(context).edit().putBoolean(KEY_RAIL_TALK, value).apply()
+        prefs(context).edit().putBoolean(ComputerConfig.key(context, KEY_RAIL_TALK), value).apply()
     }
 
     /** Outils de la barre de gauche, dans leur ordre : tous sauf ceux masqués dans Réglages. */
     fun railTools(context: Context): List<Mode> {
-        val hidden = prefs(context).getStringSet(KEY_RAIL_HIDDEN, emptySet()).orEmpty()
+        val hidden = prefs(context).getStringSet(ComputerConfig.key(context, KEY_RAIL_HIDDEN), emptySet()).orEmpty()
         return RAIL_TOOLS.filter { it.key !in hidden }
     }
 
     fun setRailTool(context: Context, tool: Mode, shown: Boolean) {
-        val hidden = prefs(context).getStringSet(KEY_RAIL_HIDDEN, emptySet()).orEmpty().toMutableSet()
+        val key = ComputerConfig.key(context, KEY_RAIL_HIDDEN)
+        val hidden = prefs(context).getStringSet(key, emptySet()).orEmpty().toMutableSet()
         if (shown) hidden -= tool.key else hidden += tool.key
-        prefs(context).edit().putStringSet(KEY_RAIL_HIDDEN, hidden).apply()
+        prefs(context).edit().putStringSet(key, hidden).apply()
     }
 
     /** Outils que la barre de gauche peut montrer ; la Caméra s'ouvre depuis Ordi (ses deux cases), plus depuis la barre. */
@@ -268,7 +269,7 @@ object Prefs {
     }
 
     /**
-     * Ordinateur verrouillé : la tablette se bloque (écran plein de ui/LockScreen). Coupé (Réglages > Tablette), elle reste
+     * Ordinateur verrouillé : la tablette se bloque (écran plein de ui/LockScreen). Coupé (Réglages > Notifs et verrou), elle reste
      * utilisable et la pastille de la barre dit « verrouillé ». Activé par défaut.
      */
     fun blockOnComputerLock(context: Context): Boolean = prefs(context).getBoolean(KEY_BLOCK_ON_COMPUTER_LOCK, true)
@@ -448,22 +449,24 @@ object Prefs {
      */
     fun topBar(context: Context): String? {
         val prefs = prefs(context)
-        val saved = prefs.getString(KEY_TOP_BAR, null)
-        if (saved == null || prefs.getBoolean(KEY_TOP_BELL, false)) return saved
+        val bar = ComputerConfig.key(context, KEY_TOP_BAR)
+        val bell = ComputerConfig.key(context, KEY_TOP_BELL)
+        val saved = prefs.getString(bar, null)
+        if (saved == null || prefs.getBoolean(bell, false)) return saved
         val withBell = app.mate.ui.topbar.TopBarModel.run { serialize(withNotifications(parse(saved))) }
-        prefs.edit().putString(KEY_TOP_BAR, withBell).putBoolean(KEY_TOP_BELL, true).apply()
+        prefs.edit().putString(bar, withBell).putBoolean(bell, true).apply()
         return withBell
     }
 
     fun setTopBar(context: Context, value: String) {
-        prefs(context).edit().putString(KEY_TOP_BAR, value).apply()
+        prefs(context).edit().putString(ComputerConfig.key(context, KEY_TOP_BAR), value).apply()
     }
 
     /** Ville de la météo du bandeau (même forme que la config d'un widget Météo : city, lat, lon, auto) ; null : aucune. */
-    fun topWeather(context: Context): String? = prefs(context).getString(KEY_TOP_WEATHER, null)
+    fun topWeather(context: Context): String? = prefs(context).getString(ComputerConfig.key(context, KEY_TOP_WEATHER), null)
 
     fun setTopWeather(context: Context, value: String) {
-        prefs(context).edit().putString(KEY_TOP_WEATHER, value).apply()
+        prefs(context).edit().putString(ComputerConfig.key(context, KEY_TOP_WEATHER), value).apply()
     }
 
     /** MR de l'essai installé par la stable (0 : aucun, ou installé autrement) et son backend : « Ouvrir l'essai » les relit. */

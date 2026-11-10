@@ -21,6 +21,7 @@ import androidx.annotation.StringRes
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.widget.TooltipCompat
 import androidx.core.graphics.ColorUtils
+import androidx.core.view.ViewCompat
 import app.mate.R
 import app.mate.ui.Look
 import app.mate.ui.dismissKeyboard
@@ -282,30 +283,41 @@ class ProfilesDialog(
     }
 
     /**
-     * Grille des icônes ([ProfileIcons]), centrée : `shown` (la choisie, sinon celle du rôle) en rouge ; « Par défaut »
+     * Grille des icônes ([ProfileIcons]), un titre par thème, centrée : `shown` (la choisie, sinon celle du rôle) en rouge ; « Par défaut »
      * remet celle du rôle (maison pour l'Accueil). Le choix est rendu à `onPick` (null = par défaut), rien n'est enregistré ici.
      */
     private fun chooseIcon(i: Int, shown: String?, onPick: (String?) -> Unit) {
-        val grid = android.widget.GridLayout(context).apply { columnCount = ICON_COLUMNS }
+        val groups = LinearLayout(context).apply { orientation = LinearLayout.VERTICAL }
         lateinit var picker: AlertDialog
-        for (icon in ProfileIcons.ALL) {
-            val isShown = icon.key == shown
-            val label = context.getString(icon.label)
-            grid.addView(
-                iconButton(icon.drawable, icon.label, if (isShown) R.attr.c_accent else R.attr.c_text) {
-                    picker.dismiss()
-                    onPick(icon.key)
-                }.apply {
-                    contentDescription = if (isShown) context.getString(R.string.profile_icon_chosen, label) else label
-                    setBackgroundResource(if (isShown) R.drawable.chip_bg else R.drawable.flat_bg)
-                    isSelected = isShown
-                    layoutParams = android.widget.GridLayout.LayoutParams().apply {
-                        width = context.dp(52)
-                        height = context.dp(52)
-                        setMargins(context.dp(4), context.dp(4), context.dp(4), context.dp(4))
-                    }
+        for ((index, group) in ProfileIcons.GROUPS.withIndex()) {
+            groups.addView(
+                section(group.title).apply { ViewCompat.setAccessibilityHeading(this, true) },
+                LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT).apply {
+                    topMargin = context.dp(if (index == 0) 4 else 16)
+                    marginStart = context.dp(4)
                 },
             )
+            val grid = android.widget.GridLayout(context).apply { columnCount = ICON_COLUMNS }
+            for (icon in group.icons) {
+                val isShown = icon.key == shown
+                val label = context.getString(icon.label)
+                grid.addView(
+                    iconButton(icon.drawable, icon.label, if (isShown) R.attr.c_accent else R.attr.c_text) {
+                        picker.dismiss()
+                        onPick(icon.key)
+                    }.apply {
+                        contentDescription = if (isShown) context.getString(R.string.profile_icon_chosen, label) else label
+                        setBackgroundResource(if (isShown) R.drawable.chip_bg else R.drawable.flat_bg)
+                        isSelected = isShown
+                        layoutParams = android.widget.GridLayout.LayoutParams().apply {
+                            width = context.dp(52)
+                            height = context.dp(52)
+                            setMargins(context.dp(4), context.dp(4), context.dp(4), context.dp(4))
+                        }
+                    },
+                )
+            }
+            groups.addView(grid)
         }
         picker = AlertDialog.Builder(context)
             .setTitle(context.getString(R.string.profile_icon_title, name(i)))
@@ -315,7 +327,7 @@ class ProfilesDialog(
                         LinearLayout(context).apply {
                             gravity = Gravity.CENTER_HORIZONTAL
                             setPadding(context.dp(16), context.dp(8), context.dp(16), 0)
-                            addView(grid, LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT))
+                            addView(groups, LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT))
                         },
                     )
                 },

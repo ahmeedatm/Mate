@@ -16,7 +16,7 @@ import app.mate.ui.home.TabletTemplates
 import kotlinx.coroutines.launch
 
 /**
- * Templates (Réglages > Configuration, et après le premier appairage) : la liste des templates ; en choisir un remplace les
+ * Templates (Réglages > Ordinateurs, et après le premier appairage) : la liste des templates ; en choisir un remplace les
  * profils, le bandeau, la barre et le thème par les siens (ui/home/TabletTemplates.kt), puis l'activité est recréée et
  * arrive sur l'Accueil. Pas de retour arrière : c'est un point de départ.
  */
