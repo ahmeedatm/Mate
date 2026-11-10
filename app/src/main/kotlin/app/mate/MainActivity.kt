@@ -414,10 +414,14 @@ class MainActivity : AppCompatActivity() {
 
     /**
      * L'ordinateur piloté a changé (choisi dans les Réglages, ou bascule automatique) : chaque écran est
-     * recréé pour relire deck, agenda, tâches et documents de cet ordinateur. Focus et sons continuent.
+     * recréé pour relire deck, agenda, tâches et documents de cet ordinateur ; ses écrans, son bandeau et sa barre
+     * ([ComputerConfig]) sont redessinés. Focus et sons continuent.
      */
     fun onComputerChanged(computer: Computer?, automatic: Boolean = false) {
         recreateScreens()
+        topBar.reload()
+        nav.applySettings()
+        refreshRail()
         showLink(Link(computer, Link.State.OFFLINE))
         remote.restart()
         topBar.restart()

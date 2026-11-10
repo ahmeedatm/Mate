@@ -3,6 +3,7 @@ package app.mate.ui.home
 import android.content.Context
 import androidx.annotation.DrawableRes
 import androidx.annotation.StringRes
+import app.mate.ComputerConfig
 import app.mate.R
 import app.mate.net.HomeFeatures
 import org.json.JSONArray
@@ -459,7 +460,7 @@ class HomeLayout(val widgets: MutableList<Placed>, val names: MutableList<String
         const val KEY = "home_layout_cadran"
 
         fun load(context: Context): HomeLayout {
-            val raw = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).getString(KEY, null)
+            val raw = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).getString(ComputerConfig.key(context, KEY), null)
             return raw?.let { runCatching { parse(it) }.getOrNull() } ?: Template.WORK_CADRAN.build()
         }
 
@@ -467,11 +468,11 @@ class HomeLayout(val widgets: MutableList<Placed>, val names: MutableList<String
         fun has(context: Context, type: WidgetType) = load(context).widgets.any { it.type == type }
 
         fun save(context: Context, layout: HomeLayout) {
-            context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit().putString(KEY, layout.toJson()).apply()
+            context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit().putString(ComputerConfig.key(context, KEY), layout.toJson()).apply()
         }
 
         /** Disposition enregistrée telle quelle (null : jamais enregistrée, le modèle par défaut s'applique). */
-        fun raw(context: Context): String? = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).getString(KEY, null)
+        fun raw(context: Context): String? = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).getString(ComputerConfig.key(context, KEY), null)
 
         /** Disposition invalide (widget inconnu, chevauchement) : on la refuse en entier, le modèle la remplace. */
         private fun parse(raw: String): HomeLayout {
