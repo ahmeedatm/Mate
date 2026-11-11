@@ -228,7 +228,10 @@ function serve(opts) {
       ) {
         return reply(res, 404, "text/plain", "Introuvable");
       }
-      return reply(res, 200, TYPES[path.extname(file).toLowerCase()] ?? "application/octet-stream", fs.readFileSync(file));
+      // Types de maquette seulement : un autre fichier posé dans le dossier ne part pas sur le WiFi.
+      const type = TYPES[path.extname(file).toLowerCase()];
+      if (!type) return reply(res, 404, "text/plain", "Introuvable");
+      return reply(res, 200, type, fs.readFileSync(file));
     } catch (e) {
       return reply(res, 400, "text/plain", String(e.message ?? e));
     }

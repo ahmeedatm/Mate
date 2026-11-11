@@ -105,6 +105,8 @@ describe("sélecteur de maquettes", () => {
 
   it("ne sert ni fichier caché ni lien qui sort du dossier", async () => {
     fs.writeFileSync(path.join(dir, ".env"), "SECRET=1");
+    fs.writeFileSync(path.join(dir, "notes.txt"), "privé");
+    assert.equal((await fetch(selector + "notes.txt")).status, 404);
     fs.symlinkSync("/etc/hosts", path.join(dir, "hosts.html"));
     assert.equal((await fetch(selector + ".env")).status, 404);
     assert.equal((await fetch(selector + "hosts.html")).status, 404);

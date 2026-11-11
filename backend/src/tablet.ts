@@ -82,8 +82,9 @@ export type TemplateId = (typeof TEMPLATES)[number]["id"];
 export const isPageUrl = (url: string) => /^https?:$/.test(URL.parse(url)?.protocol ?? "");
 
 /**
- * Route locale sans jeton (/local/tablet/page) : seulement une adresse du réseau local (maquettes servies par ce Mac),
- * pour qu'un programme de l'ordinateur ne puisse pas afficher un site public en plein écran sur la tablette.
+ * Route locale sans jeton (/local/tablet/page) : seulement une adresse du réseau local (maquettes servies par ce Mac).
+ * Simple garde-fou, pas une frontière : la porte MCP locale (outil tablette_page) passe par /tablet/command, qui accepte
+ * toute adresse http(s), comme tablette_message affiche tout texte ; et la page peut suivre un lien ou une redirection.
  */
 export function isLocalPageUrl(url: string) {
   if (!isPageUrl(url)) return false;
