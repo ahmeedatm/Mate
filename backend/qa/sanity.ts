@@ -645,6 +645,31 @@ export async function runSanity(opts: { url: string; token: string; os?: Os; hoo
       },
     },
     {
+      name: "performances par appli",
+      run: async () => {
+        const res = await call("GET", "/system/perf/apps");
+        if (!controlled()) return expectStatus(res, 501, "/system/perf/apps");
+        expectStatus(res, 200, "/system/perf/apps");
+        const { apps } = res.json;
+        // null : processus illisibles (pilote absent), jamais une liste inventée.
+        if (apps === null) throw new Skip("liste des processus illisible");
+        expect(Array.isArray(apps) && apps.length > 0 && apps.length <= 5, `liste invalide : ${JSON.stringify(apps)}`);
+        for (const a of apps)
+          expect(
+            typeof a.name === "string" &&
+              a.name.length > 0 &&
+              Number.isInteger(a.cpu) &&
+              a.cpu >= 0 &&
+              a.cpu <= 100 &&
+              Number.isInteger(a.memMb) &&
+              a.memMb >= 0 &&
+              (a.warn === undefined || a.warn === "cpu" || a.warn === "ram"),
+            `appli invalide : ${JSON.stringify(a)}`,
+          );
+        return apps.map((a: { name: string; cpu: number; memMb: number }) => `${a.name} ${a.cpu} % ${a.memMb} Mo`).join(", ");
+      },
+    },
+    {
       name: "presse-papiers",
       run: async () => {
         const first = await call("GET", "/system/clipboard");

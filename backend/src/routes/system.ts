@@ -16,6 +16,7 @@ import {
   getClipboard,
   getDnd,
   getPerf,
+  getPerfApps,
   getPerfDetail,
   mediaControl,
   mediaSessions,
@@ -154,6 +155,9 @@ export default async function systemRoutes(app: FastifyInstance) {
 
   // Processeur, mémoire et carte graphique : relus toutes les 2 s par la tablette tant que le widget est affiché.
   app.get("/system/perf", { logLevel: "warn" }, async () => getPerf());
+
+  // Applis qui consomment le plus (et celles qui abusent) : relues par la tablette seulement quand la liste est à l'écran.
+  app.get("/system/perf/apps", { logLevel: "warn" }, async () => getPerfApps());
 
   // Lecture brute du lecteur de carte graphique, pour diagnostiquer un PC à carte dédiée.
   app.get("/system/perf/detail", async () => getPerfDetail());

@@ -91,6 +91,29 @@ fun parsePerf(json: String): PcPerf {
     )
 }
 
+/** Ce qu'une appli prend en trop : le processeur (longtemps) ou la mémoire. */
+enum class AppWarn { CPU, RAM }
+
+/**
+ * Une appli de l'ordinateur (tous ses processus) : `cpu` et `memPercent` en part de toute la machine (0-100), `memMb` en
+ * Mo. `warn` : ce qu'elle prend en trop ; `hogSeconds` : depuis combien de temps elle prend trop de processeur.
+ */
+data class PcApp(val name: String, val cpu: Int, val memMb: Int, val memPercent: Int, val warn: AppWarn?, val hogSeconds: Int?)
+
+/** Réponse de `GET /system/perf/apps` ; null quand l'ordinateur ne sait pas lire ses processus. Un `warn` inconnu est ignoré. */
+fun parsePerfApps(json: String): List<PcApp>? {
+    val list = JSONObject(json).optJSONArray("apps") ?: return null
+    return (0 until list.length()).map { i ->
+        val a = list.getJSONObject(i)
+        val warn = when (a.optString("warn")) {
+            "cpu" -> AppWarn.CPU
+            "ram" -> AppWarn.RAM
+            else -> null
+        }
+        PcApp(a.getString("name"), a.getInt("cpu"), a.getInt("memMb"), a.optInt("memPercent"), warn, a.intOrNull("hogSeconds"))
+    }
+}
+
 /**
  * Ce que contient le presse-papiers de l'ordinateur. `Text.truncated` : le compagnon a coupé un texte énorme.
  * `Protected` : contenu sensible (mot de passe), jamais lu ; `Other` : fichiers ou format inconnu.
@@ -153,6 +176,9 @@ class SystemApi(private val http: Http) {
 
     /** Processeur, mémoire et carte graphique (widget Performances) ; relevé instantané. */
     suspend fun perf(): PcPerf = http.io { parsePerf(http.get("/system/perf", timeoutMs = 5_000)) }
+
+    /** Applis qui consomment le plus (widget Performances) ; null : liste illisible sur l'ordinateur. */
+    suspend fun perfApps(): List<PcApp>? = http.io { parsePerfApps(http.get("/system/perf/apps", timeoutMs = 5_000)) }
 
     suspend fun setAudio(output: Int? = null, outputDelta: Int? = null, muted: Boolean? = null, micMuted: Boolean? = null): AudioState = http.io {
         val body = JSONObject()

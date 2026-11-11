@@ -3,6 +3,7 @@ import { clipboardUnavailable, mediaUnavailable, screenDenied } from "../src/dri
 import { checkOpenTarget } from "../src/open-guard.ts";
 import type { NotificationBatch, RawNotification } from "../src/notifications.ts";
 import type { Perf } from "../src/perf.ts";
+import type { AppsPerf } from "../src/perf-apps.ts";
 import type { MediaSession, ProcessWindows, VoiceState, WinWindow } from "../src/win/index.ts";
 import type {
   AudioChange,
@@ -56,6 +57,8 @@ export type FakeState = {
   screenDelayMs?: number;
   /** Mesure renvoyée par getPerf (sinon une mesure fixe). */
   perf?: Perf;
+  /** Applis renvoyées par getPerfApps (sinon une liste fixe). */
+  perfApps?: AppsPerf;
   /** Fenêtres par appli ; `elsewhere` : sur un autre bureau. */
   windows?: Record<string, { title: string; elsewhere?: boolean }[]>;
   /** Fenêtres qui apparaissent quand l'appli est lancée (launchApp). */
@@ -237,6 +240,11 @@ export async function setAudio(change: AudioChange) {
 export async function getPerf(): Promise<Perf> {
   if (!canControl) unsupported();
   return read().perf ?? { cpu: 12, ram: { used: 4, total: 16, percent: 25 } };
+}
+
+export async function getPerfApps(): Promise<AppsPerf> {
+  if (!canControl) unsupported();
+  return read().perfApps ?? { apps: [{ name: "Code", cpu: 9, memMb: 1434, memPercent: 9 }] };
 }
 
 export async function getPerfDetail(): Promise<unknown> {
