@@ -177,6 +177,11 @@ class RemoteChannel(private val activity: MainActivity) {
             )
             null
         }
+        "page" -> {
+            // url null : fermer. Adresse refusée par PageOverlay hors http(s).
+            if (command.isNull("url")) activity.pageOverlay.close() else activity.pageOverlay.open(command.getString("url"))
+            null
+        }
         "focus" -> focusCommand(command)
         "noise" -> {
             if (command.has("volume")) NoisePlayer.setVolume(command.getDouble("volume").toFloat())
