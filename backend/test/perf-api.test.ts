@@ -94,3 +94,46 @@ describe("GET /system/perf/detail", () => {
     assert.deepEqual(json, { gpu: null });
   });
 });
+
+describe("GET /system/perf/apps", () => {
+  it("renvoie les applis qui consomment le plus, avec celles qui abusent", async () => {
+    const perfApps = {
+      apps: [
+        { name: "Google Chrome", cpu: 78, memMb: 3174, memPercent: 10, warn: "cpu" as const, hogSeconds: 120 },
+        { name: "Code", cpu: 9, memMb: 1434, memPercent: 4 },
+      ],
+    };
+    server.setOs({ perfApps });
+    try {
+      const { status, json } = await server.call("GET", "/system/perf/apps");
+      assert.equal(status, 200);
+      assert.deepEqual(json, perfApps);
+    } finally {
+      server.setOs({});
+    }
+  });
+
+  it("renvoie apps null quand la liste des processus est illisible", async () => {
+    server.setOs({ perfApps: { apps: null } });
+    try {
+      const { status, json } = await server.call("GET", "/system/perf/apps");
+      assert.equal(status, 200);
+      assert.deepEqual(json, { apps: null });
+    } finally {
+      server.setOs({});
+    }
+  });
+
+  it("demande le jeton", async () => {
+    assert.equal((await server.call("GET", "/system/perf/apps", undefined, false)).status, 401);
+  });
+
+  it("répond 501 hors Mac et Windows", async () => {
+    const linux = await startServer({ os: "other" });
+    try {
+      assert.equal((await linux.call("GET", "/system/perf/apps")).status, 501);
+    } finally {
+      await linux.stop();
+    }
+  });
+});

@@ -39,6 +39,24 @@ export function parseVmStat(output: string): number {
   return (pages("free") + pages("inactive") + pages("speculative") + pages("purgeable")) * pageSize;
 }
 
+/**
+ * Lignes de `ps -Aco pcpu=,rss=,comm=` : processeur en % d'un cœur (moyenne récente de macOS), mémoire résidente en
+ * Ko, nom court du processus (peut contenir des espaces). Les lignes illisibles sont écartées.
+ */
+export function parsePsApps(output: string): { name: string; cpu: number; memBytes: number }[] {
+  const list: { name: string; cpu: number; memBytes: number }[] = [];
+  for (const line of output.split("\n")) {
+    const m = /^\s*([\d.]+)\s+(\d+)\s+(.+?)\s*$/.exec(line);
+    if (m) list.push({ name: m[3], cpu: Number(m[1]), memBytes: Number(m[2]) * 1024 });
+  }
+  return list;
+}
+
+/** Processus du Mac pour le widget Performances (`ps`, sans permission). */
+export async function processes(): Promise<{ name: string; cpu: number; memBytes: number }[]> {
+  return parsePsApps(await run("ps", ["-Aco", "pcpu=,rss=,comm="], 5_000));
+}
+
 /** Mémoire disponible en octets (`os.freemem()` ne compte que la libre, macOS garde le reste en cache) ; `vm_stat` en échec : `os.freemem()`. */
 export async function availableMemory(): Promise<number> {
   try {

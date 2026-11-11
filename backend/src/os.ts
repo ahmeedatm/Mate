@@ -27,6 +27,7 @@ import * as win from "./win/index.ts";
 import * as winCapteurs from "./win/capteurs.ts";
 import { checkOpenTarget } from "./open-guard.ts";
 import { perfSampler, type DiskRaw, type NetPerf, type Perf } from "./perf.ts";
+import { appsSampler, type AppsPerf } from "./perf-apps.ts";
 import type { PointerAction, PointerButton, PointerGesture } from "./pointer.ts";
 import type {
   AudioChange,
@@ -248,6 +249,20 @@ export function getPerf(): Promise<Perf> {
     now: () => performance.now(),
   });
   return perfSample();
+}
+
+let appsSample: (() => Promise<AppsPerf>) | undefined;
+
+/** Applis qui consomment le plus : processus du Mac par `ps`, de Windows par les compteurs PDH `Process(*)`. */
+export function getPerfApps(): Promise<AppsPerf> {
+  if (!canControl) unsupported();
+  appsSample ??= appsSampler({
+    processes: isWindows ? win.processes : macSystem.processes,
+    cores: () => os.cpus().length,
+    totalMem: os.totalmem,
+    now: () => performance.now(),
+  });
+  return appsSample();
 }
 
 /** Diagnostic brut du lecteur de carte graphique (Windows) ; sur Mac, pas de lecteur. */
