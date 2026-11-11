@@ -73,6 +73,17 @@ describe("adresse des fichiers sur la tablette", () => {
     assert.equal(installerBase("192.0.2.10", { installerCode: "K7M2Q" }), "http://192.0.2.10:8080/K7M2Q");
   });
 
+  it("port annoncé par la tablette (8080 pris par une autre appli) : celui-là ; illisible : refus clair", () => {
+    assert.equal(installerBase("192.0.2.10", { installerCode: "K7M2Q", installerPort: 8081 }), "http://192.0.2.10:8081/K7M2Q");
+    for (const installerPort of [null, "8081", 80, 0, 70000, 8081.5]) {
+      assert.throws(
+        () => installerBase("192.0.2.10", { installerCode: "K7M2Q", installerPort }),
+        (e: Error & { statusCode?: number }) => e.statusCode === 409,
+        JSON.stringify(installerPort),
+      );
+    }
+  });
+
   it("sans code (ancienne tablette), code vide ou qui sort du chemin : refus clair", () => {
     for (const state of [
       null,

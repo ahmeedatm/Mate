@@ -291,6 +291,7 @@ class RemoteChannel(private val activity: MainActivity) {
             .put("update", RemoteUpdate.state(activity))
             .put("installers", InstallerPlan.toJsonArray(InstallerService.served(activity)))
             .put("installerCode", InstallerService.servedCode())
+            .put("installerPort", InstallerService.port() ?: JSONObject.NULL)
     }
 
     private companion object {
