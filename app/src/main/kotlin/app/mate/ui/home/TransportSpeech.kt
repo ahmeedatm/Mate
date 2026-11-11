@@ -1,6 +1,7 @@
 package app.mate.ui.home
 
 import android.content.Context
+import androidx.annotation.StringRes
 import app.mate.R
 
 /** Phrase lue par TalkBack pour une rangée du widget Transports : « métro 1 vers La Défense, dans 3 min ». */
@@ -31,4 +32,14 @@ object TransportSpeech {
         waitFormat = context.getString(R.string.widget_transport_say_wait),
         rowFormat = context.getString(R.string.widget_transport_talk_row),
     )
+}
+
+/** Nom parlé du mode et de la ligne : « métro 1 », « RER A » (format à un argument). */
+@StringRes
+fun TransportLines.Mode.spokenRes() = when (this) {
+    TransportLines.Mode.METRO -> R.string.widget_transport_spoken_metro
+    TransportLines.Mode.RER -> R.string.widget_transport_spoken_rer
+    TransportLines.Mode.TRAIN -> R.string.widget_transport_spoken_train
+    TransportLines.Mode.TRAM -> R.string.widget_transport_spoken_tram
+    TransportLines.Mode.BUS -> R.string.widget_transport_spoken_bus
 }

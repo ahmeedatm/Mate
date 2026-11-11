@@ -21,14 +21,16 @@ class BoardItem(
     val destination: String,
     val wait: Transport.Wait,
     val thenMinutes: Int?,
+    val approach: Float,
 )
 
-/** Tailles d'une famille de formes : [picto] en dp de haut, [wait] et [dest] en sp. */
-class BoardLook(val picto: Int, val wait: Float, val dest: Float, val badge: Int, val bandSp: Float)
+/** Tailles d'une famille de formes : [picto] et [gauge] (jauge d'approche) en dp de haut, [wait], [dest] et [head] (arrêt) en sp. */
+class BoardLook(val picto: Int, val wait: Float, val dest: Float, val head: Float, val gauge: Int)
 
 /**
  * Les rangées de l'écran, une mise en page par famille : [pill], [side] (Ligne), [column], [wide] (Bloc et plus). Les
- * étiquettes qui clignotent sont déposées dans [blinking] ; chaque rangée porte sa phrase pour TalkBack.
+ * étiquettes qui clignotent sont déposées dans [blinking] ; chaque rangée porte sa phrase pour TalkBack. Avec `gauge`,
+ * la rangée finit par la jauge d'approche du passage, à la couleur de sa ligne.
  */
 class BoardRows(private val context: Context, private val look: BoardLook, private val blinking: MutableList<View>) {
     /** Pastille : picto, attente, destination en petit, étagés sur la hauteur. */
@@ -37,58 +39,86 @@ class BoardRows(private val context: Context, private val look: BoardLook, priva
         addView(picto(item))
         addView(View(context), LinearLayout.LayoutParams(0, 0, 1f))
         addView(wait(item))
+        addView(gauge(item), gaugeParams())
         addView(View(context), LinearLayout.LayoutParams(0, 0, 1f))
         addView(dest(item, look.dest))
         contentDescription = describe(item)
     }
 
     /** Ligne (2 à 4 × 1) : picto, destination avec « puis N min » dessous, attente à droite. */
-    fun side(item: BoardItem): View = LinearLayout(context).apply {
-        gravity = Gravity.CENTER_VERTICAL
-        addView(picto(item))
-        val text = LinearLayout(context).apply {
-            orientation = LinearLayout.VERTICAL
-            addView(dest(item, look.dest))
-            item.thenMinutes?.let { addView(lcdText(context, THEN_SP).apply { alpha = THEN_ALPHA; text = context.getString(R.string.widget_transport_then, it); isSingleLine = true }) }
+    fun side(item: BoardItem, gauge: Boolean): View = withGauge(item, gauge) {
+        LinearLayout(context).apply {
+            gravity = Gravity.CENTER_VERTICAL
+            addView(picto(item))
+            val text = LinearLayout(context).apply {
+                orientation = LinearLayout.VERTICAL
+                addView(dest(item, look.dest))
+                item.thenMinutes?.let { addView(lcdText(context, THEN_SP).apply { alpha = THEN_ALPHA; text = context.getString(R.string.widget_transport_then, it); maxLines = 1 }) }
+            }
+            addView(text, LinearLayout.LayoutParams(0, WRAP_CONTENT, 1f).apply { marginStart = context.dp(GAP); marginEnd = context.dp(GAP) })
+            addView(wait(item))
+            contentDescription = describe(item)
         }
-        addView(text, LinearLayout.LayoutParams(0, WRAP_CONTENT, 1f).apply { marginStart = context.dp(GAP); marginEnd = context.dp(GAP) })
-        addView(wait(item))
-        contentDescription = describe(item)
     }
 
     /** Colonne (1 × 2 à 4) : picto et attente sur une ligne, destination dessous. */
-    fun column(item: BoardItem): View = LinearLayout(context).apply {
-        orientation = LinearLayout.VERTICAL
-        gravity = Gravity.CENTER_VERTICAL
-        addView(
-            LinearLayout(context).apply {
-                gravity = Gravity.CENTER_VERTICAL
-                addView(picto(item))
-                addView(View(context), LinearLayout.LayoutParams(0, 0, 1f))
-                addView(wait(item))
-            },
-            LinearLayout.LayoutParams(MATCH_PARENT, WRAP_CONTENT),
-        )
-        addView(dest(item, look.dest), LinearLayout.LayoutParams(MATCH_PARENT, WRAP_CONTENT).apply { topMargin = context.dp(4) })
-        contentDescription = describe(item)
+    fun column(item: BoardItem, gauge: Boolean): View = withGauge(item, gauge) {
+        LinearLayout(context).apply {
+            orientation = LinearLayout.VERTICAL
+            gravity = Gravity.CENTER_VERTICAL
+            addView(
+                LinearLayout(context).apply {
+                    gravity = Gravity.CENTER_VERTICAL
+                    addView(picto(item))
+                    addView(View(context), LinearLayout.LayoutParams(0, 0, 1f))
+                    addView(wait(item))
+                },
+                LinearLayout.LayoutParams(MATCH_PARENT, WRAP_CONTENT),
+            )
+            addView(dest(item, look.dest), LinearLayout.LayoutParams(MATCH_PARENT, WRAP_CONTENT).apply { topMargin = context.dp(4) })
+            contentDescription = describe(item)
+        }
     }
 
     /** Bloc, Grand, Plein écran : picto | destination | attente. */
-    fun wide(item: BoardItem): View = LinearLayout(context).apply {
-        gravity = Gravity.CENTER_VERTICAL
-        addView(picto(item))
-        addView(dest(item, look.dest), LinearLayout.LayoutParams(0, WRAP_CONTENT, 1f).apply { marginStart = context.dp(GAP); marginEnd = context.dp(GAP) })
-        addView(wait(item))
-        contentDescription = describe(item)
+    fun wide(item: BoardItem, gauge: Boolean): View = withGauge(item, gauge) {
+        LinearLayout(context).apply {
+            gravity = Gravity.CENTER_VERTICAL
+            addView(picto(item))
+            addView(dest(item, look.dest), LinearLayout.LayoutParams(0, WRAP_CONTENT, 1f).apply { marginStart = context.dp(GAP); marginEnd = context.dp(GAP) })
+            addView(wait(item))
+            contentDescription = describe(item)
+        }
     }
 
     private val words = TransportSpeech.words(context)
+
+    /** [row] suivie de la jauge d'approche de [item] si [gauge] ; la rangée seule sinon. */
+    private fun withGauge(item: BoardItem, gauge: Boolean, row: () -> View): View {
+        if (!gauge) return row()
+        return LinearLayout(context).apply {
+            orientation = LinearLayout.VERTICAL
+            gravity = Gravity.CENTER_VERTICAL
+            val inner = row()
+            addView(inner, LinearLayout.LayoutParams(MATCH_PARENT, WRAP_CONTENT))
+            addView(gauge(item), gaugeParams())
+            contentDescription = inner.contentDescription
+            inner.contentDescription = null
+        }
+    }
+
+    private fun gauge(item: BoardItem) = ApproachBar(context, item.picto.barColor).apply {
+        fraction = item.approach
+        importantForAccessibility = View.IMPORTANT_FOR_ACCESSIBILITY_NO
+    }
+
+    private fun gaugeParams() = LinearLayout.LayoutParams(MATCH_PARENT, context.dp(look.gauge)).apply { topMargin = context.dp(GAUGE_GAP) }
 
     private fun picto(item: BoardItem) = LinePicto(context).apply { set(item.picto, item.line?.name.orEmpty(), look.picto) }
 
     private fun dest(item: BoardItem, sp: Float) = lcdText(context, sp).apply {
         text = item.destination
-        isSingleLine = true
+        maxLines = 1
         ellipsize = TextUtils.TruncateAt.END
     }
 
@@ -104,7 +134,7 @@ class BoardRows(private val context: Context, private val look: BoardLook, priva
                 val scale = maxOf(UNIT_SCALE, MIN_UNIT_SP / look.wait)
                 shown.setSpan(RelativeSizeSpan(scale), shown.length - unit.length, shown.length, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
                 text = shown
-                isSingleLine = true
+                maxLines = 1
             }
         }
         if (item.wait.blink) blinking += this
@@ -120,6 +150,7 @@ class BoardRows(private val context: Context, private val look: BoardLook, priva
 
     private companion object {
         const val GAP = 12
+        const val GAUGE_GAP = 6
         const val THEN_SP = 12f
         const val THEN_ALPHA = 0.7f
         const val UNIT_SCALE = 0.38f

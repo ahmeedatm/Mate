@@ -1813,11 +1813,6 @@
     <string name="widget_transport_then">puis %1$d min</string>
     <string name="widget_transport_at_stop">À quai</string>
     <string name="widget_transport_approaching">À l\'approche</string>
-    <string name="widget_transport_badge_metro">M</string>
-    <string name="widget_transport_badge_rer">RER</string>
-    <string name="widget_transport_badge_train">TRAIN</string>
-    <string name="widget_transport_badge_tram">T</string>
-    <string name="widget_transport_badge_bus">BUS</string>
     <string name="widget_transport_spoken_metro">métro %1$s</string>
     <string name="widget_transport_spoken_rer">RER %1$s</string>
     <string name="widget_transport_spoken_train">train %1$s</string>

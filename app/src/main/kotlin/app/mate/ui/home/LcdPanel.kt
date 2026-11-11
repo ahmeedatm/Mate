@@ -55,7 +55,7 @@ class LcdPanel(context: Context) : LinearLayout(context) {
     }
 }
 
-/** Texte de l'écran : Departure Mono, capitales, couleur `c_mx_lcd_text` et léger halo de LED. */
+/** Texte de l'écran : Departure Mono, capitales, couleur `c_mx_lcd_text` et léger halo de LED. `maxLines = 1`, jamais `isSingleLine` : il remplacerait les capitales. */
 fun lcdText(context: Context, sp: Float): TextView = TextView(context).apply {
     val ink = themeColor(context, R.attr.c_mx_lcd_text)
     textSize = sp
@@ -86,5 +86,28 @@ class DashDivider(context: Context, private val vertical: Boolean) : View(contex
 
     private companion object {
         const val DASH_ALPHA = 0x80
+    }
+}
+
+/** Jauge d'approche : piste pâle de l'écran, remplie à [fraction] (0 à 1) de la couleur [fill] de la ligne. */
+class ApproachBar(context: Context, fill: Int) : View(context) {
+    var fraction = 0f
+        set(value) {
+            field = value.coerceIn(0f, 1f)
+            invalidate()
+        }
+    private val track = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        color = ColorUtils.setAlphaComponent(themeColor(context, R.attr.c_mx_lcd_text), TRACK_ALPHA)
+    }
+    private val bar = Paint(Paint.ANTI_ALIAS_FLAG).apply { color = fill }
+
+    override fun onDraw(canvas: Canvas) {
+        val r = height / 2f
+        canvas.drawRoundRect(0f, 0f, width.toFloat(), height.toFloat(), r, r, track)
+        if (fraction > 0f) canvas.drawRoundRect(0f, 0f, maxOf(height.toFloat(), width * fraction), height.toFloat(), r, r, bar)
+    }
+
+    private companion object {
+        const val TRACK_ALPHA = 0x40
     }
 }

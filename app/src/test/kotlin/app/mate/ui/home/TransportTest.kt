@@ -136,4 +136,13 @@ class TransportTest {
         assertEquals(null, Transport.following(all, c))
         assertEquals(null, Transport.following(all, otherDest))
     }
+
+    @Test
+    fun `la jauge d'approche se remplit sur les 10 dernieres minutes`() {
+        assertEquals(0f, Transport.approach(15 * 60_000L), 0.001f)
+        assertEquals(0f, Transport.approach(10 * 60_000L), 0.001f)
+        assertEquals(0.5f, Transport.approach(5 * 60_000L), 0.001f)
+        assertEquals(1f, Transport.approach(0L), 0.001f)
+        assertEquals(1f, Transport.approach(-30_000L), 0.001f)
+    }
 }

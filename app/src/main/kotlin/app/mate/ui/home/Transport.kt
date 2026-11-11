@@ -101,6 +101,11 @@ object Transport {
         else -> Wait(Wait.Kind.NUMBER, minutes, blink = minutes == 2)
     }
 
+    private const val APPROACH_MS = 10 * 60_000L
+
+    /** Jauge d'approche, de 0 (à 10 min ou plus) à 1 (à quai). */
+    fun approach(waitMs: Long): Float = 1f - waitMs.coerceIn(0L, APPROACH_MS).toFloat() / APPROACH_MS
+
     /** « puis N min » : le passage qui suit [d] dans [all] (trié par attente), même ligne et même destination. */
     fun following(all: List<Departure>, d: Departure): Departure? =
         all.dropWhile { it !== d }.drop(1).firstOrNull { it.lineRef == d.lineRef && it.destination == d.destination }

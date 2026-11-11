@@ -11,9 +11,6 @@ import app.mate.net.runCatchingCancellable
 import app.mate.ui.errorText
 import app.mate.ui.themeColor
 import kotlinx.coroutines.launch
-import java.text.SimpleDateFormat
-import java.util.Date
-import java.util.Locale
 
 /**
  * Exemple du catalogue : les prochains passages à Nation, sans réseau. [dirs] : destinations, [minutes] : attentes en
@@ -99,7 +96,7 @@ class TransportWidget(context: Context, host: HomeHost, placed: Placed) : HomeWi
         val stop = if (preview) previewStop else placed.config.optString("stop")
         val now = System.currentTimeMillis()
         val live = departures.filter { remaining(it, now) >= -MINUTE_MS }
-        val content = BoardContent(stop.ifBlank { context.getString(R.string.widget_transport) }, clock(now), items(live, now))
+        val content = BoardContent(stop.ifBlank { context.getString(R.string.widget_transport) }, items(live, now))
         val message = when {
             !preview && Transport.keyless -> context.getString(R.string.widget_transport_no_key)
             !preview && stopId().isBlank() -> context.getString(R.string.widget_transport_choose)
@@ -120,6 +117,7 @@ class TransportWidget(context: Context, host: HomeHost, placed: Placed) : HomeWi
             destination = d.destination,
             wait = Transport.waitOf(Transport.waitMinutes(remaining(d, now))),
             thenMinutes = then,
+            approach = Transport.approach(remaining(d, now)),
         )
     }
 
@@ -131,7 +129,6 @@ class TransportWidget(context: Context, host: HomeHost, placed: Placed) : HomeWi
         host.scope.launch { load() }
     }
 
-    private fun clock(now: Long) = SimpleDateFormat("HH:mm", Locale.FRANCE).format(Date(now))
     private fun stopId() = placed.config.optString("stopId")
     private fun remaining(d: Transport.Departure, now: Long) = d.waitMs - (now - baseNow)
 
