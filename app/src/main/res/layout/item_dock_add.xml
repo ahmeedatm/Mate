@@ -2,7 +2,7 @@
 <!-- Touche étroite « + » de la rangée d'Instrument (créer un écran) : socle et capuchon comme les touches d'écran, sans DEL. -->
 <FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
-    android:layout_width="56dp"
+    android:layout_width="64dp"
     android:layout_height="match_parent"
     android:layout_marginStart="6dp"
     android:layout_marginEnd="6dp"

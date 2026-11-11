@@ -46,19 +46,20 @@
             android:textColor="?attr/c_text_dim"
             android:textSize="14sp" />
 
-        <!-- Groupe centré, descendu sous le numéro pour ne jamais le chevaucher, même à grande police. -->
+        <!-- Groupe icône + libellé centré dans ce qui reste sous le numéro (30 dp) et au-dessus du bas de la touche (10 dp mini),
+             même à grande police. -->
         <LinearLayout
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_gravity="center"
-            android:layout_marginTop="16dp"
-            android:gravity="center_vertical"
-            android:orientation="horizontal">
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:gravity="center"
+            android:orientation="horizontal"
+            android:paddingTop="30dp"
+            android:paddingBottom="10dp">
 
             <ImageView
                 android:id="@+id/dock_icon"
-                android:layout_width="24dp"
-                android:layout_height="24dp"
+                android:layout_width="26dp"
+                android:layout_height="26dp"
                 android:importantForAccessibility="no"
                 app:tint="?attr/c_text" />
 
@@ -74,7 +75,7 @@
                 android:singleLine="true"
                 android:textAllCaps="?attr/c_label_caps"
                 android:textColor="?attr/c_text"
-                                android:textSize="17sp" />
+                android:textSize="17sp" />
         </LinearLayout>
 
         <TextView

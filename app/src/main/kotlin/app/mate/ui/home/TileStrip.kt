@@ -31,7 +31,7 @@ object TileStrip {
     /** Place de la touche n° [index] dans la vue de la forme ([panel] : Colonne d'un panneau à filet, lignes plus basses). */
     fun params(context: Context, family: ShapeFamily, index: Int, panel: Boolean = false): LinearLayout.LayoutParams = when (family) {
         ShapeFamily.ROW -> LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.MATCH_PARENT, 1f).apply { if (index > 0) marginStart = context.dp(TileShapes.ICON_GAP_DP) }
-        ShapeFamily.COLUMN -> LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, context.dp(if (panel) TileShapes.LIST_ROW_PANEL_DP else TileShapes.LIST_ROW_DP)).apply { if (index > 0) topMargin = context.dp(gapDp(context)) }
+        ShapeFamily.COLUMN -> LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, context.dp(if (panel) TileShapes.LIST_ROW_PANEL_DP else TileShapes.LIST_ROW_DP)).apply { if (index > 0) topMargin = context.dp(if (panel) maxOf(gapDp(context), TileShapes.LIST_GAP_PANEL_DP) else gapDp(context)) }
         else -> LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, 0, 1f)
     }
 }

@@ -28,15 +28,28 @@ class TileShapesTest {
     }
 
     @Test
-    fun `dans un panneau a filet, la Colonne a des lignes plus basses et en montre au moins autant que sans panneau`() {
-        assertEquals(9, TileShapes.stripFit(ShapeFamily.COLUMN, 300, 500, 1f, panel = true))
-        // Panneau : marge de 6 dp et titre de 14 dp en moins, contre 12 + 28 (et des lignes de 56) avant ; jamais moins qu'à nu dès 3 lignes.
-        val lost = 2 * TileShapes.PANEL_STRIP_PAD_DP + TileShapes.PANEL_CAPTION_DP
-        for (height in 200..800) {
-            val bare = TileShapes.stripFit(ShapeFamily.COLUMN, 300, height, 1f)
-            val framed = TileShapes.stripFit(ShapeFamily.COLUMN, 300, height - lost, 1f, panel = true)
-            if (bare >= 4) assertTrue("h=$height : $framed < $bare", framed >= bare)
+    fun `dans un panneau a filet, la Colonne ne montre que des lignes entieres, ecartees d'au moins 8 dp, sous le titre et sa marge`() {
+        // Panneau de 300 × 500 : 2 × 6 de marge, titre de 14 + 8 dp de marge dessous, lignes de 56 (plaque de 52 entiere) et écart de 8.
+        assertEquals(7, TileShapes.stripFit(ShapeFamily.COLUMN, 300, 500 - 12 - 22, 1f, panel = true))
+        val lost = 2 * TileShapes.PANEL_STRIP_PAD_DP + TileShapes.PANEL_CAPTION_DP + TileShapes.PANEL_CAPTION_GAP_DP
+        assertEquals(22, TileShapes.PANEL_CAPTION_DP + TileShapes.PANEL_CAPTION_GAP_DP)
+        for (height in 120..800) {
+            val room = height - lost
+            val rows = TileShapes.stripFit(ShapeFamily.COLUMN, 300, room, 1f, panel = true)
+            val used = rows * TileShapes.LIST_ROW_PANEL_DP + (rows - 1) * TileShapes.LIST_GAP_PANEL_DP
+            if (rows > 1) assertTrue("h=$height : $rows lignes = $used dp > $room", used <= room)
         }
+    }
+
+    @Test
+    fun `l'ecart entre deux lignes d'un panneau ne passe jamais sous 8 dp, meme si le theme en demande moins`() {
+        assertEquals(TileShapes.stripFit(ShapeFamily.COLUMN, 300, 400, 1f, panel = true, gapDp = 8), TileShapes.stripFit(ShapeFamily.COLUMN, 300, 400, 1f, panel = true, gapDp = 4))
+    }
+
+    @Test
+    fun `la plaque d'une touche tient dans sa ligne de liste`() {
+        assertTrue(TileMetrics.NORMAL.plateDp <= TileShapes.LIST_ROW_PANEL_DP)
+        assertTrue(TileMetrics.NORMAL.plateDp <= TileShapes.LIST_ROW_DP)
     }
 
     @Test

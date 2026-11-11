@@ -156,14 +156,14 @@ class KeysWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidget(
     /** Touches qui tiennent dans une vue de [width] × [height] px, sans la marge du cadre ni le titre de la Colonne. */
     private fun fitFor(width: Int, height: Int): Int {
         val pad = if (framed) dp(TileShapes.PANEL_STRIP_PAD_DP) * 2 else 0
-        return TileStrip.fit(context, family, width - pad, height - pad - if (titled) dp(TileShapes.PANEL_CAPTION_DP) else 0, panel = framed)
+        return TileStrip.fit(context, family, width - pad, height - pad - if (titled) dp(TileShapes.PANEL_CAPTION_DP + TileShapes.PANEL_CAPTION_GAP_DP) else 0, panel = framed)
     }
 
     /** Pastille, Ligne, Colonne : les premières touches, autant que la forme en tient ([TileStrip]). */
     private fun renderStrip(keys: List<KeyRef>) {
         if (framed) view.asCard(TileShapes.PANEL_STRIP_PAD_DP)
         view.orientation = TileStrip.orientation(family)
-        if (titled) view.addView(panelCaption(R.string.widget_keys_title), LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT))
+        if (titled) view.addView(panelCaption(R.string.widget_keys_title), LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT).apply { bottomMargin = dp(TileShapes.PANEL_CAPTION_GAP_DP) })
         for ((i, key) in keys.take(drawnFit).withIndex()) view.addView(rowTile(key, TileStrip.look(family)), TileStrip.params(context, family, i, panel = framed))
     }
 

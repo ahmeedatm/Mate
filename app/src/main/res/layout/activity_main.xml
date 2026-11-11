@@ -245,9 +245,9 @@
             android:clipToPadding="false"
             android:orientation="horizontal"
             android:paddingStart="18dp"
-            android:paddingTop="6dp"
+            android:paddingTop="10dp"
             android:paddingEnd="18dp"
-            android:paddingBottom="8dp"
+            android:paddingBottom="10dp"
             android:visibility="gone">
 
             <HorizontalScrollView

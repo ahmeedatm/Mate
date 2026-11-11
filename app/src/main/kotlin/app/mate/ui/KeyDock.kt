@@ -375,8 +375,8 @@ class KeyDock(
         const val MAX_KEY_DP = 230
         const val SEPARATOR_DP = 56
 
-        /** Place de « + » après les touches d'écran, marges comprises (56 dp + 2 × 6 dp du layout). */
-        const val ADD_DP = 68
+        /** Place de « + » après les touches d'écran, marges comprises (64 dp + 2 × 6 dp du layout). */
+        const val ADD_DP = 76
         const val APPEAR_DP = 12
         const val LABEL_SP = 17f
         const val COMPACT_LABEL_SP = 15f

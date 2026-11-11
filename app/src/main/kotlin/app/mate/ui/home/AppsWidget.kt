@@ -45,7 +45,7 @@ class AppsWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidget(
     /** Applis qui tiennent dans le cadre : sans sa marge, ni le titre de la Colonne. */
     private fun fitStrip(): Int {
         val pad = if (framed) dp(TileShapes.PANEL_STRIP_PAD_DP) * 2 else 0
-        return TileStrip.fit(context, family, view.width - pad, view.height - pad - if (titled) dp(TileShapes.PANEL_CAPTION_DP) else 0, panel = framed)
+        return TileStrip.fit(context, family, view.width - pad, view.height - pad - if (titled) dp(TileShapes.PANEL_CAPTION_DP + TileShapes.PANEL_CAPTION_GAP_DP) else 0, panel = framed)
     }
 
     /** Aperçu du catalogue : ses applis remplacent celles de l'ordinateur, même si [applySize] repasse. */
@@ -60,7 +60,7 @@ class AppsWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidget(
         section.grid.ownsLongPress = true
         section.grid.onHold = { cell, _ -> section.tileOf(cell)?.let { host.overlays.windows(it, removable = true) { section.reload() } } }
         section.onTiles = { if (!inGrid) renderStrip() }
-        view.addView(caption, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT))
+        view.addView(caption, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT).apply { bottomMargin = dp(TileShapes.PANEL_CAPTION_GAP_DP) })
         section.addTo(view)
         view.addView(strip, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, 0, 1f))
         view.addOnLayoutChangeListener { _, left, top, right, bottom, _, _, _, _ ->

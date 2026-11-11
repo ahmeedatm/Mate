@@ -715,7 +715,7 @@
         <item name="c_signal">#FFFF5A1F</item>
         <item name="c_signal_edge">#FFB3380D</item>
         <item name="c_on_signal">#FF1E1D1B</item>
-        <item name="c_dock_height">96dp</item>
+        <item name="c_dock_height">116dp</item>
         <item name="c_lcd_overlay">@style/Lcd.Instrument</item>
         <item name="c_home_card_outline">true</item>
         <item name="c_block_radius">12dp</item>
@@ -741,7 +741,7 @@
         <item name="c_dock_socle">#00000000</item>
         <item name="c_dock_socle_on">#00000000</item>
         <item name="c_dock_cap_top">18dp</item>
-        <item name="c_dock_cap_bottom">12dp</item>
+        <item name="c_dock_cap_bottom">10dp</item>
         <item name="c_list_gap">6dp</item>
         <item name="c_primary">?attr/c_accent</item>
         <item name="c_on_primary">?attr/c_on_accent</item>
@@ -825,7 +825,7 @@
         <item name="c_signal">#FFFF5A1F</item>
         <item name="c_signal_edge">#FFB3380D</item>
         <item name="c_on_signal">#FF1E1D1B</item>
-        <item name="c_dock_height">96dp</item>
+        <item name="c_dock_height">116dp</item>
         <item name="c_lcd_overlay">@style/Lcd.InstrumentNuit</item>
         <item name="c_home_card_outline">true</item>
         <item name="c_block_radius">12dp</item>
