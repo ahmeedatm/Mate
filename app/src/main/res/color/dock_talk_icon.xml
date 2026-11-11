@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Icône de Parler : c_on_signal sur la touche orange au repos (2,43:1 avec c_bg en jour), c_bg sur c_talk_live pendant l'écoute. -->
+<selector xmlns:android="http://schemas.android.com/apk/res/android">
+    <item android:color="?attr/c_bg" android:state_selected="true" />
+    <item android:color="?attr/c_on_signal" />
+</selector>

@@ -44,13 +44,15 @@
             android:layout_marginTop="8dp"
             android:fontFamily="?attr/c_font_display"
             android:textColor="?attr/c_text_dim"
-            android:textSize="12sp" />
+            android:textSize="14sp" />
 
         <LinearLayout
-            android:layout_width="wrap_content"
+            android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_gravity="center"
-            android:gravity="center_vertical"
+            android:layout_marginStart="10dp"
+            android:layout_marginEnd="10dp"
+            android:gravity="center"
             android:orientation="horizontal">
 
             <ImageView
@@ -60,19 +62,25 @@
                 android:importantForAccessibility="no"
                 app:tint="?attr/c_text" />
 
+            <!-- Largeur donnée par la touche : le libellé rétrécit (autoSize) avant d'être tronqué, à grande police. -->
             <TextView
                 android:id="@+id/dock_label"
-                android:layout_width="wrap_content"
+                android:layout_width="0dp"
                 android:layout_height="wrap_content"
                 android:layout_marginStart="10dp"
+                android:layout_weight="1"
                 android:ellipsize="end"
                 android:fontFamily="?attr/c_font_label"
+                android:gravity="center_vertical"
                 android:letterSpacing="0.08"
-                android:maxWidth="112dp"
                 android:singleLine="true"
                 android:textAllCaps="?attr/c_label_caps"
                 android:textColor="?attr/c_text"
-                android:textSize="17sp" />
+                android:textSize="17sp"
+                app:autoSizeMaxTextSize="17sp"
+                app:autoSizeMinTextSize="11sp"
+                app:autoSizeStepGranularity="1sp"
+                app:autoSizeTextType="uniform" />
         </LinearLayout>
 
         <TextView

@@ -30,6 +30,7 @@
             android:id="@+id/dock_round_icon"
             android:layout_width="26dp"
             android:layout_height="26dp"
+            android:duplicateParentState="true"
             android:layout_gravity="center"
             android:importantForAccessibility="no"
             app:tint="?attr/c_text" />

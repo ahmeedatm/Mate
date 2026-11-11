@@ -60,4 +60,8 @@ object FrameTracerModel {
         if (t < CONTENT_DELAY_MS) return 0f
         return ((t - CONTENT_DELAY_MS).toFloat() / FADE_MS).coerceIn(0f, 1f)
     }
+
+    /** Le trait d'un cadre est à l'écran : du départ à la fin de son effacement ; avant et après, rien à redessiner. */
+    fun lineVisible(elapsed: Long, startMs: Long, traced: Boolean): Boolean =
+        traced && elapsed > startMs && elapsed < startMs + TRACE_MS + LINE_FADE_MS
 }

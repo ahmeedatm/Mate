@@ -18,7 +18,7 @@ import app.mate.R
 /**
  * Balayage orange des thèmes Instrument, au changement d'écran : un aplat c_signal traverse la zone de contenu. Il couvre
  * l'ancien écran (une image prise juste avant le changement, [capture]), puis découvre le nouveau. Le numéro de l'écran et
- * son nom roulent avec lui. Durées et course : [SweepModel]. Rien d'autre qu'alpha et translation, sur calque matériel.
+ * son nom roulent avec lui. Durées et course : [SweepModel]. Rien d'autre que la translation, sur calque matériel posé pendant l'animation.
  * Coupé (Réduire les animations, échelle d'animation à zéro, famille NAVIGATION désactivée) : pas de balayage.
  */
 class SweepView @JvmOverloads constructor(
@@ -76,10 +76,13 @@ class SweepView @JvmOverloads constructor(
         }
     }
 
-    /** Joue le balayage sur [before] (l'ancien écran), vers [number] et [label] (le nouvel écran). */
+    /**
+     * Joue le balayage sur [before] (l'ancien écran) vers [number] et [label] (le nouvel écran). La course prend la largeur
+     * de [before] (celle de mode_container) : la vue, GONE jusque-là, n'a pas encore de largeur au premier balayage.
+     */
     fun play(before: Bitmap, lastMove: Int, number: String, label: String) {
         cancel()
-        val plan = SweepModel.plan(lastMove, width.toFloat(), resources.displayMetrics.density)
+        val plan = SweepModel.plan(lastMove, before.width.toFloat(), resources.displayMetrics.density)
         place(plan.direction)
         this.number.text = number
         name.text = label
@@ -88,6 +91,9 @@ class SweepView @JvmOverloads constructor(
         picture.visibility = VISIBLE
         plate.translationX = plan.plateStart
         text.translationX = plan.textStart
+        // Calque matériel le temps de l'animation seulement (une texture de plus en mémoire, retirée à la fin).
+        plate.setLayerType(LAYER_TYPE_HARDWARE, null)
+        text.setLayerType(LAYER_TYPE_HARDWARE, null)
         visibility = VISIBLE
         val turn = ++generation
         plate.animate().translationX(0f).setDuration(SweepModel.COVER_MS).setInterpolator(EASE)
@@ -106,6 +112,8 @@ class SweepView @JvmOverloads constructor(
 
     private fun finish() {
         visibility = GONE
+        plate.setLayerType(LAYER_TYPE_NONE, null)
+        text.setLayerType(LAYER_TYPE_NONE, null)
         plate.translationX = 0f
         text.translationX = 0f
     }
@@ -117,6 +125,11 @@ class SweepView @JvmOverloads constructor(
         text.animate().cancel()
         releasePicture()
         finish()
+    }
+
+    override fun onDetachedFromWindow() {
+        cancel()
+        super.onDetachedFromWindow()
     }
 
     /** Libère l'image de l'ancien écran (tas de 128 Mo) : elle n'est plus affichée après le balayage. */

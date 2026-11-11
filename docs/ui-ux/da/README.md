@@ -23,13 +23,15 @@ Jetons (`Palette.Instrument`, `Palette.InstrumentNuit`, `res/values/palettes.xml
 | `c_surface` (carte) | `#EFEDE7` | `#343432` (touche `#3A3A38`) |
 | `c_stroke` | `#B7B2A6` | `#121211` |
 | `c_text` | `#1E1D1B` | `#ECE8DF` |
-| `c_text_dim`, `c_text_faint` | `#5A564E` | `#B4AFA3`, `#AEA99D` |
+| `c_text_dim`, `c_text_faint` | `#5A564E`, `#625E55` (5,0:1 au plus bas, sur la tuile : 4,5:1 tenus) | `#B4AFA3`, `#AEA99D` |
 | `c_accent` (texte, aplats) | `#B3380D` (4,7:1 sur l'alu) | `#FF8559` (4,5:1) |
 | `c_signal` (LCD, DEL, aplat) | `#FF5A1F` | `#FF5A1F` |
 | fenêtre LCD (`Lcd.Instrument`, `Lcd.InstrumentNuit`) | `#141414`, texte `#F1EDE4` | `#0B0B0B`, texte `#F1EDE4` |
 
-Orange vif `#FF5A1F` réservé aux fenêtres LCD, aux DEL et à l'aplat de balayage (il ne fait que 3:1 sur l'alu : pas de texte dessus) ;
-le texte et les boutons de l'alu prennent le `c_accent` foncé. Nouveaux attributs : `c_signal`, `c_signal_edge`, `c_on_signal`,
+Orange vif `#FF5A1F` réservé aux fenêtres LCD, à l'aplat de balayage et aux DEL (il ne fait que 2,43:1 sur l'alu du jour : pas de
+texte dessus ; une DEL active ne tient pas par lui seul) ; le texte et les boutons de l'alu prennent le `c_accent` foncé. La DEL
+active se cerne de `c_signal_edge` (`#B3380D`, 4,7:1 sur l'alu). La DEL éteinte (1,65:1) n'a pas à se lire : c'est l'état actif qui doit
+tenir, y compris quand le capuchon est enfoncé (aussi marqué par son abaissement de 4 dp). Nouveaux attributs : `c_signal`, `c_signal_edge`, `c_on_signal`,
 `c_dock_height` (96 dp pour Instrument, 0 ailleurs : c'est ce qui allume la rangée de touches) et `c_lcd_overlay` (le style LCD).
 
 Polices : Departure Mono (`c_font_display` : heure, chiffres, minuteur, numéros des touches ; OFL 1.1, convertie en TrueType

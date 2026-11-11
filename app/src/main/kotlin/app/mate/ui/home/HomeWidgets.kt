@@ -87,6 +87,9 @@ interface HomeHost {
     val owner: LifecycleOwner
 }
 
+/** Contexte repeint en fenêtre LCD : repérable, pour retrouver le contexte d'origine (`HomeWidget.outerContext`). */
+private class LcdContext(base: Context, overlay: Int) : ContextThemeWrapper(base, overlay)
+
 /**
  * Un widget de l'Accueil : sa vue remplit ses cases. [onMinute] : chaque minute (affichage) ; [load] : chaque minute
  * aussi, ce qui passe par le réseau ; [setActive] : page à l'écran ou non.
@@ -123,6 +126,9 @@ abstract class HomeWidget(val context: Context, val host: HomeHost, val placed: 
     open val hasSettings: Boolean get() = false
     open fun showSettings() = Unit
     /** Ce widget est une fenêtre LCD (Instrument) : chiffres en Departure Mono, orange ([LcdStyle]). */
+    /** Contexte d'origine, pour dialogues, toasts et `as Activity` : le contexte LCD ne sert qu'à créer les vues. */
+    protected val outerContext: Context get() = (context as? LcdContext)?.baseContext ?: context
+
     protected val lcd get() = LcdStyle.applies(placed.type, themeRes(context, R.attr.c_lcd_overlay))
     protected fun color(id: Int) = themeColor(context, id)
     protected fun dp(value: Int) = context.dp(value)
@@ -156,7 +162,7 @@ abstract class HomeWidget(val context: Context, val host: HomeHost, val placed: 
         /** Le contexte du thème, repeint en fenêtre LCD (Instrument) pour les widgets de [LcdStyle], posé une seule fois ici. */
         private fun lcdContext(context: Context, type: WidgetType): Context {
             val overlay = themeRes(context, R.attr.c_lcd_overlay)
-            return if (LcdStyle.applies(type, overlay)) ContextThemeWrapper(context, overlay) else context
+            return if (LcdStyle.applies(type, overlay)) LcdContext(context, overlay) else context
         }
 
         private fun build(context: Context, host: HomeHost, placed: Placed): HomeWidget =

@@ -45,4 +45,11 @@ class SweepModelTest {
         assertEquals(360f, back.textStart, 0.01f)
         assertEquals(-480f, back.textEnd, 0.01f)
     }
+
+    @Test
+    fun `la course de l'aplat suit la largeur reelle, jamais zero`() {
+        val plan = SweepModel.plan(lastMove = 1, width = 1000f, density = 1f)
+        assertEquals(-1010f, plan.plateStart, 0.01f)
+        assertEquals(1010f, plan.plateEnd, 0.01f)
+    }
 }

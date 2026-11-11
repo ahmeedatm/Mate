@@ -1,6 +1,7 @@
 package app.mate.ui.home
 
 import app.mate.FakeContext
+import app.mate.R
 import app.mate.net.HomeFeatures
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -90,6 +91,13 @@ class WidgetModelTest {
         val context = FakeContext()
         HomeLayout.save(context, Template.WORK_INSTRUMENT.build())
         assertEquals(widgets.map { it.type }, HomeLayout.load(context).widgets.map { it.type })
+    }
+
+    @Test
+    fun `la creation de profil ne propose qu'un seul Travail`() {
+        val titles = HomeLayout.load(FakeContext()).offered().map { it.title }
+        assertEquals(1, titles.count { it == R.string.template_work })
+        assertFalse(Template.WORK_INSTRUMENT in HomeLayout.load(FakeContext()).offered())
     }
 
     @Test

@@ -1148,11 +1148,14 @@ class MainActivity : AppCompatActivity() {
             documentPanel.setExpanded(mode == Mode.COMPUTER, splittable = mode != Mode.COMPUTER)
         }
         val changed = current != mode
-        // Balayage (thèmes Instrument) : l'écran quitté est photographié avant d'être masqué plus bas.
+        // Un tracé encore en cours sur l'écran quitté (celui de l'activité, celui de l'Accueil) s'arrête AVANT la photo :
+        // ses cartes redeviennent visibles au lieu d'être photographiées à alpha 0.
+        findViewById<FrameTracer>(R.id.tracer).stop()
+        (supportFragmentManager.findFragmentByTag(Mode.HOME.tag) as? HomeFragment)?.stopTracing()
+        // Balayage (thèmes Instrument) : l'écran quitté est photographié avant d'être masqué plus bas. Le WebView
+        // (Page de l'ordi) et la caméra sortent vides de cette photo (surfaces GPU) : l'aplat les recouvre aussitôt.
         val before = if (changed && nav is KeyDock) findViewById<SweepView>(R.id.sweep).capture(findViewById(R.id.mode_container)) else null
         sweeping = before != null
-        // Un tracé encore en cours sur l'écran quitté s'arrête (ses cartes redeviennent visibles).
-        findViewById<FrameTracer>(R.id.tracer).stop()
         val leavingCamera = current == Mode.CAMERA && mode != Mode.CAMERA
         current = mode
         if (::presence.isInitialized) {

@@ -1,6 +1,14 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Touche ronde Parler, capuchon : c_talk au repos, c_talk_live pendant l'écoute (VoiceControl : isSelected). -->
+<!-- Touche ronde Parler, capuchon : c_talk au repos ; pendant l'écoute (VoiceControl : isSelected) c_talk_live et un anneau
+     intérieur : un second signe que la couleur seule. -->
 <selector xmlns:android="http://schemas.android.com/apk/res/android">
-    <item android:state_selected="true"><shape android:shape="oval"><solid android:color="?attr/c_talk_live" /></shape></item>
+    <item android:state_selected="true">
+        <layer-list>
+            <item><shape android:shape="oval"><solid android:color="?attr/c_talk_live" /></shape></item>
+            <item android:bottom="6dp" android:left="6dp" android:right="6dp" android:top="6dp">
+                <shape android:shape="oval"><stroke android:width="2dp" android:color="?attr/c_bg" /></shape>
+            </item>
+        </layer-list>
+    </item>
     <item><shape android:shape="oval"><solid android:color="?attr/c_talk" /></shape></item>
 </selector>

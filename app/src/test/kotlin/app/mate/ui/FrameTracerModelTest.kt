@@ -82,4 +82,16 @@ class FrameTracerModelTest {
         assertEquals(0f, FrameTracerModel.contentAlpha(elapsed = 419L, startMs = faded.startMs, lcd = false, traced = false), 0f)
         assertEquals(1f, FrameTracerModel.contentAlpha(elapsed = 420L + FrameTracerModel.FADE_MS, startMs = faded.startMs, lcd = false, traced = false), 0f)
     }
+
+    @Test
+    fun `le trait n'est dessine que de son depart a son effacement`() {
+        // Attente du balayage : rien à dessiner avant le départ du cadre.
+        assertFalse(FrameTracerModel.lineVisible(elapsed = 100L, startMs = 440L, traced = true))
+        assertFalse(FrameTracerModel.lineVisible(elapsed = 440L, startMs = 440L, traced = true))
+        assertTrue(FrameTracerModel.lineVisible(elapsed = 441L, startMs = 440L, traced = true))
+        assertTrue(FrameTracerModel.lineVisible(elapsed = 440L + FrameTracerModel.TRACE_MS + 100L, startMs = 440L, traced = true))
+        // Après l'effacement du trait, et pour un cadre en fondu : plus rien.
+        assertFalse(FrameTracerModel.lineVisible(elapsed = 440L + FrameTracerModel.TRACE_MS + FrameTracerModel.LINE_FADE_MS, startMs = 440L, traced = true))
+        assertFalse(FrameTracerModel.lineVisible(elapsed = 500L, startMs = 440L, traced = false))
+    }
 }

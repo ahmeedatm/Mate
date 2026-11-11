@@ -600,7 +600,7 @@
         <item name="c_frame_text">#FFFFFFFF</item>
         <item name="c_frame_shadow">#99000000</item>
         <item name="c_text_dim">#FF5A564E</item>
-        <item name="c_text_faint">#FF5A564E</item>
+        <item name="c_text_faint">#FF625E55</item>
         <item name="c_graphic">#FF766F63</item>
         <item name="c_ok">#FF4A6A2E</item>
         <item name="c_ok_soft">#FFE3EAD6</item>

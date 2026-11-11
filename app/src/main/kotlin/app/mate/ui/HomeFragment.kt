@@ -184,6 +184,11 @@ class HomeFragment : Fragment(), HomeHost, WidgetGrid.Listener {
         }
     }
 
+    /** Arrête le tracé d'entrée en cours : ses cartes redeviennent visibles (MainActivity, avant de photographier l'écran). */
+    fun stopTracing() {
+        if (::tracer.isInitialized) tracer.stop()
+    }
+
     override fun onStop() {
         started = false
         tracer.stop()

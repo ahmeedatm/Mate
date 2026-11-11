@@ -6,9 +6,12 @@ import android.view.View
 import android.widget.ImageView
 import android.widget.LinearLayout
 import android.widget.TextView
-import androidx.annotation.AttrRes
+import androidx.annotation.ColorRes
 import androidx.annotation.DrawableRes
 import androidx.annotation.StringRes
+import androidx.core.content.ContextCompat
+import androidx.core.view.ViewCompat
+import androidx.core.view.accessibility.AccessibilityNodeInfoCompat
 import androidx.dynamicanimation.animation.DynamicAnimation
 import app.mate.AnimFamily
 import app.mate.Mode
@@ -40,9 +43,9 @@ class KeyDock(
     private val chipState: TextView = chip.findViewById(R.id.chip_state)
     override val root: View = dock
     override val status: View = chip
-    override val talk: View = round(R.drawable.dock_talk_cap, R.drawable.ic_key_mic, R.attr.c_bg, R.string.voice_button, atEnd = false)
+    override val talk: View = round(R.drawable.dock_talk_cap, R.drawable.ic_key_mic, R.color.dock_talk_icon, R.string.voice_button, atEnd = false)
     override val talkIcon: View = talk.findViewById(R.id.dock_round_icon)
-    override val lock: View = round(null, R.drawable.ic_key_lock, R.attr.c_text, R.string.rail_lock, atEnd = true)
+    override val lock: View = round(null, R.drawable.ic_key_lock, R.color.dock_lock_icon, R.string.rail_lock, atEnd = true)
 
     private var layout = HomeLayout.load(activity)
     private var page = layout.homeProfile
@@ -64,16 +67,17 @@ class KeyDock(
         activity.findViewById<View>(R.id.rail).visibility = View.GONE
         dock.visibility = View.VISIBLE
         activity.findViewById<TopBar>(R.id.top_bar).showComputerChip()
+        ViewCompat.replaceAccessibilityAction(chip, AccessibilityNodeInfoCompat.AccessibilityActionCompat.ACTION_CLICK, activity.getString(R.string.dock_switch_computer), null)
         render()
     }
 
-    private fun round(@DrawableRes cap: Int?, @DrawableRes icon: Int, @AttrRes tint: Int, @StringRes description: Int, atEnd: Boolean): View {
+    private fun round(@DrawableRes cap: Int?, @DrawableRes icon: Int, @ColorRes tint: Int, @StringRes description: Int, atEnd: Boolean): View {
         val view = activity.layoutInflater.inflate(R.layout.item_dock_round, dock, false)
         val face = view.findViewById<View>(R.id.dock_round_cap)
         cap?.let { face.setBackgroundResource(it) }
         view.findViewById<ImageView>(R.id.dock_round_icon).apply {
             setImageResource(icon)
-            imageTintList = themeColorList(activity, tint)
+            imageTintList = ContextCompat.getColorStateList(activity, tint)
         }
         view.contentDescription = activity.getString(description)
         press(view, face)
@@ -154,6 +158,11 @@ class KeyDock(
                     onProfiles()
                     true
                 }
+                // Le geste n'a pas d'indice visible : TalkBack l'annonce comme une action.
+                ViewCompat.addAccessibilityAction(view, activity.getString(R.string.dock_manage_screens)) { _, _ ->
+                    onProfiles()
+                    true
+                }
             }
             view.findViewById<TextView>(R.id.dock_number).text = key.number
             view.findViewById<ImageView>(R.id.dock_icon).setImageResource(icon(key.mode))
@@ -195,10 +204,27 @@ class KeyDock(
         label.typeface = themeFont(activity, if (timer != null) R.attr.c_font_display else R.attr.c_font_label)
         label.setTextColor(themeColor(activity, if (timer != null) R.attr.c_accent else R.attr.c_text))
         label.visibility = if (Prefs.railLabels(activity)) View.VISIBLE else View.GONE
-        view.contentDescription = label.text
+        view.contentDescription = describe(key.mode, label.text.toString(), timer)
         view.findViewById<TextView>(R.id.dock_badge).apply {
             text = pendingTasks.toString()
             visibility = if (key.mode == Mode.HOME && pendingTasks > 0) View.VISIBLE else View.GONE
+        }
+    }
+
+    /** Ce que lit TalkBack : le nom de la touche (même quand son libellé est masqué), puis le profil, le minuteur ou les tâches. */
+    private fun describe(mode: Mode, shown: String, timer: String?): String {
+        val name = activity.getString(mode.label)
+        return when {
+            mode == Mode.HOME -> {
+                val profile = activity.getString(R.string.dock_desc_profile, name, shown)
+                if (pendingTasks > 0) {
+                    profile + activity.resources.getQuantityString(R.plurals.dock_desc_tasks, pendingTasks, pendingTasks)
+                } else {
+                    profile
+                }
+            }
+            timer != null -> activity.getString(R.string.dock_desc_timer, name, timer)
+            else -> name
         }
     }
 

@@ -297,7 +297,7 @@ class WeatherWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidg
         }
     }
 
-    override fun showSettings() = Weather.chooseCity(context, host.scope, placed.config) {
+    override fun showSettings() = Weather.chooseCity(outerContext, host.scope, placed.config) {
         current = null
         airIndex = null
         host.save()

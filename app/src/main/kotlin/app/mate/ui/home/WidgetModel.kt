@@ -515,7 +515,8 @@ class HomeLayout(val widgets: MutableList<Placed>, val names: MutableList<String
 
 /**
  * Modèles prêts à l'emploi : le défaut est Travail. `listed` : proposé à la création d'un
- * profil (Réunion ne l'est que s'il n'existe plus : [HomeLayout.offered]).
+ * profil (Réunion ne l'est que s'il n'existe plus : [HomeLayout.offered] ; Travail Instrument sert de défaut du thème,
+ * il ne double pas Travail dans la liste).
  */
 enum class Template(
     @StringRes val title: Int,
@@ -542,7 +543,7 @@ enum class Template(
         Placed(WidgetType.KEYS, WidgetSize.V, 0, 2, 2, JSONObject().put(KeyRef.DEFAULT_PAGE, "Raccourcis")),
         Placed(WidgetType.WATER, WidgetSize.S, 0, 3, 2),
         Placed(WidgetType.WEATHER, WidgetSize.S, 0, 3, 3),
-    )),
+    ), listed = false),
     STANDBY_CADRAN(R.string.template_standby, R.string.template_standby_cadran_desc, listOf(
         Placed(WidgetType.HERO, WidgetSize.W, 0, 0, 0),
         Placed(WidgetType.DAYLINE, WidgetSize.W, 0, 0, 1),

@@ -52,6 +52,7 @@ class FrameTracer @JvmOverloads constructor(context: Context, attrs: AttributeSe
     private var clock: ValueAnimator? = null
     private var elapsed = 0L
     private var generation = 0
+    private var drew = false
 
     /**
      * Trace les cadres de [views] (dans l'ordre : un par module), à partir de [lead] ms. Leur contenu passe à alpha 0 tout de
@@ -108,7 +109,10 @@ class FrameTracer @JvmOverloads constructor(context: Context, attrs: AttributeSe
                 item.view.alpha = a
             }
         }
-        invalidate()
+        // Rien à redessiner pendant l'attente du balayage ni quand tous les traits sont effacés (le dernier dessin vide un coup).
+        val drawing = items.any { FrameTracerModel.lineVisible(elapsed, it.frame.startMs, it.frame.traced) }
+        if (drawing || drew) invalidate()
+        drew = drawing
     }
 
     override fun onDraw(canvas: Canvas) {
@@ -144,6 +148,12 @@ class FrameTracer @JvmOverloads constructor(context: Context, attrs: AttributeSe
         items = emptyList()
         visibility = GONE
         elapsed = 0L
+        drew = false
+    }
+
+    override fun onDetachedFromWindow() {
+        stop()
+        super.onDetachedFromWindow()
     }
 
     companion object {
