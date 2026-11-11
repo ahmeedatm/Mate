@@ -26,6 +26,7 @@ import androidx.core.view.ViewCompat
 import app.mate.R
 import app.mate.ui.Look
 import app.mate.ui.dp
+import app.mate.ui.home.HomeCard
 import app.mate.ui.themeBool
 import app.mate.ui.themeColor
 import app.mate.ui.themeFont
@@ -200,7 +201,12 @@ class FaderStrip(context: Context) : View(context) {
     // Couleurs du thème (palettes.xml, tirées des tons de Console).
     private val cText = themeColor(context, R.attr.c_mx_text)
     private val cEngrave = themeColor(context, R.attr.c_mx_engrave)
-    private val cSlot = themeColor(context, R.attr.c_mx_slot)
+    private val cSlot = HomeCard.slot(
+        HomeCard.look(context),
+        themeColor(context, R.attr.c_mx_slot),
+        themeColor(context, R.attr.c_bg),
+        themeColor(context, R.attr.c_stroke),
+    )
     private val cHighlight = themeColor(context, R.attr.c_mx_highlight)
     private val cShadow = themeColor(context, R.attr.c_mx_shadow)
     private val cLcdBg = themeColor(context, R.attr.c_mx_lcd_bg)

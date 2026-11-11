@@ -45,6 +45,9 @@ object HomeCard {
     /** Plaque de la console de mixage (`c_mx_plate`) : retirée À même le fond, sinon son bord se voit sur le fond d'écran (#230). */
     fun plate(style: HomeCardStyle?, plate: Int): Int = if (style == HomeCardStyle.BARE) Color.TRANSPARENT else plate
 
+    /** Rail des curseurs (`c_mx_slot`) : sans plaque, un rail de la couleur du fond (thèmes sombres) prend celle du filet. */
+    fun slot(style: HomeCardStyle?, slot: Int, bg: Int, stroke: Int): Int = if (style == HomeCardStyle.BARE && slot == bg) stroke else slot
+
     /**
      * La tuile du thème, filet retiré partout ; Voile et À même le fond ne changent que sa forme au repos. L'appui garde
      * celle du thème (halo rose de Hush, translucide du Rétro).

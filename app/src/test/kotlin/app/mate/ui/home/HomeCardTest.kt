@@ -35,6 +35,16 @@ class HomeCardTest {
     }
 
     @Test
+    fun `sans plaque, un rail de la couleur du fond prend celle du filet pour rester visible`() {
+        val bg = 0xFF16171A.toInt()
+        val stroke = 0xFF3A3D44.toInt()
+        val text = 0xFFF2F2F2.toInt()
+        assertEquals(stroke, HomeCard.slot(HomeCardStyle.BARE, slot = bg, bg = bg, stroke = stroke))
+        assertEquals(text, HomeCard.slot(HomeCardStyle.BARE, slot = text, bg = bg, stroke = stroke))
+        for (style in listOf(HomeCardStyle.VEIL, HomeCardStyle.FLAT, null)) assertEquals(bg, HomeCard.slot(style, slot = bg, bg = bg, stroke = stroke))
+    }
+
+    @Test
     fun `le voile laisse voir le fond`() {
         assertTrue(HomeCard.VEIL_ALPHA in 1 until 0xFF)
     }
