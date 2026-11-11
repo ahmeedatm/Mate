@@ -20,7 +20,7 @@ data class PictoSpec(
         private const val SQUARE_RADIUS = 0.22f
         private const val BUS_RADIUS = 0.12f
         private const val BUS_WIDTH = 1.45f
-        private const val WHITE = 0xFFFFFFFF.toInt()
+        private const val WHITE = 0xFFFFFFFF.toInt() // controle: permis fond blanc officiel du picto de tram IDFM
 
         /** [neutralText] : couleur de texte du thème (le picto neutre est plein de cette couleur, texte à la couleur du fond). */
         fun of(line: TransportLines.Line?, neutralBackground: Int, neutralText: Int): PictoSpec {

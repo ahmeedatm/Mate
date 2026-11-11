@@ -21,7 +21,7 @@ class LinePicto(context: Context) : View(context) {
     private val fill = Paint(Paint.ANTI_ALIAS_FLAG)
     private val letters = Paint(Paint.ANTI_ALIAS_FLAG).apply {
         textAlign = Paint.Align.CENTER
-        typeface = ResourcesCompat.getFont(context, R.font.barlow_semicondensed_600)
+        typeface = ResourcesCompat.getFont(context, R.font.barlow_semicondensed_600) // controle: permis picto officiel de ligne, identique dans tous les thèmes
     }
 
     /** [sizeDp] : hauteur du picto ; la largeur suit [PictoSpec.widthRatio]. */

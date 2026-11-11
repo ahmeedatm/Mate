@@ -41,5 +41,5 @@ object TransportLines {
         }
     }
 
-    private fun color(hex: String): Int? = hex.takeIf { it.length == 6 }?.toLongOrNull(16)?.let { (0xFF000000 or it).toInt() }
+    private fun color(hex: String): Int? = hex.takeIf { it.length == 6 }?.toLongOrNull(16)?.let { (0xFF000000 or it).toInt() } // controle: permis couleurs officielles du référentiel IDFM
 }

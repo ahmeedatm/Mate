@@ -4,7 +4,6 @@ import android.content.Context
 import android.graphics.Bitmap
 import android.graphics.BitmapShader
 import android.graphics.Canvas
-import android.graphics.Color
 import android.graphics.DashPathEffect
 import android.graphics.Paint
 import android.graphics.Shader
@@ -42,7 +41,7 @@ class LcdPanel(context: Context) : LinearLayout(context) {
     private fun tile(): Bitmap {
         val side = context.dp(PITCH_DP)
         return Bitmap.createBitmap(side, side, Bitmap.Config.ARGB_8888).also {
-            val dot = Paint(Paint.ANTI_ALIAS_FLAG).apply { color = ColorUtils.setAlphaComponent(Color.BLACK, DOT_ALPHA) }
+            val dot = Paint(Paint.ANTI_ALIAS_FLAG).apply { color = ColorUtils.setAlphaComponent(themeColor(context, R.attr.c_mx_shadow), DOT_ALPHA) }
             Canvas(it).drawCircle(side / 2f, side / 2f, side * DOT_RATIO, dot)
         }
     }
@@ -60,7 +59,7 @@ fun lcdText(context: Context, sp: Float): TextView = TextView(context).apply {
     val ink = themeColor(context, R.attr.c_mx_lcd_text)
     textSize = sp
     setTextColor(ink)
-    typeface = ResourcesCompat.getFont(context, R.font.departure_mono_400)
+    typeface = ResourcesCompat.getFont(context, R.font.departure_mono_400) // controle: permis police de l'afficheur de quai, la même dans tous les thèmes (#231)
     isAllCaps = true
     setShadowLayer(context.dp(3).toFloat(), 0f, 0f, ink)
 }
