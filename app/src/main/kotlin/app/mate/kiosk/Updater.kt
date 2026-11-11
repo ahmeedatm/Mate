@@ -18,9 +18,11 @@ import app.mate.UserFacingException
 import app.mate.net.AppUpdate
 import app.mate.net.BackendClient
 import app.mate.net.Essai
+import app.mate.net.GitHubException
 import app.mate.net.HttpException
 import app.mate.net.UpdateSource
 import app.mate.net.UpdatesApi
+import app.mate.net.orNothingPublished
 import app.mate.trial.EssaiPlan
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CompletableDeferred
@@ -40,7 +42,7 @@ import java.util.concurrent.atomic.AtomicBoolean
 /**
  * Mises à jour installées par le Mate lui-même, sans personne : moteur web (WebView, figé en 81 par le kiosque)
  * et le Mate. Deux sources : l'ordinateur relié et les releases GitHub du projet (`BuildConfig.UPDATE_REPO`, lues
- * par l'API avec `UPDATE_TOKEN`), qui marchent sans ordinateur. Device owner : Android installe sans demander de
+ * par leurs liens de téléchargement publics), qui marchent sans ordinateur. Device owner : Android installe sans demander de
  * confirmation. Sécurité : empreinte SHA-256 du fichier comparée à celle annoncée, puis Android refuse toute
  * mise à jour qui n'est pas signée par le même éditeur (Google pour le WebView).
  */
@@ -78,8 +80,8 @@ object Updater {
         try { Result.success(block()) } catch (e: CancellationException) { throw e } catch (e: Exception) { Result.failure(e) }
 
     /**
-     * GitHub. Rien de publié (404), jeton absent ou refusé (401, 404 sur un dépôt privé) : aucune mise à jour, pas
-     * une erreur. Réseau absent : phrase propre à GitHub (errorText parlerait de l'ordinateur).
+     * GitHub. Rien de publié (manifeste en 404) : aucune mise à jour, pas une erreur. Tout autre refus (limite, panne,
+     * réseau) remonte avec sa phrase ([GitHubException.textRes]), jamais une liste vide muette.
      */
     private suspend fun serverList(api: UpdatesApi): List<AppUpdate> = lenient { api.list() }
 
@@ -90,14 +92,19 @@ object Updater {
     }
 
     private suspend fun <T> lenient(block: suspend () -> List<T>): List<T> = try {
-        block()
+        orNothingPublished { block() }
     } catch (e: CancellationException) {
         throw e
+    } catch (e: GitHubException) {
+        Log.w("Updater", "GitHub refuse (${e.code})", e)
+        throw e
     } catch (e: HttpException) {
-        if (e.code in 300..499) emptyList<T>().also { Log.i("Updater", "GitHub : rien de publié (${e.code})") } else throw serverError(e)
+        // Serveur local d'essai (`-PupdateUrl=`) : son manifeste absent vaut aussi « rien de publié ».
+        if (e.code == 404) emptyList() else throw serverError(e)
     } catch (e: JSONException) {
-        Log.i("Updater", "GitHub : pas de manifest lisible", e)
-        emptyList()
+        // Page de portail WiFi, manifeste tronqué : une erreur, pas « rien de publié ».
+        Log.w("Updater", "GitHub : manifeste illisible", e)
+        throw GitHubException(GitHubException.BAD_REPLY, e)
     } catch (e: Exception) {
         throw serverError(e)
     }
@@ -165,8 +172,8 @@ object Updater {
                     progress(percent)
                 }
             } catch (e: IOException) {
-                // Erreur de GitHub (réponse HTTP, JSON) : jamais affichée telle quelle.
-                if (update.source != UpdateSource.SERVER) throw e
+                // Erreur de GitHub (release `latest` ou `essais`) : sa phrase, jamais celle de l'ordinateur.
+                if (update.source == UpdateSource.COMPUTER || e is GitHubException) throw e
                 Log.w("Updater", "Téléchargement depuis GitHub impossible", e)
                 throw UserFacingException(R.string.update_server_download_failed)
             }

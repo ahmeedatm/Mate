@@ -1,100 +1,66 @@
 package app.mate.net
 
-import org.json.JSONArray
-import org.json.JSONObject
+import androidx.annotation.StringRes
+import app.mate.R
 import java.io.IOException
 import java.net.HttpURLConnection
 import java.net.URI
 import java.net.URL
+import java.net.URLEncoder
 
 /**
  * Source de mises à jour dans une release GitHub : `manifest.json`, APK, installeurs et archives du backend sont les
- * assets du tag. Dépôt privé : l'API GitHub seule les sert (`GET /releases/assets/<id>`), avec le jeton de lecture
- * injecté au build. Le jeton ne part qu'à api.github.com : GitHub répond 302 vers un stockage signé, suivi à la main
- * sans lui (HttpURLConnection le garderait selon la version d'Android).
+ * assets du tag, lus par leur lien de téléchargement public (`github.com/<repo>/releases/download/<tag>/<fichier>`).
+ * Dépôt public : ni API, ni jeton, ni sa limite de 60 appels par heure et par adresse IP (partagée par la tablette,
+ * l'essai et l'ordinateur derrière la même box). GitHub répond 302 vers son stockage (autre hôte) : suivi à la main,
+ * HTTPS seulement. `connect` : remplacé par les tests.
  */
-internal class GitHubStore(private val repo: String, private val tag: String, private val token: String) : UpdateStore {
+internal class GitHubStore(
+    private val repo: String,
+    private val tag: String,
+    private val now: () -> Long = System::currentTimeMillis,
+    private val connect: (String) -> HttpURLConnection = { URL(it).openConnection() as HttpURLConnection },
+) : UpdateStore {
 
-    private var assets: Map<String, Long>? = null
-    private var releaseId = 0L
-
+    /** Manifeste remplacé à chaque publication : `?t=` évite une copie gardée par un cache entre la tablette et GitHub. */
     override fun manifest(): String {
-        load()
-        return open(MANIFEST, 60_000).let { conn -> try { conn.inputStream.bufferedReader().use { it.readText() } } finally { conn.disconnect() } }
+        val conn = get("${downloadUrl(repo, tag, MANIFEST)}?t=${now()}", 60_000)
+        return try { conn.inputStream.bufferedReader().use { it.readText() } } finally { conn.disconnect() }
     }
 
-    override fun open(file: String, timeoutMs: Int): HttpURLConnection {
-        if (assets == null) load()
-        val id = assets!![file] ?: assetIdInPages(file) ?: throw HttpException(404, "")
-        return get(assetUrl(repo, id), "application/octet-stream", timeoutMs)
-    }
+    override fun open(file: String, timeoutMs: Int): HttpURLConnection = get(downloadUrl(repo, tag, file), timeoutMs)
 
-    /** Release du tag : ses assets par nom. Relue à chaque manifest (un asset remplacé change d'id). */
-    private fun load() {
-        val release = parseRelease(read(get(releaseUrl(repo, tag), "application/vnd.github+json", 60_000)))
-        releaseId = release.id
-        assets = release.assets
-    }
-
-    /** `assets` d'une release est tronqué à 30 : au-delà, la liste paginée (essais nombreux). */
-    private fun assetIdInPages(file: String): Long? {
-        for (page in 1..MAX_PAGES) {
-            val batch = parseAssets(JSONArray(read(get(assetsUrl(repo, releaseId, page), "application/vnd.github+json", 60_000))))
-            batch[file]?.let { return it }
-            if (batch.size < PAGE_SIZE) return null
-        }
-        return null
-    }
-
-    private fun read(conn: HttpURLConnection): String =
-        try { conn.inputStream.bufferedReader().use { it.readText() } } finally { conn.disconnect() }
-
-    private fun get(url: String, accept: String, timeoutMs: Int): HttpURLConnection {
+    private fun get(url: String, timeoutMs: Int): HttpURLConnection {
         var target = url
         repeat(MAX_REDIRECTS + 1) {
-            val conn = URL(target).openConnection() as HttpURLConnection
+            val conn = connect(target)
             conn.instanceFollowRedirects = false
             conn.connectTimeout = 10_000
             conn.readTimeout = timeoutMs
-            if (sendsToken(target)) {
-                conn.setRequestProperty("Accept", accept)
-                conn.setRequestProperty("X-GitHub-Api-Version", API_VERSION)
-                if (token.isNotEmpty()) conn.setRequestProperty("Authorization", "Bearer $token")
-            }
-            val code = conn.responseCode
+            val code = try { conn.responseCode } catch (e: IOException) { conn.disconnect(); throw GitHubException(GitHubException.NETWORK, e) }
             when {
                 code in 200..299 -> return conn
                 code in REDIRECTS -> {
                     val location = conn.getHeaderField("Location")
                     conn.disconnect()
-                    target = redirectTarget(target, location)
+                    target = try { redirectTarget(target, location) } catch (e: IOException) { throw GitHubException(GitHubException.BAD_REPLY, e) }
                 }
                 else -> {
                     conn.disconnect()
-                    throw HttpException(code, "")
+                    throw GitHubException(code)
                 }
             }
         }
-        throw IOException("Trop de redirections")
+        throw GitHubException(GitHubException.BAD_REPLY, IOException("Trop de redirections"))
     }
 
     companion object {
         const val MANIFEST = "manifest.json"
-        private const val HOST = "api.github.com"
-        private const val API_VERSION = "2022-11-28"
-        private const val MAX_REDIRECTS = 3
-        private const val PAGE_SIZE = 100
-        private const val MAX_PAGES = 5
+        private const val MAX_REDIRECTS = 5
         private val REDIRECTS = setOf(301, 302, 303, 307, 308)
 
-        fun releaseUrl(repo: String, tag: String) = "https://$HOST/repos/$repo/releases/tags/$tag"
-
-        fun assetUrl(repo: String, id: Long) = "https://$HOST/repos/$repo/releases/assets/$id"
-
-        fun assetsUrl(repo: String, releaseId: Long, page: Int) = "https://$HOST/repos/$repo/releases/$releaseId/assets?per_page=$PAGE_SIZE&page=$page"
-
-        /** Le jeton ne part qu'à l'API GitHub, en HTTPS. */
-        fun sendsToken(url: String): Boolean = URI(url).let { it.scheme == "https" && it.host == HOST }
+        fun downloadUrl(repo: String, tag: String, file: String) =
+            "https://github.com/$repo/releases/download/$tag/${URLEncoder.encode(file, "UTF-8").replace("+", "%20")}"
 
         /** Cible d'une redirection, relative ou absolue ; HTTPS seulement. */
         fun redirectTarget(from: String, location: String?): String {
@@ -106,12 +72,22 @@ internal class GitHubStore(private val repo: String, private val tag: String, pr
     }
 }
 
-/** Release GitHub : son id et ses assets (nom → id). */
-internal data class GitHubReleaseInfo(val id: Long, val assets: Map<String, Long>)
+/** Refus de GitHub (code HTTP), réseau coupé ([NETWORK]) ou réponse inattendue ([BAD_REPLY]) : affiché par errorText avec [textRes], jamais tel quel. */
+class GitHubException(val code: Int, cause: Throwable? = null) : IOException("GitHub $code", cause) {
+    @StringRes
+    fun textRes(): Int = when (code) {
+        NETWORK -> R.string.update_server_unreachable
+        403, 429 -> R.string.github_rate_limited
+        404 -> R.string.github_file_missing
+        else -> R.string.github_down
+    }
 
-/** `GET /repos/<repo>/releases/tags/<tag>` : `{id, assets:[{id, name}]}`. */
-internal fun parseRelease(json: String): GitHubReleaseInfo =
-    JSONObject(json).let { GitHubReleaseInfo(it.getLong("id"), parseAssets(it.getJSONArray("assets"))) }
+    companion object {
+        const val NETWORK = 0
+        const val BAD_REPLY = -1
+    }
+}
 
-internal fun parseAssets(assets: JSONArray): Map<String, Long> =
-    (0 until assets.length()).map { assets.getJSONObject(it) }.associate { it.getString("name") to it.getLong("id") }
+/** Manifeste absent (404) : rien de publié dans la release, liste vide. Tout autre refus remonte. */
+internal inline fun <T> orNothingPublished(block: () -> List<T>): List<T> =
+    try { block() } catch (e: GitHubException) { if (e.code == 404) emptyList() else throw e }

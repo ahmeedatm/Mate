@@ -126,6 +126,8 @@ namespace Mate
         }
 
         const uint PDH_FMT_DOUBLE = 0x200;
+        /** Sans lui, PDH plafonne un pourcentage à 100 : un processus sur plusieurs cœurs le dépasse. */
+        const uint PDH_FMT_NOCAP100 = 0x8000;
         const int PDH_MORE_DATA = unchecked((int)0x800007D2);
         /** PDH_FMT_COUNTERVALUE_ITEM_W : szName (pointeur) puis FmtValue { CStatus, double aligné sur 8 }, en 32 comme en 64 bits. */
         const int PdhItemSize = 24;
@@ -456,6 +458,8 @@ namespace Mate
             public IntPtr Query;
             public IntPtr[] Counters;
             public long SampledAt = -1;
+            /** Format PDH des valeurs (PDH_FMT_DOUBLE, plus PDH_FMT_NOCAP100 pour les processus). */
+            public uint Format;
             /** Par chemin : instances valides (nom, valeur) ; null si le compteur est illisible. */
             public List<KeyValuePair<string, double>>[] Last;
         }
@@ -469,16 +473,7 @@ namespace Mate
         /** Somme des instances valides de chaque chemin (filtrées par `luid` si donné) ; null pour un chemin illisible. */
         static Dictionary<string, double?> CounterValues(string[] paths, string luid)
         {
-            CounterSet set;
-            List<KeyValuePair<string, double>>[] last;
-            var key = string.Join("|", paths);
-            lock (counterLock)
-            {
-                if (!counterSets.TryGetValue(key, out set)) counterSets[key] = set = OpenCounterSet(paths);
-                if (set.SampledAt < 0 || gpuClock.ElapsedMilliseconds - set.SampledAt >= MinSampleMs) SampleCounterSet(set);
-                // Copie sous le verrou : un autre appel peut remettre `Last` à null pendant la lecture ci-dessous.
-                last = set.Last;
-            }
+            var last = SampledInstances(paths, PDH_FMT_DOUBLE);
             var res = new Dictionary<string, double?>();
             for (int i = 0; i < paths.Length; i++)
             {
@@ -492,9 +487,23 @@ namespace Mate
             return res;
         }
 
-        static CounterSet OpenCounterSet(string[] paths)
+        /** Instances valides de chaque chemin, relevées au plus une fois par MinSampleMs ; null si la requête est illisible. */
+        static List<KeyValuePair<string, double>>[] SampledInstances(string[] paths, uint format)
         {
-            var set = new CounterSet { Counters = new IntPtr[paths.Length] };
+            CounterSet set;
+            var key = format + "|" + string.Join("|", paths);
+            lock (counterLock)
+            {
+                if (!counterSets.TryGetValue(key, out set)) counterSets[key] = set = OpenCounterSet(paths, format);
+                if (set.SampledAt < 0 || gpuClock.ElapsedMilliseconds - set.SampledAt >= MinSampleMs) SampleCounterSet(set);
+                // Copie sous le verrou : un autre appel peut remettre `Last` à null pendant la lecture de l'appelant.
+                return set.Last;
+            }
+        }
+
+        static CounterSet OpenCounterSet(string[] paths, uint format)
+        {
+            var set = new CounterSet { Counters = new IntPtr[paths.Length], Format = format };
             if (PdhOpenQuery(null, IntPtr.Zero, out set.Query) != 0) { set.Query = IntPtr.Zero; return set; }
             for (int i = 0; i < paths.Length; i++)
                 if (PdhAddEnglishCounter(set.Query, paths[i], IntPtr.Zero, out set.Counters[i]) != 0) set.Counters[i] = IntPtr.Zero;
@@ -519,22 +528,22 @@ namespace Mate
             }
             var last = new List<KeyValuePair<string, double>>[set.Counters.Length];
             for (int i = 0; i < last.Length; i++)
-                if (set.Counters[i] != IntPtr.Zero) last[i] = CounterInstances(set.Counters[i]);
+                if (set.Counters[i] != IntPtr.Zero) last[i] = CounterInstances(set.Counters[i], set.Format);
             set.Last = last;
         }
 
         /** Instances valides d'un compteur avec leur nom ; null si illisible. */
-        static List<KeyValuePair<string, double>> CounterInstances(IntPtr counter)
+        static List<KeyValuePair<string, double>> CounterInstances(IntPtr counter, uint format)
         {
             uint size = 0, count;
             var list = new List<KeyValuePair<string, double>>();
-            int status = PdhGetFormattedCounterArray(counter, PDH_FMT_DOUBLE, ref size, out count, IntPtr.Zero);
+            int status = PdhGetFormattedCounterArray(counter, format, ref size, out count, IntPtr.Zero);
             if (status == 0) return list;
             if (status != PDH_MORE_DATA) return null;
             var buffer = Marshal.AllocHGlobal((int)size);
             try
             {
-                if (PdhGetFormattedCounterArray(counter, PDH_FMT_DOUBLE, ref size, out count, buffer) != 0) return null;
+                if (PdhGetFormattedCounterArray(counter, format, ref size, out count, buffer) != 0) return null;
                 for (int i = 0; i < count; i++)
                 {
                     var item = buffer + i * PdhItemSize;
@@ -556,6 +565,35 @@ namespace Mate
             var paths = StrList(req, "paths").ToArray();
             var res = new Dictionary<string, object>();
             foreach (var kv in CounterValues(paths, null)) res[kv.Key] = kv.Value;
+            return res;
+        }
+
+        // --- Applis qui consomment le plus (opération `processes`, src/perf-apps.ts) : compteurs PDH « Process », comme
+        // le Gestionnaire des tâches (processeur en % d'un cœur, mémoire = plage de travail privée).
+
+        const string ProcessCpuPath = @"\Process(*)\% Processor Time";
+        const string ProcessMemPath = @"\Process(*)\Working Set - Private";
+
+        /**
+         * Opération `processes` : [{ name, cpu, mem }] par nom d'instance (les homonymes, plusieurs chrome, sont sommés) ;
+         * null si les compteurs sont illisibles. Le regroupement par appli et les seuils sont faits par src/perf-apps.ts.
+         */
+        static object Processes()
+        {
+            var last = SampledInstances(new[] { ProcessCpuPath, ProcessMemPath }, PDH_FMT_DOUBLE | PDH_FMT_NOCAP100);
+            if (last == null || last[0] == null || last[1] == null) return null;
+            var cpu = new Dictionary<string, double>(StringComparer.OrdinalIgnoreCase);
+            var mem = new Dictionary<string, double>(StringComparer.OrdinalIgnoreCase);
+            foreach (var kv in last[0]) cpu[kv.Key] = (cpu.TryGetValue(kv.Key, out var c) ? c : 0) + kv.Value;
+            foreach (var kv in last[1]) mem[kv.Key] = (mem.TryGetValue(kv.Key, out var m) ? m : 0) + kv.Value;
+            var res = new List<object>();
+            foreach (var name in cpu.Keys.Union(mem.Keys, StringComparer.OrdinalIgnoreCase))
+                res.Add(new Dictionary<string, object>
+                {
+                    ["name"] = name,
+                    ["cpu"] = cpu.TryGetValue(name, out var c) ? c : 0,
+                    ["memBytes"] = mem.TryGetValue(name, out var m) ? m : 0,
+                });
             return res;
         }
     }

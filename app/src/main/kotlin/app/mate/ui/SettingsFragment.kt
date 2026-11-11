@@ -1083,10 +1083,17 @@ class SettingsFragment :
                 setText(R.string.cancel)
                 visibility = View.GONE
             }
-            button.setOnClickListener { install(update, button, bar, cancel, essai) }
+            // Raison d'un échec, sur la ligne de la mise à jour concernée (la phrase d'état est loin, au-dessus des essais).
+            val failure = TextView(ctx).apply {
+                textSize = 14f
+                setTextColor(themeColor(ctx, R.attr.c_ko))
+                visibility = View.GONE
+            }
+            button.setOnClickListener { install(update, Row(button, bar, cancel, failure), essai) }
             row.addView(cancel, LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, dp(52)).apply { marginEnd = dp(8) })
             row.addView(button, LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, dp(52)))
             block.addView(bar, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, dp(10)).apply { topMargin = dp(10) })
+            block.addView(failure, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT).apply { topMargin = dp(6) })
         }
         return block
     }
@@ -1108,9 +1115,18 @@ class SettingsFragment :
         return getString(R.string.essai_row_version, essai.update.versionName, backend) + "\n" + state
     }
 
-    private fun install(update: AppUpdate, button: Button, bar: android.widget.ProgressBar, cancel: Button, essai: Essai? = null) {
+    /** Vues d'une ligne de mise à jour : bouton, barre de progression, « Annuler » et raison d'un échec. */
+    private class Row(val button: Button, val bar: android.widget.ProgressBar, val cancel: Button, val failure: TextView)
+
+    private fun install(update: AppUpdate, views: Row, essai: Essai? = null) {
         if (installing) return
         installing = true
+        val button = views.button
+        val bar = views.bar
+        val cancel = views.cancel
+        views.failure.visibility = View.GONE
+        // Phrase d'état d'avant l'installation : remise en cas d'échec (la raison va sous la ligne).
+        val status = updatesStatus.text
         button.isEnabled = false
         button.backgroundTintList = null
         button.setText(R.string.updates_downloading_short)
@@ -1164,7 +1180,9 @@ class SettingsFragment :
                 if (showing()) updatesStatus.setText(R.string.updates_cancelled)
             } catch (e: Exception) {
                 showResult(button, bar, ok = false)
-                if (showing()) updatesStatus.text = ctx.errorText(e)
+                views.failure.text = ctx.errorText(e)
+                views.failure.visibility = View.VISIBLE
+                if (showing()) updatesStatus.text = status
             } finally {
                 cancel.visibility = View.GONE
                 installing = false

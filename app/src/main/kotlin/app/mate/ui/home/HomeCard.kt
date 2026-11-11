@@ -41,6 +41,15 @@ object HomeCard {
 
     /** Le filet du panneau est gardé : thème à filet (Instrument) et style Voile seulement ; « Sans filet » et « À même le fond » le retirent. */
     fun keepsOutline(themeOutline: Boolean, style: HomeCardStyle): Boolean = themeOutline && style == HomeCardStyle.VEIL
+    /** Style appliqué dans le thème courant (`look` sur les couleurs du thème). */
+    fun look(context: Context): HomeCardStyle? =
+        look(Prefs.homeCardStyle(context), themeColor(context, R.attr.c_bg), themeColor(context, R.attr.c_surface))
+
+    /** Plaque de la console de mixage (`c_mx_plate`) : retirée À même le fond, sinon son bord se voit sur le fond d'écran (#230). */
+    fun plate(style: HomeCardStyle?, plate: Int): Int = if (style == HomeCardStyle.BARE) Color.TRANSPARENT else plate
+
+    /** Rail des curseurs (`c_mx_slot`) : sans plaque, un rail de la couleur du fond (thèmes sombres) prend celle du filet. */
+    fun slot(style: HomeCardStyle?, slot: Int, bg: Int, stroke: Int): Int = if (style == HomeCardStyle.BARE && slot == bg) stroke else slot
 
     /**
      * La tuile du thème, filet retiré partout ; Voile et À même le fond ne changent que sa forme au repos. L'appui garde
@@ -50,7 +59,7 @@ object HomeCard {
     fun background(context: Context): Drawable {
         val tile = ContextCompat.getDrawable(context, themeRes(context, R.attr.c_home_card_bg))!!.mutate()
         val surface = themeColor(context, R.attr.c_surface)
-        val style = look(Prefs.homeCardStyle(context), themeColor(context, R.attr.c_bg), surface) ?: return tile
+        val style = look(context) ?: return tile
         val shapes = (tile.constantState as? DrawableContainer.DrawableContainerState)?.children?.filterIsInstance<GradientDrawable>()
             ?: listOfNotNull(tile as? GradientDrawable)
         val outline = keepsOutline(themeBool(context, R.attr.c_home_card_outline), style)

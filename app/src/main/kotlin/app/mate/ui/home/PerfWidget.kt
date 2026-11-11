@@ -24,6 +24,7 @@ import app.mate.Computers
 import app.mate.R
 import app.mate.net.BackendClient
 import app.mate.net.HttpException
+import app.mate.net.PcApp
 import app.mate.net.PcPerf
 import app.mate.ui.ProgressRing
 import app.mate.ui.errorText
@@ -70,10 +71,30 @@ class PerfWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidget(
         addView(header)
         addView(unavailable, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, 0, 1f))
         addView(body, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, 0, 1f).apply { topMargin = dp(HEADER_GAP) })
+        setOnClickListener { if (!host.editing && !sample && !notAvailable && appsView == null) showAppsPanel() }
+        // Widget retiré ou Activity recréée : le panneau part avec lui, il ne reste pas figé à l'écran.
+        addOnAttachStateChangeListener(object : View.OnAttachStateChangeListener {
+            override fun onViewAttachedToWindow(v: View) = Unit
+            override fun onViewDetachedFromWindow(v: View) = closePanel()
+        })
     }
 
     private val history = PerfHistory()
     private var last: PcPerf? = null
+
+    // Applis qui consomment le plus : `apps` null tant qu'aucune liste n'est lue, ou si elle est illisible.
+    private var apps: List<PcApp>? = null
+    private var appsRead = false
+    private var appsError: String? = null
+
+    /** Compagnon d'avant la liste des applis (404) : on ne la redemande plus. */
+    private var appsOutdated = false
+    private var appsView: PerfAppsView? = null
+
+    /** Contenu du panneau des petites formes et sa fenêtre, tant qu'il est ouvert. */
+    private var appsPanel: PerfAppsView? = null
+    private var panelDialog: AlertDialog? = null
+    private var tick = 0
     private var error: String? = null
     private var notAvailable = false
     private var job: Job? = null
@@ -129,6 +150,8 @@ class PerfWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidget(
         this.sample = true
         PerfSample.fill(history)
         last = PerfSample.perf
+        apps = PerfSample.apps
+        appsRead = true
         error = null
         fresh = true
         render()
@@ -142,6 +165,7 @@ class PerfWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidget(
         extrasKey = ""
         spark = null
         pill = null
+        appsView = null
         body.addView(when (perfLayout(placed.size)) {
             PerfLayout.PILL -> pill()
             PerfLayout.GAUGES -> gauges()
@@ -158,6 +182,8 @@ class PerfWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidget(
     override fun setActive(active: Boolean) {
         if (sample) return
         if (!active) {
+            // Plus de relevés : le panneau fermé plutôt que laissé avec des valeurs figées.
+            closePanel()
             job?.cancel()
             job = null
             history.clear()
@@ -187,7 +213,23 @@ class PerfWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidget(
         } catch (e: Exception) {
             error = context.errorText(e)
         }
+        // Liste à l'écran : à chaque relevé ; sinon un relevé sur trois, pour l'alerte de l'en-tête (le compagnon suit
+        // une appli qui abuse tant qu'on le relit au moins toutes les 10 s).
+        if (error == null && !notAvailable && (appsView != null || appsPanel != null || tick++ % APPS_EVERY == 0)) loadApps()
         render()
+    }
+
+    private suspend fun loadApps() {
+        if (appsOutdated) return
+        try {
+            apps = BackendClient(context).system.perfApps()
+            appsError = null
+            appsRead = true
+        } catch (e: HttpException) {
+            if (e.code == 404) appsOutdated = true else appsError = context.errorText(e)
+        } catch (e: Exception) {
+            appsError = context.errorText(e)
+        }
     }
 
     // ---- Taille moyenne : quatre chiffres et la courbe ----
@@ -251,13 +293,85 @@ class PerfWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidget(
                 }
             }
         }
-        return LinearLayout(context).apply {
+        val figuresBox = LinearLayout(context).apply {
             orientation = LinearLayout.VERTICAL
             gravity = Gravity.CENTER_VERTICAL
             addView(row)
             addView(line, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT).apply { topMargin = dp(CURVE_GAP) })
             addView(sparkline, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, 0, 1f).apply { topMargin = dp(CURVE_GAP) })
         }
+        return if (perfShowsApps(placed.size)) withApps(figuresBox) else figuresBox
+    }
+
+    /**
+     * Grand et Plein écran (maquette B) : « Ce qui consomme » à côté des chiffres et de la courbe sur toute la largeur de
+     * l'Accueil, dessous sur une forme haute, séparés par un filet. Les chiffres se calent sur la place qui leur reste.
+     */
+    private fun withApps(figuresBox: View): View {
+        val list = PerfAppsView(context, withTitle = true)
+        appsView = list
+        val beside = perfAppsBeside(placed.size)
+        val rule = View(context).apply { setBackgroundColor(color(R.attr.c_stroke)) }
+        val figuresFitter = fitter
+        fitter = { height, width ->
+            if (beside) {
+                val left = (width * FIGURES_SHARE).toInt()
+                figuresFitter(height, left)
+                list.fit(height - headerHeight - dp(HEADER_GAP), width - left - dp(APPS_GAP) * 2)
+            } else {
+                val top = (height * FIGURES_SHARE).toInt()
+                figuresFitter(top, width)
+                list.fit(height - top - dp(APPS_GAP) * 2, width)
+            }
+        }
+        return LinearLayout(context).apply {
+            orientation = if (beside) LinearLayout.HORIZONTAL else LinearLayout.VERTICAL
+            if (beside) {
+                addView(figuresBox, LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.MATCH_PARENT, FIGURES_SHARE))
+                addView(rule, LinearLayout.LayoutParams(dp(1), ViewGroup.LayoutParams.MATCH_PARENT).apply { marginStart = dp(APPS_GAP); marginEnd = dp(APPS_GAP) })
+                addView(list, LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.MATCH_PARENT, 1 - FIGURES_SHARE))
+            } else {
+                addView(figuresBox, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, 0, FIGURES_SHARE))
+                addView(rule, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, dp(1)).apply { topMargin = dp(APPS_GAP); bottomMargin = dp(APPS_GAP) })
+                addView(list, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, 0, 1 - FIGURES_SHARE))
+            }
+        }
+    }
+
+    /**
+     * Petites formes : un appui ouvre « Ce qui consomme » dans un panneau. La boucle des relevés le remplit (applis relues à
+     * chaque relevé tant qu'il est ouvert) : une seule requête toutes les 2 s, « Lecture des applis… » d'ici là.
+     */
+    private fun showAppsPanel() {
+        if (panelDialog != null) return
+        val list = PerfAppsView(context, withTitle = false).apply { setPadding(dp(24), dp(4), dp(24), dp(8)) }
+        appsPanel = list
+        val name = Computers.active(context)?.name ?: context.getString(R.string.computer_generic)
+        panelDialog = AlertDialog.Builder(context)
+            .setTitle(context.getString(R.string.perf_apps_panel_title, name))
+            .setView(ScrollView(context).apply { addView(list) })
+            .setPositiveButton(R.string.close, null)
+            .setOnDismissListener {
+                appsPanel = null
+                panelDialog = null
+            }
+            .showImmersive()
+        render()
+    }
+
+    private fun closePanel() {
+        panelDialog?.dismiss()
+        panelDialog = null
+        appsPanel = null
+    }
+
+    /** Le souci du moment en une phrase (« Navigateur prend 61 % du processeur depuis 2 min »), dite avec l'icône d'alerte. */
+    private fun issueText(issue: PerfIssue): String = when (issue) {
+        is PerfIssue.AppCpu -> perfDuration(issue.seconds).let {
+            context.getString(if (it.minutes) R.string.perf_issue_app_cpu_min else R.string.perf_issue_app_cpu_s, issue.name, issue.cpu, it.value)
+        }
+        is PerfIssue.AppRam -> context.getString(R.string.perf_issue_app_ram, issue.name, PerfAppsView.memText(context, issue.memMb))
+        is PerfIssue.DiskFull -> context.getString(R.string.perf_issue_disk, perfNumber(issue.freeGb))
     }
 
     // ---- Grande taille : trois anneaux, la mémoire en Go, puis température et ventilateur ----
@@ -385,7 +499,11 @@ class PerfWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidget(
         val word = perfLevelWord(level)?.takeIf { !stale }?.let { "$name ${context.getString(it)}" } ?: name
         parts.value.set("${reading.percent}%")
         parts.value.setTextColor(color(perfColorAttr(reading.series, PerfMark.VALUE, level, stale)))
-        parts.name.set(error ?: word)
+        // Une appli qui abuse : la mesure garde son nom (un nom d'appli ne tient pas dans l'anneau), avec l'icône
+        // d'alerte et en rouge ; l'appli se lit dans le panneau, d'un appui.
+        val hog = apps?.any { it.warn != null } == true && !stale && error == null
+        parts.name.setWarned(error ?: word, hog)
+        parts.name.setTextColor(color(if (hog) R.attr.c_accent else R.attr.c_text_dim))
         parts.ring.progress = reading.percent / 100f
         parts.ring.color = color(perfColorAttr(reading.series, PerfMark.FILL, level, stale))
         (parts.ring.parent as? View)?.contentDescription = context.getString(R.string.perf_pill_desc, word, reading.percent)
@@ -516,8 +634,22 @@ class PerfWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidget(
         val cpuOn = PerfOption.CPU in choice
         val gpuOn = PerfOption.GPU in choice && perf.gpu != null
         val ramOn = PerfOption.RAM in choice
+        val issue = perfIssue(perf, apps)?.takeIf { !stale }?.let { issueText(it) }
+        val appsNote = when {
+            appsOutdated -> context.getString(R.string.perf_apps_outdated)
+            appsError != null -> appsError
+            appsRead && apps == null -> context.getString(R.string.perf_apps_unavailable)
+            else -> null
+        }
+        appsView?.bind(apps, issue, appsNote, stale)
+        appsPanel?.bind(apps, issue, appsNote ?: context.getString(R.string.perf_apps_loading).takeIf { !appsRead }, stale)
+        // Sans la liste à l'écran, le souci du moment passe dans l'en-tête, en rouge d'alerte, avant les alertes des chiffres.
+        val headerIssue = issue?.takeIf { error == null && appsView == null }
+        note.setTextColor(color(if (headerIssue != null) R.attr.c_accent else R.attr.c_text_faint))
         // Alerte écrite dans l'en-tête en plus du rouge des chiffres (rien sur des valeurs grisées) ; une erreur prime.
-        if (error == null) {
+        if (headerIssue != null) {
+            note.setWarned(headerIssue, true)
+        } else if (error == null) {
             val alerts = if (stale) "" else perfAlertText(
                 listOfNotNull(
                     if (cpuOn) context.getString(R.string.perf_cpu) to usageLevel(perf.cpu) else null,
@@ -724,6 +856,13 @@ class PerfWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidget(
 
     companion object {
         private const val POLL_MS = 2_000L
+
+        /** Sans liste à l'écran, les applis sont relues un relevé sur trois (toutes les 6 s). */
+        private const val APPS_EVERY = 3
+
+        /** Part des chiffres et de la courbe quand « Ce qui consomme » est à côté ou dessous. */
+        private const val FIGURES_SHARE = 0.55f
+        private const val APPS_GAP = 20
         private val RPM_FORMAT: NumberFormat = NumberFormat.getIntegerInstance(Locale.FRANCE)
 
         /** Chiffre le plus large : la taille est bornée pour qu'un 100 % tienne. */
@@ -842,9 +981,9 @@ private class PerfSparkline(context: Context, private val capacity: Int) : View(
     }
 }
 
-/** Barre de remplissage (0 à 1) sur sa piste, bouts arrondis. */
+/** Barre de remplissage (0 à 1) sur sa piste, bouts arrondis (widget Performances et sa liste d'applis). */
 @SuppressLint("ViewConstructor")
-private class PerfBar(context: Context, trackColor: Int, fillColor: Int) : View(context) {
+internal class PerfBar(context: Context, trackColor: Int, fillColor: Int) : View(context) {
     private val track = Paint(Paint.ANTI_ALIAS_FLAG).apply { color = trackColor }
     private val fill = Paint(Paint.ANTI_ALIAS_FLAG).apply { color = fillColor }
     private val bounds = RectF()

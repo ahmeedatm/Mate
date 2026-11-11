@@ -303,6 +303,11 @@ export function counters(paths: string[]): Promise<Record<string, number | null>
   return call<Record<string, number | null>>("counters", { paths });
 }
 
+/** Processus (processeur en % d'un cœur, mémoire privée en octets) par les compteurs PDH ; null si illisibles. */
+export function processes(): Promise<{ name: string; cpu: number; memBytes: number }[] | null> {
+  return call<{ name: string; cpu: number; memBytes: number }[] | null>("processes");
+}
+
 /** Lecture brute du pilote (toutes les cartes, tous les compteurs), pour diagnostiquer un PC à carte dédiée. */
 export function gpuPerfDetail(): Promise<unknown> {
   return call("perf", { detail: true });

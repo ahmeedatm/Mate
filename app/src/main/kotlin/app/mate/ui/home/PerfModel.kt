@@ -1,7 +1,9 @@
 package app.mate.ui.home
 
 import app.mate.R
+import app.mate.net.AppWarn
 import app.mate.net.GpuPerf
+import app.mate.net.PcApp
 import app.mate.net.PcPerf
 import kotlin.math.sin
 
@@ -119,6 +121,39 @@ fun pillReading(perf: PcPerf, choice: Set<PerfOption>): PillReading? = listOfNot
     PillReading(PerfSeries.RAM, perf.ramPercent).takeIf { PerfOption.RAM in choice },
 ).maxByOrNull { it.percent }
 
+/** Grand et Plein écran montrent la liste des applis ; les autres formes l'ouvrent dans un panneau, d'un appui. */
+fun perfShowsApps(size: WidgetSize): Boolean = size.family == ShapeFamily.LARGE || size.family == ShapeFamily.FULL
+
+/** Sur toute la largeur de l'Accueil, la liste se pose à côté des chiffres (maquette B) ; sur une forme haute, dessous. */
+fun perfAppsBeside(size: WidgetSize): Boolean = size.w == COLS
+
+/** Le souci du moment, un seul : une appli qui abuse du processeur, sinon de la mémoire, sinon le disque presque plein. */
+sealed class PerfIssue {
+    data class AppCpu(val name: String, val cpu: Int, val seconds: Int) : PerfIssue()
+    data class AppRam(val name: String, val memMb: Int) : PerfIssue()
+    data class DiskFull(val freeGb: Double) : PerfIssue()
+}
+
+/** Part de disque libre en dessous de laquelle il est presque plein. */
+private const val DISK_FULL_SHARE = 0.1
+
+fun perfIssue(perf: PcPerf, apps: List<PcApp>?): PerfIssue? {
+    apps?.firstOrNull { it.warn == AppWarn.CPU }?.let { return PerfIssue.AppCpu(it.name, it.cpu, it.hogSeconds ?: 0) }
+    apps?.firstOrNull { it.warn == AppWarn.RAM }?.let { return PerfIssue.AppRam(it.name, it.memMb) }
+    val disk = perf.disk ?: return null
+    return if (disk.totalGb > 0 && disk.freeGb < disk.totalGb * DISK_FULL_SHARE) PerfIssue.DiskFull(disk.freeGb) else null
+}
+
+/** Mémoire à écrire : `value` en Mo, ou en Go (une décimale) si `giga`, dès 1000 Mo (« 1 Go » plutôt que « 1019 Mo »). */
+data class PerfMem(val value: Double, val giga: Boolean)
+
+fun perfMem(memMb: Int): PerfMem = if (memMb >= 1000) PerfMem(Math.round(memMb / 102.4) / 10.0, true) else PerfMem(memMb.toDouble(), false)
+
+/** Durée à écrire : `value` en secondes, ou en minutes si `minutes`. */
+data class PerfDuration(val value: Int, val minutes: Boolean)
+
+fun perfDuration(seconds: Int): PerfDuration = if (seconds >= 60) PerfDuration(seconds / 60, true) else PerfDuration(seconds, false)
+
 /** Exemple de Performances pour le catalogue : un PC qui travaille un peu (processeur 42 %, carte graphique 71 %), sans ordinateur. */
 object PerfSample : WidgetSample {
     val perf = PcPerf(
@@ -127,6 +162,15 @@ object PerfSample : WidgetSample {
         ramUsedGb = 20.1,
         ramTotalGb = 32.0,
         gpu = GpuPerf("GPU", usage = 71, dedicated = true, tempC = 64, fanRpm = 1450),
+    )
+
+    /** Applis d'exemple : un navigateur qui s'emballe depuis 2 minutes, le reste tranquille. */
+    val apps = listOf(
+        PcApp("Navigateur", 61, 3174, 10, AppWarn.CPU, 125),
+        PcApp("Éditeur de code", 9, 1434, 4, null, null),
+        PcApp("Messagerie", 3, 614, 2, null, null),
+        PcApp("Musique", 1, 410, 1, null, null),
+        PcApp("Explorateur", 1, 180, 1, null, null),
     )
 
     /** Cinq minutes de relevés qui ondulent autour de la mesure d'exemple, pour la courbe. */

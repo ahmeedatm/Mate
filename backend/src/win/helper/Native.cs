@@ -64,6 +64,7 @@ namespace Mate
                 case "cpu": return Cpu();
                 case "fps": return Fps();
                 case "counters": return Counters(req);
+                case "processes": return Processes();
                 case "system": SystemCommand(Str(req, "command")); return true;
                 case "locked": return SessionLocked();
                 case "screen": return ScreenPreview(Int(req, "width", 640));
