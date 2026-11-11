@@ -22,7 +22,7 @@ class AppsSample(@StringRes val names: List<Int>) : WidgetSample
  * premières applis sans titre ni grille ([TileStrip]) ; Bloc, Grand et Plein écran ont le titre, son « + » et la grille.
  */
 class AppsWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidget(context, host, placed) {
-    override val view = LinearLayout(context).asCard(12).apply { orientation = LinearLayout.VERTICAL }
+    override val view = LinearLayout(context).asCard(PANEL_PAD_DP).apply { orientation = LinearLayout.VERTICAL }
 
     private val section = TileSection(
         context, host, R.string.widget_apps, R.string.apps_all,
@@ -37,6 +37,17 @@ class AppsWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidget(
 
     private val inGrid get() = TileShapes.usesGrid(placed.size)
 
+    /** Panneau d'un thème à filet : Pastille, Ligne et Colonne gardent leur cadre, la Colonne son titre. */
+    private val caption = panelCaption(R.string.widget_apps)
+    private val framed get() = !inGrid && panel
+    private val titled get() = framed && family == ShapeFamily.COLUMN
+
+    /** Applis qui tiennent dans le cadre : sans sa marge, ni le titre de la Colonne. */
+    private fun fitStrip(): Int {
+        val pad = if (framed) dp(PANEL_PAD_DP) * 2 else 0
+        return TileStrip.fit(context, family, view.width - pad, view.height - pad - if (titled) dp(PANEL_CAPTION_DP) else 0)
+    }
+
     /** Aperçu du catalogue : ses applis remplacent celles de l'ordinateur, même si [applySize] repasse. */
     private var preview: List<KeyRef>? = null
 
@@ -49,13 +60,14 @@ class AppsWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidget(
         section.grid.ownsLongPress = true
         section.grid.onHold = { cell, _ -> section.tileOf(cell)?.let { host.overlays.windows(it, removable = true) { section.reload() } } }
         section.onTiles = { if (!inGrid) renderStrip() }
+        view.addView(caption, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT))
         section.addTo(view)
         view.addView(strip, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, 0, 1f))
         view.addOnLayoutChangeListener { _, left, top, right, bottom, _, _, _, _ ->
             // Bandeau sur la ligne fine (92 dp) : pas la place pour le titre au-dessus des applis.
             val short = bottom - top in 1 until view.dp(SHORT_DP)
             if (short != section.headerHidden) view.post { section.headerHidden = short }
-            if (!inGrid && TileStrip.fit(context, family, right - left, bottom - top) != drawnFit) view.post { renderStrip() }
+            if (!inGrid && fitStrip() != drawnFit) view.post { renderStrip() }
         }
     }
 
@@ -63,6 +75,7 @@ class AppsWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidget(
         /** Hauteur sous laquelle le titre laisse la place aux applis. */
         const val SHORT_DP = 130
 
+        const val PANEL_PAD_DP = 12
         const val ADD_ID = "+"
         const val SAMPLE_ID = "exemple-"
     }
@@ -70,7 +83,8 @@ class AppsWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidget(
     override fun applySize() {
         section.shown = inGrid
         strip.visibility = if (inGrid) View.GONE else View.VISIBLE
-        if (inGrid) view.asCard(12) else view.apply { background = null; setPadding(0, 0, 0, 0) }
+        if (inGrid || framed) view.asCard(PANEL_PAD_DP) else view.apply { background = null; setPadding(0, 0, 0, 0) }
+        caption.visibility = if (titled) View.VISIBLE else View.GONE
         renderStrip()
     }
 
@@ -90,7 +104,7 @@ class AppsWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidget(
     private fun renderStrip() {
         strip.removeAllViews()
         if (inGrid) return
-        drawnFit = TileStrip.fit(context, family, view.width, view.height)
+        drawnFit = fitStrip()
         strip.orientation = TileStrip.orientation(family)
         // Aucune appli épinglée : le « + » de la grille, qui ouvre toutes les applis de l'ordinateur.
         val cells = cells().ifEmpty { listOf(TileGridView.Cell(KeyRef(ADD_ID, context.getString(R.string.apps_all_title)), add = true)) }

@@ -42,6 +42,8 @@ class WaterWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidget
         includeFontPadding = false
         maxLines = 1
     }
+    /** Fenêtre LCD (Instrument), Pastille : « EAU · VERRES » au-dessus du compte (les autres formes ont leur titre). */
+    private val caption = lcdCaption().apply { setText(R.string.lcd_water_title) }
     private val unit = label(14f, R.attr.c_text_dim).apply { setText(R.string.water_glasses_label) }
     private val next = label(14f, R.attr.c_text_dim).apply { maxLines = 1 }
     private val bell = iconButton(R.style.IconButton_Flat, R.drawable.ic_alarm_off, 0) {
@@ -64,6 +66,14 @@ class WaterWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidget
         }
     }
     private var drawn: List<Any>? = null
+
+    init {
+        // Rangée basse (92 dp) : le titre LCD n'a pas la place, le compte et la jauge d'abord.
+        view.addOnLayoutChangeListener { _, _, top, _, bottom, _, _, _, _ ->
+            val low = bottom - top < dp(CAPTION_MIN_DP)
+            if ((caption.visibility == View.GONE) != low) caption.post { caption.visibility = if (low) View.GONE else View.VISIBLE }
+        }
+    }
     private val listener: (Water.State) -> Unit = { render() }
     private var preview: WaterSample? = null
     private var bound: WidgetSize? = null
@@ -71,7 +81,7 @@ class WaterWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidget
     override fun applySize() {
         if (placed.size == bound) return
         bound = placed.size
-        for (v in listOf(count, unit, next, bell, minus, plus, gauge)) (v.parent as? ViewGroup)?.removeView(v)
+        for (v in listOf(count, unit, next, bell, minus, plus, gauge, caption)) (v.parent as? ViewGroup)?.removeView(v)
         view.removeAllViews()
         count.setCompoundDrawablesRelative(null, null, null, null)
         when (family) {
@@ -120,6 +130,7 @@ class WaterWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidget
             addView(bell, LinearLayout.LayoutParams(dp(48), dp(48)))
             addView(plus, LinearLayout.LayoutParams(dp(48), dp(48)).apply { marginStart = dp(4) })
         }
+        if (lcd) view.addView(caption, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, dp(LCD_CAPTION_DP)))
         view.addView(line, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT))
         view.addView(gauge, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, dp(12)).apply { topMargin = dp(8) })
     }
@@ -242,5 +253,10 @@ class WaterWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidget
             else LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.MATCH_PARENT, 1f).apply { if (n > 0) marginStart = gap }
             gauge.addView(glass, params)
         }
+    }
+
+    private companion object {
+        /** Hauteur sous laquelle la Pastille laisse tomber son titre LCD. */
+        const val CAPTION_MIN_DP = 120
     }
 }

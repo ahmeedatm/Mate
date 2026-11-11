@@ -79,6 +79,15 @@ class ThemePalettesTest {
     }
 
     @Test
+    fun `seuls les thèmes Instrument gardent le filet des cartes de l'Accueil et un bloc aux coins de tuile`() {
+        for (name in all) {
+            val instrument = name in listOf("Instrument", "InstrumentNuit")
+            assertEquals("$name c_home_card_outline", instrument.toString(), values(name)["c_home_card_outline"])
+            assertEquals("$name c_block_radius", if (instrument) "12dp" else "40dp", values(name)["c_block_radius"])
+        }
+    }
+
+    @Test
     fun `texte principal et secondaires au moins 4,5 sur fond, tuile et relief`() {
         for (name in imported) for (fg in listOf("c_text", "c_text_dim", "c_text_faint")) for (bg in backgrounds) {
             assertTrue("$name $fg sur $bg : ${ratio(name, fg, bg)}", ratio(name, fg, bg) >= 4.5)

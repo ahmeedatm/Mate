@@ -142,7 +142,7 @@ class FocusWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidget
             addView(phase)
         }
         box.addView(texts)
-        val strip = FocusBand(context, vertical)
+        val strip = FocusBand(context, vertical, segmented = lcd)
         band = strip
         box.addView(
             strip,

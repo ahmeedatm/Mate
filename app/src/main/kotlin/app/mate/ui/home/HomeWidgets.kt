@@ -130,6 +130,24 @@ abstract class HomeWidget(val context: Context, val host: HomeHost, val placed: 
     protected val outerContext: Context get() = (context as? LcdContext)?.baseContext ?: context
 
     protected val lcd get() = LcdStyle.applies(placed.type, themeRes(context, R.attr.c_lcd_overlay))
+
+    /** Le thème pose les widgets de touches dans un panneau à filet, même sans grille (Instrument, `c_home_card_outline`). */
+    protected val panel get() = themeBool(context, R.attr.c_home_card_outline)
+
+    /** Petit titre d'une fenêtre LCD (Eau, Météo) : capitales en Departure Mono, comme la maquette. */
+    protected fun lcdCaption() = label(LCD_CAPTION_SP, R.attr.c_text_dim).apply {
+        typeface = themeFont(context, R.attr.c_font_display)
+        isAllCaps = true
+        letterSpacing = LCD_CAPTION_SPACING
+        maxLines = 1
+    }
+
+    /** Petit titre en capitales d'un panneau de Colonne (Applis, Touches) : la grille a le sien, la liste en manque. */
+    protected fun panelCaption(text: Int) = TitleView(context).apply {
+        setText(text)
+        minHeight = dp(PANEL_CAPTION_DP)
+        gravity = Gravity.CENTER_VERTICAL
+    }
     protected fun color(id: Int) = themeColor(context, id)
     protected fun dp(value: Int) = context.dp(value)
 
@@ -151,6 +169,14 @@ abstract class HomeWidget(val context: Context, val host: HomeHost, val placed: 
     }
 
     companion object {
+        /** Hauteur du petit titre d'un panneau de Colonne, et de son espace dessous ([panelCaption]). */
+        const val PANEL_CAPTION_DP = 28
+
+        /** Titre d'une fenêtre LCD : taille, espacement des lettres, et hauteur qu'il prend ([lcdCaption]). */
+        const val LCD_CAPTION_SP = 11f
+        const val LCD_CAPTION_SPACING = 0.08f
+        const val LCD_CAPTION_DP = 18
+
         /** Voile de la couleur du fond sur un widget indisponible (0x8C : 55 %). */
         private const val UNAVAILABLE_VEIL = 0x8C
 

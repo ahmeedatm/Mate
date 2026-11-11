@@ -32,7 +32,7 @@ Orange vif `#FF5A1F` réservé aux fenêtres LCD, à l'aplat de balayage et aux 
 texte dessus ; une DEL active ne tient pas par lui seul) ; le texte et les boutons de l'alu prennent le `c_accent` foncé. La DEL
 active se cerne de `c_signal_edge` (`#B3380D`, 4,7:1 sur l'alu). La DEL éteinte (1,65:1) n'a pas à se lire : c'est l'état actif qui doit
 tenir, y compris quand le capuchon est enfoncé (aussi marqué par son abaissement de 4 dp). Nouveaux attributs : `c_signal`, `c_signal_edge`, `c_on_signal`,
-`c_dock_height` (96 dp pour Instrument, 0 ailleurs : c'est ce qui allume la rangée de touches) et `c_lcd_overlay` (le style LCD).
+`c_dock_height` (96 dp pour Instrument, 0 ailleurs : c'est ce qui allume la rangée de touches) et `c_lcd_overlay` (le style LCD), `c_home_card_outline` (la carte des widgets de l'Accueil garde son filet : Applis et Touches posés en panneau, titre en capitales en Colonne) et `c_block_radius` (12 dp au lieu de 40 : le bloc de Depuis l'ordi n'a plus de grands coins).
 
 Polices : Departure Mono (`c_font_display` : heure, chiffres, minuteur, numéros des touches ; OFL 1.1, convertie en TrueType
 depuis la release rektdeckard/departure-mono v1.500) ; Barlow Semi Condensed 600 pour les titres et libellés en capitales

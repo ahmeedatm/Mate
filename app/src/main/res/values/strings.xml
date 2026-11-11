@@ -1774,6 +1774,9 @@
     <string name="widget_keys_sample_dark">Mode sombre</string>
     <string name="widget_keys_sample_volume_off">Son coupé</string>
     <string name="widget_weather">Météo</string>
+    <!-- Titres des fenêtres LCD d'Instrument (capitales posées par la vue). -->
+    <string name="lcd_weather_title">Météo · %1$s</string>
+    <string name="lcd_water_title">Eau · verres</string>
     <string name="widget_weather_desc">Le temps qu\'il fait dans ta ville</string>
     <string name="widget_weather_choose">Choisir ma ville</string>
     <string name="widget_weather_temp">%1$d°</string>

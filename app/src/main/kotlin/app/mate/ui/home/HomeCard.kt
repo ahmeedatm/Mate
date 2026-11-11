@@ -12,6 +12,7 @@ import androidx.core.graphics.ColorUtils
 import app.mate.Prefs
 import app.mate.R
 import app.mate.ui.dp
+import app.mate.ui.themeBool
 import app.mate.ui.themeColor
 import app.mate.ui.themeRes
 
@@ -40,7 +41,8 @@ object HomeCard {
 
     /**
      * La tuile du thème, filet retiré partout ; Voile et À même le fond ne changent que sa forme au repos. L'appui garde
-     * celle du thème (halo rose de Hush, translucide du Rétro).
+     * celle du thème (halo rose de Hush, translucide du Rétro). Un thème au panneau à filet (`c_home_card_outline`,
+     * Instrument) garde son filet, sauf à même le fond : sur l'alu, le voile seul ne se verrait pas.
      */
     fun background(context: Context): Drawable {
         val tile = ContextCompat.getDrawable(context, themeRes(context, R.attr.c_home_card_bg))!!.mutate()
@@ -48,7 +50,8 @@ object HomeCard {
         val style = look(Prefs.homeCardStyle(context), themeColor(context, R.attr.c_bg), surface) ?: return tile
         val shapes = (tile.constantState as? DrawableContainer.DrawableContainerState)?.children?.filterIsInstance<GradientDrawable>()
             ?: listOfNotNull(tile as? GradientDrawable)
-        shapes.forEach { it.setStroke(0, Color.TRANSPARENT) }
+        val outline = themeBool(context, R.attr.c_home_card_outline) && style != HomeCardStyle.BARE
+        if (!outline) shapes.forEach { it.setStroke(0, Color.TRANSPARENT) }
         tile.state = intArrayOf()
         val rest = tile.current as? GradientDrawable ?: return tile
         // Forme au repos sans coins (Hush) : le rayon de l'appui, pour que le voile ait la forme du halo.

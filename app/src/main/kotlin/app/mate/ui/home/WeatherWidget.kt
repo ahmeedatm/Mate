@@ -11,6 +11,8 @@ import android.view.ViewGroup
 import android.widget.FrameLayout
 import android.widget.LinearLayout
 import android.widget.TextView
+import androidx.annotation.DrawableRes
+import androidx.core.content.ContextCompat
 import app.mate.R
 import app.mate.ui.Look
 import app.mate.ui.themeColor
@@ -56,6 +58,13 @@ class WeatherWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidg
     private val range = label(15f, R.attr.c_text_dim).apply { oneLine() }
     private val city = label(14f, R.attr.c_text_faint).apply { oneLine() }
 
+    /** Fenêtre LCD (Instrument) : « MÉTÉO · ville » au-dessus du contenu, sauf en Ligne (92 dp : pas la place). */
+    private val caption = lcdCaption()
+    private val captioned get() = lcd && family != ShapeFamily.ROW
+
+    /** Fenêtre LCD : l'icône au trait du temps remplace l'emoji, teintée d'orange ; sa taille suit celle de l'emoji. */
+    private var skyIcon: android.graphics.drawable.Drawable? = null
+
     /** Pastille et Colonne : la colonne de détails n'a pas la place, la ville passe sous la température. */
     private val smallCity = label(14f, R.attr.c_text_faint).apply { oneLine() }
     private val details = LinearLayout(context).apply { orientation = LinearLayout.VERTICAL }
@@ -100,7 +109,7 @@ class WeatherWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidg
 
     override fun applySize() {
         face = WeatherFace.of(placed.size)
-        for (part in listOf(emoji, temp, sky, range, city, smallCity, details, now, air, days, curve)) (part.parent as? ViewGroup)?.removeView(part)
+        for (part in listOf(emoji, temp, sky, range, city, smallCity, details, now, air, days, curve, caption)) (part.parent as? ViewGroup)?.removeView(part)
         view.removeAllViews()
         val pill = family == ShapeFamily.PILL
         view.setPadding(dp(if (pill) 12 else 18), dp(if (pill) 10 else 14), dp(if (pill) 12 else 18), dp(if (pill) 10 else 14))
@@ -110,7 +119,15 @@ class WeatherWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidg
         curve.across = face.curve != WeatherFace.Curve.DOWN
         curve.withHours = !pill
         curve.maxPoints = if (pill) PILL_POINTS else Weather.HOURS
-        view.addView(if (family == ShapeFamily.ROW) rowLayout() else stackLayout(), FrameLayout.LayoutParams(MATCH, MATCH))
+        val body = if (family == ShapeFamily.ROW) rowLayout() else stackLayout()
+        if (captioned) {
+            val column = LinearLayout(context).apply { orientation = LinearLayout.VERTICAL }
+            column.addView(caption, LinearLayout.LayoutParams(MATCH, dp(LCD_CAPTION_DP)))
+            column.addView(body, LinearLayout.LayoutParams(MATCH, 0, 1f))
+            view.addView(column, FrameLayout.LayoutParams(MATCH, MATCH))
+        } else {
+            view.addView(body, FrameLayout.LayoutParams(MATCH, MATCH))
+        }
         render()
         view.post(::fit)
     }
@@ -159,7 +176,7 @@ class WeatherWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidg
 
     /** Taille de la température selon la hauteur réelle de la carte : grande en plein écran, discrète en Pastille. */
     private fun fit() {
-        val h = view.height - view.paddingTop - view.paddingBottom
+        val h = view.height - view.paddingTop - view.paddingBottom - if (captioned) dp(LCD_CAPTION_DP) else 0
         if (h <= 0) return
         val part = when (family) {
             ShapeFamily.PILL -> PILL_TEMP_PART
@@ -171,6 +188,8 @@ class WeatherWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidg
         val px = minOf((h * part).coerceIn(sp(TEMP_MIN_SP), sp(TEMP_MAX_SP)), nowFits(w.toFloat()))
         temp.setTextSize(TypedValue.COMPLEX_UNIT_PX, px)
         emoji.setTextSize(TypedValue.COMPLEX_UNIT_PX, px * EMOJI_PART)
+        skyIcon?.let { (px * EMOJI_PART).toInt().let { side -> it.setBounds(0, 0, side, side) } }
+        emoji.setCompoundDrawables(skyIcon, null, null, null)
         sky.setTextSize(TypedValue.COMPLEX_UNIT_PX, (px * SKY_PART).coerceIn(sp(DETAIL_MIN_SP), sp(DETAIL_MAX_SP)))
         for (line in listOf(range, city, smallCity, air)) line.setTextSize(TypedValue.COMPLEX_UNIT_PX, (px * DETAIL_PART).coerceIn(sp(DETAIL_MIN_SP), sp(DETAIL_MAX_SP)))
         // Repliés seulement en Ligne : une autre forme les retrouve.
@@ -226,8 +245,9 @@ class WeatherWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidg
     private fun render() {
         val name = previewCity ?: placed.config.optString("city")
         val f = current
+        caption.text = if (name.isBlank()) context.getString(R.string.widget_weather) else context.getString(R.string.lcd_weather_title, name)
         if (name.isBlank()) {
-            emoji.text = "🌤"
+            showSky("🌤", Weather.describe(2).icon)
             temp.text = ""
             sky.setText(R.string.widget_weather_choose)
             sky.maxLines = 2
@@ -243,7 +263,7 @@ class WeatherWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidg
         city.text = name
         smallCity.visibility = View.VISIBLE
         if (f == null) {
-            emoji.text = "…"
+            showSky("…", 0)
             temp.text = ""
             sky.setText(R.string.loading)
             range.text = ""
@@ -252,7 +272,7 @@ class WeatherWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidg
             return
         }
         val weather = Weather.describe(f.code)
-        emoji.text = weather.emoji
+        showSky(weather.emoji, weather.icon)
         temp.text = context.getString(R.string.widget_weather_temp, f.temperature.roundToInt())
         sky.setText(weather.text)
         range.text = context.getString(R.string.widget_weather_range, f.min.roundToInt(), f.max.roundToInt())
@@ -260,6 +280,13 @@ class WeatherWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidg
         showHours(f)
         renderAir()
         renderDays(f.days)
+    }
+
+    /** Le temps dans [emoji] ; en fenêtre LCD, son icône au trait [icon] (0 = aucune) à la place du texte. */
+    private fun showSky(text: String, @DrawableRes icon: Int) {
+        skyIcon = if (lcd && icon != 0) ContextCompat.getDrawable(context, icon)?.mutate()?.also { it.setTint(color(R.attr.c_accent)) } else null
+        emoji.text = if (skyIcon != null) "" else text
+        if (skyIcon == null) emoji.setCompoundDrawables(null, null, null, null) else view.post(::fit)
     }
 
     /** Les heures pas encore passées ; moins de deux : pas de courbe, sa place revient au reste. */

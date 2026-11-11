@@ -102,6 +102,8 @@
         <item name="c_on_signal">?attr/c_on_accent</item>
         <item name="c_dock_height">0dp</item>
         <item name="c_lcd_overlay">@null</item>
+        <item name="c_home_card_outline">false</item>
+        <item name="c_block_radius">40dp</item>
     </style>
 
     <style name="Palette.ConsoleJour" parent="Theme.AppCompat.Light.NoActionBar">
@@ -201,6 +203,8 @@
         <item name="c_on_signal">?attr/c_on_accent</item>
         <item name="c_dock_height">0dp</item>
         <item name="c_lcd_overlay">@null</item>
+        <item name="c_home_card_outline">false</item>
+        <item name="c_block_radius">40dp</item>
     </style>
 
     <!-- Contraste élevé : Console jour (mêmes formes, Figtree, un seul accent) en lisibilité maximale.
@@ -304,6 +308,8 @@
         <item name="c_on_signal">?attr/c_on_accent</item>
         <item name="c_dock_height">0dp</item>
         <item name="c_lcd_overlay">@null</item>
+        <item name="c_home_card_outline">false</item>
+        <item name="c_block_radius">40dp</item>
     </style>
 
     <!-- Hush : nuit noire, reflets rose et violet qui bougent derrière tous les écrans (c_backdrop, ui/HushBackdrop),
@@ -410,6 +416,8 @@
         <item name="c_on_signal">?attr/c_on_accent</item>
         <item name="c_dock_height">0dp</item>
         <item name="c_lcd_overlay">@null</item>
+        <item name="c_home_card_outline">false</item>
+        <item name="c_block_radius">40dp</item>
     </style>
 
     <!-- Spider-Verse (Palette.SpiderMan, AppTheme.SPIDERMAN ; direction A3, 2026-11-01) : le logo araignée de Spider-Verse en fond fixe (c_wallpaper, voile cuit
@@ -515,6 +523,8 @@
         <item name="c_on_signal">?attr/c_on_accent</item>
         <item name="c_dock_height">0dp</item>
         <item name="c_lcd_overlay">@null</item>
+        <item name="c_home_card_outline">false</item>
+        <item name="c_block_radius">40dp</item>
     </style>
 
     <!-- Instrument (DA « Instrument tracé », 11/11/2026, docs/ui-ux/da) : un appareil d'aluminium aux fenêtres LCD et aux
@@ -540,6 +550,8 @@
         <item name="c_ko">#FFFF7A66</item>
         <item name="c_warn">#FFF2C46B</item>
         <item name="c_home_card_bg">@drawable/instrument_lcd_bg</item>
+        <item name="c_home_card_outline">false</item>
+        <item name="c_graphic">#FFA14A24</item>
     </style>
 
     <style name="Lcd.InstrumentNuit" parent="">
@@ -559,6 +571,8 @@
         <item name="c_ko">#FFFF7A66</item>
         <item name="c_warn">#FFF2C46B</item>
         <item name="c_home_card_bg">@drawable/instrument_lcd_bg</item>
+        <item name="c_home_card_outline">false</item>
+        <item name="c_graphic">#FFA14A24</item>
     </style>
 
     <style name="Palette.Instrument" parent="">
@@ -573,7 +587,7 @@
         <item name="c_label">?attr/c_text_dim</item>
         <item name="c_slider_thumb">?attr/c_accent</item>
         <item name="c_slider_track">?attr/c_text_faint</item>
-        <item name="c_key_plate">@drawable/round_bg</item>
+        <item name="c_key_plate">@drawable/instrument_key_plate</item>
         <item name="c_primary">?attr/c_accent</item>
         <item name="c_on_primary">?attr/c_on_accent</item>
         <item name="c_primary_pressed">#FF8F2C0A</item>
@@ -658,6 +672,8 @@
         <item name="c_on_signal">#FF1E1D1B</item>
         <item name="c_dock_height">96dp</item>
         <item name="c_lcd_overlay">@style/Lcd.Instrument</item>
+        <item name="c_home_card_outline">true</item>
+        <item name="c_block_radius">12dp</item>
     </style>
 
     <!-- Instrument nuit : l'appareil en graphite (#2B2B2A, touches #3A3A38, LCD #0B0B0B). Orange éclairci #FF8559 pour tenir 4,5:1
@@ -674,7 +690,7 @@
         <item name="c_label">?attr/c_text_dim</item>
         <item name="c_slider_thumb">?attr/c_accent</item>
         <item name="c_slider_track">?attr/c_text_faint</item>
-        <item name="c_key_plate">@drawable/round_bg</item>
+        <item name="c_key_plate">@drawable/instrument_key_plate</item>
         <item name="c_primary">?attr/c_accent</item>
         <item name="c_on_primary">?attr/c_on_accent</item>
         <item name="c_primary_pressed">#FFFF9E7B</item>
@@ -759,6 +775,8 @@
         <item name="c_on_signal">#FF1E1D1B</item>
         <item name="c_dock_height">96dp</item>
         <item name="c_lcd_overlay">@style/Lcd.InstrumentNuit</item>
+        <item name="c_home_card_outline">true</item>
+        <item name="c_block_radius">12dp</item>
     </style>
 
     <!-- Chaleur (par défaut, 05/11/2026) : la DA de claude.ai et anthropic.com relevée sur les sites (crème, terre cuite,
@@ -861,6 +879,8 @@
         <item name="c_on_signal">?attr/c_on_accent</item>
         <item name="c_dock_height">0dp</item>
         <item name="c_lcd_overlay">@null</item>
+        <item name="c_home_card_outline">false</item>
+        <item name="c_block_radius">40dp</item>
     </style>
 
     <!-- Clair et Sombre : la DA Cadran sans texture (blanc et noir francs, sans tubes, grain seulement par le réglage), rouge Unowhy en accent, Outfit.
@@ -962,6 +982,8 @@
         <item name="c_on_signal">?attr/c_on_accent</item>
         <item name="c_dock_height">0dp</item>
         <item name="c_lcd_overlay">@null</item>
+        <item name="c_home_card_outline">false</item>
+        <item name="c_block_radius">40dp</item>
     </style>
 
     <style name="Palette.CadranSombre" parent="">
@@ -1061,6 +1083,8 @@
         <item name="c_on_signal">?attr/c_on_accent</item>
         <item name="c_dock_height">0dp</item>
         <item name="c_lcd_overlay">@null</item>
+        <item name="c_home_card_outline">false</item>
+        <item name="c_block_radius">40dp</item>
     </style>
 
     <!-- Cadran : rôles Material 3 générés depuis le rouge Unowhy, une seule couleur vivante. Texture de Rétro (grain, tubes qui
@@ -1164,6 +1188,8 @@
         <item name="c_on_signal">?attr/c_on_accent</item>
         <item name="c_dock_height">0dp</item>
         <item name="c_lcd_overlay">@null</item>
+        <item name="c_home_card_outline">false</item>
+        <item name="c_block_radius">40dp</item>
     </style>
 
     <!-- Cadran nuit : même texture que Cadran (grain, tubes, widgets translucides) sur un charbon chaud plutôt que noir ;
@@ -1265,6 +1291,8 @@
         <item name="c_on_signal">?attr/c_on_accent</item>
         <item name="c_dock_height">0dp</item>
         <item name="c_lcd_overlay">@null</item>
+        <item name="c_home_card_outline">false</item>
+        <item name="c_block_radius">40dp</item>
     </style>
 
     <!-- Rétro : la DA Cadran (mêmes formes et dispositions) habillée années 70 : brun, rouge, orange et crème, titres et grands
@@ -1372,6 +1400,8 @@
         <item name="c_on_signal">?attr/c_on_accent</item>
         <item name="c_dock_height">0dp</item>
         <item name="c_lcd_overlay">@null</item>
+        <item name="c_home_card_outline">false</item>
+        <item name="c_block_radius">40dp</item>
     </style>
 
     <!-- Registre : Cadran sur papier de registre. Fond crème, feuillets blancs, vert comptable (c_primary), rouge d'encre =
@@ -1397,6 +1427,8 @@
         <item name="c_on_signal">?attr/c_on_accent</item>
         <item name="c_dock_height">0dp</item>
         <item name="c_lcd_overlay">@null</item>
+        <item name="c_home_card_outline">false</item>
+        <item name="c_block_radius">40dp</item>
         <item name="colorBackgroundFloating">?attr/c_surface</item>
         <item name="android:colorBackgroundFloating">?attr/c_surface</item>
         <item name="c_primary">#FF175E34</item>
@@ -1502,6 +1534,8 @@
         <item name="c_on_signal">?attr/c_on_accent</item>
         <item name="c_dock_height">0dp</item>
         <item name="c_lcd_overlay">@null</item>
+        <item name="c_home_card_outline">false</item>
+        <item name="c_block_radius">40dp</item>
         <item name="c_primary">#FF513FFF</item>
         <item name="c_on_primary">#FFFFFFFF</item>
         <item name="c_primary_pressed">#FF3F2FD6</item>
@@ -1681,6 +1715,8 @@
         <item name="c_on_signal">?attr/c_on_accent</item>
         <item name="c_dock_height">0dp</item>
         <item name="c_lcd_overlay">@null</item>
+        <item name="c_home_card_outline">false</item>
+        <item name="c_block_radius">40dp</item>
     </style>
 
     <!-- Tableau : Cadran en tableau de bord. Gris froid, tuiles à filet de 1 dp (tableau_tile_bg), bleu marine (c_primary), statuts
@@ -1707,6 +1743,8 @@
         <item name="c_on_signal">?attr/c_on_accent</item>
         <item name="c_dock_height">0dp</item>
         <item name="c_lcd_overlay">@null</item>
+        <item name="c_home_card_outline">false</item>
+        <item name="c_block_radius">40dp</item>
         <item name="c_primary">#FF005592</item>
         <item name="c_on_primary">#FFFFFFFF</item>
         <item name="c_primary_pressed">#FF004477</item>
@@ -1808,6 +1846,8 @@
         <item name="c_on_signal">?attr/c_on_accent</item>
         <item name="c_dock_height">0dp</item>
         <item name="c_lcd_overlay">@null</item>
+        <item name="c_home_card_outline">false</item>
+        <item name="c_block_radius">40dp</item>
         <item name="c_primary">#FF43E188</item>
         <item name="c_on_primary">#FF00391C</item>
         <item name="c_primary_pressed">#FF2FB86B</item>
