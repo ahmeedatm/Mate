@@ -63,6 +63,7 @@ import app.mate.ui.ComputerAdder
 import app.mate.ui.ComputersDialog
 import app.mate.ui.DocumentPanel
 import app.mate.ui.FocusFragment
+import app.mate.ui.FrameTracerModel
 import app.mate.ui.FromComputerFragment
 import app.mate.ui.GameSession
 import app.mate.ui.Grain
@@ -1147,6 +1148,7 @@ class MainActivity : AppCompatActivity() {
         val changed = current != mode
         // Balayage (thèmes Instrument) : l'écran quitté est photographié avant d'être masqué plus bas.
         val before = if (changed && nav is KeyDock) findViewById<SweepView>(R.id.sweep).capture(findViewById(R.id.mode_container)) else null
+        sweeping = before != null
         val leavingCamera = current == Mode.CAMERA && mode != Mode.CAMERA
         current = mode
         if (::presence.isInitialized) {
@@ -1176,8 +1178,15 @@ class MainActivity : AppCompatActivity() {
         renderNoComputer()
         if (changed) slideTo(mode, before)
         fm.executePendingTransactions()
+        sweeping = false
         showTopHeader()
     }
+
+    /** Balayage orange en cours d'installation : le nouvel écran attend qu'il le découvre avant de tracer ses cadres. */
+    private var sweeping = false
+
+    /** Attente (ms) avant que l'écran qui arrive trace ses cadres : celle du balayage, ou rien. */
+    fun traceLead(): Long = if (sweeping) FrameTracerModel.AFTER_SWEEP_MS else 0L
 
     /** Numéro de la touche du mode sur la rangée (01 à 05, renumérotée quand un outil est masqué dans Réglages > Barre). */
     private fun keyNumber(mode: Mode) = KeyDockModel.keys(Prefs.railTools(this)).firstOrNull { it.mode == mode }?.number.orEmpty()
