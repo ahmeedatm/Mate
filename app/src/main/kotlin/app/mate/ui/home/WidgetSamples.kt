@@ -105,5 +105,5 @@ object WidgetSamples {
     }.timeInMillis
 }
 
-/** Lignes de l'exemple Nation, par identifiant IDFM : RER A, métros 1, 9, A, 2 et 6, bus 86 (ordre des destinations). */
+/** Lignes de l'exemple Nation, par identifiant IDFM : RER A, métros 1 et 9, RER A, métros 2 et 6, bus 86 (ordre des destinations). */
 private val TRANSPORT_LINES = listOf("C01742", "C01371", "C01379", "C01742", "C01372", "C01376", "C01118")

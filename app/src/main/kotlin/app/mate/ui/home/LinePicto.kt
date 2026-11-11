@@ -18,6 +18,8 @@ class LinePicto(context: Context) : View(context) {
     private var spec = PictoSpec.of(null, 0, 0)
     private var text = ""
     private var side = 0
+    private val box = RectF()
+    private val clip = Path()
     private val fill = Paint(Paint.ANTI_ALIAS_FLAG)
     private val letters = Paint(Paint.ANTI_ALIAS_FLAG).apply {
         textAlign = Paint.Align.CENTER
@@ -36,8 +38,11 @@ class LinePicto(context: Context) : View(context) {
     override fun onMeasure(widthMeasureSpec: Int, heightMeasureSpec: Int) =
         setMeasuredDimension((side * spec.widthRatio).toInt(), side)
 
+    override fun onSizeChanged(w: Int, h: Int, oldw: Int, oldh: Int) {
+        box.set(0f, 0f, w.toFloat(), h.toFloat())
+    }
+
     override fun onDraw(canvas: Canvas) {
-        val box = RectF(0f, 0f, width.toFloat(), height.toFloat())
         val radius = spec.radiusRatio * height
         fill.color = spec.fill
         canvas.drawRoundRect(box, radius, radius, fill)
@@ -52,7 +57,9 @@ class LinePicto(context: Context) : View(context) {
         val bar = maxOf(context.dp(2).toFloat(), height / BAR_DIV)
         fill.color = spec.barColor
         canvas.save()
-        canvas.clipPath(Path().apply { addRoundRect(box, radius, radius, Path.Direction.CW) })
+        clip.rewind()
+        clip.addRoundRect(box, radius, radius, Path.Direction.CW)
+        canvas.clipPath(clip)
         canvas.drawRect(0f, 0f, box.right, bar, fill)
         canvas.drawRect(0f, box.bottom - bar, box.right, box.bottom, fill)
         canvas.restore()

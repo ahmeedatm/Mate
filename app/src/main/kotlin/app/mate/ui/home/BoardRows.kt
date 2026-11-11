@@ -151,10 +151,10 @@ class BoardRows(private val context: Context, private val look: BoardLook, priva
     private companion object {
         const val GAP = 12
         const val GAUGE_GAP = 6
-        const val THEN_SP = 12f
-        const val THEN_ALPHA = 0.7f
+        const val THEN_SP = 13f
+        const val THEN_ALPHA = 0.85f
         const val UNIT_SCALE = 0.38f
-        const val MIN_UNIT_SP = 11f
+        const val MIN_UNIT_SP = 13f
         const val WORD_SCALE = 0.5f
     }
 }

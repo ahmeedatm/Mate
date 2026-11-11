@@ -113,11 +113,11 @@ class TransportBoard(private val context: Context, private val card: LinearLayou
     }
 
     private fun look() = when (family) {
-        ShapeFamily.PILL -> BoardLook(30, 46f, 12f, 13f, 4)
-        ShapeFamily.ROW -> BoardLook(38, 46f, 19f, 13f, 4)
-        ShapeFamily.COLUMN -> BoardLook(26, 26f, 12f, 13f, 4)
+        ShapeFamily.PILL -> BoardLook(30, 46f, 14f, 15f, 4)
+        ShapeFamily.ROW -> BoardLook(38, 46f, 19f, 15f, 4)
+        ShapeFamily.COLUMN -> BoardLook(26, 26f, 14f, 15f, 4)
         ShapeFamily.FULL -> BoardLook(44, 44f, 26f, 18f, 6)
-        else -> BoardLook(30, 30f, 18f, 13f, 4)
+        else -> BoardLook(30, 30f, 18f, 15f, 4)
     }
 
     private companion object {
@@ -127,7 +127,7 @@ class TransportBoard(private val context: Context, private val card: LinearLayou
         const val SIDE_PAD_X = 14
         const val SIDE_PAD_Y = 8
         const val HEAD_GAP = 6
-        const val HEAD_ALPHA = 0.7f
+        const val HEAD_ALPHA = 0.85f
         const val MESSAGE_SP = 14f
         const val MESSAGE_LINES = 3
     }

@@ -73,11 +73,6 @@ class DashDivider(context: Context, private val vertical: Boolean) : View(contex
         pathEffect = DashPathEffect(floatArrayOf(context.dp(3).toFloat(), context.dp(3).toFloat()), 0f)
     }
 
-    init {
-        // Pointillés fiables sur les Android anciens : trait dessiné en logiciel, la vue est minuscule.
-        setLayerType(LAYER_TYPE_SOFTWARE, null)
-    }
-
     override fun onDraw(canvas: Canvas) {
         if (vertical) canvas.drawLine(width / 2f, 0f, width / 2f, height.toFloat(), paint)
         else canvas.drawLine(0f, height / 2f, width.toFloat(), height / 2f, paint)

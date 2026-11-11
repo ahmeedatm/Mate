@@ -21,7 +21,7 @@ class TransportSample(@StringRes val stop: Int, @ArrayRes val dirs: Int, val min
 /**
  * Prochains passages à un arrêt d'Île-de-France, lus par la tablette chez IDFM ([Transport]), rafraîchis chaque minute.
  * L'arrêt (et une direction optionnelle) se règlent par les réglages du widget. Dessiné en afficheur de quai
- * ([TransportBoard]) : bandeau du thème et écran à points ; une mise en page par famille ([TransportShape]). Le picto de
+ * ([TransportBoard]) : carte du thème, écran à points et jauge d'approche ; une mise en page par famille ([TransportShape]). Le picto de
  * chaque ligne vient du référentiel d'IDFM ([TransportLines]) ; « À l'approche » clignote ([Blinker]).
  */
 class TransportWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidget(context, host, placed) {
