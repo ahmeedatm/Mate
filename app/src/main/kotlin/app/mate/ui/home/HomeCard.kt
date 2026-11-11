@@ -38,6 +38,13 @@ object HomeCard {
     /** Style appliqué, ou `null` quand la tuile du thème est gardée (carte de la couleur du fond). */
     fun look(style: HomeCardStyle, bg: Int, surface: Int): HomeCardStyle? = style.takeIf { surface != bg }
 
+    /** Style appliqué dans le thème courant (`look` sur les couleurs du thème). */
+    fun look(context: Context): HomeCardStyle? =
+        look(Prefs.homeCardStyle(context), themeColor(context, R.attr.c_bg), themeColor(context, R.attr.c_surface))
+
+    /** Plaque de la console de mixage (`c_mx_plate`) : retirée À même le fond, sinon son bord se voit sur le fond d'écran (#230). */
+    fun plate(style: HomeCardStyle?, plate: Int): Int = if (style == HomeCardStyle.BARE) Color.TRANSPARENT else plate
+
     /**
      * La tuile du thème, filet retiré partout ; Voile et À même le fond ne changent que sa forme au repos. L'appui garde
      * celle du thème (halo rose de Hush, translucide du Rétro).
@@ -45,7 +52,7 @@ object HomeCard {
     fun background(context: Context): Drawable {
         val tile = ContextCompat.getDrawable(context, themeRes(context, R.attr.c_home_card_bg))!!.mutate()
         val surface = themeColor(context, R.attr.c_surface)
-        val style = look(Prefs.homeCardStyle(context), themeColor(context, R.attr.c_bg), surface) ?: return tile
+        val style = look(context) ?: return tile
         val shapes = (tile.constantState as? DrawableContainer.DrawableContainerState)?.children?.filterIsInstance<GradientDrawable>()
             ?: listOfNotNull(tile as? GradientDrawable)
         shapes.forEach { it.setStroke(0, Color.TRANSPARENT) }

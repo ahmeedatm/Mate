@@ -34,7 +34,7 @@ import java.util.UUID
 
 /**
  * Console de mixage du Deck sur un profil : sortie, micro, une tranche par appli et les scènes. La console dessine sa
- * plaque et ses coins (pas de carte). Les curseurs se tirent à la verticale et la rangée de tranches défile de côté :
+ * plaque et ses coins (pas de carte) ; À même le fond, pas de plaque (`HomeCard.plate`). Les curseurs se tirent à la verticale et la rangée de tranches défile de côté :
  * le widget garde l'appui long et le balayage, sinon la grille entrerait en mode Modifier ou changerait de profil.
  *
  * ⚙ du mode Modifier : les applis à montrer, dans l'ordre voulu (`MixerApps`, rangées par ordinateur), et les applis

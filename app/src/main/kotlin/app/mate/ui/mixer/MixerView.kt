@@ -38,6 +38,7 @@ import app.mate.ui.IconCache
 import app.mate.ui.LatestSender
 import app.mate.ui.dp
 import app.mate.ui.errorText
+import app.mate.ui.home.HomeCard
 import app.mate.ui.inputField
 import app.mate.ui.showForTyping
 import app.mate.ui.showImmersive
@@ -87,8 +88,8 @@ class MixerView @JvmOverloads constructor(
     /** Console basse (widget d'un profil) : rangée des scènes et tranches resserrées. */
     private var tight = false
 
-    // Plaque unie (c_mx_plate), dessinée derrière tout.
-    private val plate = Paint().apply { color = themeColor(context, R.attr.c_mx_plate) }
+    // Plaque unie (c_mx_plate), dessinée derrière tout ; aucune À même le fond (HomeCard.plate).
+    private val plate = Paint().apply { color = HomeCard.plate(HomeCard.look(context), themeColor(context, R.attr.c_mx_plate)) }
     private val brush = Paint()
     private val cShadow = themeColor(context, R.attr.c_mx_shadow)
     private val cHighlight = themeColor(context, R.attr.c_mx_highlight)

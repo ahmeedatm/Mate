@@ -28,6 +28,13 @@ class HomeCardTest {
     }
 
     @Test
+    fun `a meme le fond, la console de mixage n'a plus de plaque (#230)`() {
+        val plate = 0xFF1A1A1A.toInt()
+        assertEquals(0, HomeCard.plate(HomeCardStyle.BARE, plate))
+        for (style in listOf(HomeCardStyle.VEIL, HomeCardStyle.FLAT, null)) assertEquals(plate, HomeCard.plate(style, plate))
+    }
+
+    @Test
     fun `le voile laisse voir le fond`() {
         assertTrue(HomeCard.VEIL_ALPHA in 1 until 0xFF)
     }
