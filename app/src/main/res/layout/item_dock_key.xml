@@ -31,8 +31,8 @@
         android:id="@+id/dock_cap"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
-        android:layout_marginTop="12dp"
-        android:layout_marginBottom="6dp"
+        android:layout_marginTop="?attr/c_dock_cap_top"
+        android:layout_marginBottom="?attr/c_dock_cap_bottom"
         android:background="@drawable/dock_key_cap"
         android:duplicateParentState="true">
 

@@ -2,6 +2,7 @@ package app.mate.ui.home
 
 import android.content.Context
 import android.content.res.ColorStateList
+import android.graphics.Color
 import android.graphics.drawable.GradientDrawable
 import android.text.format.DateFormat
 import android.util.TypedValue
@@ -56,7 +57,11 @@ class WaterWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidget
     private val plus = iconButton(R.style.IconButton_Primary, R.drawable.ic_add, R.string.water_plus) {
         Water.add(context, 1)
         Look.pop(count)
-    }.apply { backgroundTintList = ColorStateList.valueOf(color(R.attr.c_hue_cyan)) }
+    }.apply {
+        // Thème à boutons au filet (Instrument nuit, `c_btn_edge`) : noir, filet gris, icône orange, sans la teinte pleine.
+        if (Color.alpha(color(R.attr.c_btn_edge)) == 0) backgroundTintList = ColorStateList.valueOf(color(R.attr.c_hue_cyan))
+        else imageTintList = ColorStateList.valueOf(color(R.attr.c_on_primary))
+    }
 
     /** Les verres : couchés (pastille, ligne), empilés (colonne) ou debout côte à côte (bloc et plus). */
     private val gauge = LinearLayout(context).apply {

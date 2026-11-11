@@ -33,7 +33,7 @@ import java.util.Locale
  * réunion, et la journée en ligne de temps dans les grandes formes.
  */
 class DayWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidget(context, host, placed) {
-    override val view = FrameLayout(context)
+    override val view = FrameLayout(context).barelyFramed()
     private var face = DayFace.of(placed.size)
     private lateinit var greeting: TextView
     private lateinit var date: TextView

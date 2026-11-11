@@ -28,11 +28,11 @@ object TileShapes {
      * Touches montrées hors de la grille dans une vue de [width] × [height] px : icônes en largeur en Ligne, lignes de
      * liste en hauteur en Colonne, une seule en Pastille. [density] : px par dp, comme `Context.dp`. [panel] : dans un panneau à filet, la Colonne a des lignes plus basses.
      */
-    fun stripFit(family: ShapeFamily, width: Int, height: Int, density: Float, panel: Boolean = false): Int {
+    fun stripFit(family: ShapeFamily, width: Int, height: Int, density: Float, panel: Boolean = false, gapDp: Int = LIST_GAP_DP): Int {
         fun px(dp: Int) = (dp * density).toInt()
         return when (family) {
             ShapeFamily.ROW -> fit(width, px(ICON_DP), px(ICON_GAP_DP))
-            ShapeFamily.COLUMN -> fit(height, px(if (panel) LIST_ROW_PANEL_DP else LIST_ROW_DP), px(LIST_GAP_DP))
+            ShapeFamily.COLUMN -> fit(height, px(if (panel) LIST_ROW_PANEL_DP else LIST_ROW_DP), px(gapDp))
             else -> 1
         }
     }

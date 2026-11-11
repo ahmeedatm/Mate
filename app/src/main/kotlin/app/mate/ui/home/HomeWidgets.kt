@@ -161,6 +161,11 @@ abstract class HomeWidget(val context: Context, val host: HomeHost, val placed: 
         setPadding(px, px, px, px)
     }
 
+    /** Widget posé à nu (Héros, Journée, Ligne du jour) : le thème à cadre partout (`c_bare_frame`, Instrument nuit) lui donne quand même la carte au style choisi. */
+    protected fun <T : View> T.barelyFramed(): T = apply {
+        if (themeBool(context, R.attr.c_bare_frame)) background = HomeCard.background(context)
+    }
+
     protected fun cardTitle(text: Int) = TitleView(context).apply {
         setText(text)
     }

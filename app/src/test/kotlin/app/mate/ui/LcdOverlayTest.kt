@@ -35,8 +35,10 @@ class LcdOverlayTest {
         for (name in listOf("Lcd.Instrument", "Lcd.InstrumentNuit")) {
             val v = items(name)
             assertTrue("$name : ${v.keys - attrs}", (v.keys - attrs).all { it.startsWith("android:") })
-            assertEquals(name, v["c_bg"], v["c_surface"])
-            assertEquals(name, "@drawable/instrument_lcd_bg", v["c_home_card_bg"])
+            // Nuit : noir pur, surface à peine au-dessus pour que « Sans filet » et « À même le fond » s'appliquent (HomeCard.look), rayon 12.
+            val nuit = name == "Lcd.InstrumentNuit"
+            if (nuit) assertEquals(name, "#FF000000", v["c_bg"]) else assertEquals(name, v["c_bg"], v["c_surface"])
+            assertEquals(name, if (nuit) "@drawable/instrument_nuit_lcd_bg" else "@drawable/instrument_lcd_bg", v["c_home_card_bg"])
             assertEquals(name, "@font/departure_mono_400", v["c_font_light"])
             for (text in listOf("c_text", "c_text_dim", "c_accent", "c_hue_orange", "c_hue_cyan", "c_ok", "c_ko", "c_warn")) {
                 assertTrue("$name $text : ${ratio(v[text]!!, v["c_surface"]!!)}", ratio(v[text]!!, v["c_surface"]!!) >= 4.5)

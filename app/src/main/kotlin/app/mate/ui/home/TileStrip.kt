@@ -8,6 +8,8 @@ import android.widget.LinearLayout
 import android.widget.TextView
 import app.mate.R
 import app.mate.ui.dp
+import app.mate.ui.themePx
+import kotlin.math.roundToInt
 
 /**
  * Pastille, Ligne et Colonne des widgets de touches (Touches, Applis), sans défilement : en Colonne une liste (icône et
@@ -17,7 +19,10 @@ import app.mate.ui.dp
 object TileStrip {
     /** Touches qui tiennent dans une vue de [width] × [height] px ; 1 tant qu'elle n'est pas mesurée. */
     fun fit(context: Context, family: ShapeFamily, width: Int, height: Int, panel: Boolean = false) =
-        TileShapes.stripFit(family, width, height, context.resources.displayMetrics.density, panel)
+        TileShapes.stripFit(family, width, height, context.resources.displayMetrics.density, panel, gapDp(context))
+
+    /** Écart entre deux lignes de liste (dp) : celui du thème (`c_list_gap`). */
+    fun gapDp(context: Context) = (themePx(context, R.attr.c_list_gap) / context.resources.displayMetrics.density).roundToInt()
 
     fun orientation(family: ShapeFamily) = if (family == ShapeFamily.ROW) LinearLayout.HORIZONTAL else LinearLayout.VERTICAL
 
@@ -26,7 +31,7 @@ object TileStrip {
     /** Place de la touche n° [index] dans la vue de la forme ([panel] : Colonne d'un panneau à filet, lignes plus basses). */
     fun params(context: Context, family: ShapeFamily, index: Int, panel: Boolean = false): LinearLayout.LayoutParams = when (family) {
         ShapeFamily.ROW -> LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.MATCH_PARENT, 1f).apply { if (index > 0) marginStart = context.dp(TileShapes.ICON_GAP_DP) }
-        ShapeFamily.COLUMN -> LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, context.dp(if (panel) TileShapes.LIST_ROW_PANEL_DP else TileShapes.LIST_ROW_DP)).apply { if (index > 0) topMargin = context.dp(TileShapes.LIST_GAP_DP) }
+        ShapeFamily.COLUMN -> LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, context.dp(if (panel) TileShapes.LIST_ROW_PANEL_DP else TileShapes.LIST_ROW_DP)).apply { if (index > 0) topMargin = context.dp(gapDp(context)) }
         else -> LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, 0, 1f)
     }
 }

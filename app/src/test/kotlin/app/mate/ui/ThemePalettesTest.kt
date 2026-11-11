@@ -88,6 +88,19 @@ class ThemePalettesTest {
     }
 
     @Test
+    fun `Instrument nuit est noir, ses modules se separent par un filet gris et un fond a peine au-dessus, les autres themes gardent leur cadre`() {
+        val nuit = values("InstrumentNuit")
+        for (attr in listOf("c_bg", "c_rail")) assertEquals(attr, "#FF000000", nuit[attr])
+        assertEquals("#FF000000", nuit["c_mx_lcd_bg"])
+        assertEquals("#FF3A3A3A", nuit["c_stroke"])
+        assertTrue("filet visible sur noir : ${ratio("InstrumentNuit", "c_stroke", "c_bg")}", ratio("InstrumentNuit", "c_stroke", "c_bg") >= 1.5)
+        assertTrue("c_surface differe de c_bg pour que les styles de carte s'appliquent", nuit["c_surface"] != nuit["c_bg"])
+        assertEquals("?attr/c_stroke", nuit["c_btn_edge"])
+        for (name in all) assertEquals("$name c_bare_frame", (name == "InstrumentNuit").toString(), values(name)["c_bare_frame"])
+        for (name in all - "InstrumentNuit") assertEquals("$name c_btn_edge", "#00000000", values(name)["c_btn_edge"])
+    }
+
+    @Test
     fun `texte principal et secondaires au moins 4,5 sur fond, tuile et relief`() {
         for (name in imported) for (fg in listOf("c_text", "c_text_dim", "c_text_faint")) for (bg in backgrounds) {
             assertTrue("$name $fg sur $bg : ${ratio(name, fg, bg)}", ratio(name, fg, bg) >= 4.5)

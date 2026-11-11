@@ -34,7 +34,7 @@ class DayLineWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidg
         ellipsize = TextUtils.TruncateAt.END
     }
     private val stack = LinearLayout(context).apply { orientation = LinearLayout.VERTICAL }
-    override val view = FrameLayout(context)
+    override val view = FrameLayout(context).barelyFramed()
     private var face = DayLineFace.of(placed.size)
     private var active = false
     private val clock = SimpleDateFormat("HH:mm", Locale.FRANCE)

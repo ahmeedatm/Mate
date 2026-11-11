@@ -114,6 +114,16 @@
     <attr name="c_signal_edge" format="color" />
     <attr name="c_on_signal" format="color" />
     <attr name="c_dock_height" format="dimension" />
+    <!-- Touches du bas : socle fixe sous le capuchon (repos, actif) et air au-dessus / au-dessous du capuchon ; bouton rond à filet (c_btn_edge, transparent hors nuit) ;
+         cadre aussi autour des widgets posés à nu (Héros, Journée, Ligne du jour : c_bare_frame, Instrument nuit). -->
+    <attr name="c_dock_socle" format="color" />
+    <attr name="c_dock_socle_on" format="color" />
+    <attr name="c_dock_cap_top" format="dimension" />
+    <attr name="c_dock_cap_bottom" format="dimension" />
+    <attr name="c_btn_edge" format="color" />
+    <attr name="c_bare_frame" format="boolean" />
+    <!-- Écart entre deux lignes des listes Touches et Applis. -->
+    <attr name="c_list_gap" format="dimension" />
     <attr name="c_lcd_overlay" format="reference" />
     <!-- Instrument : la carte d'un widget de l'Accueil garde son filet (le voile seul disparaît sur l'alu), et le grand bloc de
          Depuis l'ordi arrondit ses coins du dehors au rayon des tuiles (c_block_radius) au lieu de 40 dp. -->

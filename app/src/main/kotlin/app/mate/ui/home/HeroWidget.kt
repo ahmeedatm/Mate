@@ -90,7 +90,7 @@ class HeroView @JvmOverloads constructor(context: Context, attrs: AttributeSet? 
  * minutes (Colonne), la journée en ligne de temps et le prochain rendez-vous dans son anneau (Plein écran).
  */
 class HeroWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidget(context, host, placed) {
-    override val view = FrameLayout(context)
+    override val view = FrameLayout(context).barelyFramed()
     private var face = HeroFace.of(placed.size)
 
     /** Le bandeau d'avant, en Ligne seulement : il dimensionne lui-même l'heure. */

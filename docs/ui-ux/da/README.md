@@ -4,7 +4,7 @@
 
 Choisie par Ahmed sur la maquette de fusion (`fusion/index.html`, issue #216, PR #229). Un appareil d'aluminium avec des
 fenêtres LCD et des touches qui s'enfoncent, dont chaque écran se dessine à l'arrivée, sur une hiérarchie d'affiche : l'heure
-et le prochain rendez-vous en héros, le reste petit et dense. Deux thèmes : Instrument (jour) et Instrument nuit (graphite),
+et le prochain rendez-vous en héros, le reste petit et dense. Deux thèmes : Instrument (jour) et Instrument nuit (noir pur à filets gris, 11/11 : « un écran qui se dégage du fond »),
 tous deux en tête des Réglages ; Instrument est le défaut, un thème enregistré est gardé. Aucun logo ni marque repris.
 
 D'où vient chaque idée :
@@ -19,20 +19,26 @@ Jetons (`Palette.Instrument`, `Palette.InstrumentNuit`, `res/values/palettes.xml
 
 | Jeton | Jour | Nuit |
 |---|---|---|
-| `c_bg`, `c_rail` (alu) | `#E6E3DC` | `#2B2B2A` |
-| `c_surface` (carte) | `#EFEDE7` | `#343432` (touche `#3A3A38`) |
-| `c_stroke` | `#B7B2A6` | `#121211` |
+| `c_bg`, `c_rail` (alu ; nuit : noir pur, bandeau, dock, Réglages) | `#E6E3DC` | `#000000` |
+| `c_surface` (carte) | `#EFEDE7` | `#050505` (à peine au-dessus du fond : les styles Voile / Sans filet / À même le fond s'appliquent) ; touche et bouton `c_surface_raised` `#0D0D0D`, appui `#1C1C1C` |
+| `c_stroke` (filet de 1 dp, rayon 12, ni ombre ni dégradé) | `#B7B2A6` | `#3A3A3A` (1,8:1 sur noir : filet décoratif) |
 | `c_text` | `#1E1D1B` | `#ECE8DF` |
 | `c_text_dim`, `c_text_faint` | `#5A564E`, `#625E55` (5,0:1 au plus bas, sur la tuile : 4,5:1 tenus) | `#B4AFA3`, `#AEA99D` |
 | `c_accent` (texte, aplats) | `#B3380D` (4,7:1 sur l'alu) | `#FF8559` (4,5:1) |
 | `c_signal` (LCD, DEL, aplat) | `#FF5A1F` | `#FF5A1F` |
-| fenêtre LCD (`Lcd.Instrument`, `Lcd.InstrumentNuit`) | `#141414`, texte `#F1EDE4` | `#0B0B0B`, texte `#F1EDE4` |
+| fenêtre LCD (`Lcd.Instrument`, `Lcd.InstrumentNuit`) | `#141414`, texte `#F1EDE4` | fond `#000000` (surface `#050505`), filet `#3A3A3A`, rayon 12, texte `#F1EDE4` |
 
 Orange vif `#FF5A1F` réservé aux fenêtres LCD, à l'aplat de balayage et aux DEL (il ne fait que 2,43:1 sur l'alu du jour : pas de
 texte dessus ; une DEL active ne tient pas par lui seul) ; le texte et les boutons de l'alu prennent le `c_accent` foncé. La DEL
 active se cerne de `c_signal_edge` (`#B3380D`, 4,7:1 sur l'alu). La DEL éteinte (1,65:1) n'a pas à se lire : c'est l'état actif qui doit
 tenir, y compris quand le capuchon est enfoncé (aussi marqué par son abaissement de 4 dp). Nouveaux attributs : `c_signal`, `c_signal_edge`, `c_on_signal`,
 `c_dock_height` (96 dp pour Instrument, 0 ailleurs : c'est ce qui allume la rangée de touches) et `c_lcd_overlay` (le style LCD), `c_home_card_outline` (la carte des widgets de l'Accueil garde son filet : Applis et Touches posés en panneau, titre en capitales en Colonne) et `c_block_radius` (12 dp au lieu de 40 : le bloc de Depuis l'ordi n'a plus de grands coins).
+
+Instrument nuit, tout en filet : chaque module de l'Accueil (LCD ou non, y compris Héros, Journée et Ligne du jour posés à nu : `c_bare_frame`)
+prend le même cadre ; « À même le fond » le retire. Boutons ronds et pastilles : noir, filet `c_btn_edge` (= `c_stroke` en nuit, transparent
+ailleurs), icône au trait ; Eau + : noir, filet gris, icône orange (Lcd.InstrumentNuit : `c_primary`). Touches du bas : plus de socle (`c_dock_socle`,
+`c_dock_socle_on` transparents), capuchon noir à filet 1 dp, 18 dp d'air sous la DEL et 12 dp avant le bord (`c_dock_cap_top`, `c_dock_cap_bottom`) ;
+Réunion en appel garde son contour orange de 2 dp. Rangées de Touches et d'Applis : 6 dp entre deux lignes (`c_list_gap`, 4 dp ailleurs).
 
 Polices : Departure Mono (`c_font_display` : heure, chiffres, minuteur, numéros des touches ; OFL 1.1, convertie en TrueType
 depuis la release rektdeckard/departure-mono v1.500) ; Barlow Semi Condensed 600 pour les titres et libellés en capitales
