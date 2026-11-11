@@ -41,6 +41,7 @@ Hors périmètre : Compose, Material You dynamique (Android 10), outillage web d
         thème actif lues dans `palettes.xml` (variables CSS) et copiées de `res/font/`. Interactive
         un minimum (boutons, onglets qui changent d'état), sans vraie logique ni donnée réelle. Script
         dans une IIFE (le navigateur d'Orca déclare déjà `close`). `<title>` = « A · nom court ».
+        Laisser libre le coin haut-droit (72 × 72 px) : le bouton Fermer de la tablette s'y pose.
      2. `node scripts/maquettes.mjs <sujet> --compagnon <port>… --appareil <série>…` : sert les
         maquettes, ouvre le sélecteur dans un onglet Orca à droite, pose `adb reverse`. Un compagnon
         par appareil (3000 pour la vraie tablette, celui de son émulateur à soi) ; `--appareil` pour

@@ -17,6 +17,7 @@ import path from "node:path";
 
 const DEFAULT_ROOT = "/tmp/mate-maquettes";
 const LOOPBACK = new Set(["127.0.0.1", "::1", "::ffff:127.0.0.1"]);
+const LOCAL_HOST = /^(127\.0\.0\.1|localhost|\[::1\])(:\d+)?$/i;
 const TYPES = {
   ".html": "text/html; charset=utf-8",
   ".css": "text/css; charset=utf-8",
@@ -53,7 +54,12 @@ function parseArgs(argv) {
   for (const p of [opts.port, ...opts.companions]) {
     if (!Number.isInteger(p) || p < 0 || p > 65535) throw new Error(`Port invalide : ${p}`);
   }
-  opts.dir = path.resolve(opts.target.includes("/") ? opts.target : path.join(DEFAULT_ROOT, opts.target));
+  // Sujet seul : un nom simple (`..` servirait tout /tmp sur le WiFi).
+  if (!opts.target.includes("/") && !/^[\w-]+$/.test(opts.target)) throw new Error(`Sujet invalide : ${opts.target}`);
+  const dir = path.resolve(opts.target.includes("/") ? opts.target : path.join(DEFAULT_ROOT, opts.target));
+  if (!fs.statSync(dir, { throwIfNoEntry: false })?.isDirectory()) throw new Error(`Dossier introuvable : ${dir}`);
+  // Chemin réel (/tmp → /private/tmp sur Mac) : comparé à celui de chaque fichier servi.
+  opts.dir = fs.realpathSync(dir);
   return opts;
 }
 
@@ -198,7 +204,11 @@ function serve(opts) {
       if (url.pathname === "/" && req.method === "GET") return reply(res, 200, TYPES[".html"], selectorPage(variants(opts.dir)));
       if (url.pathname === "/choisir" && req.method === "POST") {
         // Le sélecteur seul (ce Mac) envoie des ordres : pas un autre appareil du WiFi.
-        if (!LOOPBACK.has(req.socket.remoteAddress)) return reply(res, 403, "text/plain", "Depuis ce Mac seulement");
+        // JSON exigé (pré-vérification CORS pour un autre site) et nom local (pas de DNS rebinding).
+        if (!LOOPBACK.has(req.socket.remoteAddress) || !LOCAL_HOST.test(req.headers.host ?? "")) {
+          return reply(res, 403, "text/plain", "Depuis ce Mac seulement");
+        }
+        if (!req.headers["content-type"]?.startsWith("application/json")) return reply(res, 415, "text/plain", "JSON attendu");
         const { file } = await readJson(req);
         if (file !== null && !variants(opts.dir).some((v) => v.file === file)) return reply(res, 404, "text/plain", "Maquette inconnue");
         const lines = await sendPage(opts.companions, opts.server.address().port, file);
@@ -206,9 +216,16 @@ function serve(opts) {
         return reply(res, 200, "application/json", JSON.stringify(lines));
       }
       if (req.method !== "GET") return reply(res, 405, "text/plain", "GET seulement");
-      // Fichiers du dossier seulement (maquettes, polices, images) : rien au-dessus.
-      const file = path.resolve(opts.dir, "." + decodeURIComponent(url.pathname));
-      if (!file.startsWith(opts.dir + path.sep) || !fs.statSync(file, { throwIfNoEntry: false })?.isFile()) {
+      // Fichiers du dossier seulement (maquettes, polices, images) : rien au-dessus, ni fichier caché, ni lien qui sort.
+      const asked = path.resolve(opts.dir, "." + decodeURIComponent(url.pathname));
+      const file = fs.statSync(asked, { throwIfNoEntry: false })?.isFile() ? fs.realpathSync(asked) : "";
+      if (
+        !file.startsWith(opts.dir + path.sep) ||
+        file
+          .slice(opts.dir.length)
+          .split(path.sep)
+          .some((p) => p.startsWith("."))
+      ) {
         return reply(res, 404, "text/plain", "Introuvable");
       }
       return reply(res, 200, TYPES[path.extname(file).toLowerCase()] ?? "application/octet-stream", fs.readFileSync(file));
@@ -245,7 +262,6 @@ function openTab(url) {
 let opts;
 try {
   opts = parseArgs(process.argv.slice(2));
-  if (!fs.statSync(opts.dir, { throwIfNoEntry: false })?.isDirectory()) throw new Error(`Dossier introuvable : ${opts.dir}`);
 } catch (e) {
   console.error(e.message);
   process.exit(1);
@@ -260,6 +276,7 @@ opts.server.listen(opts.port, () => {
   const port = opts.server.address().port;
   const url = `http://127.0.0.1:${port}/`;
   console.log(`Sélecteur : ${url} (${variants(opts.dir).length} maquettes dans ${opts.dir})`);
+  console.log(`Pendant l'essai, ce dossier est lisible par tout le réseau local (port ${port}) : Ctrl+C pour arrêter.`);
   if (opts.adb) adbReverse(port, opts.devices);
   if (opts.tab) openTab(url);
 });

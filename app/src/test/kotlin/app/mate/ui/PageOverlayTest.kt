@@ -19,4 +19,13 @@ class PageOverlayTest {
             assertFalse(url, PageOverlay.isPageUrl(url))
         }
     }
+
+    @Test
+    fun `un lien suivi dans la page reste une page web, majuscules comprises`() {
+        assertTrue(PageOverlay.isWebScheme("HTTPS"))
+        assertTrue(PageOverlay.isWebScheme("http"))
+        for (scheme in listOf("intent", "market", "file", "javascript", null)) {
+            assertFalse(scheme.toString(), PageOverlay.isWebScheme(scheme))
+        }
+    }
 }

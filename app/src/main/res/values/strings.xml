@@ -29,6 +29,7 @@
     <string name="computer_generic">L\'ordinateur</string>
     <string name="refresh">Actualiser</string>
     <string name="close">Fermer</string>
+    <string name="page_unreachable">Page injoignable : %1$s. Le script des maquettes tourne-t-il encore sur l\'ordinateur ?</string>
     <string name="offline">Ordinateur injoignable</string>
     <string name="online">Connecté</string>
     <string name="computer_locked_spoken">Session de l\'ordinateur verrouillée</string>

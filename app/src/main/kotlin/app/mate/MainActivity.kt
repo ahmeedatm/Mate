@@ -556,6 +556,7 @@ class MainActivity : AppCompatActivity() {
 
     override fun onResume() {
         super.onResume()
+        pageOverlay.resume()
         Kiosk.enter(this)
         Accessibility.applyAnimationScale(this, Prefs.reduceMotion(this))
         Screen.apply(this)
@@ -572,6 +573,7 @@ class MainActivity : AppCompatActivity() {
 
     /** Mate quitte l'écran (écran éteint, autre appli) : le mot de réveil n'écoute plus. */
     override fun onPause() {
+        pageOverlay.pause()
         wake.pause()
         presence.pause()
         Screen.stopAmbient(this)

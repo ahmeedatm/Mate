@@ -62,10 +62,16 @@ describe("page en plein écran sur la tablette", () => {
     }
   });
 
+  it("sans jeton, seulement une adresse du réseau local", async () => {
+    for (const url of ["https://exemple.fr/", "http://8.8.8.8/", "http://172.32.0.1/", "http://192.168.1.5.exemple.fr/"]) {
+      assert.equal((await server.call("POST", "/local/tablet/page", { url }, false)).status, 400, url);
+    }
+  });
+
   it("rend l'erreur de la tablette", async () => {
     const polling = nextPage();
     await new Promise((r) => setTimeout(r, 300));
-    const post = server.call("POST", "/local/tablet/page", { url: "https://exemple.fr/" }, false);
+    const post = server.call("POST", "/local/tablet/page", { url: "https://mac.local:4300/c.html" }, false);
     const order = await polling;
     await server.call("POST", "/tablet/result", { id: order.id, ok: false, error: "WebView absent" });
     const done = await post;

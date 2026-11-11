@@ -17,6 +17,7 @@
         style="@style/IconButton"
         android:layout_gravity="top|end"
         android:layout_margin="12dp"
+        android:elevation="6dp"
         android:contentDescription="@string/close"
         android:src="@drawable/ic_close" />
 </FrameLayout>

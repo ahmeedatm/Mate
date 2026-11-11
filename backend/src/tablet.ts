@@ -81,6 +81,20 @@ export type TemplateId = (typeof TEMPLATES)[number]["id"];
 /** Seules adresses que l'ordre `page` ouvre : pas de fichier local, de javascript: ni d'intent. */
 export const isPageUrl = (url: string) => /^https?:$/.test(URL.parse(url)?.protocol ?? "");
 
+/**
+ * Route locale sans jeton (/local/tablet/page) : seulement une adresse du réseau local (maquettes servies par ce Mac),
+ * pour qu'un programme de l'ordinateur ne puisse pas afficher un site public en plein écran sur la tablette.
+ */
+export function isLocalPageUrl(url: string) {
+  if (!isPageUrl(url)) return false;
+  const host = URL.parse(url)!.hostname.toLowerCase();
+  return (
+    host === "localhost" ||
+    host.endsWith(".local") ||
+    /^(127\.|10\.|192\.168\.|172\.(1[6-9]|2\d|3[01])\.|169\.254\.)\d{1,3}\.\d{1,3}(\.\d{1,3})?$/.test(host)
+  );
+}
+
 export type TabletDoc = { name: string; path: string; kind: string; size: number; mtimeMs: number };
 
 export type TabletCommand =
