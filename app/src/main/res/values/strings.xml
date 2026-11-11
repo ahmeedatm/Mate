@@ -1053,6 +1053,8 @@
     <string name="home_card_veil">Voile</string>
     <string name="home_card_flat">Sans filet</string>
     <string name="home_card_bare">À même le fond</string>
+    <string name="theme_instrument">Instrument</string>
+    <string name="theme_instrument_nuit">Instrument nuit</string>
     <string name="theme_chaleur">Chaleur</string>
     <string name="theme_console">Console</string>
     <string name="theme_console_jour">Console jour</string>
@@ -1071,6 +1073,7 @@
     <string name="theme_maison">Maison</string>
     <string name="theme_tableau">Tableau</string>
     <string name="theme_terminal">Terminal</string>
+    <string name="theme_group_instrument">Instrument</string>
     <string name="theme_group_chaleur">Chaleur</string>
     <string name="theme_group_console">Console</string>
     <string name="theme_group_sober">Sobres</string>
@@ -1238,7 +1241,7 @@
     <string name="template_in_call">Appel en cours : choisis le template après l\'appel.</string>
     <string name="template_busy">Un template est déjà en cours de pose.</string>
     <string name="template_bureau">Bureau</string>
-    <string name="template_bureau_desc">La configuration de base : l\'Accueil du jour avec agenda, Focus, applis et raccourcis. Thème Chaleur.</string>
+    <string name="template_bureau_desc">La configuration de base : l\'Accueil du jour avec agenda, Focus, applis et raccourcis. Thème Instrument.</string>
     <string name="template_dev">Dev</string>
     <string name="template_dev_desc">Pour développer : l\'Accueil du jour, puis un écran pour les agents Claude, les MR GitLab, les pipelines et les tickets Jira. Thème Cadran nuit.</string>
     <string name="template_screen_agents">Agents</string>

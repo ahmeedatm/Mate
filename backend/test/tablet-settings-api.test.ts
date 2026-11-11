@@ -77,6 +77,8 @@ describe("panneau Tablette", () => {
   });
 
   const THEMES = [
+    "INSTRUMENT",
+    "INSTRUMENT_NUIT",
     "CHALEUR",
     "CONSOLE",
     "CONSOLE_JOUR",

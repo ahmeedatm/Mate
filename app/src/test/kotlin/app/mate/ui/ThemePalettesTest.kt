@@ -12,7 +12,7 @@ import java.io.File
 class ThemePalettesTest {
     private val xml = File("src/main/res/values/palettes.xml").readText()
 
-    private val sober = listOf("Chaleur", "CadranClair", "CadranSombre")
+    private val sober = listOf("Instrument", "InstrumentNuit", "Chaleur", "CadranClair", "CadranSombre")
     private val retro = listOf("Cadran", "CadranNuit", "Retro")
     private val ambiances = listOf("Registre", "Studio", "Maison", "Tableau", "Terminal")
     private val imported = sober + retro + ambiances
@@ -63,6 +63,19 @@ class ThemePalettesTest {
             assertEquals("false", v["c_mx_bare"])
             assertEquals(v["c_font_title"], v["c_font_label"])
         }
+    }
+
+    @Test
+    fun `Instrument et Instrument nuit ont un signal orange lisible sur le LCD, et Departure Mono pour les chiffres`() {
+        for (name in listOf("Instrument", "InstrumentNuit")) {
+            assertTrue("$name c_signal sur c_mx_lcd_bg : ${ratio(name, "c_signal", "c_mx_lcd_bg")}", ratio(name, "c_signal", "c_mx_lcd_bg") >= 4.5)
+            assertTrue("$name c_mx_lcd_text sur c_mx_lcd_bg", ratio(name, "c_mx_lcd_text", "c_mx_lcd_bg") >= 4.5)
+            assertTrue("$name c_on_signal sur c_signal : ${ratio(name, "c_on_signal", "c_signal")}", ratio(name, "c_on_signal", "c_signal") >= 4.5)
+            assertEquals("$name c_font_display", "@font/departure_mono_400", values(name)["c_font_display"])
+            assertEquals("$name c_label_caps", "true", values(name)["c_label_caps"])
+            assertTrue("$name c_dock_height", values(name)["c_dock_height"] != "0dp")
+        }
+        for (name in all - listOf("Instrument", "InstrumentNuit")) assertEquals("$name c_dock_height", "0dp", values(name)["c_dock_height"])
     }
 
     @Test

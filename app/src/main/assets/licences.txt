@@ -88,6 +88,7 @@ POLICES (SIL Open Font License 1.1, texte plus bas)
 - Atkinson Hyperlegible : Copyright 2020 Braille Institute of America, Inc. (https://github.com/googlefonts/atkinson-hyperlegible)
 - Source Serif 4 : © 2014 - 2021 Adobe Systems Incorporated (http://www.adobe.com/), with Reserved Font Name ‘Source’ (https://github.com/adobe-fonts/source-serif)
 - Hanken Grotesk : Copyright 2021 The Hanken Grotesk Project Authors (https://github.com/marcologous/hanken-grotesk)
+- Departure Mono : Copyright 2022-2024 Helena Zhang (https://github.com/rektdeckard/departure-mono)
 
 DONNÉES
 - Prévisions météo : MET Norway (Institut météorologique norvégien), licence CC BY 4.0,

@@ -11,6 +11,7 @@ import app.mate.R
 
 /** Groupes du choix des Réglages, dans cet ordre (celui des entrées d'[AppTheme]). */
 enum class ThemeGroup(val label: Int) {
+    INSTRUMENT(R.string.theme_group_instrument),
     CHALEUR(R.string.theme_group_chaleur),
     CONSOLE(R.string.theme_group_console),
     SOBRE(R.string.theme_group_sober),
@@ -20,8 +21,9 @@ enum class ThemeGroup(val label: Int) {
 }
 
 /**
- * Thèmes de Mate (docs/ui-ux/da) et ceux d'UnoMate, choisis dans Réglages en six groupes ([ThemeGroup]) : Chaleur (par
- * défaut : crème, terre cuite et serif de livre, d'après claude.ai) ; Console (nuit, et Console jour) ; Sobres (Clair et Sombre : la DA Cadran en blanc et noir francs) ; Rétro
+ * Thèmes de Mate (docs/ui-ux/da) et ceux d'UnoMate, choisis dans Réglages en sept groupes ([ThemeGroup]) : Instrument (par
+ * défaut : Instrument jour et Instrument nuit, un appareil d'aluminium aux écrans LCD et touches numérotées, DA « Instrument tracé »,
+ * Departure Mono pour les chiffres) ; Chaleur (crème, terre cuite et serif de livre, d'après claude.ai) ; Console (nuit, et Console jour) ; Sobres (Clair et Sombre : la DA Cadran en blanc et noir francs) ; Rétro
  * (Cadran, Cadran nuit et Rétro : tube qui coule à droite, c_flow ; grain plus chaud, c_grain_*, posé sur tous les thèmes si Réglages > Thème > Grain est allumé) ; Ambiances (Hush :
  * nuit noire, reflets rose et violet animés derrière les écrans, tuiles en verre, ui/HushBackdrop ; Spider-Verse : son logo
  * en fond fixe, c_wallpaper, contenu rangé autour, c_spine ; Registre, Studio, Maison, Tableau et Terminal : chacun sa police,
@@ -31,9 +33,11 @@ enum class ThemeGroup(val label: Int) {
  * (`?attr/c_…`, res/values/palettes.xml) : changer de thème recrée l'activité. Les thèmes clairs ont leur propre base AppCompat
  * (dialogues et champs clairs) ; la palette de Console et de Console jour est celle de leur base, les autres en posent une
  * par-dessus (une palette à parent AppCompat écraserait colorAccent et colorControlActivated de la base).
- * Chaleur est le thème par défaut : sans choix, ou avec un thème enregistré qui n'existe plus (Nuit, Néon, Chaud…).
+ * Instrument est le thème par défaut : sans choix, ou avec un thème enregistré qui n'existe plus (Nuit, Néon, Chaud…).
  */
 enum class AppTheme(val label: Int, val group: ThemeGroup, val base: Int, val palette: Int? = null) {
+    INSTRUMENT(R.string.theme_instrument, ThemeGroup.INSTRUMENT, R.style.Theme_CompanionLight, R.style.Palette_Instrument),
+    INSTRUMENT_NUIT(R.string.theme_instrument_nuit, ThemeGroup.INSTRUMENT, R.style.Theme_Companion, R.style.Palette_InstrumentNuit),
     CHALEUR(R.string.theme_chaleur, ThemeGroup.CHALEUR, R.style.Theme_CompanionLight, R.style.Palette_Chaleur),
     CONSOLE(R.string.theme_console, ThemeGroup.CONSOLE, R.style.Theme_Companion),
     CONSOLE_JOUR(R.string.theme_console_jour, ThemeGroup.CONSOLE, R.style.Theme_CompanionLight),
@@ -53,7 +57,7 @@ enum class AppTheme(val label: Int, val group: ThemeGroup, val base: Int, val pa
     ;
 
     companion object {
-        fun current(context: Context): AppTheme = entries.firstOrNull { it.name == Prefs.theme(context) } ?: CHALEUR
+        fun current(context: Context): AppTheme = entries.firstOrNull { it.name == Prefs.theme(context) } ?: INSTRUMENT
 
         /** À appeler avant super.onCreate. Police lisible (Réglages > Accessibilité) par-dessus la palette. */
         fun apply(activity: Activity) {

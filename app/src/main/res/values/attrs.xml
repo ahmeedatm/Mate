@@ -106,6 +106,15 @@
         <enum name="scan" value="4" />
     </attr>
     <attr name="c_pattern_color" format="color" />
+    <!-- Instrument : orange vif réservé aux LCD, DEL et à l'aplat de balayage (c_signal), son bord (c_signal_edge), le texte posé
+         dessus (c_on_signal) ; hauteur de la rangée de touches du bas (c_dock_height, 0 = pas de rangée, barre de gauche) ; style
+         des fenêtres LCD des widgets (c_lcd_overlay, référence de style, @null = widgets tels quels). Les autres thèmes : signal =
+         accent, rangée 0dp, pas de style. -->
+    <attr name="c_signal" format="color" />
+    <attr name="c_signal_edge" format="color" />
+    <attr name="c_on_signal" format="color" />
+    <attr name="c_dock_height" format="dimension" />
+    <attr name="c_lcd_overlay" format="reference" />
     <!-- Console de l'onglet Son du deck (plaque unie, afficheurs, curseurs, LED) : ui/mixer/. -->
     <attr name="c_mx_plate" format="color" />
     <!-- Hush : table de mixage nue (plaque transparente), ni vis ni filet après la dernière tranche (ui/mixer). Absent = faux. -->

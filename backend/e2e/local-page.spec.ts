@@ -292,8 +292,10 @@ test.describe("page locale GET /", () => {
     expect(await page.locator("#twin").evaluate((el) => el.style.getPropertyValue("--t-now"))).toBe("#FF2BD6");
     expect(await page.locator("#twin").evaluate((el) => el.style.getPropertyValue("--t-tile"))).toBe("#000000");
 
-    // Les 16 thèmes de la tablette ont leur bouton, dans l'ordre de l'appli.
+    // Les 18 thèmes de la tablette ont leur bouton, dans l'ordre de l'appli.
     await expect(page.locator(".themes button")).toHaveText([
+      "Instrument",
+      "Instrument nuit",
       "Chaleur",
       "Console",
       "Console jour",
@@ -319,6 +321,8 @@ test.describe("page locale GET /", () => {
 
     // Accent de l'aperçu de chaque thème = c_accent de palettes.xml (valeurs relevées à la main). showTwin direct : un clic enverrait un ordre à la tablette.
     const accents = {
+      INSTRUMENT: "#B3380D",
+      INSTRUMENT_NUIT: "#FF8559",
       CHALEUR: "#A34A2B",
       CONSOLE: "#B8F34A",
       CONSOLE_JOUR: "#3F6B00",
@@ -345,12 +349,12 @@ test.describe("page locale GET /", () => {
       ),
     );
     expect(shown).toEqual(accents);
-    // Thème inconnu (tablette plus récente que le compagnon) : l'aperçu prend Chaleur, le thème par défaut.
+    // Thème inconnu (tablette plus récente que le compagnon) : l'aperçu prend Instrument, le thème par défaut.
     const fallback = await page.evaluate(() => {
       (window as unknown as { showTwin: (t: string) => void }).showTwin("INCONNU");
       return document.getElementById("twin")!.style.getPropertyValue("--t-now");
     });
-    expect(fallback).toBe("#A34A2B");
+    expect(fallback).toBe("#B3380D");
 
     await page.locator("#nightdim").uncheck();
     await expect(page.locator("#tabletmsg")).toHaveText("Réglé sur la tablette.");
