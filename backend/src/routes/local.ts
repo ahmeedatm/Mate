@@ -17,7 +17,7 @@ import { WEB_FILES } from "../web-style.ts";
 import { accessibility, openTarget } from "../os.ts";
 import { identity, lanAddresses, notePageVisible, pendingCode, waiting } from "../pairing.ts";
 import { mcpInfo } from "./mcp.ts";
-import { sendToTablet, tabletStatus, THEMES, type TabletSettings } from "../tablet.ts";
+import { isPageUrl, sendToTablet, tabletStatus, THEMES, type TabletSettings } from "../tablet.ts";
 
 const SETTINGS = ["theme", "brightness", "volume", "nightDim", "focusDnd"] satisfies (keyof TabletSettings)[];
 
@@ -179,6 +179,28 @@ export default async function localRoutes(app: FastifyInstance) {
     async (req, reply) => {
       if (!tabletStatus().connected) return reply.code(409).send({ error: "Tablette non connectée" });
       const result = await sendToTablet({ type: "ring", on: req.body.on });
+      return result.ok ? { ok: true } : reply.code(502).send({ error: result.error });
+    },
+  );
+
+  /** Maquettes de scripts/maquettes.mjs (ordre `page`) : page web en plein écran sur la tablette, `null` la ferme. */
+  app.post<{ Body: { url: string | null } }>(
+    "/local/tablet/page",
+    {
+      schema: {
+        body: {
+          type: "object",
+          required: ["url"],
+          additionalProperties: false,
+          properties: { url: { type: ["string", "null"], maxLength: 2000 } },
+        },
+      },
+    },
+    async (req, reply) => {
+      const { url } = req.body;
+      if (url !== null && !isPageUrl(url)) return reply.code(400).send({ error: "Adresse http ou https attendue" });
+      if (!tabletStatus().connected) return reply.code(409).send({ error: "Tablette non connectée" });
+      const result = await sendToTablet({ type: "page", url });
       return result.ok ? { ok: true } : reply.code(502).send({ error: result.error });
     },
   );

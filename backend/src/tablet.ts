@@ -78,6 +78,9 @@ export const TEMPLATES = [
 export const TEMPLATE_IDS = TEMPLATES.map((t) => t.id);
 export type TemplateId = (typeof TEMPLATES)[number]["id"];
 
+/** Seules adresses que l'ordre `page` ouvre : pas de fichier local, de javascript: ni d'intent. */
+export const isPageUrl = (url: string) => /^https?:$/.test(URL.parse(url)?.protocol ?? "");
+
 export type TabletDoc = { name: string; path: string; kind: string; size: number; mtimeMs: number };
 
 export type TabletCommand =
@@ -89,6 +92,8 @@ export type TabletCommand =
   | { type: "screenshot" }
   /** Retrouver la tablette : sonnerie forte en boucle (`on`), arrêtée par un toucher, l'ordre inverse ou au bout de 2 minutes. */
   | { type: "ring"; on: boolean }
+  /** Page web en plein écran par-dessus tout (maquettes de scripts/maquettes.mjs) ; `null` la ferme. http(s) seulement. */
+  | { type: "page"; url: string | null }
   /** Alerte maison (src/alerts.ts) : bannière qui reste jusqu'à un toucher, lue à voix haute. */
   | { type: "alert"; text: string }
   /** Panneau Tablette de la page locale (routes/local.ts). */
