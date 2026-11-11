@@ -32,6 +32,7 @@ import app.mate.ui.home.HomeHost
 import app.mate.ui.home.HomeLayout
 import app.mate.ui.home.HomeRefresh
 import app.mate.ui.home.HomeWidget
+import app.mate.ui.home.LcdStyle
 import app.mate.ui.home.Placed
 import app.mate.ui.home.ProfilesDialog
 import app.mate.ui.home.ROWS
@@ -57,6 +58,7 @@ import java.util.Locale
 class HomeFragment : Fragment(), HomeHost, WidgetGrid.Listener {
 
     private lateinit var grid: WidgetGrid
+    private lateinit var tracer: FrameTracer
     private lateinit var scroll: ScrollView
     private lateinit var editBar: View
     private lateinit var empty: View
@@ -126,6 +128,8 @@ class HomeFragment : Fragment(), HomeHost, WidgetGrid.Listener {
         deckOverlays = null
         catalogueView = null
         grid = view.findViewById(R.id.home_grid)
+        tracer = FrameTracer(requireContext()).apply { visibility = View.GONE }
+        view.findViewById<ViewGroup>(R.id.home_root).addView(tracer, ViewGroup.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT))
         scroll = view.findViewById(R.id.home_scroll)
         editBar = view.findViewById(R.id.home_edit_bar)
         empty = view.findViewById(R.id.home_empty)
@@ -180,8 +184,14 @@ class HomeFragment : Fragment(), HomeHost, WidgetGrid.Listener {
         }
     }
 
+    /** Arrête le tracé d'entrée en cours : ses cartes redeviennent visibles (MainActivity, avant de photographier l'écran). */
+    fun stopTracing() {
+        if (::tracer.isInitialized) tracer.stop()
+    }
+
     override fun onStop() {
         started = false
+        tracer.stop()
         // Les autres panneaux restent : l'écran qui s'éteint ne doit pas perdre une macro à moitié saisie.
         deckOverlays?.hideAgentsBoard()
         closeZoom()
@@ -192,6 +202,7 @@ class HomeFragment : Fragment(), HomeHost, WidgetGrid.Listener {
 
     override fun onHiddenChanged(hidden: Boolean) {
         if (hidden) {
+            tracer.stop()
             closeZoom()
             deckOverlays?.hideAll()
             if (grid.editing) endEdit(keep = true)
@@ -209,6 +220,11 @@ class HomeFragment : Fragment(), HomeHost, WidgetGrid.Listener {
      */
     private fun animateIn() {
         val shown = widgets.keys.filter { it.page == page }.sortedWith(compareBy({ it.row }, { it.col }))
+        // Thèmes Instrument : les cadres se tracent, puis le contenu apparaît (FrameTracer) ; les autres thèmes montent un à un.
+        if (FrameTracer.wanted(requireContext())) {
+            tracer.play(shown.mapNotNull { widgets[it]?.view }, ::isLcd, main?.traceLead() ?: 0L)
+            return
+        }
         var tiles = 0
         for (placed in shown) {
             val widget = widgets[placed] ?: continue
@@ -221,6 +237,9 @@ class HomeFragment : Fragment(), HomeHost, WidgetGrid.Listener {
             }
         }
     }
+
+    /** Fenêtre LCD d'Instrument : elle s'allume par paliers au lieu de fondre. */
+    private fun isLcd(view: View) = (view.tag as? Placed)?.let { LcdStyle.applies(it.type, themeRes(requireContext(), R.attr.c_lcd_overlay)) } == true
 
     // --- Widgets
 
@@ -678,6 +697,8 @@ class HomeFragment : Fragment(), HomeHost, WidgetGrid.Listener {
         val widget = addWidget(placed)
         grid.showPage()
         activate()
+        // Instrument : le nouveau module se trace (les autres sont déjà là).
+        if (FrameTracer.wanted(requireContext())) tracer.play(listOf(widget.view), ::isLcd)
         scope.launch { widget.load() }
         // Touches et météo n'affichent rien tant qu'on ne les a pas réglées.
         if (type == WidgetType.KEYS || type == WidgetType.WEATHER) widget.showSettings()

@@ -6,6 +6,8 @@ import androidx.annotation.StringRes
 import app.mate.ComputerConfig
 import app.mate.R
 import app.mate.net.HomeFeatures
+import app.mate.ui.AppTheme
+import app.mate.ui.ThemeGroup
 import org.json.JSONArray
 import org.json.JSONObject
 
@@ -463,8 +465,12 @@ class HomeLayout(val widgets: MutableList<Placed>, val names: MutableList<String
 
         fun load(context: Context): HomeLayout {
             val raw = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).getString(ComputerConfig.key(context, KEY), null)
-            return raw?.let { runCatching { parse(it) }.getOrNull() } ?: Template.WORK_CADRAN.build()
+            return raw?.let { runCatching { parse(it) }.getOrNull() } ?: defaultTemplate(context).build()
         }
+
+        /** Le modèle d'une tablette neuve : celui d'Instrument (heure et rendez-vous en grand) ou, aux autres thèmes, Travail. */
+        private fun defaultTemplate(context: Context) =
+            if (AppTheme.current(context).group == ThemeGroup.INSTRUMENT) Template.WORK_INSTRUMENT else Template.WORK_CADRAN
 
         /** Ce widget est-il sur l'Accueil (modèle par défaut si rien n'est enregistré) ? */
         fun has(context: Context, type: WidgetType) = load(context).widgets.any { it.type == type }
@@ -509,7 +515,8 @@ class HomeLayout(val widgets: MutableList<Placed>, val names: MutableList<String
 
 /**
  * Modèles prêts à l'emploi : le défaut est Travail. `listed` : proposé à la création d'un
- * profil (Réunion ne l'est que s'il n'existe plus : [HomeLayout.offered]).
+ * profil (Réunion ne l'est que s'il n'existe plus : [HomeLayout.offered] ; Travail Instrument sert de défaut du thème,
+ * il ne double pas Travail dans la liste).
  */
 enum class Template(
     @StringRes val title: Int,
@@ -527,6 +534,19 @@ enum class Template(
         // Touches remplies d'office (Verrouiller, Couper le micro, Ne pas déranger…) : pas de case vide au premier lancement.
         Placed(WidgetType.KEYS, WidgetSize.V, 0, 3, 2, JSONObject().put(KeyRef.DEFAULT_PAGE, "Raccourcis")),
     )),
+    // Instrument : l'heure et le prochain rendez-vous en haut (fenêtres LCD), la ligne du jour 8 h-20 h sur toute la largeur,
+    // puis l'agenda et le Focus l'un sur l'autre, les applis, les touches, l'eau et la météo (4 colonnes × 2 lignes en tout).
+    WORK_INSTRUMENT(R.string.template_work, R.string.template_work_instrument_desc, listOf(
+        Placed(WidgetType.CLOCK, WidgetSize.M, 0, 0, 0),
+        Placed(WidgetType.NEXT, WidgetSize.M, 0, 2, 0),
+        Placed(WidgetType.DAYLINE, WidgetSize.W, 0, 0, 1),
+        Placed(WidgetType.AGENDA, WidgetSize.S, 0, 0, 2),
+        Placed(WidgetType.FOCUS, WidgetSize.S, 0, 0, 3),
+        Placed(WidgetType.APPS, WidgetSize.V, 0, 1, 2),
+        Placed(WidgetType.KEYS, WidgetSize.V, 0, 2, 2, JSONObject().put(KeyRef.DEFAULT_PAGE, "Raccourcis")),
+        Placed(WidgetType.WATER, WidgetSize.S, 0, 3, 2),
+        Placed(WidgetType.WEATHER, WidgetSize.S, 0, 3, 3),
+    ), listed = false),
     STANDBY_CADRAN(R.string.template_standby, R.string.template_standby_cadran_desc, listOf(
         Placed(WidgetType.HERO, WidgetSize.W, 0, 0, 0),
         Placed(WidgetType.DAYLINE, WidgetSize.W, 0, 0, 1),

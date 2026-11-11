@@ -37,7 +37,18 @@ import kotlinx.coroutines.launch
  */
 class FromComputerFragment :
     Fragment(),
-    TopHeader {
+    TopHeader,
+    TracedScreen {
+    /** Thèmes Instrument : les six cartes du choix, tant qu'il est à l'écran. */
+    override fun tracedCards(): List<View> {
+        val root = view ?: return emptyList()
+        if (screen != Screen.CHOICE) return emptyList()
+        return listOf(
+            R.id.docs_choose_files, R.id.docs_choose_web, R.id.docs_choose_clipboard,
+            R.id.docs_choose_frame, R.id.docs_choose_camera_show, R.id.docs_choose_camera_photo,
+        ).map { root.findViewById(it) }
+    }
+
     /** Retour, chemin, nombre, Actualiser, Retour : dans le bandeau du haut. */
     override var topHeader: View? = null
         private set

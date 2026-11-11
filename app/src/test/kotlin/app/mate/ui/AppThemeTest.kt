@@ -13,6 +13,7 @@ class AppThemeTest {
     fun `les themes, dans l'ordre des groupes`() {
         assertEquals(
             listOf(
+                AppTheme.INSTRUMENT, AppTheme.INSTRUMENT_NUIT,
                 AppTheme.CHALEUR,
                 AppTheme.CONSOLE, AppTheme.CONSOLE_JOUR,
                 AppTheme.CLAIR, AppTheme.SOMBRE,
@@ -25,14 +26,15 @@ class AppThemeTest {
     }
 
     @Test
-    fun `six groupes, Chaleur d'abord, Accessibilite en dernier`() {
+    fun `sept groupes, Instrument d'abord, Accessibilite en dernier`() {
         assertEquals(
-            listOf(ThemeGroup.CHALEUR, ThemeGroup.CONSOLE, ThemeGroup.SOBRE, ThemeGroup.RETRO, ThemeGroup.AMBIANCES, ThemeGroup.ACCESSIBILITE),
+            listOf(ThemeGroup.INSTRUMENT, ThemeGroup.CHALEUR, ThemeGroup.CONSOLE, ThemeGroup.SOBRE, ThemeGroup.RETRO, ThemeGroup.AMBIANCES, ThemeGroup.ACCESSIBILITE),
             ThemeGroup.entries,
         )
         assertEquals(ThemeGroup.entries, AppTheme.entries.map { it.group }.distinct())
         assertEquals(
             mapOf(
+                ThemeGroup.INSTRUMENT to listOf(AppTheme.INSTRUMENT, AppTheme.INSTRUMENT_NUIT),
                 ThemeGroup.CHALEUR to listOf(AppTheme.CHALEUR),
                 ThemeGroup.CONSOLE to listOf(AppTheme.CONSOLE, AppTheme.CONSOLE_JOUR),
                 ThemeGroup.SOBRE to listOf(AppTheme.CLAIR, AppTheme.SOMBRE),
@@ -49,6 +51,8 @@ class AppThemeTest {
     @Test
     fun `Clair, Sombre, Cadran, Retro et les ambiances d'UnoMate ont leur base et leur palette`() {
         val expected = mapOf(
+            AppTheme.INSTRUMENT to (R.style.Theme_CompanionLight to R.style.Palette_Instrument),
+            AppTheme.INSTRUMENT_NUIT to (R.style.Theme_Companion to R.style.Palette_InstrumentNuit),
             AppTheme.CHALEUR to (R.style.Theme_CompanionLight to R.style.Palette_Chaleur),
             AppTheme.CLAIR to (R.style.Theme_CompanionLight to R.style.Palette_CadranClair),
             AppTheme.SOMBRE to (R.style.Theme_Companion to R.style.Palette_CadranSombre),
@@ -96,6 +100,12 @@ class AppThemeTest {
     }
 
     @Test
+    fun `Chaleur enregistre est garde`() {
+        Prefs.setTheme(context, "CHALEUR")
+        assertEquals(AppTheme.CHALEUR, AppTheme.current(context))
+    }
+
+    @Test
     fun `Console enregistre est garde`() {
         Prefs.setTheme(context, "CONSOLE")
         assertEquals(AppTheme.CONSOLE, AppTheme.current(context))
@@ -117,6 +127,14 @@ class AppThemeTest {
     fun `Hush enregistre est garde`() {
         Prefs.setTheme(context, "HUSH")
         assertEquals(AppTheme.HUSH, AppTheme.current(context))
+    }
+
+    @Test
+    fun `Instrument et Instrument nuit se choisissent et sont gardes`() {
+        for (theme in listOf(AppTheme.INSTRUMENT, AppTheme.INSTRUMENT_NUIT)) {
+            Prefs.setTheme(context, theme.name)
+            assertEquals(theme, AppTheme.current(context))
+        }
     }
 
     @Test

@@ -1,11 +1,11 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <!-- Thème de lancement (MainActivity) : fenêtre système montrée pendant le cold start avec le logo, avant qu'onCreate
-         pose le vrai thème (AppTheme.apply). Évite l'écran vide au démarrage. Clair, au fond crème de Chaleur (le thème par
-         défaut) : pas de flash noir puis crème ; un thème sombre choisi garde un court passage du crème à la nuit. -->
+         pose le vrai thème (AppTheme.apply). Évite l'écran vide au démarrage. Clair, au fond alu d'Instrument (le thème par
+         défaut) : pas de flash noir puis alu ; un thème sombre choisi garde un court passage de l'alu à la nuit. -->
     <style name="Theme.Companion.Launch" parent="Theme.CompanionLight">
         <item name="android:windowBackground">@drawable/splash_window</item>
-        <item name="c_bg">#FFFAF9F5</item> <!-- controle: permis fenêtre de lancement, montrée avant qu on puisse lire la palette -->
+        <item name="c_bg">#FFE6E3DC</item> <!-- controle: permis fenêtre de lancement, montrée avant qu on puisse lire la palette -->
     </style>
 
     <!-- Fenêtre de « Partager » > Mate : transparente, la Galerie reste visible pendant l'envoi. -->

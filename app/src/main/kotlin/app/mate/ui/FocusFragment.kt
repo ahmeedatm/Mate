@@ -12,6 +12,7 @@ import android.widget.TextView
 import android.widget.Toast
 import androidx.annotation.StringRes
 import androidx.core.content.ContextCompat
+import androidx.core.view.children
 import androidx.fragment.app.Fragment
 import app.mate.MainActivity
 import app.mate.Prefs
@@ -39,7 +40,9 @@ val NoisePlayer.Kind.label: Int
     }
 
 /** Focus : Pomodoro + sons d'ambiance. Les deux continuent quand on change de mode. */
-class FocusFragment : Fragment() {
+class FocusFragment :
+    Fragment(),
+    TracedScreen {
 
     private lateinit var phase: TextView
     private lateinit var time: TextView
@@ -60,6 +63,13 @@ class FocusFragment : Fragment() {
 
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, state: Bundle?): View =
         inflater.inflate(R.layout.fragment_focus, container, false)
+
+    /** Thèmes Instrument : la carte Ambiance, puis les cartes d'humeur. */
+    override fun tracedCards(): List<View> {
+        val root = view ?: return emptyList()
+        val moods = root.findViewById<MoodColumn>(R.id.focus_moods)
+        return listOf<View>(root.findViewById(R.id.focus_ambiance)) + moods.children.filterIsInstance<Button>()
+    }
 
     override fun onViewCreated(view: View, state: Bundle?) {
         phase = view.findViewById(R.id.focus_phase)

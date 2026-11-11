@@ -237,7 +237,7 @@ class ProfilesDialog(
     }
 
     private fun templateIcon(template: Template): Pair<Int, Int> = when (template) {
-        Template.WORK_CADRAN -> R.drawable.ic_tasks to R.attr.c_hue_blue
+        Template.WORK_CADRAN, Template.WORK_INSTRUMENT -> R.drawable.ic_tasks to R.attr.c_hue_blue
         Template.STANDBY_CADRAN -> R.drawable.ic_clock to R.attr.c_hue_orange
         Template.DECK_CADRAN -> R.drawable.ic_deck to R.attr.c_hue_red
         else -> R.drawable.ic_widgets to R.attr.c_hue_violet

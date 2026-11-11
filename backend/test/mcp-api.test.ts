@@ -220,6 +220,8 @@ describe("pont stdio (Claude Desktop)", () => {
       assert.ok(names.includes("profils_ecrire"));
       const res = (await desktop.callTool({ name: "tablette_reglages", arguments: {} })) as Result;
       assert.deepEqual(json(res).themes, [
+        "INSTRUMENT",
+        "INSTRUMENT_NUIT",
         "CHALEUR",
         "CONSOLE",
         "CONSOLE_JOUR",

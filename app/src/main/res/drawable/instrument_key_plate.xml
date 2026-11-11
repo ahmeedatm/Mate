@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Plaque de touche d'Instrument à deux couches (Touches, Applis) : le socle (c_stroke) dépasse sous le capuchon, comme les
+     touches du bas (dock_key_base, dock_key_cap). -->
+<layer-list xmlns:android="http://schemas.android.com/apk/res/android">
+    <item>
+        <shape android:shape="rectangle">
+            <solid android:color="?attr/c_stroke" />
+            <corners android:radius="100dp" />
+        </shape>
+    </item>
+    <item android:bottom="3dp">
+        <shape android:shape="rectangle">
+            <solid android:color="?attr/c_surface_raised" />
+            <stroke android:width="1dp" android:color="?attr/c_stroke" />
+            <corners android:radius="100dp" />
+        </shape>
+    </item>
+</layer-list>

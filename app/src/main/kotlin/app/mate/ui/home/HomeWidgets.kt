@@ -3,6 +3,7 @@ package app.mate.ui.home
 import android.content.Context
 import android.content.res.ColorStateList
 import android.util.TypedValue
+import android.view.ContextThemeWrapper
 import android.view.Gravity
 import android.view.View
 import android.view.ViewGroup
@@ -50,6 +51,7 @@ import app.mate.ui.themeColor
 import app.mate.ui.themeColorList
 import app.mate.ui.themeFont
 import app.mate.ui.themePx
+import app.mate.ui.themeRes
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
@@ -84,6 +86,9 @@ interface HomeHost {
     /** Le cycle de vie de l'écran (viewLifecycleOwner) : [app.mate.ui.AgentsView.attach] en a besoin. */
     val owner: LifecycleOwner
 }
+
+/** Contexte repeint en fenêtre LCD : repérable, pour retrouver le contexte d'origine (`HomeWidget.outerContext`). */
+private class LcdContext(base: Context, overlay: Int) : ContextThemeWrapper(base, overlay)
 
 /**
  * Un widget de l'Accueil : sa vue remplit ses cases. [onMinute] : chaque minute (affichage) ; [load] : chaque minute
@@ -120,6 +125,32 @@ abstract class HomeWidget(val context: Context, val host: HomeHost, val placed: 
 
     open val hasSettings: Boolean get() = false
     open fun showSettings() = Unit
+    /** Ce widget est une fenêtre LCD (Instrument) : chiffres en Departure Mono, orange ([LcdStyle]). */
+    /** Contexte d'origine, pour dialogues, toasts et `as Activity` : le contexte LCD ne sert qu'à créer les vues. */
+    protected val outerContext: Context get() = (context as? LcdContext)?.baseContext ?: context
+
+    protected val lcd get() = LcdStyle.applies(placed.type, themeRes(context, R.attr.c_lcd_overlay))
+
+    /** Le thème pose les widgets de touches dans un panneau à filet, même sans grille (Instrument, `c_home_card_outline`). */
+    protected val panel get() = themeBool(context, R.attr.c_home_card_outline)
+
+    /** Petit titre d'une fenêtre LCD (Eau, Météo) : capitales en Departure Mono, comme la maquette. */
+    protected fun lcdCaption() = label(LCD_CAPTION_SP, R.attr.c_text_dim).apply {
+        typeface = themeFont(context, R.attr.c_font_display)
+        isAllCaps = true
+        letterSpacing = LCD_CAPTION_SPACING
+        maxLines = 1
+    }
+
+    /** Petit titre en capitales d'un panneau de Colonne (Applis, Touches) : la grille a le sien, la liste en manque. Compact : il prend [TileShapes.PANEL_CAPTION_DP]. */
+    protected fun panelCaption(text: Int) = TitleView(context).apply {
+        setText(text)
+        textSize = PANEL_CAPTION_SP
+        includeFontPadding = false
+        minHeight = dp(TileShapes.PANEL_CAPTION_DP)
+        maxHeight = dp(TileShapes.PANEL_CAPTION_DP)
+        gravity = Gravity.CENTER_VERTICAL
+    }
     protected fun color(id: Int) = themeColor(context, id)
     protected fun dp(value: Int) = context.dp(value)
 
@@ -128,6 +159,11 @@ abstract class HomeWidget(val context: Context, val host: HomeHost, val placed: 
         background = HomeCard.background(context)
         val px = padding?.let { dp(it) } ?: themePx(context, R.attr.c_card_pad)
         setPadding(px, px, px, px)
+    }
+
+    /** Widget posé à nu (Héros, Journée, Ligne du jour) : le thème à cadre partout (`c_bare_frame`, Instrument nuit) lui donne quand même la carte au style choisi. */
+    protected fun <T : View> T.barelyFramed(): T = apply {
+        if (themeBool(context, R.attr.c_bare_frame)) background = HomeCard.background(context)
     }
 
     protected fun cardTitle(text: Int) = TitleView(context).apply {
@@ -141,13 +177,30 @@ abstract class HomeWidget(val context: Context, val host: HomeHost, val placed: 
     }
 
     companion object {
+        /** Corps du petit titre d'un panneau de Colonne ([panelCaption]). */
+        const val PANEL_CAPTION_SP = 10f
+
+        /** Titre d'une fenêtre LCD : taille, espacement des lettres, et hauteur qu'il prend ([lcdCaption]). */
+        const val LCD_CAPTION_SP = 11f
+        const val LCD_CAPTION_SPACING = 0.08f
+        const val LCD_CAPTION_DP = 18
+
         /** Voile de la couleur du fond sur un widget indisponible (0x8C : 55 %). */
         private const val UNAVAILABLE_VEIL = 0x8C
 
         /** Sans ordinateur, les widgets qui en ont besoin laissent la place à une carte « Connecter mon ordinateur ». */
         fun create(context: Context, host: HomeHost, placed: Placed, noComputer: Boolean): HomeWidget =
             if (noComputer && placed.type.computer) ConnectWidget(context, host, placed)
-            else when (placed.type) {
+            else build(lcdContext(context, placed.type), host, placed)
+
+        /** Le contexte du thème, repeint en fenêtre LCD (Instrument) pour les widgets de [LcdStyle], posé une seule fois ici. */
+        private fun lcdContext(context: Context, type: WidgetType): Context {
+            val overlay = themeRes(context, R.attr.c_lcd_overlay)
+            return if (LcdStyle.applies(type, overlay)) LcdContext(context, overlay) else context
+        }
+
+        private fun build(context: Context, host: HomeHost, placed: Placed): HomeWidget =
+            when (placed.type) {
                 WidgetType.CLOCK -> ClockWidget(context, host, placed)
                 WidgetType.NEXT -> NextWidget(context, host, placed)
                 WidgetType.AGENDA -> AgendaWidget(context, host, placed)

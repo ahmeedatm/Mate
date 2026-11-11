@@ -148,58 +148,132 @@
 
     </LinearLayout>
 
-    <!-- Écran du mode ; par-dessus, « Aucun ordinateur connecté » pour les modes qui en ont besoin. -->
-    <FrameLayout
-        android:id="@+id/mode_area"
-        android:layout_width="0dp"
-        android:layout_height="match_parent"
-        android:layout_weight="1">
-
-        <!-- Thèmes à tubes seulement (c_flow, sinon GONE) : tubes qui coulent derrière tous les écrans, à droite de la zone des modes
-             (donc pas sous la barre) et sous le bandeau du haut (jamais derrière lui) ; ils défilent d'un écran quand on passe à
-             l'entrée voisine de la barre (ui/home/FlowBandView). -->
-        <app.mate.ui.home.FlowBandView
-            android:id="@+id/flow"
-            android:layout_width="wrap_content"
-            android:layout_height="match_parent"
-            android:layout_gravity="end"
-            android:layout_marginTop="@dimen/top_bar_height" />
-
-        <!-- Sous le bandeau du haut : rien ne défile dessous. Balayage vertical entre les entrées de la barre (ui/RailSwipeLayout). -->
-        <app.mate.ui.RailSwipeLayout
-            android:id="@+id/mode_container"
-            android:layout_marginTop="@dimen/top_bar_height"
-            android:defaultFocusHighlightEnabled="false"
-            tools:targetApi="o"
-            android:focusable="true"
-            android:focusableInTouchMode="true"
-            android:layout_width="match_parent"
-            android:layout_height="match_parent" />
-
-        <include
-            android:id="@+id/no_computer"
-            layout="@layout/view_connect"
-            android:layout_width="match_parent"
-            android:layout_height="match_parent"
-            android:layout_marginTop="@dimen/top_bar_height"
-            android:visibility="gone" />
-
-        <!-- Bandeau du haut, fixe (ui/topbar/TopBar) : en-tête de l'écran à gauche, éléments choisis à droite (lecture en
-             cours, heure, WiFi, batterie…) ; la barre d'état d'Android est masquée en kiosque. -->
-        <app.mate.ui.topbar.TopBar
-            android:id="@+id/top_bar"
-            android:layout_width="match_parent"
-            android:layout_height="@dimen/top_bar_height"
-            android:layout_gravity="top" />
-
-    </FrameLayout>
-
-    <app.mate.ui.DocumentPanel
-        android:id="@+id/document_panel"
+    <!-- Colonne de l'écran : le mode, et en bas la rangée de touches des thèmes Instrument (c_dock_height > 0, sinon masquée :
+         la barre de gauche est là). -->
+    <LinearLayout
+        android:id="@+id/main_column"
         android:layout_width="0dp"
         android:layout_height="match_parent"
         android:layout_weight="1"
-        android:visibility="gone" />
+        android:orientation="vertical">
+
+        <!-- Écran du mode à gauche, panneau document à droite (masqué tant qu'aucun document n'est ouvert) : agrandi, il
+             prend toute la place du mode et la rangée de touches reste dessous. -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="0dp"
+            android:layout_weight="1"
+            android:orientation="horizontal">
+
+        <!-- Écran du mode ; par-dessus, « Aucun ordinateur connecté » pour les modes qui en ont besoin. -->
+        <FrameLayout
+            android:id="@+id/mode_area"
+            android:layout_width="0dp"
+            android:layout_height="match_parent"
+            android:layout_weight="1">
+
+            <!-- Thèmes à tubes seulement (c_flow, sinon GONE) : tubes qui coulent derrière tous les écrans, à droite de la zone des modes
+                 (donc pas sous la barre) et sous le bandeau du haut (jamais derrière lui) ; ils défilent d'un écran quand on passe à
+                 l'entrée voisine de la barre (ui/home/FlowBandView). -->
+            <app.mate.ui.home.FlowBandView
+                android:id="@+id/flow"
+                android:layout_width="wrap_content"
+                android:layout_height="match_parent"
+                android:layout_gravity="end"
+                android:layout_marginTop="@dimen/top_bar_height" />
+
+            <!-- Sous le bandeau du haut : rien ne défile dessous. Balayage vertical entre les entrées de la barre (ui/RailSwipeLayout). -->
+            <app.mate.ui.RailSwipeLayout
+                android:id="@+id/mode_container"
+                android:layout_marginTop="@dimen/top_bar_height"
+                android:defaultFocusHighlightEnabled="false"
+                tools:targetApi="o"
+                android:focusable="true"
+                android:focusableInTouchMode="true"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent" />
+
+            <include
+                android:id="@+id/no_computer"
+                layout="@layout/view_connect"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:layout_marginTop="@dimen/top_bar_height"
+                android:visibility="gone" />
+
+            <!-- Balayage orange des thèmes Instrument (ui/SweepView) : sous le bandeau du haut, caché au repos. -->
+            <app.mate.ui.SweepView
+                android:id="@+id/sweep"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:layout_marginTop="@dimen/top_bar_height"
+                android:visibility="gone" />
+
+            <!-- Tracé des cadres des thèmes Instrument pour Focus, Ordi, Caméra et Réglages (ui/FrameTracer) : caché au repos. -->
+            <app.mate.ui.FrameTracer
+                android:id="@+id/tracer"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:layout_marginTop="@dimen/top_bar_height"
+                android:visibility="gone" />
+
+            <!-- Bandeau du haut, fixe (ui/topbar/TopBar) : en-tête de l'écran à gauche, éléments choisis à droite (lecture en
+                 cours, heure, WiFi, batterie…) ; la barre d'état d'Android est masquée en kiosque. -->
+            <app.mate.ui.topbar.TopBar
+                android:id="@+id/top_bar"
+                android:layout_width="match_parent"
+                android:layout_height="@dimen/top_bar_height"
+                android:layout_gravity="top" />
+
+        </FrameLayout>
+
+        <app.mate.ui.DocumentPanel
+            android:id="@+id/document_panel"
+            android:layout_width="0dp"
+            android:layout_height="match_parent"
+            android:layout_weight="1"
+            android:visibility="gone" />
+        </LinearLayout>
+
+        <!-- Rangée de touches (ui/KeyDock) : Parler, les touches d'écran (dans une zone qui défile quand elles sont nombreuses),
+             « + », un séparateur, les boutons ronds des outils (posés par KeyDock), Verrou. -->
+        <LinearLayout
+            android:id="@+id/key_dock"
+            android:layout_width="match_parent"
+            android:layout_height="?attr/c_dock_height"
+            android:background="@drawable/dock_panel_bg"
+            android:clipToPadding="false"
+            android:orientation="horizontal"
+            android:paddingStart="18dp"
+            android:paddingTop="10dp"
+            android:paddingEnd="18dp"
+            android:paddingBottom="10dp"
+            android:visibility="gone">
+
+            <HorizontalScrollView
+                android:id="@+id/dock_scroll"
+                android:layout_width="0dp"
+                android:layout_height="match_parent"
+                android:layout_weight="1"
+                android:overScrollMode="never"
+                android:scrollbars="none">
+
+                <LinearLayout
+                    android:id="@+id/dock_keys"
+                    android:layout_width="wrap_content"
+                    android:layout_height="match_parent"
+                    android:clipChildren="false"
+                    android:orientation="horizontal" />
+            </HorizontalScrollView>
+
+            <LinearLayout
+                android:id="@+id/dock_end"
+                android:layout_width="wrap_content"
+                android:layout_height="match_parent"
+                android:clipChildren="false"
+                android:orientation="horizontal" />
+        </LinearLayout>
+    </LinearLayout>
 </LinearLayout>
 
     <!-- Premier lancement : tant qu'aucun ordinateur n'est appairé. -->

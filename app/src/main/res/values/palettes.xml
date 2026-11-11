@@ -17,6 +17,13 @@
         <item name="c_tile_bg">@drawable/console_tile_bg</item>
         <item name="c_home_card_bg">@drawable/console_tile_bg</item>
         <item name="c_key_plate">@drawable/round_bg</item>
+        <item name="c_bare_frame">false</item>
+        <item name="c_btn_edge">#00000000</item>
+        <item name="c_dock_socle">?attr/c_stroke</item>
+        <item name="c_dock_socle_on">?attr/c_signal</item>
+        <item name="c_dock_cap_top">12dp</item>
+        <item name="c_dock_cap_bottom">6dp</item>
+        <item name="c_list_gap">4dp</item>
         <item name="c_card_pad">24dp</item>
         <item name="c_font_medium">@font/figtree_500</item>
         <item name="c_font_light">@font/figtree_300</item>
@@ -97,6 +104,13 @@
         <item name="c_grain_dark">#26000000</item>
         <item name="c_pattern">none</item>
         <item name="c_pattern_color">#00000000</item>
+        <item name="c_signal">?attr/c_accent</item>
+        <item name="c_signal_edge">?attr/c_accent</item>
+        <item name="c_on_signal">?attr/c_on_accent</item>
+        <item name="c_dock_height">0dp</item>
+        <item name="c_lcd_overlay">@null</item>
+        <item name="c_home_card_outline">false</item>
+        <item name="c_block_radius">40dp</item>
     </style>
 
     <style name="Palette.ConsoleJour" parent="Theme.AppCompat.Light.NoActionBar">
@@ -111,6 +125,13 @@
         <item name="c_tile_bg">@drawable/console_tile_bg</item>
         <item name="c_home_card_bg">@drawable/console_tile_bg</item>
         <item name="c_key_plate">@drawable/round_bg</item>
+        <item name="c_bare_frame">false</item>
+        <item name="c_btn_edge">#00000000</item>
+        <item name="c_dock_socle">?attr/c_stroke</item>
+        <item name="c_dock_socle_on">?attr/c_signal</item>
+        <item name="c_dock_cap_top">12dp</item>
+        <item name="c_dock_cap_bottom">6dp</item>
+        <item name="c_list_gap">4dp</item>
         <item name="c_card_pad">24dp</item>
         <item name="c_font_medium">@font/figtree_500</item>
         <item name="c_font_light">@font/figtree_300</item>
@@ -191,6 +212,13 @@
         <item name="c_grain_dark">#14000000</item>
         <item name="c_pattern">none</item>
         <item name="c_pattern_color">#00000000</item>
+        <item name="c_signal">?attr/c_accent</item>
+        <item name="c_signal_edge">?attr/c_accent</item>
+        <item name="c_on_signal">?attr/c_on_accent</item>
+        <item name="c_dock_height">0dp</item>
+        <item name="c_lcd_overlay">@null</item>
+        <item name="c_home_card_outline">false</item>
+        <item name="c_block_radius">40dp</item>
     </style>
 
     <!-- Contraste élevé : Console jour (mêmes formes, Figtree, un seul accent) en lisibilité maximale.
@@ -209,6 +237,13 @@
         <item name="c_tile_bg">@drawable/contraste_tile_bg</item>
         <item name="c_home_card_bg">@drawable/contraste_tile_bg</item>
         <item name="c_key_plate">@drawable/round_bg</item>
+        <item name="c_bare_frame">false</item>
+        <item name="c_btn_edge">#00000000</item>
+        <item name="c_dock_socle">?attr/c_stroke</item>
+        <item name="c_dock_socle_on">?attr/c_signal</item>
+        <item name="c_dock_cap_top">12dp</item>
+        <item name="c_dock_cap_bottom">6dp</item>
+        <item name="c_list_gap">4dp</item>
         <item name="c_card_pad">24dp</item>
         <item name="c_font_medium">@font/figtree_500</item>
         <item name="c_font_light">@font/figtree_400</item>
@@ -289,6 +324,13 @@
         <item name="c_grain_dark">#00000000</item>
         <item name="c_pattern">none</item>
         <item name="c_pattern_color">#00000000</item>
+        <item name="c_signal">?attr/c_accent</item>
+        <item name="c_signal_edge">?attr/c_accent</item>
+        <item name="c_on_signal">?attr/c_on_accent</item>
+        <item name="c_dock_height">0dp</item>
+        <item name="c_lcd_overlay">@null</item>
+        <item name="c_home_card_outline">false</item>
+        <item name="c_block_radius">40dp</item>
     </style>
 
     <!-- Hush : nuit noire, reflets rose et violet qui bougent derrière tous les écrans (c_backdrop, ui/HushBackdrop),
@@ -309,6 +351,13 @@
         <item name="c_tile_bg">@drawable/hush_tile_bg</item>
         <item name="c_home_card_bg">@drawable/hush_tile_bg</item>
         <item name="c_key_plate">@drawable/hush_key_plate</item>
+        <item name="c_bare_frame">false</item>
+        <item name="c_btn_edge">#00000000</item>
+        <item name="c_dock_socle">?attr/c_stroke</item>
+        <item name="c_dock_socle_on">?attr/c_signal</item>
+        <item name="c_dock_cap_top">12dp</item>
+        <item name="c_dock_cap_bottom">6dp</item>
+        <item name="c_list_gap">4dp</item>
         <item name="c_card_pad">24dp</item>
         <item name="c_font_medium">@font/chakra_petch_500</item>
         <item name="c_font_light">@font/chakra_petch_400</item>
@@ -390,6 +439,13 @@
         <item name="c_grain_dark">#26000000</item>
         <item name="c_pattern">none</item>
         <item name="c_pattern_color">#00000000</item>
+        <item name="c_signal">?attr/c_accent</item>
+        <item name="c_signal_edge">?attr/c_accent</item>
+        <item name="c_on_signal">?attr/c_on_accent</item>
+        <item name="c_dock_height">0dp</item>
+        <item name="c_lcd_overlay">@null</item>
+        <item name="c_home_card_outline">false</item>
+        <item name="c_block_radius">40dp</item>
     </style>
 
     <!-- Spider-Verse (Palette.SpiderMan, AppTheme.SPIDERMAN ; direction A3, 2026-11-01) : le logo araignée de Spider-Verse en fond fixe (c_wallpaper, voile cuit
@@ -409,6 +465,13 @@
         <item name="c_tile_bg">@drawable/hush_tile_bg</item>
         <item name="c_home_card_bg">@drawable/hush_tile_bg</item>
         <item name="c_key_plate">@drawable/hush_key_plate</item>
+        <item name="c_bare_frame">false</item>
+        <item name="c_btn_edge">#00000000</item>
+        <item name="c_dock_socle">?attr/c_stroke</item>
+        <item name="c_dock_socle_on">?attr/c_signal</item>
+        <item name="c_dock_cap_top">12dp</item>
+        <item name="c_dock_cap_bottom">6dp</item>
+        <item name="c_list_gap">4dp</item>
         <item name="c_card_pad">24dp</item>
         <item name="c_font_medium">@font/chakra_petch_500</item>
         <item name="c_font_light">@font/chakra_petch_400</item>
@@ -490,6 +553,282 @@
         <item name="c_grain_dark">#26000000</item>
         <item name="c_pattern">none</item>
         <item name="c_pattern_color">#00000000</item>
+        <item name="c_signal">?attr/c_accent</item>
+        <item name="c_signal_edge">?attr/c_accent</item>
+        <item name="c_on_signal">?attr/c_on_accent</item>
+        <item name="c_dock_height">0dp</item>
+        <item name="c_lcd_overlay">@null</item>
+        <item name="c_home_card_outline">false</item>
+        <item name="c_block_radius">40dp</item>
+    </style>
+
+    <!-- Instrument (DA « Instrument tracé », 11/11/2026, docs/ui-ux/da) : un appareil d'aluminium aux fenêtres LCD et aux
+         touches numérotées. Alu #E6E3DC, touche #F2F0EB, encre #1E1D1B. Un seul orange : c_accent #B3380D (4,7:1 sur l'alu)
+         pour le texte et les aplats, c_signal #FF5A1F réservé aux LCD, DEL et à l'aplat de balayage. Chiffres en Departure Mono
+         (OFL), titres et libellés en Barlow Semi Condensed 600 capitales, textes en Barlow. -->
+    <!-- Fenêtre LCD d'Instrument (c_lcd_overlay) : posée par-dessus la palette sur l'heure, le prochain rendez-vous, l'agenda,
+         le Focus, l'eau et la météo (ui/home/LcdStyle) : fond d'afficheur, texte crème, chiffres et aplats orange (c_signal). -->
+    <style name="Lcd.Instrument" parent="">
+        <item name="c_bg">#FF141414</item>
+        <item name="c_surface">#FF141414</item>
+        <item name="c_surface_raised">#FF1E1E1E</item>
+        <item name="c_surface_pressed">#FF1E1E1E</item>
+        <item name="c_text">#FFF1EDE4</item>
+        <item name="c_text_dim">#FFA29D92</item>
+        <item name="c_text_faint">#FF8F8A7F</item>
+        <item name="c_accent">#FFFF5A1F</item>
+        <item name="c_on_accent">#FF141414</item>
+        <item name="c_font_light">@font/departure_mono_400</item>
+        <item name="c_hue_orange">#FFFF5A1F</item>
+        <item name="c_hue_cyan">#FFFF5A1F</item>
+        <item name="c_ok">#FF9CC08A</item>
+        <item name="c_ko">#FFFF7A66</item>
+        <item name="c_warn">#FFF2C46B</item>
+        <item name="c_home_card_bg">@drawable/instrument_lcd_bg</item>
+        <item name="c_home_card_outline">false</item>
+        <item name="c_graphic">#FFA14A24</item>
+    </style>
+
+    <style name="Lcd.InstrumentNuit" parent="">
+        <item name="c_bg">#FF000000</item>
+        <item name="c_surface">#FF050505</item>
+        <item name="c_surface_raised">#FF0D0D0D</item>
+        <item name="c_surface_pressed">#FF1C1C1C</item>
+        <item name="c_text">#FFF1EDE4</item>
+        <item name="c_text_dim">#FFA29D92</item>
+        <item name="c_text_faint">#FF8F8A7F</item>
+        <item name="c_accent">#FFFF5A1F</item>
+        <item name="c_on_accent">#FF141414</item>
+        <item name="c_font_light">@font/departure_mono_400</item>
+        <item name="c_hue_orange">#FFFF5A1F</item>
+        <item name="c_hue_cyan">#FFFF5A1F</item>
+        <item name="c_ok">#FF9CC08A</item>
+        <item name="c_ko">#FFFF7A66</item>
+        <item name="c_warn">#FFF2C46B</item>
+        <item name="c_home_card_bg">@drawable/instrument_nuit_lcd_bg</item>
+        <item name="c_home_card_outline">true</item>
+        <item name="c_primary">#FF0D0D0D</item>
+        <item name="c_on_primary">#FFFF5A1F</item>
+        <item name="c_primary_pressed">#FF1C1C1C</item>
+        <item name="c_graphic">#FFA14A24</item>
+    </style>
+
+    <style name="Palette.Instrument" parent="">
+        <item name="c_card_bg">@drawable/instrument_tile_bg</item>
+        <item name="c_tile_bg">@drawable/instrument_tile_bg</item>
+        <item name="c_home_card_bg">@drawable/instrument_tile_bg</item>
+        <item name="c_card_pad">20dp</item>
+        <item name="c_talk">?attr/c_signal</item>
+        <item name="c_talk_live">?attr/c_text</item>
+        <item name="c_wallpaper">@null</item>
+        <item name="c_spine">0dp</item>
+        <item name="c_label">?attr/c_text_dim</item>
+        <item name="c_slider_thumb">?attr/c_accent</item>
+        <item name="c_slider_track">?attr/c_text_faint</item>
+        <item name="c_key_plate">@drawable/instrument_key_plate</item>
+        <item name="c_bare_frame">false</item>
+        <item name="c_btn_edge">#00000000</item>
+        <item name="c_dock_socle">?attr/c_stroke</item>
+        <item name="c_dock_socle_on">?attr/c_signal</item>
+        <item name="c_dock_cap_top">12dp</item>
+        <item name="c_dock_cap_bottom">6dp</item>
+        <item name="c_list_gap">4dp</item>
+        <item name="c_primary">?attr/c_accent</item>
+        <item name="c_on_primary">?attr/c_on_accent</item>
+        <item name="c_primary_pressed">#FF8F2C0A</item>
+        <item name="c_font_medium">@font/barlow_semicondensed_500</item>
+        <item name="c_font_light">@font/barlow_400</item>
+        <item name="c_font_regular">@font/barlow_400</item>
+        <item name="c_font_title">@font/barlow_semicondensed_600</item>
+        <item name="c_font_display">@font/departure_mono_400</item>
+        <item name="c_font_label">@font/barlow_semicondensed_600</item>
+        <item name="c_label_caps">true</item>
+        <item name="c_text_shadow">#00000000</item>
+        <item name="android:fontFamily">@font/barlow_400</item>
+        <item name="c_bg">#FFE6E3DC</item>
+        <item name="c_rail">#FFE6E3DC</item>
+        <item name="c_surface">#FFEFEDE7</item>
+        <item name="c_surface_raised">#FFF2F0EB</item>
+        <item name="c_surface_pressed">#FFD6D2C8</item>
+        <item name="c_stroke">#FFB7B2A6</item>
+        <item name="c_accent">#FFB3380D</item>
+        <item name="c_accent_soft">#FFF3DDD3</item>
+        <item name="c_on_accent">#FFF2F0EB</item>
+        <item name="c_text">#FF1E1D1B</item>
+        <item name="c_frame_bg">#FF000000</item>
+        <item name="c_frame_text">#FFFFFFFF</item>
+        <item name="c_frame_shadow">#99000000</item>
+        <item name="c_text_dim">#FF5A564E</item>
+        <item name="c_text_faint">#FF625E55</item>
+        <item name="c_graphic">#FF766F63</item>
+        <item name="c_ok">#FF4A6A2E</item>
+        <item name="c_ok_soft">#FFE3EAD6</item>
+        <item name="c_ko">#FFB23A2E</item>
+        <item name="c_ko_soft">#24B23A2E</item>
+        <item name="c_on_ko">#FFFFFFFF</item>
+        <item name="c_warn">#FF8A5A00</item>
+        <item name="c_agent_wait">#FFB23A2E</item>
+        <item name="c_agent_done">#FF4A6A2E</item>
+        <item name="c_agent_limit">#FF2F5F8F</item>
+        <item name="c_agent_work">#FFA34A2B</item>
+        <item name="c_agent_monitor">#FF7A5B00</item>
+        <item name="c_paper">#FFFFFFFF</item>
+        <item name="c_scrim">#52000000</item>
+        <item name="c_hue_orange">#FFA34A2B</item>
+        <item name="c_hue_cyan">#FF2F6F78</item>
+        <item name="c_hue_violet">#FF6A5596</item>
+        <item name="c_hue_pink">#FF9E4566</item>
+        <item name="c_hue_yellow">#FF7A5B00</item>
+        <item name="c_hue_blue">#FF3A6A9A</item>
+        <item name="c_hue_red">#FFB23A2E</item>
+        <item name="c_hue_green">#FF4A6A2E</item>
+        <item name="c_mx_plate">?attr/c_bg</item>
+        <item name="c_mx_lcd_bg">#FF141414</item>
+        <item name="c_mx_lcd_text">#FFF1EDE4</item>
+        <item name="c_mx_text">?attr/c_text</item>
+        <item name="c_mx_slot">?attr/c_text</item>
+        <item name="c_mx_cap_top">?attr/c_text_dim</item>
+        <item name="c_mx_cap_bottom">?attr/c_text</item>
+        <item name="c_mx_cap_line">?attr/c_surface</item>
+        <item name="c_mx_led_off">?attr/c_text_dim</item>
+        <item name="c_mx_led_low">#FF9CC08A</item>
+        <item name="c_mx_led_mid">#FFF2C46B</item>
+        <item name="c_mx_led_high">#FFFF5A1F</item>
+        <item name="c_mx_engrave">?attr/c_text_faint</item>
+        <item name="c_mx_shadow">#24000000</item>
+        <item name="c_mx_highlight">#FFFFFFFF</item>
+        <item name="c_mx_key_top">?attr/c_surface</item>
+        <item name="c_mx_key_bottom">?attr/c_surface_raised</item>
+        <item name="c_big_keys">false</item>
+        <item name="c_title_size">16sp</item>
+        <item name="c_backdrop">false</item>
+        <item name="c_mx_bare">false</item>
+        <item name="c_flow">false</item>
+        <item name="c_flow_dark">#00000000</item>
+        <item name="c_flow_red">#00000000</item>
+        <item name="c_flow_orange">#00000000</item>
+        <item name="c_flow_cream">#00000000</item>
+        <item name="c_grain_light">#33FFFFFF</item>
+        <item name="c_grain_dark">#14000000</item>
+        <item name="c_pattern">none</item>
+        <item name="c_pattern_color">#00000000</item>
+        <item name="c_signal">#FFFF5A1F</item>
+        <item name="c_signal_edge">#FFB3380D</item>
+        <item name="c_on_signal">#FF1E1D1B</item>
+        <item name="c_dock_height">116dp</item>
+        <item name="c_lcd_overlay">@style/Lcd.Instrument</item>
+        <item name="c_home_card_outline">true</item>
+        <item name="c_block_radius">12dp</item>
+    </style>
+
+    <!-- Instrument nuit : noir pur : fond #000000, cartes #050505, filet #3A3A3A. Orange éclairci #FF8559 pour tenir 4,5:1
+         sur le panneau et la touche ; le signal vif #FF5A1F reste pour les LCD, DEL et l'aplat. -->
+    <style name="Palette.InstrumentNuit" parent="">
+        <item name="c_card_bg">@drawable/instrument_tile_bg</item>
+        <item name="c_tile_bg">@drawable/instrument_tile_bg</item>
+        <item name="c_home_card_bg">@drawable/instrument_tile_bg</item>
+        <item name="c_card_pad">20dp</item>
+        <item name="c_talk">?attr/c_signal</item>
+        <item name="c_talk_live">?attr/c_text</item>
+        <item name="c_wallpaper">@null</item>
+        <item name="c_spine">0dp</item>
+        <item name="c_label">?attr/c_text_dim</item>
+        <item name="c_slider_thumb">?attr/c_accent</item>
+        <item name="c_slider_track">?attr/c_text_faint</item>
+        <item name="c_key_plate">@drawable/instrument_nuit_key_plate</item>
+        <item name="c_bare_frame">true</item>
+        <item name="c_btn_edge">?attr/c_stroke</item>
+        <item name="c_dock_socle">#00000000</item>
+        <item name="c_dock_socle_on">#00000000</item>
+        <item name="c_dock_cap_top">18dp</item>
+        <item name="c_dock_cap_bottom">10dp</item>
+        <item name="c_list_gap">6dp</item>
+        <item name="c_primary">?attr/c_accent</item>
+        <item name="c_on_primary">?attr/c_on_accent</item>
+        <item name="c_primary_pressed">#FFFF9E7B</item>
+        <item name="c_font_medium">@font/barlow_semicondensed_500</item>
+        <item name="c_font_light">@font/barlow_400</item>
+        <item name="c_font_regular">@font/barlow_400</item>
+        <item name="c_font_title">@font/barlow_semicondensed_600</item>
+        <item name="c_font_display">@font/departure_mono_400</item>
+        <item name="c_font_label">@font/barlow_semicondensed_600</item>
+        <item name="c_label_caps">true</item>
+        <item name="c_text_shadow">#00000000</item>
+        <item name="android:fontFamily">@font/barlow_400</item>
+        <item name="c_bg">#FF000000</item>
+        <item name="c_rail">#FF000000</item>
+        <item name="c_surface">#FF050505</item>
+        <item name="c_surface_raised">#FF0D0D0D</item>
+        <item name="c_surface_pressed">#FF1C1C1C</item>
+        <item name="c_stroke">#FF3A3A3A</item>
+        <item name="c_accent">#FFFF8559</item>
+        <item name="c_accent_soft">#FF4A2E22</item>
+        <item name="c_on_accent">#FF1E1D1B</item>
+        <item name="c_text">#FFECE8DF</item>
+        <item name="c_frame_bg">#FF000000</item>
+        <item name="c_frame_text">#FFFFFFFF</item>
+        <item name="c_frame_shadow">#99000000</item>
+        <item name="c_text_dim">#FFB4AFA3</item>
+        <item name="c_text_faint">#FFAEA99D</item>
+        <item name="c_graphic">#FF8A857A</item>
+        <item name="c_ok">#FF7FD8A6</item>
+        <item name="c_ok_soft">#FF1C3A2B</item>
+        <item name="c_ko">#FFFF8379</item>
+        <item name="c_ko_soft">#33FF7A70</item>
+        <item name="c_on_ko">#FF2A0707</item>
+        <item name="c_warn">#FFFFC24B</item>
+        <item name="c_agent_wait">#FFF87171</item>
+        <item name="c_agent_done">#FF5DD39E</item>
+        <item name="c_agent_limit">#FF6CB4FF</item>
+        <item name="c_agent_work">#FFFB923C</item>
+        <item name="c_agent_monitor">#FFFACC15</item>
+        <item name="c_paper">#FFFFFFFF</item>
+        <item name="c_scrim">#B3000000</item>
+        <item name="c_hue_orange">#FFFFA45B</item>
+        <item name="c_hue_cyan">#FF5FD4E8</item>
+        <item name="c_hue_violet">#FFB39CFF</item>
+        <item name="c_hue_pink">#FFFF8FB8</item>
+        <item name="c_hue_yellow">#FFFFD45B</item>
+        <item name="c_hue_blue">#FF6FA8FF</item>
+        <item name="c_hue_red">#FFFF8379</item>
+        <item name="c_hue_green">#FFB8F34A</item>
+        <item name="c_mx_plate">?attr/c_bg</item>
+        <item name="c_mx_lcd_bg">#FF000000</item>
+        <item name="c_mx_lcd_text">#FFF1EDE4</item>
+        <item name="c_mx_text">?attr/c_text</item>
+        <item name="c_mx_slot">?attr/c_bg</item>
+        <item name="c_mx_cap_top">?attr/c_text</item>
+        <item name="c_mx_cap_bottom">?attr/c_text_faint</item>
+        <item name="c_mx_cap_line">?attr/c_bg</item>
+        <item name="c_mx_led_off">?attr/c_surface_raised</item>
+        <item name="c_mx_led_low">#FF9CC08A</item>
+        <item name="c_mx_led_mid">#FFF2C46B</item>
+        <item name="c_mx_led_high">#FFFF5A1F</item>
+        <item name="c_mx_engrave">?attr/c_text_faint</item>
+        <item name="c_mx_shadow">#66000000</item>
+        <item name="c_mx_highlight">#14FFFFFF</item>
+        <item name="c_mx_key_top">?attr/c_stroke</item>
+        <item name="c_mx_key_bottom">?attr/c_surface_raised</item>
+        <item name="c_big_keys">false</item>
+        <item name="c_title_size">16sp</item>
+        <item name="c_backdrop">false</item>
+        <item name="c_mx_bare">false</item>
+        <item name="c_flow">false</item>
+        <item name="c_flow_dark">#00000000</item>
+        <item name="c_flow_red">#00000000</item>
+        <item name="c_flow_orange">#00000000</item>
+        <item name="c_flow_cream">#00000000</item>
+        <item name="c_grain_light">#0AFFFFFF</item>
+        <item name="c_grain_dark">#26000000</item>
+        <item name="c_pattern">none</item>
+        <item name="c_pattern_color">#00000000</item>
+        <item name="c_signal">#FFFF5A1F</item>
+        <item name="c_signal_edge">#FFB3380D</item>
+        <item name="c_on_signal">#FF1E1D1B</item>
+        <item name="c_dock_height">116dp</item>
+        <item name="c_lcd_overlay">@style/Lcd.InstrumentNuit</item>
+        <item name="c_home_card_outline">true</item>
+        <item name="c_block_radius">12dp</item>
     </style>
 
     <!-- Chaleur (par défaut, 05/11/2026) : la DA de claude.ai et anthropic.com relevée sur les sites (crème, terre cuite,
@@ -508,6 +847,13 @@
         <item name="c_slider_thumb">?attr/c_accent</item>
         <item name="c_slider_track">?attr/c_text_faint</item>
         <item name="c_key_plate">@drawable/round_bg</item>
+        <item name="c_bare_frame">false</item>
+        <item name="c_btn_edge">#00000000</item>
+        <item name="c_dock_socle">?attr/c_stroke</item>
+        <item name="c_dock_socle_on">?attr/c_signal</item>
+        <item name="c_dock_cap_top">12dp</item>
+        <item name="c_dock_cap_bottom">6dp</item>
+        <item name="c_list_gap">4dp</item>
         <item name="c_primary">?attr/c_accent</item>
         <item name="c_on_primary">?attr/c_on_accent</item>
         <item name="c_primary_pressed">#FF8F4127</item>
@@ -587,6 +933,13 @@
         <item name="c_grain_dark">#14000000</item>
         <item name="c_pattern">none</item>
         <item name="c_pattern_color">#00000000</item>
+        <item name="c_signal">?attr/c_accent</item>
+        <item name="c_signal_edge">?attr/c_accent</item>
+        <item name="c_on_signal">?attr/c_on_accent</item>
+        <item name="c_dock_height">0dp</item>
+        <item name="c_lcd_overlay">@null</item>
+        <item name="c_home_card_outline">false</item>
+        <item name="c_block_radius">40dp</item>
     </style>
 
     <!-- Clair et Sombre : la DA Cadran sans texture (blanc et noir francs, sans tubes, grain seulement par le réglage), rouge Unowhy en accent, Outfit.
@@ -604,6 +957,13 @@
         <item name="c_slider_thumb">?attr/c_accent</item>
         <item name="c_slider_track">?attr/c_text_faint</item>
         <item name="c_key_plate">@drawable/round_bg</item>
+        <item name="c_bare_frame">false</item>
+        <item name="c_btn_edge">#00000000</item>
+        <item name="c_dock_socle">?attr/c_stroke</item>
+        <item name="c_dock_socle_on">?attr/c_signal</item>
+        <item name="c_dock_cap_top">12dp</item>
+        <item name="c_dock_cap_bottom">6dp</item>
+        <item name="c_list_gap">4dp</item>
         <item name="c_primary">?attr/c_text</item>
         <item name="c_on_primary">?attr/c_bg</item>
         <item name="c_primary_pressed">?attr/c_text_dim</item>
@@ -683,6 +1043,13 @@
         <item name="c_grain_dark">#14000000</item>
         <item name="c_pattern">none</item>
         <item name="c_pattern_color">#00000000</item>
+        <item name="c_signal">?attr/c_accent</item>
+        <item name="c_signal_edge">?attr/c_accent</item>
+        <item name="c_on_signal">?attr/c_on_accent</item>
+        <item name="c_dock_height">0dp</item>
+        <item name="c_lcd_overlay">@null</item>
+        <item name="c_home_card_outline">false</item>
+        <item name="c_block_radius">40dp</item>
     </style>
 
     <style name="Palette.CadranSombre" parent="">
@@ -698,6 +1065,13 @@
         <item name="c_slider_thumb">?attr/c_accent</item>
         <item name="c_slider_track">?attr/c_text_faint</item>
         <item name="c_key_plate">@drawable/round_bg</item>
+        <item name="c_bare_frame">false</item>
+        <item name="c_btn_edge">#00000000</item>
+        <item name="c_dock_socle">?attr/c_stroke</item>
+        <item name="c_dock_socle_on">?attr/c_signal</item>
+        <item name="c_dock_cap_top">12dp</item>
+        <item name="c_dock_cap_bottom">6dp</item>
+        <item name="c_list_gap">4dp</item>
         <item name="c_primary">?attr/c_text</item>
         <item name="c_on_primary">?attr/c_bg</item>
         <item name="c_primary_pressed">?attr/c_text_dim</item>
@@ -777,6 +1151,13 @@
         <item name="c_grain_dark">#26000000</item>
         <item name="c_pattern">none</item>
         <item name="c_pattern_color">#00000000</item>
+        <item name="c_signal">?attr/c_accent</item>
+        <item name="c_signal_edge">?attr/c_accent</item>
+        <item name="c_on_signal">?attr/c_on_accent</item>
+        <item name="c_dock_height">0dp</item>
+        <item name="c_lcd_overlay">@null</item>
+        <item name="c_home_card_outline">false</item>
+        <item name="c_block_radius">40dp</item>
     </style>
 
     <!-- Cadran : rôles Material 3 générés depuis le rouge Unowhy, une seule couleur vivante. Texture de Rétro (grain, tubes qui
@@ -796,6 +1177,13 @@
         <item name="c_slider_thumb">?attr/c_accent</item>
         <item name="c_slider_track">?attr/c_text_faint</item>
         <item name="c_key_plate">@drawable/round_bg</item>
+        <item name="c_bare_frame">false</item>
+        <item name="c_btn_edge">#00000000</item>
+        <item name="c_dock_socle">?attr/c_stroke</item>
+        <item name="c_dock_socle_on">?attr/c_signal</item>
+        <item name="c_dock_cap_top">12dp</item>
+        <item name="c_dock_cap_bottom">6dp</item>
+        <item name="c_list_gap">4dp</item>
         <item name="c_flow">true</item>
         <item name="c_flow_dark">#FF680018</item>
         <item name="c_flow_red">#FFCA0538</item>
@@ -875,6 +1263,13 @@
         <item name="c_mx_bare">false</item>
         <item name="c_pattern">none</item>
         <item name="c_pattern_color">#00000000</item>
+        <item name="c_signal">?attr/c_accent</item>
+        <item name="c_signal_edge">?attr/c_accent</item>
+        <item name="c_on_signal">?attr/c_on_accent</item>
+        <item name="c_dock_height">0dp</item>
+        <item name="c_lcd_overlay">@null</item>
+        <item name="c_home_card_outline">false</item>
+        <item name="c_block_radius">40dp</item>
     </style>
 
     <!-- Cadran nuit : même texture que Cadran (grain, tubes, widgets translucides) sur un charbon chaud plutôt que noir ;
@@ -892,6 +1287,13 @@
         <item name="c_slider_thumb">?attr/c_accent</item>
         <item name="c_slider_track">?attr/c_text_faint</item>
         <item name="c_key_plate">@drawable/round_bg</item>
+        <item name="c_bare_frame">false</item>
+        <item name="c_btn_edge">#00000000</item>
+        <item name="c_dock_socle">?attr/c_stroke</item>
+        <item name="c_dock_socle_on">?attr/c_signal</item>
+        <item name="c_dock_cap_top">12dp</item>
+        <item name="c_dock_cap_bottom">6dp</item>
+        <item name="c_list_gap">4dp</item>
         <item name="c_flow">true</item>
         <item name="c_flow_dark">#FF6E1028</item>
         <item name="c_flow_red">#FFA3123A</item>
@@ -971,6 +1373,13 @@
         <item name="c_mx_bare">false</item>
         <item name="c_pattern">none</item>
         <item name="c_pattern_color">#00000000</item>
+        <item name="c_signal">?attr/c_accent</item>
+        <item name="c_signal_edge">?attr/c_accent</item>
+        <item name="c_on_signal">?attr/c_on_accent</item>
+        <item name="c_dock_height">0dp</item>
+        <item name="c_lcd_overlay">@null</item>
+        <item name="c_home_card_outline">false</item>
+        <item name="c_block_radius">40dp</item>
     </style>
 
     <!-- Rétro : la DA Cadran (mêmes formes et dispositions) habillée années 70 : brun, rouge, orange et crème, titres et grands
@@ -990,6 +1399,13 @@
         <item name="c_slider_thumb">?attr/c_accent</item>
         <item name="c_slider_track">?attr/c_text_faint</item>
         <item name="c_key_plate">@drawable/round_bg</item>
+        <item name="c_bare_frame">false</item>
+        <item name="c_btn_edge">#00000000</item>
+        <item name="c_dock_socle">?attr/c_stroke</item>
+        <item name="c_dock_socle_on">?attr/c_signal</item>
+        <item name="c_dock_cap_top">12dp</item>
+        <item name="c_dock_cap_bottom">6dp</item>
+        <item name="c_list_gap">4dp</item>
         <item name="c_title_size">17sp</item>
         <item name="c_primary">?attr/c_text</item>
         <item name="c_on_primary">#FFFBF2B7</item>
@@ -1073,6 +1489,13 @@
         <item name="c_mx_bare">false</item>
         <item name="c_pattern">none</item>
         <item name="c_pattern_color">#00000000</item>
+        <item name="c_signal">?attr/c_accent</item>
+        <item name="c_signal_edge">?attr/c_accent</item>
+        <item name="c_on_signal">?attr/c_on_accent</item>
+        <item name="c_dock_height">0dp</item>
+        <item name="c_lcd_overlay">@null</item>
+        <item name="c_home_card_outline">false</item>
+        <item name="c_block_radius">40dp</item>
     </style>
 
     <!-- Registre : Cadran sur papier de registre. Fond crème, feuillets blancs, vert comptable (c_primary), rouge d'encre =
@@ -1091,8 +1514,22 @@
         <item name="c_slider_thumb">?attr/c_accent</item>
         <item name="c_slider_track">?attr/c_text_faint</item>
         <item name="c_key_plate">@drawable/round_bg</item>
+        <item name="c_bare_frame">false</item>
+        <item name="c_btn_edge">#00000000</item>
+        <item name="c_dock_socle">?attr/c_stroke</item>
+        <item name="c_dock_socle_on">?attr/c_signal</item>
+        <item name="c_dock_cap_top">12dp</item>
+        <item name="c_dock_cap_bottom">6dp</item>
+        <item name="c_list_gap">4dp</item>
         <item name="c_pattern">ledger</item>
         <item name="c_pattern_color">#1A1F6B4A</item>
+        <item name="c_signal">?attr/c_accent</item>
+        <item name="c_signal_edge">?attr/c_accent</item>
+        <item name="c_on_signal">?attr/c_on_accent</item>
+        <item name="c_dock_height">0dp</item>
+        <item name="c_lcd_overlay">@null</item>
+        <item name="c_home_card_outline">false</item>
+        <item name="c_block_radius">40dp</item>
         <item name="colorBackgroundFloating">?attr/c_surface</item>
         <item name="android:colorBackgroundFloating">?attr/c_surface</item>
         <item name="c_primary">#FF175E34</item>
@@ -1190,9 +1627,23 @@
         <item name="c_slider_thumb">?attr/c_accent</item>
         <item name="c_slider_track">?attr/c_text_faint</item>
         <item name="c_key_plate">@drawable/round_bg</item>
+        <item name="c_bare_frame">false</item>
+        <item name="c_btn_edge">#00000000</item>
+        <item name="c_dock_socle">?attr/c_stroke</item>
+        <item name="c_dock_socle_on">?attr/c_signal</item>
+        <item name="c_dock_cap_top">12dp</item>
+        <item name="c_dock_cap_bottom">6dp</item>
+        <item name="c_list_gap">4dp</item>
         <item name="c_title_size">20sp</item>
         <item name="c_pattern">accent</item>
         <item name="c_pattern_color">#29513FFF</item>
+        <item name="c_signal">?attr/c_accent</item>
+        <item name="c_signal_edge">?attr/c_accent</item>
+        <item name="c_on_signal">?attr/c_on_accent</item>
+        <item name="c_dock_height">0dp</item>
+        <item name="c_lcd_overlay">@null</item>
+        <item name="c_home_card_outline">false</item>
+        <item name="c_block_radius">40dp</item>
         <item name="c_primary">#FF513FFF</item>
         <item name="c_on_primary">#FFFFFFFF</item>
         <item name="c_primary_pressed">#FF3F2FD6</item>
@@ -1286,6 +1737,13 @@
         <item name="c_slider_thumb">?attr/c_accent</item>
         <item name="c_slider_track">?attr/c_text_faint</item>
         <item name="c_key_plate">@drawable/round_bg</item>
+        <item name="c_bare_frame">false</item>
+        <item name="c_btn_edge">#00000000</item>
+        <item name="c_dock_socle">?attr/c_stroke</item>
+        <item name="c_dock_socle_on">?attr/c_signal</item>
+        <item name="c_dock_cap_top">12dp</item>
+        <item name="c_dock_cap_bottom">6dp</item>
+        <item name="c_list_gap">4dp</item>
         <item name="c_title_size">17sp</item>
         <item name="c_grain_light">#29FFF1DC</item>
         <item name="c_grain_dark">#12664A2A</item>
@@ -1367,6 +1825,13 @@
         <item name="c_flow_cream">#00000000</item>
         <item name="c_pattern">none</item>
         <item name="c_pattern_color">#00000000</item>
+        <item name="c_signal">?attr/c_accent</item>
+        <item name="c_signal_edge">?attr/c_accent</item>
+        <item name="c_on_signal">?attr/c_on_accent</item>
+        <item name="c_dock_height">0dp</item>
+        <item name="c_lcd_overlay">@null</item>
+        <item name="c_home_card_outline">false</item>
+        <item name="c_block_radius">40dp</item>
     </style>
 
     <!-- Tableau : Cadran en tableau de bord. Gris froid, tuiles à filet de 1 dp (tableau_tile_bg), bleu marine (c_primary), statuts
@@ -1385,9 +1850,23 @@
         <item name="c_slider_thumb">?attr/c_accent</item>
         <item name="c_slider_track">?attr/c_text_faint</item>
         <item name="c_key_plate">@drawable/round_bg</item>
+        <item name="c_bare_frame">false</item>
+        <item name="c_btn_edge">#00000000</item>
+        <item name="c_dock_socle">?attr/c_stroke</item>
+        <item name="c_dock_socle_on">?attr/c_signal</item>
+        <item name="c_dock_cap_top">12dp</item>
+        <item name="c_dock_cap_bottom">6dp</item>
+        <item name="c_list_gap">4dp</item>
         <item name="c_title_size">17sp</item>
         <item name="c_pattern">grid</item>
         <item name="c_pattern_color">#1444474C</item>
+        <item name="c_signal">?attr/c_accent</item>
+        <item name="c_signal_edge">?attr/c_accent</item>
+        <item name="c_on_signal">?attr/c_on_accent</item>
+        <item name="c_dock_height">0dp</item>
+        <item name="c_lcd_overlay">@null</item>
+        <item name="c_home_card_outline">false</item>
+        <item name="c_block_radius">40dp</item>
         <item name="c_primary">#FF005592</item>
         <item name="c_on_primary">#FFFFFFFF</item>
         <item name="c_primary_pressed">#FF004477</item>
@@ -1481,9 +1960,23 @@
         <item name="c_slider_thumb">?attr/c_accent</item>
         <item name="c_slider_track">?attr/c_text_faint</item>
         <item name="c_key_plate">@drawable/round_bg</item>
+        <item name="c_bare_frame">false</item>
+        <item name="c_btn_edge">#00000000</item>
+        <item name="c_dock_socle">?attr/c_stroke</item>
+        <item name="c_dock_socle_on">?attr/c_signal</item>
+        <item name="c_dock_cap_top">12dp</item>
+        <item name="c_dock_cap_bottom">6dp</item>
+        <item name="c_list_gap">4dp</item>
         <item name="c_title_size">14sp</item>
         <item name="c_pattern">scan</item>
         <item name="c_pattern_color">#24000000</item>
+        <item name="c_signal">?attr/c_accent</item>
+        <item name="c_signal_edge">?attr/c_accent</item>
+        <item name="c_on_signal">?attr/c_on_accent</item>
+        <item name="c_dock_height">0dp</item>
+        <item name="c_lcd_overlay">@null</item>
+        <item name="c_home_card_outline">false</item>
+        <item name="c_block_radius">40dp</item>
         <item name="c_primary">#FF43E188</item>
         <item name="c_on_primary">#FF00391C</item>
         <item name="c_primary_pressed">#FF2FB86B</item>

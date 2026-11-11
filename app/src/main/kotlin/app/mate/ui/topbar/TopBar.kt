@@ -2,7 +2,9 @@ package app.mate.ui.topbar
 
 import android.content.Context
 import android.util.AttributeSet
+import android.view.ContextThemeWrapper
 import android.view.Gravity
+import android.view.LayoutInflater
 import android.view.MotionEvent
 import android.view.View
 import android.view.ViewConfiguration
@@ -25,6 +27,7 @@ import app.mate.ui.dp
 import app.mate.ui.showImmersive
 import app.mate.ui.themeColor
 import app.mate.ui.themeFont
+import app.mate.ui.themeRes
 import kotlinx.coroutines.CoroutineScope
 import org.json.JSONObject
 import kotlin.math.abs
@@ -94,6 +97,15 @@ class TopBar @JvmOverloads constructor(context: Context, attrs: AttributeSet? = 
         visibility = GONE
         setColorFilter(themeColor(context, R.attr.c_text_faint))
     }
+
+    /**
+     * Pastille LCD de l'ordinateur actif, à droite du bandeau, pour les thèmes à rangée de touches (leur barre de gauche, qui
+     * portait l'ordinateur, n'y est pas) ; cachée tant que [showComputerChip] n'est pas appelé. Gonflée avec le style LCD du thème.
+     */
+    val computerChip: View = LayoutInflater.from(
+        themeRes(context, R.attr.c_lcd_overlay).let { if (it == 0) context else ContextThemeWrapper(context, it) },
+    ).inflate(R.layout.top_computer, this, false)
+    private var chipShown = false
     private val row = TopItemsLayout(context)
     /** Mode Modifier : consigne, « Ajouter », les pastilles (qui défilent si elles débordent), « OK ». */
     private val editRow = LinearLayout(context).apply {
@@ -129,6 +141,7 @@ class TopBar @JvmOverloads constructor(context: Context, attrs: AttributeSet? = 
         addView(header, LayoutParams(0, LayoutParams.MATCH_PARENT, 1f))
         addView(presenceEye, LayoutParams(dp(20), dp(20)).apply { marginEnd = dp(12) })
         addView(wakeMic, LayoutParams(dp(20), dp(20)).apply { marginEnd = dp(12) })
+        addView(computerChip, LayoutParams(LayoutParams.WRAP_CONTENT, LayoutParams.WRAP_CONTENT).apply { marginEnd = dp(16) })
         addView(row, LayoutParams(LayoutParams.WRAP_CONTENT, LayoutParams.MATCH_PARENT))
         addView(editRow, LayoutParams(0, LayoutParams.MATCH_PARENT, 1f))
         editRow.addView(hint, LayoutParams(LayoutParams.WRAP_CONTENT, LayoutParams.WRAP_CONTENT).apply { marginEnd = dp(16) })
@@ -167,6 +180,12 @@ class TopBar @JvmOverloads constructor(context: Context, attrs: AttributeSet? = 
             true
         }
         contentDescription = context.getString(R.string.top_edit_open)
+    }
+
+    /** La rangée de touches porte la navigation : l'ordinateur actif se lit ici (caché pendant le mode Modifier). */
+    fun showComputerChip() {
+        chipShown = true
+        computerChip.visibility = if (editing) GONE else VISIBLE
     }
 
     fun attach(host: TopBarHost) {
@@ -262,6 +281,7 @@ class TopBar @JvmOverloads constructor(context: Context, attrs: AttributeSet? = 
         header.visibility = if (on) GONE else VISIBLE
         wakeMic.alpha = if (on) 0f else 1f
         row.visibility = if (on) GONE else VISIBLE
+        computerChip.visibility = if (chipShown && !on) VISIBLE else GONE
         editRow.visibility = if (on) VISIBLE else GONE
         if (on) fillEditRow() else chips.removeAllViews()
     }

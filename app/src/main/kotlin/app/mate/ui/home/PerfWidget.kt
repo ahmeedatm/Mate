@@ -92,7 +92,7 @@ class PerfWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidget(
     private var appsView: PerfAppsView? = null
 
     /** Contenu du panneau des petites formes et sa fenêtre, tant qu'il est ouvert. */
-    private var panel: PerfAppsView? = null
+    private var appsPanel: PerfAppsView? = null
     private var panelDialog: AlertDialog? = null
     private var tick = 0
     private var error: String? = null
@@ -215,7 +215,7 @@ class PerfWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidget(
         }
         // Liste à l'écran : à chaque relevé ; sinon un relevé sur trois, pour l'alerte de l'en-tête (le compagnon suit
         // une appli qui abuse tant qu'on le relit au moins toutes les 10 s).
-        if (error == null && !notAvailable && (appsView != null || panel != null || tick++ % APPS_EVERY == 0)) loadApps()
+        if (error == null && !notAvailable && (appsView != null || appsPanel != null || tick++ % APPS_EVERY == 0)) loadApps()
         render()
     }
 
@@ -345,14 +345,14 @@ class PerfWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidget(
     private fun showAppsPanel() {
         if (panelDialog != null) return
         val list = PerfAppsView(context, withTitle = false).apply { setPadding(dp(24), dp(4), dp(24), dp(8)) }
-        panel = list
+        appsPanel = list
         val name = Computers.active(context)?.name ?: context.getString(R.string.computer_generic)
         panelDialog = AlertDialog.Builder(context)
             .setTitle(context.getString(R.string.perf_apps_panel_title, name))
             .setView(ScrollView(context).apply { addView(list) })
             .setPositiveButton(R.string.close, null)
             .setOnDismissListener {
-                panel = null
+                appsPanel = null
                 panelDialog = null
             }
             .showImmersive()
@@ -362,7 +362,7 @@ class PerfWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidget(
     private fun closePanel() {
         panelDialog?.dismiss()
         panelDialog = null
-        panel = null
+        appsPanel = null
     }
 
     /** Le souci du moment en une phrase (« Navigateur prend 61 % du processeur depuis 2 min »), dite avec l'icône d'alerte. */
@@ -642,7 +642,7 @@ class PerfWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidget(
             else -> null
         }
         appsView?.bind(apps, issue, appsNote, stale)
-        panel?.bind(apps, issue, appsNote ?: context.getString(R.string.perf_apps_loading).takeIf { !appsRead }, stale)
+        appsPanel?.bind(apps, issue, appsNote ?: context.getString(R.string.perf_apps_loading).takeIf { !appsRead }, stale)
         // Sans la liste à l'écran, le souci du moment passe dans l'en-tête, en rouge d'alerte, avant les alertes des chiffres.
         val headerIssue = issue?.takeIf { error == null && appsView == null }
         note.setTextColor(color(if (headerIssue != null) R.attr.c_accent else R.attr.c_text_faint))

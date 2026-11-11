@@ -11,12 +11,12 @@ import app.mate.R
 /**
  * Un seul grand bloc coupé par des sillons : ses enfants en cases carrées, 2 par rangée jusqu'à 4, 3 au-delà (écran
  * Depuis l'ordi : 3 × 2), dans l'ordre de lecture, centrés dans la place. Chaque case prend la tuile de l'Accueil
- * (`c_home_card_bg` : translucide en Rétro, les tubes passent derrière), arrondie en grand aux quatre coins du bloc et à
- * peine le long des sillons : on lit un seul bloc.
+ * (`c_home_card_bg` : translucide en Rétro, les tubes passent derrière), arrondie aux quatre coins du bloc au rayon du thème
+ * (`c_block_radius` : 40 dp, 12 dp en Instrument où le bloc n'a plus de coins en grand) et à peine le long des sillons.
  */
 class TileBlockLayout @JvmOverloads constructor(context: Context, attrs: AttributeSet? = null) : ViewGroup(context, attrs) {
     private val gap = dp(GAP_DP)
-    private val outer = dp(OUTER_DP).toFloat()
+    private val outer = themePx(context, R.attr.c_block_radius).toFloat()
     private val inner = dp(INNER_DP).toFloat()
 
     private val columns get() = if (childCount > 4) 3 else 2
@@ -69,7 +69,6 @@ class TileBlockLayout @JvmOverloads constructor(context: Context, attrs: Attribu
 
     private companion object {
         const val GAP_DP = 12
-        const val OUTER_DP = 40
         const val INNER_DP = 12
     }
 }

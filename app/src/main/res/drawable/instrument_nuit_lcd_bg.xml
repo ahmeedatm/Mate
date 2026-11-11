@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Fenêtre LCD d'Instrument nuit : noir de l'afficheur, filet gris de 1 dp (c_stroke), rayon 12 comme les autres modules. -->
+<shape xmlns:android="http://schemas.android.com/apk/res/android" android:shape="rectangle">
+    <solid android:color="?attr/c_mx_lcd_bg" />
+    <stroke android:width="1dp" android:color="?attr/c_stroke" />
+    <corners android:radius="12dp" />
+</shape>

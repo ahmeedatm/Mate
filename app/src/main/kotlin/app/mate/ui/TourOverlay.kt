@@ -103,7 +103,7 @@ class TourOverlay(context: Context, private val anchor: (TourModel.Step) -> View
             return
         }
         val step = steps[index]
-        val (titleRes, bodyRes) = TEXTS.getValue(step)
+        val (titleRes, bodyRes) = TourModel.texts(step, dock = themePx(context, R.attr.c_dock_height) > 0)
         title.setText(titleRes)
         body.setText(bodyRes)
         counter.text = context.getString(R.string.tour_counter, index + 1, steps.size)
@@ -147,14 +147,5 @@ class TourOverlay(context: Context, private val anchor: (TourModel.Step) -> View
     private companion object {
         const val BUBBLE_WIDTH_DP = 420
         const val RADIUS_DP = 18
-
-        val TEXTS = mapOf(
-            TourModel.Step.HOME to (R.string.tour_home_title to R.string.tour_home_body),
-            TourModel.Step.SCREENS to (R.string.tour_screens_title to R.string.tour_screens_body),
-            TourModel.Step.SWIPE to (R.string.tour_swipe_title to R.string.tour_swipe_body),
-            TourModel.Step.TALK to (R.string.tour_talk_title to R.string.tour_talk_body),
-            TourModel.Step.NOTIFICATIONS to (R.string.tour_notifications_title to R.string.tour_notifications_body),
-            TourModel.Step.CUSTOMIZE to (R.string.tour_customize_title to R.string.tour_customize_body),
-        )
     }
 }

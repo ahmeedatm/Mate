@@ -12,7 +12,7 @@ import java.io.File
 class ThemePalettesTest {
     private val xml = File("src/main/res/values/palettes.xml").readText()
 
-    private val sober = listOf("Chaleur", "CadranClair", "CadranSombre")
+    private val sober = listOf("Instrument", "InstrumentNuit", "Chaleur", "CadranClair", "CadranSombre")
     private val retro = listOf("Cadran", "CadranNuit", "Retro")
     private val ambiances = listOf("Registre", "Studio", "Maison", "Tableau", "Terminal")
     private val imported = sober + retro + ambiances
@@ -63,6 +63,41 @@ class ThemePalettesTest {
             assertEquals("false", v["c_mx_bare"])
             assertEquals(v["c_font_title"], v["c_font_label"])
         }
+    }
+
+    @Test
+    fun `Instrument et Instrument nuit ont un signal orange lisible sur le LCD, et Departure Mono pour les chiffres`() {
+        for (name in listOf("Instrument", "InstrumentNuit")) {
+            assertTrue("$name c_signal sur c_mx_lcd_bg : ${ratio(name, "c_signal", "c_mx_lcd_bg")}", ratio(name, "c_signal", "c_mx_lcd_bg") >= 4.5)
+            assertTrue("$name c_mx_lcd_text sur c_mx_lcd_bg", ratio(name, "c_mx_lcd_text", "c_mx_lcd_bg") >= 4.5)
+            assertTrue("$name c_on_signal sur c_signal : ${ratio(name, "c_on_signal", "c_signal")}", ratio(name, "c_on_signal", "c_signal") >= 4.5)
+            assertEquals("$name c_font_display", "@font/departure_mono_400", values(name)["c_font_display"])
+            assertEquals("$name c_label_caps", "true", values(name)["c_label_caps"])
+            assertTrue("$name c_dock_height", values(name)["c_dock_height"] != "0dp")
+        }
+        for (name in all - listOf("Instrument", "InstrumentNuit")) assertEquals("$name c_dock_height", "0dp", values(name)["c_dock_height"])
+    }
+
+    @Test
+    fun `seuls les thèmes Instrument gardent le filet des cartes de l'Accueil et un bloc aux coins de tuile`() {
+        for (name in all) {
+            val instrument = name in listOf("Instrument", "InstrumentNuit")
+            assertEquals("$name c_home_card_outline", instrument.toString(), values(name)["c_home_card_outline"])
+            assertEquals("$name c_block_radius", if (instrument) "12dp" else "40dp", values(name)["c_block_radius"])
+        }
+    }
+
+    @Test
+    fun `Instrument nuit est noir, ses modules se separent par un filet gris et un fond a peine au-dessus, les autres themes gardent leur cadre`() {
+        val nuit = values("InstrumentNuit")
+        for (attr in listOf("c_bg", "c_rail")) assertEquals(attr, "#FF000000", nuit[attr])
+        assertEquals("#FF000000", nuit["c_mx_lcd_bg"])
+        assertEquals("#FF3A3A3A", nuit["c_stroke"])
+        assertTrue("filet visible sur noir : ${ratio("InstrumentNuit", "c_stroke", "c_bg")}", ratio("InstrumentNuit", "c_stroke", "c_bg") >= 1.5)
+        assertTrue("c_surface differe de c_bg pour que les styles de carte s'appliquent", nuit["c_surface"] != nuit["c_bg"])
+        assertEquals("?attr/c_stroke", nuit["c_btn_edge"])
+        for (name in all) assertEquals("$name c_bare_frame", (name == "InstrumentNuit").toString(), values(name)["c_bare_frame"])
+        for (name in all - "InstrumentNuit") assertEquals("$name c_btn_edge", "#00000000", values(name)["c_btn_edge"])
     }
 
     @Test

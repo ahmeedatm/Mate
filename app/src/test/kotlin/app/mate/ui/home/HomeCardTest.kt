@@ -3,6 +3,7 @@ package app.mate.ui.home
 import app.mate.FakeContext
 import app.mate.Prefs
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
@@ -25,6 +26,14 @@ class HomeCardTest {
     @Test
     fun `carte de la couleur du fond, seul son filet la montre, le theme la garde (Contraste eleve)`() {
         for (style in HomeCardStyle.entries) assertEquals(null, HomeCard.look(style, bg = 0xFFFFFFFF.toInt(), surface = 0xFFFFFFFF.toInt()))
+    }
+
+    @Test
+    fun `un theme a filet le garde au voile seulement, Sans filet et A meme le fond le retirent`() {
+        assertTrue(HomeCard.keepsOutline(themeOutline = true, style = HomeCardStyle.VEIL))
+        assertFalse(HomeCard.keepsOutline(themeOutline = true, style = HomeCardStyle.FLAT))
+        assertFalse(HomeCard.keepsOutline(themeOutline = true, style = HomeCardStyle.BARE))
+        for (style in HomeCardStyle.entries) assertFalse(HomeCard.keepsOutline(themeOutline = false, style = style))
     }
 
     @Test

@@ -12,6 +12,7 @@ import androidx.core.graphics.ColorUtils
 import app.mate.Prefs
 import app.mate.R
 import app.mate.ui.dp
+import app.mate.ui.themeBool
 import app.mate.ui.themeColor
 import app.mate.ui.themeRes
 
@@ -38,6 +39,8 @@ object HomeCard {
     /** Style appliqué, ou `null` quand la tuile du thème est gardée (carte de la couleur du fond). */
     fun look(style: HomeCardStyle, bg: Int, surface: Int): HomeCardStyle? = style.takeIf { surface != bg }
 
+    /** Le filet du panneau est gardé : thème à filet (Instrument) et style Voile seulement ; « Sans filet » et « À même le fond » le retirent. */
+    fun keepsOutline(themeOutline: Boolean, style: HomeCardStyle): Boolean = themeOutline && style == HomeCardStyle.VEIL
     /** Style appliqué dans le thème courant (`look` sur les couleurs du thème). */
     fun look(context: Context): HomeCardStyle? =
         look(Prefs.homeCardStyle(context), themeColor(context, R.attr.c_bg), themeColor(context, R.attr.c_surface))
@@ -50,7 +53,8 @@ object HomeCard {
 
     /**
      * La tuile du thème, filet retiré partout ; Voile et À même le fond ne changent que sa forme au repos. L'appui garde
-     * celle du thème (halo rose de Hush, translucide du Rétro).
+     * celle du thème (halo rose de Hush, translucide du Rétro). Un thème au panneau à filet (`c_home_card_outline`,
+     * Instrument) garde son filet au Voile seulement : sur l'alu, le voile seul ne se verrait pas, mais « Sans filet » le retire.
      */
     fun background(context: Context): Drawable {
         val tile = ContextCompat.getDrawable(context, themeRes(context, R.attr.c_home_card_bg))!!.mutate()
@@ -58,7 +62,8 @@ object HomeCard {
         val style = look(context) ?: return tile
         val shapes = (tile.constantState as? DrawableContainer.DrawableContainerState)?.children?.filterIsInstance<GradientDrawable>()
             ?: listOfNotNull(tile as? GradientDrawable)
-        shapes.forEach { it.setStroke(0, Color.TRANSPARENT) }
+        val outline = keepsOutline(themeBool(context, R.attr.c_home_card_outline), style)
+        if (!outline) shapes.forEach { it.setStroke(0, Color.TRANSPARENT) }
         tile.state = intArrayOf()
         val rest = tile.current as? GradientDrawable ?: return tile
         // Forme au repos sans coins (Hush) : le rayon de l'appui, pour que le voile ait la forme du halo.

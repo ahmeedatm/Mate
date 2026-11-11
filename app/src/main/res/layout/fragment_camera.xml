@@ -64,7 +64,8 @@
         <LinearLayout
             android:id="@+id/camera_choice"
             android:layout_width="match_parent"
-            android:layout_height="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_gravity="center"
             android:gravity="center"
             android:orientation="horizontal"
             android:visibility="gone">
@@ -73,7 +74,7 @@
                 android:id="@+id/camera_choose_show"
                 style="@style/Card"
                 android:layout_width="0dp"
-                android:layout_height="wrap_content"
+                android:layout_height="match_parent"
                 android:layout_marginEnd="12dp"
                 android:layout_weight="1"
                 android:clickable="true"
@@ -113,7 +114,7 @@
                 android:id="@+id/camera_choose_photo"
                 style="@style/Card"
                 android:layout_width="0dp"
-                android:layout_height="wrap_content"
+                android:layout_height="match_parent"
                 android:layout_marginStart="12dp"
                 android:layout_weight="1"
                 android:clickable="true"

@@ -1,5 +1,7 @@
 package app.mate.ui.home
 
+import app.mate.FakeContext
+import app.mate.R
 import app.mate.net.HomeFeatures
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -72,6 +74,31 @@ class WidgetModelTest {
             listOf(WidgetType.AGENDA, WidgetType.FOCUS, WidgetType.APPS, WidgetType.KEYS).map { it to WidgetSize.V },
             bottom,
         )
+    }
+
+    @Test
+    fun `Accueil Instrument, heure et rendez-vous en haut, ligne du jour dessous, puis les petits`() {
+        val widgets = Template.WORK_INSTRUMENT.build().widgets
+        assertEquals(
+            listOf(Triple(WidgetType.CLOCK, WidgetSize.M, 0 to 0), Triple(WidgetType.NEXT, WidgetSize.M, 2 to 0)),
+            widgets.filter { it.row == 0 }.sortedBy { it.col }.map { Triple(it.type, it.size, it.col to it.row) },
+        )
+        assertEquals(listOf(Triple(WidgetType.DAYLINE, WidgetSize.W, 0 to 1)), widgets.filter { it.row == 1 }.map { Triple(it.type, it.size, it.col to it.row) })
+        assertEquals(
+            listOf(WidgetType.AGENDA, WidgetType.FOCUS, WidgetType.APPS, WidgetType.KEYS, WidgetType.WATER, WidgetType.WEATHER),
+            widgets.filter { it.row >= 2 }.sortedWith(compareBy({ it.col }, { it.row })).map { it.type },
+        )
+        // `parse` refuse un chevauchement ou une taille non permise : la disposition se relit telle quelle.
+        val context = FakeContext()
+        HomeLayout.save(context, Template.WORK_INSTRUMENT.build())
+        assertEquals(widgets.map { it.type }, HomeLayout.load(context).widgets.map { it.type })
+    }
+
+    @Test
+    fun `la creation de profil ne propose qu'un seul Travail`() {
+        val titles = HomeLayout.load(FakeContext()).offered().map { it.title }
+        assertEquals(1, titles.count { it == R.string.template_work })
+        assertFalse(Template.WORK_INSTRUMENT in HomeLayout.load(FakeContext()).offered())
     }
 
     @Test
@@ -186,9 +213,10 @@ class WidgetModelTest {
         assertEquals(WidgetSize.V, HomeLayout.load(context).widgets.single().size)
     }
 
+    // Instrument fait exception : l'heure et le prochain rendez-vous en 2 x 2, pas de bandeau.
     @Test
     fun `chaque modele d'Accueil commence par un bandeau (heure ou Ma journee) puis la ligne du jour`() {
-        for (template in Template.entries.filter { !it.role }) {
+        for (template in Template.entries.filter { !it.role && it != Template.WORK_INSTRUMENT }) {
             val widgets = template.build().widgets
             val hero = widgets.single { it.type == WidgetType.HERO || it.type == WidgetType.DAY }
             val line = widgets.single { it.type == WidgetType.DAYLINE }
@@ -206,7 +234,9 @@ class WidgetModelTest {
 
     @Test
     fun `le modele par defaut est Travail`() {
-        val layout = HomeLayout.load(app.mate.FakeContext())
+        val context = app.mate.FakeContext()
+        app.mate.Prefs.setTheme(context, "CHALEUR")
+        val layout = HomeLayout.load(context)
         assertEquals(Template.WORK_CADRAN.build().widgets.map { it.type }, layout.widgets.map { it.type })
         assertEquals(WidgetType.AGENDA to WidgetSize.V, layout.widgets.single { it.type == WidgetType.AGENDA }.let { it.type to it.size })
     }

@@ -9,4 +9,6 @@
     <item name="countdown_second" type="id" />
     <!-- Plaque ronde d'une case de touche (TileGridView.newCell, îlot d'un widget d'appel). -->
     <item name="tile_round" type="id" />
+    <!-- Ressort du capuchon d'une touche du dock (Look.keyCap), gardé sur la vue. -->
+    <item name="key_spring" type="id" />
 </resources>

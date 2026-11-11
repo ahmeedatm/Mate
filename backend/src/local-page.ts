@@ -321,7 +321,7 @@ ${FAVICON}
         <div id="tabletsettings">
           <div class="label">Thème</div>
           <div class="themes">
-            <button data-theme="CHALEUR"><span></span>Chaleur</button><button data-theme="CONSOLE"><span></span>Console</button><button data-theme="CONSOLE_JOUR"><span></span>Console jour</button><button data-theme="CLAIR"><span></span>Clair</button><button data-theme="SOMBRE"><span></span>Sombre</button><button data-theme="CADRAN"><span></span>Cadran</button><button data-theme="CADRAN_NUIT"><span></span>Cadran nuit</button><button data-theme="RETRO"><span></span>Rétro</button><button data-theme="HUSH"><span></span>Hush</button><button data-theme="SPIDERMAN"><span></span>Spider-Verse</button><button data-theme="REGISTRE"><span></span>Registre</button><button data-theme="STUDIO"><span></span>Studio</button><button data-theme="MAISON"><span></span>Maison</button><button data-theme="TABLEAU"><span></span>Tableau</button><button data-theme="TERMINAL"><span></span>Terminal</button><button data-theme="CONTRASTE"><span></span>Contraste élevé</button>
+            <button data-theme="INSTRUMENT"><span></span>Instrument</button><button data-theme="INSTRUMENT_NUIT"><span></span>Instrument nuit</button><button data-theme="CHALEUR"><span></span>Chaleur</button><button data-theme="CONSOLE"><span></span>Console</button><button data-theme="CONSOLE_JOUR"><span></span>Console jour</button><button data-theme="CLAIR"><span></span>Clair</button><button data-theme="SOMBRE"><span></span>Sombre</button><button data-theme="CADRAN"><span></span>Cadran</button><button data-theme="CADRAN_NUIT"><span></span>Cadran nuit</button><button data-theme="RETRO"><span></span>Rétro</button><button data-theme="HUSH"><span></span>Hush</button><button data-theme="SPIDERMAN"><span></span>Spider-Verse</button><button data-theme="REGISTRE"><span></span>Registre</button><button data-theme="STUDIO"><span></span>Studio</button><button data-theme="MAISON"><span></span>Maison</button><button data-theme="TABLEAU"><span></span>Tableau</button><button data-theme="TERMINAL"><span></span>Terminal</button><button data-theme="CONTRASTE"><span></span>Contraste élevé</button>
           </div>
           <div class="row"><label for="brightness">Luminosité de l'écran</label><input type="range" id="brightness" min="5" max="100"><span class="value" id="brightnessvalue"></span></div>
           <div class="row"><label for="volume">Volume du haut-parleur</label><input type="range" id="volume" min="0" max="100"><span class="value" id="volumevalue"></span></div>
@@ -1035,6 +1035,8 @@ ${FAVICON}
 
   // Aperçu de la tablette : couleurs des thèmes (fond, tuile, texte, texte 2, accent, filet, texte sur l'accent), d'après palettes.xml.
   const THEMES = {
+    INSTRUMENT: ["#E6E3DC", "#EFEDE7", "#1E1D1B", "#5A564E", "#B3380D", "#B7B2A6", "#F2F0EB"],
+    INSTRUMENT_NUIT: ["#000000", "#050505", "#ECE8DF", "#B4AFA3", "#FF8559", "#3A3A3A", "#0D0D0D"],
     CHALEUR: ["#FAF9F5", "#FFFFFF", "#141413", "#3D3D3A", "#A34A2B", "#E8E6DC", "#FFFFFF"],
     CONSOLE: ["#17181B", "#23252A", "#ECEDEF", "#B4B8C0", "#B8F34A", "#3A3D44", "#16210A"],
     CONSOLE_JOUR: ["#F4F2EE", "#FFFFFF", "#1B1C1F", "#474B54", "#3F6B00", "#D8D3CA", "#FFFFFF"],

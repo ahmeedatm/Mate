@@ -2,6 +2,7 @@ package app.mate
 
 import android.content.Context
 import android.content.res.Configuration
+import android.graphics.Bitmap
 import android.os.Bundle
 import android.os.SystemClock
 import android.view.KeyEvent
@@ -62,12 +63,16 @@ import app.mate.ui.ComputerAdder
 import app.mate.ui.ComputersDialog
 import app.mate.ui.DocumentPanel
 import app.mate.ui.FocusFragment
+import app.mate.ui.FrameTracer
+import app.mate.ui.FrameTracerModel
 import app.mate.ui.FromComputerFragment
 import app.mate.ui.GameSession
 import app.mate.ui.Grain
 import app.mate.ui.HomeFragment
 import app.mate.ui.HushBackdrop
 import app.mate.ui.IconCache
+import app.mate.ui.KeyDock
+import app.mate.ui.KeyDockModel
 import app.mate.ui.KeyboardControl
 import app.mate.ui.LockScreen
 import app.mate.ui.Look
@@ -81,11 +86,13 @@ import app.mate.ui.ProfileRail
 import app.mate.ui.RailSwipeLayout
 import app.mate.ui.ReadingAids
 import app.mate.ui.SettingsFragment
+import app.mate.ui.SweepView
 import app.mate.ui.TabletAlerts
 import app.mate.ui.TemplatesDialog
 import app.mate.ui.ThemePattern
 import app.mate.ui.TourModel
 import app.mate.ui.TourOverlay
+import app.mate.ui.TracedScreen
 import app.mate.ui.Typing
 import app.mate.ui.Wallpaper
 import app.mate.ui.WelcomeView
@@ -101,6 +108,7 @@ import app.mate.ui.notificationBannerText
 import app.mate.ui.notificationBody
 import app.mate.ui.showImmersive
 import app.mate.ui.themeBool
+import app.mate.ui.themePx
 import app.mate.ui.topbar.TopBar
 import app.mate.ui.topbar.TopBarHost
 import app.mate.ui.topbar.TopHeader
@@ -230,7 +238,7 @@ class MainActivity : AppCompatActivity() {
         AutoUpdater.start(this)
         InstallerService.start(this)
 
-        nav = ProfileRail(this, ::showFromRail, ::showProfile, ::openProfiles)
+        nav = if (themePx(this, R.attr.c_dock_height) > 0) KeyDock(this, ::showFromRail, ::showProfile, ::openProfiles) else ProfileRail(this, ::showFromRail, ::showProfile, ::openProfiles)
         findViewById<RailSwipeLayout>(R.id.mode_container).apply {
             onSwipe = { delta -> railStep(delta) }
             canSwipe = { delta -> railCanStep(delta) }
@@ -239,7 +247,7 @@ class MainActivity : AppCompatActivity() {
         flow = findViewById(R.id.flow)
         flow.hidden = { homeFragment()?.bareWidgets().orEmpty() }
         wakeRail()
-        voice = VoiceControl(this, nav.talk, nav.talk.findViewById(R.id.rail_icon))
+        voice = VoiceControl(this, nav.talk, nav.talkIcon)
         topBar = findViewById(R.id.top_bar)
         topBar.attach(topHost)
         topBar.onEditDone = { if (current == Mode.HOME && homeFragment()?.isEditing() == true) homeFragment()?.finishEdit() }
@@ -275,7 +283,7 @@ class MainActivity : AppCompatActivity() {
         frame = PhotoFrameView(this)
         findViewById<android.view.ViewGroup>(android.R.id.content).addView(frame, 1, android.view.ViewGroup.LayoutParams(-1, -1))
 
-        keyboard.setUp()
+        keyboard.setUp(nav.root)
 
         // Par-dessus tout, boîtes comprises ; revient après une recréation. Un 423 de l'ordinateur le pose aussi.
         lockScreen = LockScreen(this)
@@ -300,8 +308,7 @@ class MainActivity : AppCompatActivity() {
         }
         banner = Banner(findViewById(R.id.remote_banner), lifecycleScope)
         alerts = TabletAlerts(this, banner)
-        findViewById<View>(R.id.rail_settings).setOnClickListener { show(Mode.SETTINGS) }
-        findViewById<View>(R.id.rail_lock).setOnClickListener { lockScreen.lockTablet() }
+        nav.lock.setOnClickListener { lockScreen.lockTablet() }
         signals.onMinute {
             Screen.apply(this@MainActivity)
             // Verrou levé, modification finie : la caméra de la veille repart.
@@ -1149,6 +1156,14 @@ class MainActivity : AppCompatActivity() {
             documentPanel.setExpanded(mode == Mode.COMPUTER, splittable = mode != Mode.COMPUTER)
         }
         val changed = current != mode
+        // Un tracé encore en cours sur l'écran quitté (celui de l'activité, celui de l'Accueil) s'arrête AVANT la photo :
+        // ses cartes redeviennent visibles au lieu d'être photographiées à alpha 0.
+        findViewById<FrameTracer>(R.id.tracer).stop()
+        (supportFragmentManager.findFragmentByTag(Mode.HOME.tag) as? HomeFragment)?.stopTracing()
+        // Balayage (thèmes Instrument) : l'écran quitté est photographié avant d'être masqué plus bas. Le WebView
+        // (Page de l'ordi) et la caméra sortent vides de cette photo (surfaces GPU) : l'aplat les recouvre aussitôt.
+        val before = if (changed && nav is KeyDock) findViewById<SweepView>(R.id.sweep).capture(findViewById(R.id.mode_container)) else null
+        sweeping = before != null
         val leavingCamera = current == Mode.CAMERA && mode != Mode.CAMERA
         current = mode
         if (::presence.isInitialized) {
@@ -1176,9 +1191,40 @@ class MainActivity : AppCompatActivity() {
         // Caméra : hors barre, et ses gestes (zoom) restent à elle.
         findViewById<RailSwipeLayout>(R.id.mode_container).swipeEnabled = mode != Mode.HOME && mode != Mode.SETTINGS && mode != Mode.CAMERA
         renderNoComputer()
-        if (changed) slideTo(mode)
+        if (changed) slideTo(mode, before)
         fm.executePendingTransactions()
+        // Thèmes Instrument : Focus, Ordi, Caméra et Réglages tracent leurs cartes à l'arrivée (l'Accueil a son propre tracé).
+        if (changed && mode != Mode.HOME && FrameTracer.wanted(this)) {
+            val cards = (fm.findFragmentByTag(mode.tag) as? TracedScreen)?.tracedCards().orEmpty()
+            if (cards.isNotEmpty()) findViewById<FrameTracer>(R.id.tracer).play(cards, { false }, traceLead())
+        }
+        sweeping = false
         showTopHeader()
+    }
+
+    /** Balayage orange en cours d'installation : le nouvel écran attend qu'il le découvre avant de tracer ses cadres. */
+    private var sweeping = false
+
+    /** Attente (ms) avant que l'écran qui arrive trace ses cadres : celle du balayage, ou rien. */
+    fun traceLead(): Long = if (sweeping) FrameTracerModel.AFTER_SWEEP_MS else 0L
+
+    /** Écran de l'Accueil que le balayage annonce : celui qu'on ouvre (touche d'écran), sinon celui qui s'affiche. */
+    private var sweepPage: Int? = null
+
+    /** Numéro écrit sur l'aplat du balayage : celui de l'écran de l'Accueil (01…), vide pour un outil (bouton rond, sans numéro). */
+    private fun keyNumber(mode: Mode): String {
+        if (mode != Mode.HOME) return ""
+        val layout = HomeLayout.load(this)
+        return KeyDockModel.numberOf(KeyDockModel.screens(layout.profilesInOrder(inCall), layout.callProfile, inCall), sweepTarget(layout))
+    }
+
+    private fun sweepTarget(layout: HomeLayout) = sweepPage ?: homeFragment()?.shownPage ?: layout.homeProfile
+
+    /** Nom de l'écran sur l'aplat : celui du profil de l'Accueil (« Accueil » par défaut), sinon le nom du mode. */
+    private fun sweepName(mode: Mode): String {
+        if (mode != Mode.HOME) return getString(mode.label)
+        val layout = HomeLayout.load(this)
+        return layout.nameOf(sweepTarget(layout), getString(R.string.profile_first), getString(R.string.profile_default))
     }
 
     /**
@@ -1236,8 +1282,14 @@ class MainActivity : AppCompatActivity() {
     }
 
     /** Arrivée de l'écran `mode` dans le sens du déplacement dans la barre. Ressorts qui jouent aussi en kiosque. */
-    private fun slideTo(mode: Mode) {
+    private fun slideTo(mode: Mode, before: Bitmap?) {
         supportFragmentManager.executePendingTransactions()
+        // Thèmes Instrument : l'aplat orange découvre le nouvel écran (pas de glissement en plus).
+        if (before != null) {
+            findViewById<SweepView>(R.id.sweep).play(before, nav.lastMove, keyNumber(mode), sweepName(mode))
+            flowTravel(nav.lastMove)
+            return
+        }
         val into = supportFragmentManager.findFragmentByTag(mode.tag)?.view ?: return
         // Kiosque : l'Accueil arrive par ses widgets (Look.enterSpring), pas en glissant tout entier par-dessus.
         if (mode == Mode.HOME && Look.cascadeOnly(this)) {
@@ -1255,7 +1307,9 @@ class MainActivity : AppCompatActivity() {
     private fun showProfile(page: Int) {
         // Déjà sur l'Accueil : seul le profil change (et glisse) ; sinon l'écran arrive en entier, sur ce profil.
         val within = current == Mode.HOME
+        sweepPage = page
         show(Mode.HOME)
+        sweepPage = null
         supportFragmentManager.executePendingTransactions()
         homeFragment()?.showProfile(page, animate = within)
     }

@@ -438,6 +438,8 @@ object Look {
 
     /** Rebond (pop, pastille d'état) : ressort peu amorti, un dépassement visible puis posé. */
     private val BOUNCE = Spring(600f, 0.45f)
+    private const val KEY_PRESS_DP = 6
+    private const val KEY_PRESS_MS = 90L
     private const val BLIP_SCALE = 1.9f
 
     /** Compte à rebours : pulsation sur les 10 dernières secondes. */
@@ -552,6 +554,27 @@ object Look {
         val to = if (pressed) 0.96f else 1f
         x.animateToFinalPosition(to)
         y.animateToFinalPosition(to)
+    }
+
+    /**
+     * Capuchon d'une touche d'Instrument (ui/KeyDock) : il s'enfonce à l'appui en 90 ms, puis revient à sa place `rest` (px)
+     * sur un ressort qui rebondit un peu. Hors de la famille DETAILS, ou réduit : il se pose tout de suite.
+     */
+    fun keyCap(cap: View, pressed: Boolean, rest: Float) {
+        cap.animate().cancel()
+        (cap.getTag(R.id.key_spring) as? SpringAnimation)?.cancel()
+        val target = if (pressed) cap.dp(KEY_PRESS_DP).toFloat() else rest
+        if (!on(cap.context, AnimFamily.DETAILS) || reduced(cap.context)) {
+            cap.translationY = target
+            return
+        }
+        if (pressed) {
+            cap.animate().translationY(target).setDuration(KEY_PRESS_MS).setInterpolator(DecelerateInterpolator()).start()
+            return
+        }
+        val spring = SpringAnimation(cap, DynamicAnimation.TRANSLATION_Y).setSpring(force(BOUNCE, rest))
+        cap.setTag(R.id.key_spring, spring)
+        spring.start()
     }
 
     @Suppress("UNCHECKED_CAST")

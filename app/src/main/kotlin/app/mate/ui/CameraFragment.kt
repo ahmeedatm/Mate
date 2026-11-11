@@ -48,7 +48,15 @@ import java.util.concurrent.atomic.AtomicInteger
  */
 class CameraFragment :
     Fragment(),
-    TopHeader {
+    TopHeader,
+    TracedScreen {
+    /** Thèmes Instrument : les deux cartes du choix, tant qu'il est à l'écran. */
+    override fun tracedCards(): List<View> {
+        val root = view ?: return emptyList()
+        if (purpose != null) return emptyList()
+        return listOf(R.id.camera_choose_show, R.id.camera_choose_photo).map { root.findViewById(it) }
+    }
+
     /** Titre, état, Arrêter : dans le bandeau du haut. */
     override var topHeader: View? = null
         private set

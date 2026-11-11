@@ -21,9 +21,8 @@ class KeyboardControl(private val activity: Activity) {
 
     private val window get() = activity.window
 
-    fun setUp() {
-        // Clavier ouvert : la barre fixe se cache plutôt que d'être coupée.
-        val rail = activity.findViewById<View>(R.id.rail)
+    fun setUp(navigation: View) {
+        // Clavier ouvert : la navigation (barre de gauche ou rangée de touches) se cache plutôt que d'être coupée.
         val content = activity.findViewById<View>(android.R.id.content)
         // Fenêtre plein écran (setDecorFitsSystemWindows(false)) : adjustResize ne la réduit plus, le clavier arrive en
         // inset ; on le rend en marge basse pour que l'écran se réduise au-dessus de lui.
@@ -43,7 +42,7 @@ class KeyboardControl(private val activity: Activity) {
         content.viewTreeObserver.addOnGlobalLayoutListener {
             val keyboard = content.height - content.paddingBottom in 1 until window.decorView.height - activity.dp(150)
             val visibility = if (keyboard) View.GONE else View.VISIBLE
-            if (rail.visibility != visibility) rail.visibility = visibility
+            if (navigation.visibility != visibility) navigation.visibility = visibility
         }
     }
 
