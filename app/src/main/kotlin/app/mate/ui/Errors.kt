@@ -7,6 +7,7 @@ import androidx.fragment.app.Fragment
 import app.mate.Computers
 import app.mate.R
 import app.mate.UserFacingException
+import app.mate.net.GitHubException
 import app.mate.net.HttpException
 import app.mate.net.InsecureComputerException
 import org.json.JSONException
@@ -25,6 +26,8 @@ fun Context.errorText(e: Throwable?): String {
     Log.w("Mate", "Erreur affichée", e)
     val computer = Computers.active(this)
     return when (e) {
+        // Releases GitHub (mises à jour, essais) : la phrase de GitHub, pas celle de l'ordinateur.
+        is GitHubException -> getString(e.textRes())
         is HttpException -> when {
             e.code == 401 -> getString(R.string.error_reauth, computer?.name ?: getString(R.string.computer_generic))
             // Session verrouillée (backend/src/screen-lock.ts) : vue seulement si le blocage est coupé (Prefs.blockOnComputerLock).

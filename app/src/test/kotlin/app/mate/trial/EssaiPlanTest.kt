@@ -82,11 +82,11 @@ class EssaiPlanTest {
 
     @Test
     fun `source des mises a jour selon le build`() {
-        assertNull(UpdatesApi.server("", "", "jeton"))
-        assertNull(UpdatesApi.essais("", "  ", "jeton"))
-        assertNotNull(UpdatesApi.server("", "ahmeedatm/Mate", ""))
-        assertNotNull(UpdatesApi.essais("", "ahmeedatm/Mate", "jeton"))
-        assertNotNull(UpdatesApi.server("http://10.0.2.2:8099/", "", ""))
+        assertNull(UpdatesApi.server("", ""))
+        assertNull(UpdatesApi.essais("", "  "))
+        assertNotNull(UpdatesApi.server("", "ahmeedatm/Mate"))
+        assertNotNull(UpdatesApi.essais("", "ahmeedatm/Mate"))
+        assertNotNull(UpdatesApi.server("http://10.0.2.2:8099/", ""))
     }
 
     @Test

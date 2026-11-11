@@ -14,8 +14,8 @@ permissions:
 
 jobs:
   # Version X.Y.Z-essai.N : X.Y.Z = dernier tag de la branche, N = numéro d'exécution de ce workflow
-  # (app/build.gradle.kts). Le jeton de lecture des releases (UPDATE_TOKEN) est en lecture seule : il peut aller dans
-  # le code de la PR ; la clé, elle, est dans l'environnement « signature », réservé à master et aux tags v*.
+  # (app/build.gradle.kts). La clé de signature n'est jamais ici : elle est dans l'environnement « signature »,
+  # réservé à master et aux tags v*.
   android:
     if: >-
       !github.event.pull_request.draft && contains(github.event.pull_request.labels.*.name, 'essai')
@@ -42,16 +42,14 @@ jobs:
           key: gradle-${{ hashFiles('gradle/wrapper/gradle-wrapper.properties', 'app/build.gradle.kts') }}
       - name: APK d'essai non signé
         env:
-          UPDATE_TOKEN: ${{ secrets.UPDATE_TOKEN }}
           IDFM_TOKEN: ${{ secrets.IDFM_TOKEN }}
         run: |
           git config --global --add safe.directory "$GITHUB_WORKSPACE"
           TAG=$(git describe --tags --abbrev=0 --match 'v[0-9]*.[0-9]*.[0-9]*') \
             || { echo "::error::Aucun tag vX.Y.Z dans l'historique de la branche"; exit 1; }
           VERSION=${TAG#v}-essai.$GITHUB_RUN_NUMBER
-          test -n "$UPDATE_TOKEN" || echo "::warning::UPDATE_TOKEN absent : l'essai lira les releases sans jeton"
           test -n "$IDFM_TOKEN" || echo "::warning::IDFM_TOKEN absent : le widget Transports affichera « horaires indisponibles » dans l'essai"
-          ./gradlew --no-daemon --console=plain assembleRelease -PappVersion="$VERSION" -PupdateToken="$UPDATE_TOKEN" -PidfmToken="$IDFM_TOKEN"
+          ./gradlew --no-daemon --console=plain assembleRelease -PappVersion="$VERSION" -PidfmToken="$IDFM_TOKEN"
           mkdir -p essai
           cp app/build/outputs/apk/release/app-release-unsigned.apk "essai/companion-$VERSION-unsigned.apk"
           cd essai && sha256sum -- * > SHA256SUMS-android

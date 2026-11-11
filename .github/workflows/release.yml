@@ -30,18 +30,16 @@ jobs:
       - name: APK non signé
         shell: bash
         env:
-          UPDATE_TOKEN: ${{ secrets.UPDATE_TOKEN }}
           TECH_CODE: ${{ secrets.TECH_CODE }}
           IDFM_TOKEN: ${{ secrets.IDFM_TOKEN }}
         run: |
           set -euo pipefail
           git config --global --add safe.directory "$GITHUB_WORKSPACE"
           git merge-base --is-ancestor HEAD origin/master || { echo "::error::Le tag n'est pas sur master"; exit 1; }
-          test -n "$UPDATE_TOKEN" || echo "::warning::UPDATE_TOKEN absent : les tablettes liront les releases sans jeton"
           test -n "$IDFM_TOKEN" || echo "::warning::IDFM_TOKEN absent : le widget Transports affichera « horaires indisponibles »"
           CODE_TRIM="${TECH_CODE//[[:space:]]/}"
           { test -n "$CODE_TRIM" && test "$CODE_TRIM" != 4242; } || { echo "::error::Code technicien absent, vide ou égal au défaut (secret TECH_CODE)"; exit 1; }
-          ./gradlew --no-daemon --console=plain assembleRelease -PappVersion="${GITHUB_REF_NAME#v}" -PupdateToken="$UPDATE_TOKEN" -PtechCode="$TECH_CODE" -PidfmToken="$IDFM_TOKEN"
+          ./gradlew --no-daemon --console=plain assembleRelease -PappVersion="${GITHUB_REF_NAME#v}" -PtechCode="$TECH_CODE" -PidfmToken="$IDFM_TOKEN"
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: apk-non-signe
