@@ -230,8 +230,8 @@ class ClockWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidget
         includeFontPadding = false
         isSingleLine = true
         gravity = Gravity.CENTER
-        setTextColor(color(R.attr.c_text))
-        typeface = themeFont(context, R.attr.c_font_light)
+        setTextColor(color(if (lcd) R.attr.c_accent else R.attr.c_text))
+        typeface = themeFont(context, if (lcd) R.attr.c_font_display else R.attr.c_font_light)
     }
 
     private fun column(gravity: Int) = LinearLayout(context).apply {

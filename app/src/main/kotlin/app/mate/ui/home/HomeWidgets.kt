@@ -3,6 +3,7 @@ package app.mate.ui.home
 import android.content.Context
 import android.content.res.ColorStateList
 import android.util.TypedValue
+import android.view.ContextThemeWrapper
 import android.view.Gravity
 import android.view.View
 import android.view.ViewGroup
@@ -50,6 +51,7 @@ import app.mate.ui.themeColor
 import app.mate.ui.themeColorList
 import app.mate.ui.themeFont
 import app.mate.ui.themePx
+import app.mate.ui.themeRes
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
@@ -120,6 +122,8 @@ abstract class HomeWidget(val context: Context, val host: HomeHost, val placed: 
 
     open val hasSettings: Boolean get() = false
     open fun showSettings() = Unit
+    /** Ce widget est une fenêtre LCD (Instrument) : chiffres en Departure Mono, orange ([LcdStyle]). */
+    protected val lcd get() = LcdStyle.applies(placed.type, themeRes(context, R.attr.c_lcd_overlay))
     protected fun color(id: Int) = themeColor(context, id)
     protected fun dp(value: Int) = context.dp(value)
 
@@ -147,7 +151,16 @@ abstract class HomeWidget(val context: Context, val host: HomeHost, val placed: 
         /** Sans ordinateur, les widgets qui en ont besoin laissent la place à une carte « Connecter mon ordinateur ». */
         fun create(context: Context, host: HomeHost, placed: Placed, noComputer: Boolean): HomeWidget =
             if (noComputer && placed.type.computer) ConnectWidget(context, host, placed)
-            else when (placed.type) {
+            else build(lcdContext(context, placed.type), host, placed)
+
+        /** Le contexte du thème, repeint en fenêtre LCD (Instrument) pour les widgets de [LcdStyle], posé une seule fois ici. */
+        private fun lcdContext(context: Context, type: WidgetType): Context {
+            val overlay = themeRes(context, R.attr.c_lcd_overlay)
+            return if (LcdStyle.applies(type, overlay)) ContextThemeWrapper(context, overlay) else context
+        }
+
+        private fun build(context: Context, host: HomeHost, placed: Placed): HomeWidget =
+            when (placed.type) {
                 WidgetType.CLOCK -> ClockWidget(context, host, placed)
                 WidgetType.NEXT -> NextWidget(context, host, placed)
                 WidgetType.AGENDA -> AgendaWidget(context, host, placed)

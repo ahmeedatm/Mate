@@ -1227,6 +1227,7 @@
     <string name="home_no_room_size">Pas assez de place autour pour une autre taille : déplace ou retire un widget voisin.</string>
     <string name="template_work">Bureau</string>
     <string name="template_standby">Veille</string>
+    <string name="template_work_instrument_desc">Heure et prochain rendez-vous en grand, Focus, applis, touches, eau et météo.</string>
     <string name="template_work_cadran_desc">Heure, ligne du jour, agenda, Focus, applis et touches.</string>
     <string name="template_standby_cadran_desc">L\'heure et la ligne du jour, rien d\'autre : lisible de loin.</string>
     <string name="template_card">Templates</string>

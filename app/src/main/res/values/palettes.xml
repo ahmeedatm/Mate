@@ -521,6 +521,46 @@
          touches numérotées. Alu #E6E3DC, touche #F2F0EB, encre #1E1D1B. Un seul orange : c_accent #B3380D (4,7:1 sur l'alu)
          pour le texte et les aplats, c_signal #FF5A1F réservé aux LCD, DEL et à l'aplat de balayage. Chiffres en Departure Mono
          (OFL), titres et libellés en Barlow Semi Condensed 600 capitales, textes en Barlow. -->
+    <!-- Fenêtre LCD d'Instrument (c_lcd_overlay) : posée par-dessus la palette sur l'heure, le prochain rendez-vous, l'agenda,
+         le Focus, l'eau et la météo (ui/home/LcdStyle) : fond d'afficheur, texte crème, chiffres et aplats orange (c_signal). -->
+    <style name="Lcd.Instrument" parent="">
+        <item name="c_bg">#FF141414</item>
+        <item name="c_surface">#FF141414</item>
+        <item name="c_surface_raised">#FF1E1E1E</item>
+        <item name="c_surface_pressed">#FF1E1E1E</item>
+        <item name="c_text">#FFF1EDE4</item>
+        <item name="c_text_dim">#FFA29D92</item>
+        <item name="c_text_faint">#FF8F8A7F</item>
+        <item name="c_accent">#FFFF5A1F</item>
+        <item name="c_on_accent">#FF141414</item>
+        <item name="c_font_light">@font/departure_mono_400</item>
+        <item name="c_hue_orange">#FFFF5A1F</item>
+        <item name="c_hue_cyan">#FFFF5A1F</item>
+        <item name="c_ok">#FF9CC08A</item>
+        <item name="c_ko">#FFFF7A66</item>
+        <item name="c_warn">#FFF2C46B</item>
+        <item name="c_home_card_bg">@drawable/instrument_lcd_bg</item>
+    </style>
+
+    <style name="Lcd.InstrumentNuit" parent="">
+        <item name="c_bg">#FF0B0B0B</item>
+        <item name="c_surface">#FF0B0B0B</item>
+        <item name="c_surface_raised">#FF1A1A1A</item>
+        <item name="c_surface_pressed">#FF1A1A1A</item>
+        <item name="c_text">#FFF1EDE4</item>
+        <item name="c_text_dim">#FFA29D92</item>
+        <item name="c_text_faint">#FF8F8A7F</item>
+        <item name="c_accent">#FFFF5A1F</item>
+        <item name="c_on_accent">#FF141414</item>
+        <item name="c_font_light">@font/departure_mono_400</item>
+        <item name="c_hue_orange">#FFFF5A1F</item>
+        <item name="c_hue_cyan">#FFFF5A1F</item>
+        <item name="c_ok">#FF9CC08A</item>
+        <item name="c_ko">#FFFF7A66</item>
+        <item name="c_warn">#FFF2C46B</item>
+        <item name="c_home_card_bg">@drawable/instrument_lcd_bg</item>
+    </style>
+
     <style name="Palette.Instrument" parent="">
         <item name="c_card_bg">@drawable/instrument_tile_bg</item>
         <item name="c_tile_bg">@drawable/instrument_tile_bg</item>
@@ -617,7 +657,7 @@
         <item name="c_signal_edge">#FFB3380D</item>
         <item name="c_on_signal">#FF1E1D1B</item>
         <item name="c_dock_height">96dp</item>
-        <item name="c_lcd_overlay">@null</item>
+        <item name="c_lcd_overlay">@style/Lcd.Instrument</item>
     </style>
 
     <!-- Instrument nuit : l'appareil en graphite (#2B2B2A, touches #3A3A38, LCD #0B0B0B). Orange éclairci #FF8559 pour tenir 4,5:1
@@ -718,7 +758,7 @@
         <item name="c_signal_edge">#FFB3380D</item>
         <item name="c_on_signal">#FF1E1D1B</item>
         <item name="c_dock_height">96dp</item>
-        <item name="c_lcd_overlay">@null</item>
+        <item name="c_lcd_overlay">@style/Lcd.InstrumentNuit</item>
     </style>
 
     <!-- Chaleur (par défaut, 05/11/2026) : la DA de claude.ai et anthropic.com relevée sur les sites (crème, terre cuite,

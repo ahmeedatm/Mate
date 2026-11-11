@@ -1,6 +1,7 @@
 package app.mate.ui.home
 
 import app.mate.FakeContext
+import app.mate.Prefs
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
@@ -15,9 +16,11 @@ class HomeLayoutKeyTest {
     }
 
     @Test
-    fun `sans disposition enregistree, le modele Travail s'applique`() {
+    fun `sans disposition enregistree, le modele Travail du theme s'applique`() {
         val context = FakeContext()
         assertNull(HomeLayout.raw(context))
+        assertEquals(Template.WORK_INSTRUMENT.build().widgets.map { it.type }, HomeLayout.load(context).widgets.map { it.type })
+        Prefs.setTheme(context, "CHALEUR")
         assertEquals(Template.WORK_CADRAN.build().widgets.map { it.type }, HomeLayout.load(context).widgets.map { it.type })
     }
 
