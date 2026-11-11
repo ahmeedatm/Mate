@@ -28,15 +28,31 @@ Hors périmètre : Compose, Material You dynamique (Android 10), outillage web d
 
 0. **Regarder l'écran tel qu'il est**, avant d'écrire une ligne. Capturer l'écran **entier** où la
    nouveauté va vivre (l'Accueil pour un widget, la fenêtre entière pour un bouton) :
-   `adb exec-out screencap -p > captures/<écran>-avant.png` (sans appareil : voir « Captures par
-   thème »). Le regarder comme l'utilisateur, en 4 questions : où va l'œil en premier ? qu'est-ce
+   `adb exec-out screencap -p > captures/<écran>-avant.png` (tablette sans adb : outil MCP
+   `tablette_capture` ; sans appareil : voir « Captures par thème »). Le regarder comme l'utilisateur, en 4 questions : où va l'œil en premier ? qu'est-ce
    qui est dit deux fois ? qu'est-ce qu'il faut deviner (icône sans texte, couleur seule) ? où est
    le vide qui ne sert à rien ? Dire à l'humain ce qu'on voit, en mots simples, avec la capture,
    avant de proposer quoi que ce soit : la nouveauté se place dans l'écran entier, pas toute seule.
-   - Changement visible (nouvel écran, nouveau widget, refonte) : 2 ou 3 variantes vraiment
+   - Changement visible (nouvel écran, nouveau widget, refonte) : 3 variantes vraiment
      différentes par la mise en page et la densité (pas par la palette ni la police : le périmètre
-     tient), chacune en capture avec une ligne « quand elle gagne / ce qu'elle coûte ». Puis
-     s'arrêter : l'humain choisit.
+     tient), en **maquettes HTML sur l'appareil**, pas en Kotlin ni en simple image :
+     1. Une page `.html` par variante dans `/tmp/mate-maquettes/<sujet>/` (jamais commitée) :
+        `<meta name="viewport" content="width=1280">`, corps fixé à 1280×800, couleurs et polices du
+        thème actif lues dans `palettes.xml` (variables CSS) et copiées de `res/font/`. Interactive
+        un minimum (boutons, onglets qui changent d'état), sans vraie logique ni donnée réelle. Script
+        dans une IIFE (le navigateur d'Orca déclare déjà `close`). `<title>` = « A · nom court ».
+     2. `node scripts/maquettes.mjs <sujet> --compagnon <port>… --appareil <série>…` : sert les
+        maquettes, ouvre le sélecteur dans un onglet Orca à droite, pose `adb reverse`. Un compagnon
+        par appareil (3000 pour la vraie tablette, celui de son émulateur à soi) ; `--appareil` pour
+        ne pas toucher l'émulateur d'une autre session. La tablette ne reçoit l'ordre `page` qu'à
+        partir de la version qui le connaît (PR étiquetée `essai` ou release).
+     3. Choisir une variante soi-même dans le sélecteur, puis capturer l'appareil
+        (`adb exec-out screencap -p`, `tablette_capture`) et **regarder la capture** avant de dire à
+        l'humain de regarder : la maquette est-elle entière, à l'échelle, dans les bonnes polices ?
+     4. Dire « quand elle gagne / ce qu'elle coûte » pour chacune, puis s'arrêter : l'humain touche
+        les maquettes sur la tablette et choisit. Seule la variante retenue est codée en Kotlin.
+        Ensuite : fermer la page (bouton du sélecteur), arrêter le script, fermer l'onglet, supprimer
+        le dossier.
    - Retouche de cohérence (alignement, style manquant, texte) : pas de variantes.
 1. Lire la direction artistique : `DESIGN.md` pour les pages web, `docs/ui-ux/da/README.md` et ses
    captures pour l'appli.

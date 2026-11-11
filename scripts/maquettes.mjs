@@ -3,12 +3,13 @@
 // sélecteur ; un clic sur une maquette l'ouvre en plein écran sur chaque tablette connectée à un compagnon de ce Mac
 // (ordre `page`, route locale POST /local/tablet/page : 127.0.0.1, sans jeton). Sans dépendance.
 //
-//   node scripts/maquettes.mjs [sujet | dossier] [--port 4300] [--compagnon 3000]… [--sans-onglet] [--sans-adb]
+//   node scripts/maquettes.mjs [sujet | dossier] [--port 4300] [--compagnon 3000]… [--appareil <série>]… [--sans-onglet] [--sans-adb]
 //
 // Une maquette = un fichier .html à la racine du dossier (index.html exclu). Sujet seul : /tmp/mate-maquettes/<sujet>/,
 // jamais commité. Adresse donnée à chaque tablette : celle du Mac sur le WiFi, ou 127.0.0.1 si son compagnon n'écoute
-// qu'en local (émulateur, tablette en USB) ; `adb reverse` est alors posé sur chaque appareil adb. Le sélecteur s'ouvre
-// dans un onglet Orca à droite (ORCA_CLI_COMMAND).
+// qu'en local (émulateur, tablette en USB) ; `adb reverse` est alors posé sur les appareils `--appareil` (tous les
+// appareils adb sans cette option : en viser un quand d'autres sessions ont leur émulateur). Le sélecteur s'ouvre dans
+// un onglet Orca à droite (ORCA_CLI_COMMAND).
 import { spawnSync } from "node:child_process";
 import fs from "node:fs";
 import http from "node:http";
@@ -34,6 +35,7 @@ function parseArgs(argv) {
     target: "essai",
     port: 4300,
     companions: [],
+    devices: [],
     tab: true,
     adb: true,
   };
@@ -41,6 +43,7 @@ function parseArgs(argv) {
     const a = argv[i];
     if (a === "--port") opts.port = Number(argv[++i]);
     else if (a === "--compagnon") opts.companions.push(Number(argv[++i]));
+    else if (a === "--appareil") opts.devices.push(argv[++i]);
     else if (a === "--sans-onglet") opts.tab = false;
     else if (a === "--sans-adb") opts.adb = false;
     else if (a.startsWith("--")) throw new Error(`Option inconnue : ${a}`);
@@ -48,14 +51,9 @@ function parseArgs(argv) {
   }
   if (opts.companions.length === 0) opts.companions.push(3000);
   for (const p of [opts.port, ...opts.companions]) {
-    if (!Number.isInteger(p) || p < 0 || p > 65535)
-      throw new Error(`Port invalide : ${p}`);
+    if (!Number.isInteger(p) || p < 0 || p > 65535) throw new Error(`Port invalide : ${p}`);
   }
-  opts.dir = path.resolve(
-    opts.target.includes("/")
-      ? opts.target
-      : path.join(DEFAULT_ROOT, opts.target),
-  );
+  opts.dir = path.resolve(opts.target.includes("/") ? opts.target : path.join(DEFAULT_ROOT, opts.target));
   return opts;
 }
 
@@ -65,9 +63,7 @@ const variants = (dir) =>
     .filter((f) => f.endsWith(".html") && f !== "index.html")
     .sort()
     .map((file) => {
-      const title = /<title>([^<]*)<\/title>/i
-        .exec(fs.readFileSync(path.join(dir, file), "utf8"))?.[1]
-        ?.trim();
+      const title = /<title>([^<]*)<\/title>/i.exec(fs.readFileSync(path.join(dir, file), "utf8"))?.[1]?.trim();
       return { file, title: title || file.replace(/\.html$/, "") };
     });
 
@@ -87,8 +83,7 @@ async function sendPage(companions, servePort, file) {
     companions.map(async (port) => {
       try {
         const base = await companionTarget(port, servePort);
-        if (!base)
-          return { port, ok: false, detail: "pas de tablette connectée" };
+        if (!base) return { port, ok: false, detail: "pas de tablette connectée" };
         const url = file === null ? null : base + encodeURIComponent(file);
         const res = await fetch(`http://127.0.0.1:${port}/local/tablet/page`, {
           method: "POST",
@@ -115,11 +110,7 @@ async function sendPage(companions, servePort, file) {
 }
 
 function selectorPage(list) {
-  const escape = (s) =>
-    s.replace(
-      /[&<>"]/g,
-      (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c],
-    );
+  const escape = (s) => s.replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c]);
   const cards = list
     .map(
       (v) => `<button class="card" data-file="${escape(v.file)}">
@@ -204,48 +195,23 @@ function serve(opts) {
   return http.createServer(async (req, res) => {
     const url = new URL(req.url, "http://x");
     try {
-      if (url.pathname === "/" && req.method === "GET")
-        return reply(
-          res,
-          200,
-          TYPES[".html"],
-          selectorPage(variants(opts.dir)),
-        );
+      if (url.pathname === "/" && req.method === "GET") return reply(res, 200, TYPES[".html"], selectorPage(variants(opts.dir)));
       if (url.pathname === "/choisir" && req.method === "POST") {
         // Le sélecteur seul (ce Mac) envoie des ordres : pas un autre appareil du WiFi.
-        if (!LOOPBACK.has(req.socket.remoteAddress))
-          return reply(res, 403, "text/plain", "Depuis ce Mac seulement");
+        if (!LOOPBACK.has(req.socket.remoteAddress)) return reply(res, 403, "text/plain", "Depuis ce Mac seulement");
         const { file } = await readJson(req);
-        if (file !== null && !variants(opts.dir).some((v) => v.file === file))
-          return reply(res, 404, "text/plain", "Maquette inconnue");
-        const lines = await sendPage(
-          opts.companions,
-          opts.server.address().port,
-          file,
-        );
-        for (const l of lines)
-          console.log(`${l.ok ? "✓" : "✗"} compagnon ${l.port} : ${l.detail}`);
+        if (file !== null && !variants(opts.dir).some((v) => v.file === file)) return reply(res, 404, "text/plain", "Maquette inconnue");
+        const lines = await sendPage(opts.companions, opts.server.address().port, file);
+        for (const l of lines) console.log(`${l.ok ? "✓" : "✗"} compagnon ${l.port} : ${l.detail}`);
         return reply(res, 200, "application/json", JSON.stringify(lines));
       }
-      if (req.method !== "GET")
-        return reply(res, 405, "text/plain", "GET seulement");
+      if (req.method !== "GET") return reply(res, 405, "text/plain", "GET seulement");
       // Fichiers du dossier seulement (maquettes, polices, images) : rien au-dessus.
-      const file = path.resolve(
-        opts.dir,
-        "." + decodeURIComponent(url.pathname),
-      );
-      if (
-        !file.startsWith(opts.dir + path.sep) ||
-        !fs.statSync(file, { throwIfNoEntry: false })?.isFile()
-      ) {
+      const file = path.resolve(opts.dir, "." + decodeURIComponent(url.pathname));
+      if (!file.startsWith(opts.dir + path.sep) || !fs.statSync(file, { throwIfNoEntry: false })?.isFile()) {
         return reply(res, 404, "text/plain", "Introuvable");
       }
-      return reply(
-        res,
-        200,
-        TYPES[path.extname(file).toLowerCase()] ?? "application/octet-stream",
-        fs.readFileSync(file),
-      );
+      return reply(res, 200, TYPES[path.extname(file).toLowerCase()] ?? "application/octet-stream", fs.readFileSync(file));
     } catch (e) {
       return reply(res, 400, "text/plain", String(e.message ?? e));
     }
@@ -253,67 +219,47 @@ function serve(opts) {
 }
 
 /** Émulateur et tablette en USB : 127.0.0.1:<port> de l'appareil mène au serveur des maquettes de ce Mac. */
-function adbReverse(port) {
+function adbReverse(port, devices) {
   const list = spawnSync("adb", ["devices"], { encoding: "utf8" });
-  if (list.error)
-    return console.log(`adb absent : pas de reverse (${list.error.code})`);
+  if (list.error) return console.log(`adb absent : pas de reverse (${list.error.code})`);
   const serials = list.stdout
     .split("\n")
     .slice(1)
     .map((l) => l.split("\t"))
     .filter(([, state]) => state?.trim() === "device")
-    .map(([serial]) => serial);
+    .map(([serial]) => serial)
+    .filter((serial) => devices.length === 0 || devices.includes(serial));
   for (const serial of serials) {
-    const r = spawnSync(
-      "adb",
-      ["-s", serial, "reverse", `tcp:${port}`, `tcp:${port}`],
-      { encoding: "utf8" },
-    );
-    console.log(
-      r.status === 0
-        ? `adb reverse posé sur ${serial}`
-        : `adb reverse refusé sur ${serial} : ${r.stderr.trim()}`,
-    );
+    const r = spawnSync("adb", ["-s", serial, "reverse", `tcp:${port}`, `tcp:${port}`], { encoding: "utf8" });
+    console.log(r.status === 0 ? `adb reverse posé sur ${serial}` : `adb reverse refusé sur ${serial} : ${r.stderr.trim()}`);
   }
 }
 
 function openTab(url) {
   const orca = process.env.ORCA_CLI_COMMAND;
   if (!orca) return console.log(`Ouvrir le sélecteur : ${url}`);
-  const r = spawnSync(
-    orca,
-    ["tab", "create", "--url", url, "--worktree", "active", "--split", "right"],
-    { encoding: "utf8" },
-  );
-  if (r.status !== 0)
-    console.log(
-      `Onglet Orca non ouvert (${(r.stderr || r.error?.message || "").trim()}) : ${url}`,
-    );
+  const r = spawnSync(orca, ["tab", "create", "--url", url, "--worktree", "active", "--split", "right"], { encoding: "utf8" });
+  if (r.status !== 0) console.log(`Onglet Orca non ouvert (${(r.stderr || r.error?.message || "").trim()}) : ${url}`);
 }
 
 let opts;
 try {
   opts = parseArgs(process.argv.slice(2));
-  if (!fs.statSync(opts.dir, { throwIfNoEntry: false })?.isDirectory())
-    throw new Error(`Dossier introuvable : ${opts.dir}`);
+  if (!fs.statSync(opts.dir, { throwIfNoEntry: false })?.isDirectory()) throw new Error(`Dossier introuvable : ${opts.dir}`);
 } catch (e) {
   console.error(e.message);
   process.exit(1);
 }
 opts.server = serve(opts);
 opts.server.on("error", (e) => {
-  console.error(
-    `Serveur des maquettes : ${e.code === "EADDRINUSE" ? `port ${opts.port} déjà pris (--port)` : e.message}`,
-  );
+  console.error(`Serveur des maquettes : ${e.code === "EADDRINUSE" ? `port ${opts.port} déjà pris (--port)` : e.message}`);
   process.exit(1);
 });
 // Toutes les interfaces : la tablette en WiFi lit les maquettes ; les ordres restent réservés à ce Mac (/choisir).
 opts.server.listen(opts.port, () => {
   const port = opts.server.address().port;
   const url = `http://127.0.0.1:${port}/`;
-  console.log(
-    `Sélecteur : ${url} (${variants(opts.dir).length} maquettes dans ${opts.dir})`,
-  );
-  if (opts.adb) adbReverse(port);
+  console.log(`Sélecteur : ${url} (${variants(opts.dir).length} maquettes dans ${opts.dir})`);
+  if (opts.adb) adbReverse(port, opts.devices);
   if (opts.tab) openTab(url);
 });
