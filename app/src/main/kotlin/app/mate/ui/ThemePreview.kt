@@ -16,7 +16,7 @@ import app.mate.R
 
 /**
  * Vignette d'un thème dans Réglages > Apparence : un petit écran peint avec ses propres couleurs (fond, barre de
- * gauche, carte avec « Aa » dans sa police de titres, pastille d'accent). Choisi : cadre de l'accent du thème
+ * gauche, ou rangée de touches en bas pour les thèmes Instrument, carte avec « Aa » dans sa police de titres, pastille d'accent). Choisi : cadre de l'accent du thème
  * affiché. Thème à tubes (Cadran, Cadran nuit, Rétro, c_flow) : trois bandes de leurs couleurs à droite. Thème à fond
  * animé (Hush, c_backdrop) : un reflet violet et un rose sous la carte en verre. Thème à image de fond (Spider-Verse,
  * c_wallpaper) : l'image réduite (1/8, 160 × 100 px), sans carte, comme ses widgets sans tuile.
@@ -33,6 +33,7 @@ class ThemePreview(context: Context, theme: AppTheme, private val chosen: Boolea
     private val accent = color(R.attr.c_accent)
     private val text = color(R.attr.c_text)
     private val dim = color(R.attr.c_text_dim)
+    private val dock = themePx(themed, R.attr.c_dock_height) > 0
     private val backdrop = themeBool(themed, R.attr.c_backdrop)
     private val wallpaper: Bitmap? = themeRes(themed, R.attr.c_wallpaper).takeIf { it != 0 }
         ?.let { BitmapFactory.decodeResource(resources, it, BitmapFactory.Options().apply { inSampleSize = WALLPAPER_SAMPLE }) }
@@ -83,6 +84,30 @@ class ThemePreview(context: Context, theme: AppTheme, private val chosen: Boolea
         glow2.shader = halo(accent, w * 0.9f, h * 0.05f)
     }
 
+    /** Barre de gauche, un peu à part du fond comme dans l'appli. */
+    private fun drawRail(canvas: Canvas, pad: Float, w: Float, h: Float, d: Float) {
+        fill.color = rail
+        canvas.drawRect(pad, pad, pad + w * 0.12f, pad + h, fill)
+        fill.color = accent
+        canvas.drawRoundRect(pad + w * 0.04f, pad + h * 0.2f, pad + w * 0.08f, pad + h * 0.38f, 2 * d, 2 * d, fill)
+    }
+
+    /** Rangée de touches en bas (thèmes Instrument) : un panneau, cinq touches, la première allumée d'une DEL d'accent. */
+    private fun drawDock(canvas: Canvas, pad: Float, w: Float, h: Float, d: Float) {
+        val top = pad + h * 0.72f
+        fill.color = rail
+        canvas.drawRect(pad, top, pad + w, pad + h, fill)
+        val keyW = w * 0.15f
+        val gap = (w - KEYS * keyW) / (KEYS + 1)
+        for (i in 0 until KEYS) {
+            val left = pad + gap + i * (keyW + gap)
+            fill.color = surface
+            canvas.drawRoundRect(left, top + h * 0.06f, left + keyW, pad + h - h * 0.05f, 2 * d, 2 * d, fill)
+            fill.color = if (i == 0) accent else dim
+            canvas.drawRoundRect(left + keyW * 0.3f, top - h * 0.02f, left + keyW * 0.7f, top + h * 0.02f, d, d, fill)
+        }
+    }
+
     override fun onDraw(canvas: Canvas) {
         val d = resources.displayMetrics.density
         val pad = 4 * d
@@ -101,11 +126,7 @@ class ThemePreview(context: Context, theme: AppTheme, private val chosen: Boolea
             canvas.drawRect(rect, glow2)
         }
         wallpaper?.let { canvas.drawBitmap(it, null, wallpaperFrame(it), image) }
-        // Barre de gauche, un peu à part du fond comme dans l'appli.
-        fill.color = rail
-        canvas.drawRect(pad, pad, pad + w * 0.12f, pad + h, fill)
-        fill.color = accent
-        canvas.drawRoundRect(pad + w * 0.04f, pad + h * 0.2f, pad + w * 0.08f, pad + h * 0.38f, 2 * d, 2 * d, fill)
+        if (dock) drawDock(canvas, pad, w, h, d) else drawRail(canvas, pad, w, h, d)
         // Tubes à droite : trois bandes de leurs couleurs.
         flow.forEachIndexed { i, c ->
             fill.color = c
@@ -113,7 +134,7 @@ class ThemePreview(context: Context, theme: AppTheme, private val chosen: Boolea
             canvas.drawRect(pad + w * 0.8f + i * band, pad, pad + w * 0.8f + (i + 1) * band, pad + h, fill)
         }
         // Carte : « Aa » en couleur de texte, pastille d'accent, ligne de texte secondaire.
-        rect.set(pad + w * 0.18f, pad + h * 0.16f, pad + w * 0.76f, pad + h * 0.84f)
+        if (dock) rect.set(pad + w * 0.08f, pad + h * 0.12f, pad + w * 0.92f, pad + h * 0.62f) else rect.set(pad + w * 0.18f, pad + h * 0.16f, pad + w * 0.76f, pad + h * 0.84f)
         fill.color = surface
         if (wallpaper == null) canvas.drawRoundRect(rect, 10 * d, 10 * d, fill)
         letters.color = text
@@ -141,3 +162,6 @@ class ThemePreview(context: Context, theme: AppTheme, private val chosen: Boolea
 
 /** Réduction de l'image de fond dans la vignette : 1280 × 800 / 8 = 160 × 100 px, 64 Ko en mémoire. */
 private const val WALLPAPER_SAMPLE = 8
+
+/** Touches dessinées dans la rangée d'une vignette Instrument (comme les cinq de l'appli). */
+private const val KEYS = 5

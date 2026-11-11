@@ -63,6 +63,7 @@ import app.mate.ui.ComputerAdder
 import app.mate.ui.ComputersDialog
 import app.mate.ui.DocumentPanel
 import app.mate.ui.FocusFragment
+import app.mate.ui.FrameTracer
 import app.mate.ui.FrameTracerModel
 import app.mate.ui.FromComputerFragment
 import app.mate.ui.GameSession
@@ -90,6 +91,7 @@ import app.mate.ui.TemplatesDialog
 import app.mate.ui.ThemePattern
 import app.mate.ui.TourModel
 import app.mate.ui.TourOverlay
+import app.mate.ui.TracedScreen
 import app.mate.ui.Typing
 import app.mate.ui.Wallpaper
 import app.mate.ui.WelcomeView
@@ -1149,6 +1151,8 @@ class MainActivity : AppCompatActivity() {
         // Balayage (thèmes Instrument) : l'écran quitté est photographié avant d'être masqué plus bas.
         val before = if (changed && nav is KeyDock) findViewById<SweepView>(R.id.sweep).capture(findViewById(R.id.mode_container)) else null
         sweeping = before != null
+        // Un tracé encore en cours sur l'écran quitté s'arrête (ses cartes redeviennent visibles).
+        findViewById<FrameTracer>(R.id.tracer).stop()
         val leavingCamera = current == Mode.CAMERA && mode != Mode.CAMERA
         current = mode
         if (::presence.isInitialized) {
@@ -1178,6 +1182,11 @@ class MainActivity : AppCompatActivity() {
         renderNoComputer()
         if (changed) slideTo(mode, before)
         fm.executePendingTransactions()
+        // Thèmes Instrument : Focus, Ordi, Caméra et Réglages tracent leurs cartes à l'arrivée (l'Accueil a son propre tracé).
+        if (changed && mode != Mode.HOME && FrameTracer.wanted(this)) {
+            val cards = (fm.findFragmentByTag(mode.tag) as? TracedScreen)?.tracedCards().orEmpty()
+            if (cards.isNotEmpty()) findViewById<FrameTracer>(R.id.tracer).play(cards, { false }, traceLead())
+        }
         sweeping = false
         showTopHeader()
     }

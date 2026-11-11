@@ -8,12 +8,19 @@ import android.graphics.Path
 import android.graphics.PathMeasure
 import android.graphics.RectF
 import android.graphics.drawable.GradientDrawable
+import android.util.AttributeSet
 import android.view.View
 import android.view.animation.LinearInterpolator
 import android.view.animation.PathInterpolator
 import androidx.core.view.doOnLayout
 import app.mate.AnimFamily
 import app.mate.R
+
+/** Un écran qui trace ses cartes principales à son arrivée (thèmes Instrument) : MainActivity les confie au tracé partagé. */
+interface TracedScreen {
+    /** Les cartes à tracer, dans l'ordre ; vide si l'écran n'en montre pas pour l'instant. */
+    fun tracedCards(): List<View>
+}
 
 /**
  * Tracé des cadres à l'arrivée d'un écran des thèmes Instrument : un seul calque transparent posé sur la grille, qui dessine
@@ -22,7 +29,7 @@ import app.mate.R
  * plafond : [FrameTracerModel]. Une seule animation pilote tout ; `invalidate` ne part que pendant le tracé, le calque se
  * retire à la fin. Coupé : [wanted] est faux, l'appelant ne l'utilise pas et rien ne passe à alpha 0.
  */
-class FrameTracer(context: Context) : View(context) {
+class FrameTracer @JvmOverloads constructor(context: Context, attrs: AttributeSet? = null) : View(context, attrs) {
 
     private class Item(val view: View, val frame: FrameTracerModel.Frame, val lcd: Boolean) {
         val rect = RectF()

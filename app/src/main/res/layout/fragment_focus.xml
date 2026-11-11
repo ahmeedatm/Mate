@@ -160,6 +160,7 @@
         <!-- Ambiance : reste à l'écran avec la respiration, pour changer de son à tout moment. Fond des widgets de
              l'Accueil : translucide dans les thèmes à tubes, qui passent derrière. -->
         <LinearLayout
+            android:id="@+id/focus_ambiance"
             style="@style/Card"
             android:layout_width="wrap_content"
             android:background="?attr/c_home_card_bg"

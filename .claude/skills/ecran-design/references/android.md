@@ -88,8 +88,13 @@ l'écran et le taux d'images en retard ne sont pas encore mesurés : à relever 
 | Changement d'état (sélection, coche) | 150 à 250 ms |
 | Arrivée d'un mode, d'une boîte | 200 à 300 ms |
 | Décalage entre éléments d'une liste | ≤ 50 ms par élément, 300 ms de décalage total au plus |
+| Thèmes Instrument : balayage orange entre deux écrans | 300 ms (couvrir) + 360 ms (révéler) |
+| Thèmes Instrument : tracé d'un cadre à l'arrivée | 440 ms par cadre, 60 ms entre deux, 8 cadres au plus |
 | Sortie | plus courte que l'entrée |
 
+- Le balayage (660 ms) et le tracé (440 ms par cadre) des thèmes Instrument (`ui/SweepView`, `ui/FrameTracer`) sont des
+  exceptions assumées au « 200 à 300 ms » : c'est la signature de la DA. Leur vitesse sur la tablette (55 Hz, 2 Go) reste à
+  mesurer ; au-delà de 8 cadres le tracé passe en fondu, et tout est coupé par Réduire les animations.
 - Propriétés : `alpha`, `translationX/Y`, `scaleX/Y`, `rotation`. Avec `withLayer()` pour une vue
   complexe. Jamais `width`/`height`/marges animées, jamais de flou, d'ombre ou de dégradé animé.
 - Décélération (`DecelerateInterpolator`). Rebond (`Overshoot`) seulement pour un geste qui l'appelle

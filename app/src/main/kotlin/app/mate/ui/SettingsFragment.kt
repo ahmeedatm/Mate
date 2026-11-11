@@ -24,6 +24,7 @@ import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.widget.SwitchCompat
 import androidx.core.content.ContextCompat
 import androidx.core.view.ViewCompat
+import androidx.core.view.children
 import androidx.core.widget.ImageViewCompat
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.lifecycleScope
@@ -71,7 +72,15 @@ import kotlinx.coroutines.withContext
 
 class SettingsFragment :
     Fragment(),
-    TopHeader {
+    TopHeader,
+    TracedScreen {
+    /** Thèmes Instrument : les premières cartes de l'onglet affiché. */
+    override fun tracedCards(): List<View> {
+        if (view == null) return emptyList()
+        val page = tabs.getOrNull(tab.ordinal)?.second as? ViewGroup ?: return emptyList()
+        return page.children.filter { it.visibility == View.VISIBLE }.take(TRACED_CARDS).toList()
+    }
+
     /** Le titre (appui long : code technicien), dans le bandeau du haut. */
     override var topHeader: View? = null
         private set
@@ -1317,6 +1326,9 @@ class SettingsFragment :
 
     private companion object {
         const val KEY_TAB = "settings_tab"
+
+        /** Cartes tracées à l'arrivée (celles qu'on voit sans défiler). */
+        const val TRACED_CARDS = 3
 
         /** Vignettes de thème par rangée. */
         const val THEME_COLUMNS = 5

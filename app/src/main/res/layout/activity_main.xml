@@ -201,6 +201,14 @@
                 android:layout_marginTop="@dimen/top_bar_height"
                 android:visibility="gone" />
 
+            <!-- Tracé des cadres des thèmes Instrument pour Focus, Ordi, Caméra et Réglages (ui/FrameTracer) : caché au repos. -->
+            <app.mate.ui.FrameTracer
+                android:id="@+id/tracer"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:layout_marginTop="@dimen/top_bar_height"
+                android:visibility="gone" />
+
             <!-- Bandeau du haut, fixe (ui/topbar/TopBar) : en-tête de l'écran à gauche, éléments choisis à droite (lecture en
                  cours, heure, WiFi, batterie…) ; la barre d'état d'Android est masquée en kiosque. -->
             <app.mate.ui.topbar.TopBar

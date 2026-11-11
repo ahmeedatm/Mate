@@ -1,5 +1,68 @@
 # DA de Mate
 
+## Instrument tracé (thème par défaut, 11/11/2026)
+
+Choisie par Ahmed sur la maquette de fusion (`fusion/index.html`, issue #216, PR #229). Un appareil d'aluminium avec des
+fenêtres LCD et des touches qui s'enfoncent, dont chaque écran se dessine à l'arrivée, sur une hiérarchie d'affiche : l'heure
+et le prochain rendez-vous en héros, le reste petit et dense. Deux thèmes : Instrument (jour) et Instrument nuit (graphite),
+tous deux en tête des Réglages ; Instrument est le défaut, un thème enregistré est gardé. Aucun logo ni marque repris.
+
+D'où vient chaque idée :
+
+| Source | Ce qu'on lui prend |
+|---|---|
+| Instrument (la base) | aluminium, fenêtres LCD, Departure Mono, un seul orange, touches à deux couches avec DEL, nuit graphite |
+| Carnet | le geste du dessin à chaque arrivée d'écran : les cadres se tracent au trait fin, sans papier ni crayon tremblé |
+| Affiche | héros énorme (heure + prochain rendez-vous), titres Barlow SC 600, aplat orange qui balaie entre les écrans, touches numérotées 01 à 05 |
+
+Jetons (`Palette.Instrument`, `Palette.InstrumentNuit`, `res/values/palettes.xml` ; contrastes en test, `ThemePalettesTest`) :
+
+| Jeton | Jour | Nuit |
+|---|---|---|
+| `c_bg`, `c_rail` (alu) | `#E6E3DC` | `#2B2B2A` |
+| `c_surface` (carte) | `#EFEDE7` | `#343432` (touche `#3A3A38`) |
+| `c_stroke` | `#B7B2A6` | `#121211` |
+| `c_text` | `#1E1D1B` | `#ECE8DF` |
+| `c_text_dim`, `c_text_faint` | `#5A564E` | `#B4AFA3`, `#AEA99D` |
+| `c_accent` (texte, aplats) | `#B3380D` (4,7:1 sur l'alu) | `#FF8559` (4,5:1) |
+| `c_signal` (LCD, DEL, aplat) | `#FF5A1F` | `#FF5A1F` |
+| fenêtre LCD (`Lcd.Instrument`, `Lcd.InstrumentNuit`) | `#141414`, texte `#F1EDE4` | `#0B0B0B`, texte `#F1EDE4` |
+
+Orange vif `#FF5A1F` réservé aux fenêtres LCD, aux DEL et à l'aplat de balayage (il ne fait que 3:1 sur l'alu : pas de texte dessus) ;
+le texte et les boutons de l'alu prennent le `c_accent` foncé. Nouveaux attributs : `c_signal`, `c_signal_edge`, `c_on_signal`,
+`c_dock_height` (96 dp pour Instrument, 0 ailleurs : c'est ce qui allume la rangée de touches) et `c_lcd_overlay` (le style LCD).
+
+Polices : Departure Mono (`c_font_display` : heure, chiffres, minuteur, numéros des touches ; OFL 1.1, convertie en TrueType
+depuis la release rektdeckard/departure-mono v1.500) ; Barlow Semi Condensed 600 pour les titres et libellés en capitales
+(`c_font_title` = `c_font_label`, `c_label_caps`), 500 pour le moyen ; Barlow 400 pour le texte.
+
+Navigation : une rangée de touches numérotées en bas (`ui/KeyDock`, `KeyDockModel`), à la place de la barre de gauche (les
+autres thèmes la gardent). Parler en touche ronde orange à gauche, Verrou en touche ronde à droite ; 01 Accueil, 02 Focus
+(le minuteur en Departure Mono quand il tourne), 03 Ordi, 04 Caméra, 05 Réglages, renumérotées quand un outil est masqué.
+Une DEL au-dessus de la touche active ; celle de 01 a un segment par profil (orange sur l'affiché, contour pour Réunion en
+appel), toucher 01 déjà active passe au profil suivant, appui long = liste des profils. L'ordinateur actif est une pastille
+LCD à droite du bandeau du haut. Cibles de 48 dp au moins.
+
+Signature de mouvement (une exception assumée au budget de `ecran-design/references/android.md` ; durées à mesurer sur la
+tablette, 55 Hz et 2 Go) :
+
+| Geste | Durée |
+|---|---|
+| Touche qui s'enfonce (capuchon de 6 dp) | 90 ms, retour par ressort |
+| DEL qui s'allume (flash) | 140 ms |
+| Aplat orange qui balaie entre deux écrans (`ui/SweepView`, `SweepModel`) | 300 ms pour couvrir + 360 ms pour révéler, courbe (.65, 0, .35, 1) ; numéro et nom de l'écran sur l'aplat |
+| Cadre qui se trace (`ui/FrameTracer`, `FrameTracerModel`) | 440 ms par cadre, 60 ms entre deux cadres, 8 cadres tracés au plus (les suivants en fondu) |
+| Contenu du module | fondu 200 ms, 300 ms après le départ du cadre |
+| Fenêtre LCD qui s'allume | 4 paliers sur 300 ms, 700 ms après le départ du cadre |
+
+Le tracé démarre 140 ms après le début de la révélation du balayage. Réduire les animations, la famille Accueil coupée ou
+l'échelle d'animation à zéro : rien ne s'anime (le tracé n'est pas lancé, tout est visible). Écrans tracés : l'Accueil (tous
+ses modules, plus la tuile ajoutée), Focus (Ambiance et humeurs), Ordi et Caméra (les cartes du choix), Réglages (les trois
+premières cartes de l'onglet). Pas encore faits : chiffres qui roulent à l'allumage des fenêtres LCD (`ClockWidget` et
+`NextWidget` n'utilisent pas `RollingText`), vis, mascotte et module Ordi de l'Accueil.
+
+Aperçu dans Réglages > Thème (`ThemePreview`) : une rangée de touches en bas à la place de la barre de gauche.
+
 ## Chaleur (thème par défaut, 05/11/2026)
 
 Choisie par Ahmed parmi trois directions (Sobre, Chaleur, Nuit), sur maquettes HTML. Esprit de claude.ai et anthropic.com,
