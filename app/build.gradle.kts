@@ -11,11 +11,9 @@ val backendUrl = (findProperty("backendUrl") as String?) ?: "http://127.0.0.1:30
 // release passe le secret TECH_CODE, 4242 ne vaut que pour les builds locales et les essais de PR.
 val techCode = (findProperty("techCode") as String?) ?: "4242"
 
-// Mises à jour : assets des releases GitHub du dépôt `updateRepo` (tag `latest` : stables, tag `essais` : essais de PR),
-// lus par l'API GitHub avec `updateToken`, jeton en lecture seule du dépôt (privé). Le jeton est dans l'APK, jamais dans
-// le dépôt : la CI release le passe (-PupdateToken=…), vide en debug (aucune mise à jour vue). -PupdateRepo= (vide) coupe la source.
+// Mises à jour : assets des releases GitHub du dépôt public `updateRepo` (tag `latest` : stables, tag `essais` : essais
+// de PR), lus par leurs liens de téléchargement publics, sans jeton. -PupdateRepo= (vide) coupe la source.
 val updateRepo = (findProperty("updateRepo") as String?) ?: "ahmeedatm/Mate"
-val updateToken = (findProperty("updateToken") as String?) ?: ""
 // Serveur HTTP simple à la place de GitHub, pour un essai local : -PupdateUrl=http://10.0.2.2:8099 (essais sous /essais).
 val updateUrl = (findProperty("updateUrl") as String?) ?: ""
 
@@ -62,7 +60,6 @@ android {
         buildConfigField("String", "TECH_CODE", "\"$techCode\"")
         buildConfigField("String", "UPDATE_URL", "\"$updateUrl\"")
         buildConfigField("String", "UPDATE_REPO", "\"$updateRepo\"")
-        buildConfigField("String", "UPDATE_TOKEN", "\"$updateToken\"")
         buildConfigField("String", "IDFM_TOKEN", "\"$idfmToken\"")
         // Bibliothèques natives de Vosk (10 Mo par ABI) : la tablette (arm64-v8a), les lots 32 bits (armeabi-v7a) et
         // l'émulateur (x86_64) ; x86, armeabi et mips n'ont pas de Vosk de toute façon.

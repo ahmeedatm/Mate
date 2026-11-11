@@ -55,7 +55,7 @@ internal class HttpStore(private val http: Http, private val source: UpdateSourc
 
 /**
  * Mises à jour de la tablette, même format de manifeste partout : l'ordinateur (`GET /updates`, src/updates.ts, avec le
- * jeton d'appairage), une release GitHub (`GitHubStore`, jeton de lecture injecté au build) ou un serveur HTTP simple
+ * jeton d'appairage), une release GitHub (`GitHubStore`, liens de téléchargement publics) ou un serveur HTTP simple
  * (essai local, `-PupdateUrl=`). `http` : l'ordinateur seulement.
  */
 class UpdatesApi internal constructor(
@@ -142,20 +142,20 @@ class UpdatesApi internal constructor(
         private const val ESSAIS = "essais"
 
         /** Release `latest`, null si la source est coupée au build (`-PupdateRepo=` et `-PupdateUrl=` vides). */
-        fun server(url: String = BuildConfig.UPDATE_URL, repo: String = BuildConfig.UPDATE_REPO, token: String = BuildConfig.UPDATE_TOKEN): UpdatesApi? =
-            remote(url, repo, token, LATEST, UpdateSource.SERVER)
+        fun server(url: String = BuildConfig.UPDATE_URL, repo: String = BuildConfig.UPDATE_REPO): UpdatesApi? =
+            remote(url, repo, LATEST, UpdateSource.SERVER)
 
-        /** Release `essais` (une entrée par PR), même dépôt et même jeton de lecture ; `<url>/essais` pour un essai local. */
-        fun essais(url: String = BuildConfig.UPDATE_URL, repo: String = BuildConfig.UPDATE_REPO, token: String = BuildConfig.UPDATE_TOKEN): UpdatesApi? =
-            remote(url, repo, token, ESSAIS, UpdateSource.TRIALS)
+        /** Release `essais` (une entrée par PR), même dépôt ; `<url>/essais` pour un essai local. */
+        fun essais(url: String = BuildConfig.UPDATE_URL, repo: String = BuildConfig.UPDATE_REPO): UpdatesApi? =
+            remote(url, repo, ESSAIS, UpdateSource.TRIALS)
 
         /** Serveur HTTP simple s'il y a une `url` (essai local), sinon release GitHub du `repo`, sinon null. */
-        private fun remote(url: String, repo: String, token: String, tag: String, source: UpdateSource): UpdatesApi? = when {
+        private fun remote(url: String, repo: String, tag: String, source: UpdateSource): UpdatesApi? = when {
             url.isNotBlank() -> {
                 val base = url.trimEnd('/').let { if (tag == LATEST) it else "$it/$tag" }
                 Http(base, "", 10_000).let { UpdatesApi(it, source, HttpStore(it, source)) }
             }
-            repo.isNotBlank() -> UpdatesApi(null, source, GitHubStore(repo.trim(), tag, token))
+            repo.isNotBlank() -> UpdatesApi(null, source, GitHubStore(repo.trim(), tag))
             else -> null
         }
     }
