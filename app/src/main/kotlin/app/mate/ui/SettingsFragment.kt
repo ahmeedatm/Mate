@@ -41,6 +41,7 @@ import app.mate.device.Accessibility
 import app.mate.device.Bluetooth
 import app.mate.device.Screen
 import app.mate.device.Tablet
+import app.mate.device.TalkBackRoute
 import app.mate.installers.BackendPlan
 import app.mate.installers.BackendRelease
 import app.mate.installers.CompanionUpdater
@@ -119,6 +120,7 @@ class SettingsFragment :
     private lateinit var wakeStatus: TextView
     private lateinit var weatherLocation: SwitchCompat
     private lateinit var talkBack: SwitchCompat
+    private var talkBackRoute = TalkBackRoute.MISSING
     private lateinit var tabletInfo: TextView
     private lateinit var updatesStatus: TextView
     private lateinit var updates: LinearLayout
@@ -444,10 +446,14 @@ class SettingsFragment :
         val ctx = requireContext()
         talkBack = view.findViewById(R.id.settings_talkback)
         val hint = view.findViewById<TextView>(R.id.settings_talkback_hint)
-        val installed = Accessibility.talkBackInstalled(ctx)
-        val allowed = Accessibility.canConfigure(ctx)
-        talkBack.isEnabled = installed && allowed
-        if (!installed) hint.setText(R.string.a11y_talkback_missing) else if (!allowed) hint.setText(R.string.a11y_talkback_locked)
+        talkBackRoute = TalkBackRoute.of(Accessibility.talkBackInstalled(ctx), Accessibility.canConfigure(ctx), Kiosk.isLocked(ctx))
+        talkBack.isEnabled = talkBackRoute == TalkBackRoute.DIRECT || talkBackRoute == TalkBackRoute.SYSTEM_SETTINGS
+        when (talkBackRoute) {
+            TalkBackRoute.MISSING -> hint.setText(R.string.a11y_talkback_missing)
+            TalkBackRoute.LOCKED -> hint.setText(R.string.a11y_talkback_locked)
+            TalkBackRoute.SYSTEM_SETTINGS -> hint.setText(R.string.a11y_talkback_system)
+            TalkBackRoute.DIRECT -> Unit
+        }
         renderTalkBack()
 
         val row = view.findViewById<LinearLayout>(R.id.settings_text_sizes)
@@ -477,7 +483,15 @@ class SettingsFragment :
         val ctx = requireContext()
         talkBack.setOnCheckedChangeListener(null)
         talkBack.isChecked = Accessibility.talkBackOn(ctx)
-        talkBack.setOnCheckedChangeListener { _, checked -> Accessibility.setTalkBack(ctx, checked) }
+        talkBack.setOnCheckedChangeListener { _, checked ->
+            if (talkBackRoute == TalkBackRoute.DIRECT) {
+                Accessibility.setTalkBack(ctx, checked)
+                return@setOnCheckedChangeListener
+            }
+            // Hors kiosque sans la permission : Android règle TalkBack lui-même ; l'interrupteur suivra au retour (onResume).
+            runCatching { startActivity(android.content.Intent(android.provider.Settings.ACTION_ACCESSIBILITY_SETTINGS)) }
+            renderTalkBack()
+        }
     }
 
     // --- Tablette : luminosité, volume, batterie (cachés par le kiosque)

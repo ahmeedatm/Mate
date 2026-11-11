@@ -1,6 +1,7 @@
 package app.mate.remote
 
 import android.content.Context
+import app.mate.BuildConfig
 import app.mate.R
 import app.mate.kiosk.Kiosk
 import app.mate.kiosk.UpdatePlan
@@ -45,7 +46,8 @@ internal object RemoteUpdate {
     fun install(context: Context) {
         val update = available ?: error("Aucune mise à jour à installer : la tablette est à jour")
         if (installing) return
-        if (!Kiosk.isDeviceOwner(context)) error(context.getString(R.string.update_needs_kiosk))
+        // Appli d'essai : ses mises à jour sont les essais de PR, choisis dans ses Réglages.
+        if (BuildConfig.TRIAL) error(context.getString(R.string.update_not_in_trial))
         val app = context.applicationContext
         installing = true
         failure = null
@@ -69,4 +71,6 @@ internal object RemoteUpdate {
         .put("installing", installing)
         .put("error", failure ?: JSONObject.NULL)
         .put("kiosk", Kiosk.isDeviceOwner(context))
+        // Hors kiosque : Android affiche sa confirmation sur la tablette (Updater), la page de l'ordinateur le dit.
+        .put("confirm", !Kiosk.isDeviceOwner(context) && !BuildConfig.TRIAL)
 }
