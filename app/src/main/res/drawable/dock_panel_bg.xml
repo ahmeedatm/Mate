@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Rangée de touches d'Instrument : le panneau d'alu de la barre (c_rail), un filet en haut (c_stroke). -->
+<layer-list xmlns:android="http://schemas.android.com/apk/res/android">
+    <item><shape android:shape="rectangle"><solid android:color="?attr/c_rail" /></shape></item>
+    <item android:gravity="top"><shape android:shape="rectangle"><size android:height="1dp" /><solid android:color="?attr/c_stroke" /></shape></item>
+</layer-list>

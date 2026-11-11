@@ -1,0 +1,55 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Pastille LCD de l'ordinateur actif, à droite du bandeau du haut (thèmes à rangée de touches : la barre de gauche, qui
+     la portait, n'y est pas). Gonflée avec le style LCD du thème : texte crème, signe d'état aux couleurs de l'afficheur.
+     Toucher : changer d'ordinateur. -->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/chip_computer"
+    android:layout_width="wrap_content"
+    android:layout_height="wrap_content"
+    android:background="@drawable/instrument_lcd_bg"
+    android:clickable="true"
+    android:focusable="true"
+    android:gravity="center_vertical"
+    android:minHeight="48dp"
+    android:orientation="horizontal"
+    android:paddingStart="12dp"
+    android:paddingTop="4dp"
+    android:paddingEnd="14dp"
+    android:paddingBottom="4dp"
+    android:stateListAnimator="@animator/press"
+    android:visibility="gone">
+
+    <ImageView
+        android:id="@+id/chip_dot"
+        android:layout_width="20dp"
+        android:layout_height="20dp"
+        android:importantForAccessibility="no"
+        android:padding="2dp" />
+
+    <LinearLayout
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="10dp"
+        android:orientation="vertical">
+
+        <TextView
+            android:id="@+id/chip_name"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:ellipsize="end"
+            android:fontFamily="?attr/c_font_medium"
+            android:maxWidth="180dp"
+            android:singleLine="true"
+            android:textColor="?attr/c_text"
+            android:textSize="14sp" />
+
+        <TextView
+            android:id="@+id/chip_state"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:fontFamily="?attr/c_font_regular"
+            android:singleLine="true"
+            android:textColor="?attr/c_text_dim"
+            android:textSize="12sp" />
+    </LinearLayout>
+</LinearLayout>

@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Capuchon d'une touche d'Instrument : enfoncé de 6 dp à l'appui, de 4 dp tant que la touche est active (celle qu'on voit),
+     il remonte avec un petit rebond. -->
+<selector xmlns:android="http://schemas.android.com/apk/res/android">
+    <item android:state_pressed="true">
+        <objectAnimator android:duration="90" android:propertyName="translationY" android:valueTo="6dp" android:valueType="floatType" />
+    </item>
+    <item android:state_selected="true">
+        <objectAnimator android:duration="140" android:propertyName="translationY" android:valueTo="4dp" android:valueType="floatType" />
+    </item>
+    <item>
+        <objectAnimator android:duration="260" android:interpolator="@android:anim/overshoot_interpolator" android:propertyName="translationY" android:valueTo="0dp" android:valueType="floatType" />
+    </item>
+</selector>

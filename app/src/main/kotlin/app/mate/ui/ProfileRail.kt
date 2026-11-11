@@ -36,7 +36,10 @@ class ProfileRail(
     private val statusName: TextView = activity.findViewById(R.id.status_name)
     private val statusState: TextView = activity.findViewById(R.id.status_state)
     override val status: View = activity.findViewById(R.id.status)
+    override val root: View = rail
     override val talk: View = activity.layoutInflater.inflate(R.layout.item_rail_talk, rail, false).also { rail.addView(it, 0) }
+    override val talkIcon: View = talk.findViewById(R.id.rail_icon)
+    override val lock: View = activity.findViewById(R.id.rail_lock)
 
     private var layout = HomeLayout.load(activity)
     private var page = layout.homeProfile
@@ -60,6 +63,7 @@ class ProfileRail(
         private set
 
     init {
+        settings.setOnClickListener { onMode(Mode.SETTINGS) }
         // Halo du signe, couleur de la barre : le symbole percé ne laisse pas voir le trait de l'icône. Barre
         // transparente (Hush, Spider-Verse) : le fond de l'écran.
         val railColor = themeColor(activity, R.attr.c_rail)

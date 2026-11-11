@@ -68,6 +68,7 @@ import app.mate.ui.Grain
 import app.mate.ui.HomeFragment
 import app.mate.ui.HushBackdrop
 import app.mate.ui.IconCache
+import app.mate.ui.KeyDock
 import app.mate.ui.KeyboardControl
 import app.mate.ui.LockScreen
 import app.mate.ui.Look
@@ -100,6 +101,7 @@ import app.mate.ui.notificationBannerText
 import app.mate.ui.notificationBody
 import app.mate.ui.showImmersive
 import app.mate.ui.themeBool
+import app.mate.ui.themePx
 import app.mate.ui.topbar.TopBar
 import app.mate.ui.topbar.TopBarHost
 import app.mate.ui.topbar.TopHeader
@@ -226,7 +228,7 @@ class MainActivity : AppCompatActivity() {
         AutoUpdater.start(this)
         InstallerService.start(this)
 
-        nav = ProfileRail(this, ::showFromRail, ::showProfile, ::openProfiles)
+        nav = if (themePx(this, R.attr.c_dock_height) > 0) KeyDock(this, ::showFromRail, ::showProfile, ::openProfiles) else ProfileRail(this, ::showFromRail, ::showProfile, ::openProfiles)
         findViewById<RailSwipeLayout>(R.id.mode_container).apply {
             onSwipe = { delta -> railStep(delta) }
             canSwipe = { delta -> railCanStep(delta) }
@@ -235,7 +237,7 @@ class MainActivity : AppCompatActivity() {
         flow = findViewById(R.id.flow)
         flow.hidden = { homeFragment()?.bareWidgets().orEmpty() }
         wakeRail()
-        voice = VoiceControl(this, nav.talk, nav.talk.findViewById(R.id.rail_icon))
+        voice = VoiceControl(this, nav.talk, nav.talkIcon)
         topBar = findViewById(R.id.top_bar)
         topBar.attach(topHost)
         topBar.onEditDone = { if (current == Mode.HOME && homeFragment()?.isEditing() == true) homeFragment()?.finishEdit() }
@@ -271,7 +273,7 @@ class MainActivity : AppCompatActivity() {
         frame = PhotoFrameView(this)
         findViewById<android.view.ViewGroup>(android.R.id.content).addView(frame, 1, android.view.ViewGroup.LayoutParams(-1, -1))
 
-        keyboard.setUp()
+        keyboard.setUp(nav.root)
 
         // Par-dessus tout, boîtes comprises ; revient après une recréation. Un 423 de l'ordinateur le pose aussi.
         lockScreen = LockScreen(this)
@@ -289,15 +291,14 @@ class MainActivity : AppCompatActivity() {
         documentPanel = findViewById(R.id.document_panel)
         documentPanel.attach(lifecycleScope)
         documentPanel.onExpandedChanged = { expanded ->
-            findViewById<View>(R.id.mode_area).visibility = if (expanded) View.GONE else View.VISIBLE
+            findViewById<View>(R.id.main_column).visibility = if (expanded) View.GONE else View.VISIBLE
         }
         nav.status.setOnClickListener {
             showComputerPicker()
         }
         banner = Banner(findViewById(R.id.remote_banner), lifecycleScope)
         alerts = TabletAlerts(this, banner)
-        findViewById<View>(R.id.rail_settings).setOnClickListener { show(Mode.SETTINGS) }
-        findViewById<View>(R.id.rail_lock).setOnClickListener { lockScreen.lockTablet() }
+        nav.lock.setOnClickListener { lockScreen.lockTablet() }
         signals.onMinute {
             Screen.apply(this@MainActivity)
             // Verrou levé, modification finie : la caméra de la veille repart.

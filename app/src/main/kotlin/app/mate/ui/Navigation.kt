@@ -1,6 +1,7 @@
 package app.mate.ui
 
 import android.app.Activity
+import android.content.Context
 import android.content.res.ColorStateList
 import android.view.View
 import android.widget.ImageView
@@ -14,10 +15,17 @@ import app.mate.focus.FocusTimer
 import app.mate.net.Link
 import app.mate.ui.home.HomeLayout
 
-/** Ce que MainActivity demande à la navigation : la barre fixe ([ProfileRail]). */
+/** Ce que MainActivity demande à la navigation : la barre fixe de gauche ([ProfileRail]) ou la rangée de touches du bas ([KeyDock]). */
 interface Navigation {
-    /** Commandes vocales. */
+    /** Toute la navigation (barre ou rangée) : le clavier la cache. */
+    val root: View
+
+    /** Commandes vocales, et son icône (qui pulse pendant l'écoute). */
     val talk: View
+    val talkIcon: View
+
+    /** Verrouille la tablette. */
+    val lock: View
 
     /** Ordinateur piloté et pastille de connexion ; toucher : changer d'ordinateur. */
     val status: View
@@ -89,9 +97,10 @@ internal fun linkMark(state: Link.State, locked: Boolean = false): LinkMark = wh
 
 /**
  * Pastille de connexion : signe et couleur selon l'état (`offline` : couleur de l'injoignable), nom de l'ordinateur
- * actif et, dans `stateText`, l'état écrit (« verrouillé » quand sa session l'est).
+ * actif et, dans `stateText`, l'état écrit (« verrouillé » quand sa session l'est). `colors` : le contexte dont on lit les
+ * couleurs (la pastille LCD d'Instrument a les siennes).
  */
-internal fun renderLink(activity: Activity, dot: ImageView, name: TextView, stateText: TextView, status: View, link: Link, offline: Int = R.attr.c_ko) {
+internal fun renderLink(activity: Activity, dot: ImageView, name: TextView, stateText: TextView, status: View, link: Link, offline: Int = R.attr.c_ko, colors: Context = activity) {
     val locked = Prefs.computerLocked(activity)
     val color = when (link.state) {
         Link.State.ONLINE -> if (locked) R.attr.c_warn else R.attr.c_ok
@@ -100,7 +109,7 @@ internal fun renderLink(activity: Activity, dot: ImageView, name: TextView, stat
     }
     val mark = linkMark(link.state, locked)
     dot.setImageResource(mark.shape.drawable)
-    dot.imageTintList = ColorStateList.valueOf(themeColor(activity, color))
+    dot.imageTintList = ColorStateList.valueOf(themeColor(colors, color))
     name.text = link.computer?.name ?: activity.getString(R.string.no_computer_short)
     stateText.text = mark.label?.let { activity.getString(it) }
     stateText.visibility = if (mark.label == null) View.GONE else View.VISIBLE

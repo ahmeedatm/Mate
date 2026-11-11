@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Touche ronde Parler, capuchon : c_talk au repos, c_talk_live pendant l'écoute (VoiceControl : isSelected). -->
+<selector xmlns:android="http://schemas.android.com/apk/res/android">
+    <item android:state_selected="true"><shape android:shape="oval"><solid android:color="?attr/c_talk_live" /></shape></item>
+    <item><shape android:shape="oval"><solid android:color="?attr/c_talk" /></shape></item>
+</selector>

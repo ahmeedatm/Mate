@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- DEL au-dessus d'une touche : fente éteinte (c_stroke), orange (c_signal) quand la touche est active ; contour orange
+     (isActivated) pour Réunion pendant un appel quand elle n'est pas celle qu'on voit. -->
+<selector xmlns:android="http://schemas.android.com/apk/res/android">
+    <item android:state_selected="true"><shape android:shape="rectangle"><solid android:color="?attr/c_signal" /><corners android:radius="3dp" /></shape></item>
+    <item android:state_activated="true"><shape android:shape="rectangle"><solid android:color="@android:color/transparent" /><stroke android:width="1dp" android:color="?attr/c_signal" /><corners android:radius="3dp" /></shape></item>
+    <item><shape android:shape="rectangle"><solid android:color="?attr/c_stroke" /><corners android:radius="3dp" /></shape></item>
+</selector>
