@@ -16,17 +16,17 @@ import app.mate.ui.dp
  */
 object TileStrip {
     /** Touches qui tiennent dans une vue de [width] × [height] px ; 1 tant qu'elle n'est pas mesurée. */
-    fun fit(context: Context, family: ShapeFamily, width: Int, height: Int) =
-        TileShapes.stripFit(family, width, height, context.resources.displayMetrics.density)
+    fun fit(context: Context, family: ShapeFamily, width: Int, height: Int, panel: Boolean = false) =
+        TileShapes.stripFit(family, width, height, context.resources.displayMetrics.density, panel)
 
     fun orientation(family: ShapeFamily) = if (family == ShapeFamily.ROW) LinearLayout.HORIZONTAL else LinearLayout.VERTICAL
 
     fun look(family: ShapeFamily) = if (family == ShapeFamily.COLUMN) TileLook.LIST else TileLook.ICON
 
-    /** Place de la touche n° [index] dans la vue de la forme. */
-    fun params(context: Context, family: ShapeFamily, index: Int): LinearLayout.LayoutParams = when (family) {
+    /** Place de la touche n° [index] dans la vue de la forme ([panel] : Colonne d'un panneau à filet, lignes plus basses). */
+    fun params(context: Context, family: ShapeFamily, index: Int, panel: Boolean = false): LinearLayout.LayoutParams = when (family) {
         ShapeFamily.ROW -> LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.MATCH_PARENT, 1f).apply { if (index > 0) marginStart = context.dp(TileShapes.ICON_GAP_DP) }
-        ShapeFamily.COLUMN -> LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, context.dp(TileShapes.LIST_ROW_DP)).apply { if (index > 0) topMargin = context.dp(TileShapes.LIST_GAP_DP) }
+        ShapeFamily.COLUMN -> LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, context.dp(if (panel) TileShapes.LIST_ROW_PANEL_DP else TileShapes.LIST_ROW_DP)).apply { if (index > 0) topMargin = context.dp(TileShapes.LIST_GAP_DP) }
         else -> LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, 0, 1f)
     }
 }

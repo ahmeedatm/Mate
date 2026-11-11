@@ -1,6 +1,7 @@
 package app.mate.ui.home
 
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class TileShapesTest {
@@ -24,6 +25,18 @@ class TileShapesTest {
         assertEquals(13, TileShapes.stripFit(ShapeFamily.ROW, 940, 92, 1f))
         assertEquals(8, TileShapes.stripFit(ShapeFamily.COLUMN, 300, 500, 1f))
         assertEquals(1, TileShapes.stripFit(ShapeFamily.PILL, 300, 170, 1f))
+    }
+
+    @Test
+    fun `dans un panneau a filet, la Colonne a des lignes plus basses et en montre au moins autant que sans panneau`() {
+        assertEquals(9, TileShapes.stripFit(ShapeFamily.COLUMN, 300, 500, 1f, panel = true))
+        // Panneau : marge de 6 dp et titre de 14 dp en moins, contre 12 + 28 (et des lignes de 56) avant ; jamais moins qu'à nu dès 3 lignes.
+        val lost = 2 * TileShapes.PANEL_STRIP_PAD_DP + TileShapes.PANEL_CAPTION_DP
+        for (height in 200..800) {
+            val bare = TileShapes.stripFit(ShapeFamily.COLUMN, 300, height, 1f)
+            val framed = TileShapes.stripFit(ShapeFamily.COLUMN, 300, height - lost, 1f, panel = true)
+            if (bare >= 4) assertTrue("h=$height : $framed < $bare", framed >= bare)
+        }
     }
 
     @Test

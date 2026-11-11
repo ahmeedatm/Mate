@@ -142,10 +142,13 @@ abstract class HomeWidget(val context: Context, val host: HomeHost, val placed: 
         maxLines = 1
     }
 
-    /** Petit titre en capitales d'un panneau de Colonne (Applis, Touches) : la grille a le sien, la liste en manque. */
+    /** Petit titre en capitales d'un panneau de Colonne (Applis, Touches) : la grille a le sien, la liste en manque. Compact : il prend [TileShapes.PANEL_CAPTION_DP]. */
     protected fun panelCaption(text: Int) = TitleView(context).apply {
         setText(text)
-        minHeight = dp(PANEL_CAPTION_DP)
+        textSize = PANEL_CAPTION_SP
+        includeFontPadding = false
+        minHeight = dp(TileShapes.PANEL_CAPTION_DP)
+        maxHeight = dp(TileShapes.PANEL_CAPTION_DP)
         gravity = Gravity.CENTER_VERTICAL
     }
     protected fun color(id: Int) = themeColor(context, id)
@@ -169,8 +172,8 @@ abstract class HomeWidget(val context: Context, val host: HomeHost, val placed: 
     }
 
     companion object {
-        /** Hauteur du petit titre d'un panneau de Colonne, et de son espace dessous ([panelCaption]). */
-        const val PANEL_CAPTION_DP = 28
+        /** Corps du petit titre d'un panneau de Colonne ([panelCaption]). */
+        const val PANEL_CAPTION_SP = 10f
 
         /** Titre d'une fenêtre LCD : taille, espacement des lettres, et hauteur qu'il prend ([lcdCaption]). */
         const val LCD_CAPTION_SP = 11f

@@ -44,8 +44,8 @@ class AppsWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidget(
 
     /** Applis qui tiennent dans le cadre : sans sa marge, ni le titre de la Colonne. */
     private fun fitStrip(): Int {
-        val pad = if (framed) dp(PANEL_PAD_DP) * 2 else 0
-        return TileStrip.fit(context, family, view.width - pad, view.height - pad - if (titled) dp(PANEL_CAPTION_DP) else 0)
+        val pad = if (framed) dp(TileShapes.PANEL_STRIP_PAD_DP) * 2 else 0
+        return TileStrip.fit(context, family, view.width - pad, view.height - pad - if (titled) dp(TileShapes.PANEL_CAPTION_DP) else 0, panel = framed)
     }
 
     /** Aperçu du catalogue : ses applis remplacent celles de l'ordinateur, même si [applySize] repasse. */
@@ -83,7 +83,7 @@ class AppsWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidget(
     override fun applySize() {
         section.shown = inGrid
         strip.visibility = if (inGrid) View.GONE else View.VISIBLE
-        if (inGrid || framed) view.asCard(PANEL_PAD_DP) else view.apply { background = null; setPadding(0, 0, 0, 0) }
+        if (inGrid) view.asCard(PANEL_PAD_DP) else if (framed) view.asCard(TileShapes.PANEL_STRIP_PAD_DP) else view.apply { background = null; setPadding(0, 0, 0, 0) }
         caption.visibility = if (titled) View.VISIBLE else View.GONE
         renderStrip()
     }
@@ -108,7 +108,7 @@ class AppsWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidget(
         strip.orientation = TileStrip.orientation(family)
         // Aucune appli épinglée : le « + » de la grille, qui ouvre toutes les applis de l'ordinateur.
         val cells = cells().ifEmpty { listOf(TileGridView.Cell(KeyRef(ADD_ID, context.getString(R.string.apps_all_title)), add = true)) }
-        for ((i, cell) in cells.take(drawnFit).withIndex()) strip.addView(stripTile(cell), TileStrip.params(context, family, i))
+        for ((i, cell) in cells.take(drawnFit).withIndex()) strip.addView(stripTile(cell), TileStrip.params(context, family, i, panel = framed))
     }
 
     /** Une appli hors de la grille : toucher la lance, appui long ouvre ses fenêtres ; le « + » ouvre toutes les applis. */

@@ -297,7 +297,7 @@ class MainActivity : AppCompatActivity() {
         documentPanel = findViewById(R.id.document_panel)
         documentPanel.attach(lifecycleScope)
         documentPanel.onExpandedChanged = { expanded ->
-            findViewById<View>(R.id.main_column).visibility = if (expanded) View.GONE else View.VISIBLE
+            findViewById<View>(R.id.mode_area).visibility = if (expanded) View.GONE else View.VISIBLE
         }
         nav.status.setOnClickListener {
             showComputerPicker()

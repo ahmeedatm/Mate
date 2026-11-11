@@ -46,8 +46,10 @@ class SweepView @JvmOverloads constructor(
     private var snapshot: Bitmap? = null
     private var generation = 0
 
+    /** Fond posé le temps de couvrir : il cache le nouvel écran, retiré dès la révélation pour qu'on voie le contenu arriver sous l'aplat. */
+    private val coverColor = themeColor(context, R.attr.c_bg)
+
     init {
-        setBackgroundColor(themeColor(context, R.attr.c_bg))
         visibility = GONE
         addView(picture, LayoutParams(MATCH, MATCH))
         addView(plate, LayoutParams(MATCH, MATCH))
@@ -87,6 +89,7 @@ class SweepView @JvmOverloads constructor(
         this.number.text = number
         name.text = label
         snapshot = before
+        setBackgroundColor(coverColor)
         picture.setImageBitmap(before)
         picture.visibility = VISIBLE
         plate.translationX = plan.plateStart
@@ -104,6 +107,7 @@ class SweepView @JvmOverloads constructor(
     /** L'aplat couvre le nouvel écran : l'image de l'ancien part, l'aplat continue et découvre le nouveau. */
     private fun cover(plan: SweepModel.Plan, turn: Int) {
         releasePicture()
+        background = null
         text.animate().cancel()
         plate.animate().translationX(plan.plateEnd).setDuration(SweepModel.REVEAL_MS).setInterpolator(EASE)
             .withEndAction { if (turn == generation) finish() }.start()
@@ -112,6 +116,7 @@ class SweepView @JvmOverloads constructor(
 
     private fun finish() {
         visibility = GONE
+        background = null
         plate.setLayerType(LAYER_TYPE_NONE, null)
         text.setLayerType(LAYER_TYPE_NONE, null)
         plate.translationX = 0f

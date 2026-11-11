@@ -1,6 +1,7 @@
 package app.mate.ui
 
 import android.app.Activity
+import android.content.res.ColorStateList
 import android.view.MotionEvent
 import android.view.View
 import android.widget.ImageView
@@ -202,7 +203,10 @@ class KeyDock(
             else -> timer ?: activity.getString(key.mode.label)
         }
         label.typeface = themeFont(activity, if (timer != null) R.attr.c_font_display else R.attr.c_font_label)
-        label.setTextColor(themeColor(activity, if (timer != null) R.attr.c_accent else R.attr.c_text))
+        val tone = themeColor(activity, if (timer != null) R.attr.c_accent else R.attr.c_text)
+        label.setTextColor(tone)
+        // Focus en cours : l'icône prend aussi l'accent, un signe qui reste quand les noms sont coupés (comme la barre de gauche).
+        view.findViewById<ImageView>(R.id.dock_icon).imageTintList = ColorStateList.valueOf(tone)
         label.visibility = if (Prefs.railLabels(activity)) View.VISIBLE else View.GONE
         view.contentDescription = describe(key.mode, label.text.toString(), timer)
         view.findViewById<TextView>(R.id.dock_badge).apply {

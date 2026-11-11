@@ -157,11 +157,19 @@
         android:layout_weight="1"
         android:orientation="vertical">
 
+        <!-- Écran du mode à gauche, panneau document à droite (masqué tant qu'aucun document n'est ouvert) : agrandi, il
+             prend toute la place du mode et la rangée de touches reste dessous. -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="0dp"
+            android:layout_weight="1"
+            android:orientation="horizontal">
+
         <!-- Écran du mode ; par-dessus, « Aucun ordinateur connecté » pour les modes qui en ont besoin. -->
         <FrameLayout
             android:id="@+id/mode_area"
-            android:layout_width="match_parent"
-            android:layout_height="0dp"
+            android:layout_width="0dp"
+            android:layout_height="match_parent"
             android:layout_weight="1">
 
             <!-- Thèmes à tubes seulement (c_flow, sinon GONE) : tubes qui coulent derrière tous les écrans, à droite de la zone des modes
@@ -219,6 +227,14 @@
 
         </FrameLayout>
 
+        <app.mate.ui.DocumentPanel
+            android:id="@+id/document_panel"
+            android:layout_width="0dp"
+            android:layout_height="match_parent"
+            android:layout_weight="1"
+            android:visibility="gone" />
+        </LinearLayout>
+
         <!-- Rangée de touches (ui/KeyDock) : Parler, les touches numérotées au milieu (posées par KeyDock), Verrou. -->
         <LinearLayout
             android:id="@+id/key_dock"
@@ -243,13 +259,6 @@
                 android:orientation="horizontal" />
         </LinearLayout>
     </LinearLayout>
-
-    <app.mate.ui.DocumentPanel
-        android:id="@+id/document_panel"
-        android:layout_width="0dp"
-        android:layout_height="match_parent"
-        android:layout_weight="1"
-        android:visibility="gone" />
 </LinearLayout>
 
     <!-- Premier lancement : tant qu'aucun ordinateur n'est appairé. -->

@@ -42,12 +42,9 @@ class FrameTracerModelTest {
     }
 
     @Test
-    fun `contenu a +300 ms, LCD a +700 ms, fin apres l'allumage`() {
-        assertEquals(300L, FrameTracerModel.CONTENT_DELAY_MS)
-        assertEquals(700L, FrameTracerModel.LCD_DELAY_MS)
+    fun `la fin de la sequence est celle du dernier trait, l'allumage LCD etant plus court`() {
         val plan = FrameTracerModel.plan(count = 2, lead = 0L, enabled = true)
-        // dernier cadre à 60 ms + allumage LCD (700 + 300)
-        assertEquals(60L + 700L + FrameTracerModel.LCD_MS, FrameTracerModel.totalMs(plan))
+        assertEquals(60L + FrameTracerModel.TRACE_MS + FrameTracerModel.LINE_FADE_MS, FrameTracerModel.totalMs(plan))
         assertEquals(0L, FrameTracerModel.totalMs(emptyList()))
     }
 
@@ -66,21 +63,31 @@ class FrameTracerModelTest {
     }
 
     @Test
-    fun `l'alpha du contenu monte en fondu, celui d'un LCD par quatre paliers`() {
-        assertEquals(0f, FrameTracerModel.contentAlpha(elapsed = 299L, startMs = 0L, lcd = false), 0f)
-        assertEquals(1f, FrameTracerModel.contentAlpha(elapsed = 700L, startMs = 0L, lcd = false), 0f)
-        assertEquals(0f, FrameTracerModel.contentAlpha(elapsed = 699L, startMs = 0L, lcd = true), 0f)
-        assertEquals(0.25f, FrameTracerModel.contentAlpha(elapsed = 700L, startMs = 0L, lcd = true), 0f)
-        assertEquals(0.5f, FrameTracerModel.contentAlpha(elapsed = 800L, startMs = 0L, lcd = true), 0f)
-        assertEquals(0.75f, FrameTracerModel.contentAlpha(elapsed = 900L, startMs = 0L, lcd = true), 0f)
-        assertEquals(1f, FrameTracerModel.contentAlpha(elapsed = 1000L, startMs = 0L, lcd = true), 0f)
+    fun `le contenu d'un module est visible tout de suite, le trace passe par-dessus`() {
+        assertEquals(1f, FrameTracerModel.contentAlpha(elapsed = 0L, startMs = 0L, lcd = false), 0f)
+        assertEquals(1f, FrameTracerModel.contentAlpha(elapsed = 0L, startMs = 420L, lcd = false), 0f)
+        val faded = FrameTracerModel.plan(count = 9, lead = 0L, enabled = true).last()
+        assertEquals(1f, FrameTracerModel.contentAlpha(elapsed = 0L, startMs = faded.startMs, lcd = false), 0f)
     }
 
     @Test
-    fun `un cadre en fondu montre son contenu des son depart`() {
-        val faded = FrameTracerModel.plan(count = 9, lead = 0L, enabled = true).last()
-        assertEquals(0f, FrameTracerModel.contentAlpha(elapsed = 419L, startMs = faded.startMs, lcd = false, traced = false), 0f)
-        assertEquals(1f, FrameTracerModel.contentAlpha(elapsed = 420L + FrameTracerModel.FADE_MS, startMs = faded.startMs, lcd = false, traced = false), 0f)
+    fun `une fenetre LCD s'allume en quatre paliers, entierement en 300 ms au plus`() {
+        assertTrue(FrameTracerModel.LCD_MS <= 300L)
+        assertEquals(0f, FrameTracerModel.contentAlpha(elapsed = -1L, startMs = 0L, lcd = true), 0f)
+        assertEquals(0.25f, FrameTracerModel.contentAlpha(elapsed = 0L, startMs = 0L, lcd = true), 0f)
+        assertEquals(0.5f, FrameTracerModel.contentAlpha(elapsed = FrameTracerModel.LCD_MS / 4, startMs = 0L, lcd = true), 0f)
+        assertEquals(0.75f, FrameTracerModel.contentAlpha(elapsed = FrameTracerModel.LCD_MS / 2, startMs = 0L, lcd = true), 0f)
+        assertEquals(1f, FrameTracerModel.contentAlpha(elapsed = FrameTracerModel.LCD_MS, startMs = 0L, lcd = true), 0f)
+    }
+
+    @Test
+    fun `les LCD s'allument sans attendre le decalage des cadres, apres l'attente du balayage seulement`() {
+        val plan = FrameTracerModel.plan(count = 8, lead = 0L, enabled = true)
+        assertTrue(plan.all { it.lcdStartMs == 0L })
+        val swept = FrameTracerModel.plan(count = 8, lead = FrameTracerModel.AFTER_SWEEP_MS, enabled = true)
+        // Allumés dès que l'aplat découvre l'écran, avant le départ des traits.
+        assertTrue(swept.all { it.lcdStartMs == SweepModel.COVER_MS })
+        assertTrue(swept.all { it.startMs >= it.lcdStartMs })
     }
 
     @Test

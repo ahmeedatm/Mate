@@ -25,6 +25,17 @@ class TourModelTest {
     }
 
     @Test
+    fun `la rangee de touches a ses propres textes pour le plus de la barre, les autres etapes sont communes`() {
+        for (step in TourModel.STEPS) {
+            val bar = TourModel.texts(step, dock = false)
+            val dock = TourModel.texts(step, dock = true)
+            assertEquals(bar.first, dock.first)
+            val mentionsPlus = step == TourModel.Step.SCREENS || step == TourModel.Step.CUSTOMIZE
+            assertEquals(step.name, mentionsPlus, bar.second != dock.second)
+        }
+    }
+
+    @Test
     fun `visite sans l'etape Parler quand le bouton est cache`() {
         assertEquals(TourModel.STEPS, TourModel.steps(talkShown = true))
         assertEquals(TourModel.STEPS - TourModel.Step.TALK, TourModel.steps(talkShown = false))

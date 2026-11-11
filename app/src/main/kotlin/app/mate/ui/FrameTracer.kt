@@ -25,7 +25,7 @@ interface TracedScreen {
 /**
  * Tracé des cadres à l'arrivée d'un écran des thèmes Instrument : un seul calque transparent posé sur la grille, qui dessine
  * le cadre de chaque module au trait fin ([PathMeasure.getSegment]) avec une petite plume c_signal en tête. Le contenu du
- * module (ses vues) est à alpha 0 jusqu'à son heure, puis apparaît : fondu, ou paliers pour une fenêtre LCD. Délais et
+ * module (ses vues) reste visible : seule une fenêtre LCD part éteinte et s'allume par paliers. Délais et
  * plafond : [FrameTracerModel]. Une seule animation pilote tout ; `invalidate` ne part que pendant le tracé, le calque se
  * retire à la fin. Coupé : [wanted] est faux, l'appelant ne l'utilise pas et rien ne passe à alpha 0.
  */
@@ -63,7 +63,8 @@ class FrameTracer @JvmOverloads constructor(context: Context, attrs: AttributeSe
         val plan = FrameTracerModel.plan(views.size, lead, enabled = true)
         if (plan.isEmpty()) return
         items = views.mapIndexed { i, v -> Item(v, plan[i], lcd(v)) }
-        items.forEach { it.view.alpha = 0f }
+        // Le contenu reste visible : seules les fenêtres LCD partent éteintes, pour s'allumer par paliers.
+        items.filter { it.lcd }.forEach { it.view.alpha = 0f }
         visibility = VISIBLE
         val turn = ++generation
         doOnLayout { if (turn == generation) begin(FrameTracerModel.totalMs(plan)) }
@@ -103,7 +104,7 @@ class FrameTracer @JvmOverloads constructor(context: Context, attrs: AttributeSe
 
     private fun step() {
         items.forEach { item ->
-            val a = FrameTracerModel.contentAlpha(elapsed, item.frame.startMs, item.lcd, item.frame.traced)
+            val a = FrameTracerModel.contentAlpha(elapsed, item.frame.lcdStartMs, item.lcd)
             if (a != item.alpha) {
                 item.alpha = a
                 item.view.alpha = a
