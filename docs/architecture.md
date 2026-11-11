@@ -54,7 +54,7 @@ Pas de serveur dans le cloud : chaque ordinateur a son compagnon, la tablette pa
 
 ### 3. Les ordres de l'ordinateur vers la tablette (canal `/tablet`)
 
-La tablette n'ouvre aucun port. `remote/RemoteChannel.kt` garde une requête `POST /tablet/poll` ouverte (long-polling) ; le compagnon y dépose les ordres (`tablet.ts`) : rappel parlé d'une tâche ou d'un événement, message, changement de mode, capture d'écran, sonnerie pour retrouver la tablette (ordre `ring`, `audio/Ringer.kt` : son d'alarme au maximum en boucle, volume remis ensuite ; un toucher, l'ordre inverse ou 2 minutes l'arrêtent ; bouton « Faire sonner » du panneau Tablette et outil `tablette_sonner`)… Livraison « au moins une fois », dédoublonnée par la tablette. C'est aussi par là que passe **l'extension Claude** (`mcp.ts`, serveur MCP qui relaie vers `POST /tablet/command`). Si l'écran de la tablette est éteint, l'appli est en pause et les ordres attendent.
+La tablette n'ouvre aucun port. `remote/RemoteChannel.kt` garde une requête `POST /tablet/poll` ouverte (long-polling) ; le compagnon y dépose les ordres (`tablet.ts`) : rappel parlé d'une tâche ou d'un événement, message, changement de mode, capture d'écran, sonnerie pour retrouver la tablette (ordre `ring`, `audio/Ringer.kt` : son d'alarme au maximum en boucle, volume remis ensuite ; un toucher, l'ordre inverse ou 2 minutes l'arrêtent ; bouton « Faire sonner » du panneau Tablette et outil `tablette_sonner`), page web en plein écran par-dessus tout (ordre `page`, `ui/PageOverlay.kt`, http(s) seulement, bouton Fermer ; voir § Maquettes sur la tablette)… Livraison « au moins une fois », dédoublonnée par la tablette. C'est aussi par là que passe **l'extension Claude** (`mcp.ts`, serveur MCP qui relaie vers `POST /tablet/command`). Si l'écran de la tablette est éteint, l'appli est en pause et les ordres attendent.
 
 ### 4. Le Deck
 
@@ -369,6 +369,10 @@ Agents, Jira, GitLab, Pipelines, GitHub, Actions et Chiffres acceptent les 16 fo
 ### Contrat API
 
 - Contrat API (voir aussi `/deck`, `/system/audio`, `/docs`, `/calendar`, `/camera` dans `backend/src/routes/`, un plugin Fastify par domaine ; `server.ts` = démarrage, jeton, erreurs, enregistrement des plugins) : `GET /health` → identité de l'ordinateur (`id`, `name`, `os`, `auth`, `accessibility`).
+
+### Maquettes sur la tablette
+
+Pour un changement visible, Claude montre 3 maquettes HTML légères (boutons, onglets, sans vraie logique) au lieu de coder chaque variante. `node scripts/maquettes.mjs <sujet>` sert `/tmp/mate-maquettes/<sujet>/` (une maquette = un `.html` à la racine, jamais commitée) sur le réseau local et ouvre un sélecteur dans un onglet Orca ; un clic envoie l'ordre `page` à la tablette de chaque compagnon (`--compagnon <port>`, 3000 par défaut) par `POST /local/tablet/page` (127.0.0.1, sans jeton comme `/local/tablet/ring`, donc adresses du réseau local seulement ; une adresse publique passe par `/tablet/command`, avec jeton). Adresse donnée : celle du Mac sur le WiFi, ou 127.0.0.1 avec `adb reverse` (`--appareil <série>`) si le compagnon n'écoute qu'en local (émulateur, USB). Côté tablette, `ui/PageOverlay.kt` pose un WebView plein écran par-dessus les modes (le verrou reste devant), avec un bouton Fermer (coin haut-droit à laisser libre dans les maquettes) ; Retour le ferme aussi, une page injoignable affiche une phrase. Outil MCP `tablette_page`. Marche à suivre : skill `ecran-design`, étape 0.
 
 ### Extension MCP (IA de bureau)
 

@@ -313,7 +313,7 @@ class DocumentPanel @JvmOverloads constructor(
         return BitmapFactory.decodeFile(file.absolutePath, BitmapFactory.Options().apply { inSampleSize = sample })
     }
 
-    private companion object {
+    companion object {
         val WEB_SCHEMES = setOf("http", "https")
     }
 }

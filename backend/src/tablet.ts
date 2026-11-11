@@ -78,6 +78,24 @@ export const TEMPLATES = [
 export const TEMPLATE_IDS = TEMPLATES.map((t) => t.id);
 export type TemplateId = (typeof TEMPLATES)[number]["id"];
 
+/** Seules adresses que l'ordre `page` ouvre : pas de fichier local, de javascript: ni d'intent. */
+export const isPageUrl = (url: string) => /^https?:$/.test(URL.parse(url)?.protocol ?? "");
+
+/**
+ * Route locale sans jeton (/local/tablet/page) : seulement une adresse du réseau local (maquettes servies par ce Mac).
+ * Simple garde-fou, pas une frontière : la porte MCP locale (outil tablette_page) passe par /tablet/command, qui accepte
+ * toute adresse http(s), comme tablette_message affiche tout texte ; et la page peut suivre un lien ou une redirection.
+ */
+export function isLocalPageUrl(url: string) {
+  if (!isPageUrl(url)) return false;
+  const host = URL.parse(url)!.hostname.toLowerCase();
+  return (
+    host === "localhost" ||
+    host.endsWith(".local") ||
+    /^(127\.|10\.|192\.168\.|172\.(1[6-9]|2\d|3[01])\.|169\.254\.)\d{1,3}\.\d{1,3}(\.\d{1,3})?$/.test(host)
+  );
+}
+
 export type TabletDoc = { name: string; path: string; kind: string; size: number; mtimeMs: number };
 
 export type TabletCommand =
@@ -89,6 +107,8 @@ export type TabletCommand =
   | { type: "screenshot" }
   /** Retrouver la tablette : sonnerie forte en boucle (`on`), arrêtée par un toucher, l'ordre inverse ou au bout de 2 minutes. */
   | { type: "ring"; on: boolean }
+  /** Page web en plein écran par-dessus tout (maquettes de scripts/maquettes.mjs) ; `null` la ferme. http(s) seulement. */
+  | { type: "page"; url: string | null }
   /** Alerte maison (src/alerts.ts) : bannière qui reste jusqu'à un toucher, lue à voix haute. */
   | { type: "alert"; text: string }
   /** Panneau Tablette de la page locale (routes/local.ts). */

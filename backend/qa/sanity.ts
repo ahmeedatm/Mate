@@ -234,6 +234,15 @@ export async function runSanity(opts: { url: string; token: string; os?: Os; hoo
       },
     },
     {
+      name: "page en plein écran (ordre page)",
+      run: async () => {
+        // Adresses refusées avant tout envoi : rien ne s'ouvre sur la vraie tablette pendant le contrôle.
+        expectStatus(await call("POST", "/tablet/command", { type: "page", url: "file:///etc/hosts" }), 400, "ordre page file:");
+        expectStatus(await call("POST", "/local/tablet/page", { url: "javascript:alert(1)" }, false), 400, "page locale javascript:");
+        return "adresses hors http(s) refusées";
+      },
+    },
+    {
       name: "ordinateur verrouillé (écran bloquant de la tablette)",
       run: async () => {
         // L'ordre lock n'est poussé que par la veille du verrouillage (src/screen-lock.ts) : refusé de l'extérieur.

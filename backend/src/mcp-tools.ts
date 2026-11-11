@@ -87,6 +87,22 @@ export function createMcpServer(api: Api, where: () => string): McpServer {
   );
 
   server.registerTool(
+    "tablette_page",
+    {
+      title: "Page web en plein écran",
+      description:
+        "Ouvre une page web (http ou https) en plein écran sur la tablette, par-dessus tout : maquettes HTML de scripts/maquettes.mjs. " +
+        "Un bouton sur la tablette la ferme. Sans url : ferme la page. L'adresse doit être joignable depuis la tablette (IP du LAN, ou 127.0.0.1 avec adb reverse).",
+      inputSchema: { url: z.string().max(2000).optional().describe("http(s)://…, vide pour fermer") },
+    },
+    ({ url }) =>
+      attempt(async () => {
+        await command({ type: "page", url: url || null });
+        return text(url ? `${url} ouvert sur la tablette.` : "Page fermée.");
+      }),
+  );
+
+  server.registerTool(
     "tablette_afficher_mode",
     {
       title: "Changer d'écran",
