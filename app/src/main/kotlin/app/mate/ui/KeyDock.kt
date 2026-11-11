@@ -1,6 +1,7 @@
 package app.mate.ui
 
 import android.app.Activity
+import android.view.MotionEvent
 import android.view.View
 import android.widget.ImageView
 import android.widget.LinearLayout
@@ -68,15 +69,31 @@ class KeyDock(
 
     private fun round(@DrawableRes cap: Int?, @DrawableRes icon: Int, @AttrRes tint: Int, @StringRes description: Int, atEnd: Boolean): View {
         val view = activity.layoutInflater.inflate(R.layout.item_dock_round, dock, false)
-        cap?.let { view.findViewById<View>(R.id.dock_round_cap).setBackgroundResource(it) }
+        val face = view.findViewById<View>(R.id.dock_round_cap)
+        cap?.let { face.setBackgroundResource(it) }
         view.findViewById<ImageView>(R.id.dock_round_icon).apply {
             setImageResource(icon)
             imageTintList = themeColorList(activity, tint)
         }
         view.contentDescription = activity.getString(description)
+        press(view, face)
         dock.addView(view, if (atEnd) dock.childCount else 0)
         return view
     }
+
+    /** Appui sur une touche : son capuchon s'enfonce tant qu'elle est pressée ([Look.keyCap]). Le clic n'est pas consommé. */
+    private fun press(view: View, cap: View) {
+        view.setOnTouchListener { _, event ->
+            when (event.actionMasked) {
+                MotionEvent.ACTION_DOWN -> Look.keyCap(cap, pressed = true, rest = restOf(view))
+                MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> Look.keyCap(cap, pressed = false, rest = restOf(view))
+            }
+            false
+        }
+    }
+
+    /** Place du capuchon au repos : enfoncé de 4 dp quand la touche est active (celle qu'on voit), sinon posé. */
+    private fun restOf(view: View): Float = if (view.isSelected) view.dp(SELECTED_DP).toFloat() else 0f
 
     override fun showProfiles(layout: HomeLayout, page: Int, inCall: Boolean) {
         this.layout = layout
@@ -140,6 +157,7 @@ class KeyDock(
             }
             view.findViewById<TextView>(R.id.dock_number).text = key.number
             view.findViewById<ImageView>(R.id.dock_icon).setImageResource(icon(key.mode))
+            press(view, view.findViewById(R.id.dock_cap))
             row.addView(view)
             views += view
             decorate(i)
@@ -194,6 +212,8 @@ class KeyDock(
         marked = selected
         views.forEachIndexed { i, view ->
             view.isSelected = i == selected
+            val cap = view.findViewById<View>(R.id.dock_cap)
+            if (animate) Look.keyCap(cap, pressed = false, rest = restOf(view)) else cap.translationY = restOf(view)
             fillLeds(view.findViewById(R.id.dock_led), keys[i].mode, i == selected, order, animate)
         }
     }
@@ -212,7 +232,7 @@ class KeyDock(
             val lit = segment.on && !view.isSelected
             view.isSelected = segment.on
             view.isActivated = segment.call && !segment.on
-            if (lit && animate && Look.on(activity, AnimFamily.NAVIGATION)) {
+            if (lit && animate && Look.on(activity, AnimFamily.DETAILS) && !Look.reduced(activity)) {
                 view.alpha = FLASH_ALPHA
                 view.animate().alpha(1f).setDuration(FLASH_MS).start()
             }
@@ -252,6 +272,9 @@ class KeyDock(
         const val FLASH_ALPHA = 0.25f
         const val FLASH_MS = 140L
         const val SEGMENT_DP = 24
+
+        /** Enfoncement du capuchon de la touche active, au repos. */
+        const val SELECTED_DP = 4
 
         /** Place d'un profil derrière sa touche, pour le sens du mouvement ([lastMove]). */
         const val PROFILE_SPAN = 1000

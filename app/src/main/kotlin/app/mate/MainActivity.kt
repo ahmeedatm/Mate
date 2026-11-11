@@ -2,6 +2,7 @@ package app.mate
 
 import android.content.Context
 import android.content.res.Configuration
+import android.graphics.Bitmap
 import android.os.Bundle
 import android.os.SystemClock
 import android.view.KeyEvent
@@ -69,6 +70,7 @@ import app.mate.ui.HomeFragment
 import app.mate.ui.HushBackdrop
 import app.mate.ui.IconCache
 import app.mate.ui.KeyDock
+import app.mate.ui.KeyDockModel
 import app.mate.ui.KeyboardControl
 import app.mate.ui.LockScreen
 import app.mate.ui.Look
@@ -81,6 +83,7 @@ import app.mate.ui.ProfileRail
 import app.mate.ui.RailSwipeLayout
 import app.mate.ui.ReadingAids
 import app.mate.ui.SettingsFragment
+import app.mate.ui.SweepView
 import app.mate.ui.TabletAlerts
 import app.mate.ui.TemplatesDialog
 import app.mate.ui.ThemePattern
@@ -1142,6 +1145,8 @@ class MainActivity : AppCompatActivity() {
             documentPanel.setExpanded(mode == Mode.COMPUTER, splittable = mode != Mode.COMPUTER)
         }
         val changed = current != mode
+        // Balayage (thèmes Instrument) : l'écran quitté est photographié avant d'être masqué plus bas.
+        val before = if (changed && nav is KeyDock) findViewById<SweepView>(R.id.sweep).capture(findViewById(R.id.mode_container)) else null
         val leavingCamera = current == Mode.CAMERA && mode != Mode.CAMERA
         current = mode
         if (::presence.isInitialized) {
@@ -1169,10 +1174,16 @@ class MainActivity : AppCompatActivity() {
         // Caméra : hors barre, et ses gestes (zoom) restent à elle.
         findViewById<RailSwipeLayout>(R.id.mode_container).swipeEnabled = mode != Mode.HOME && mode != Mode.SETTINGS && mode != Mode.CAMERA
         renderNoComputer()
-        if (changed) slideTo(mode)
+        if (changed) slideTo(mode, before)
         fm.executePendingTransactions()
         showTopHeader()
     }
+
+    /** Numéro de la touche du mode sur la rangée (01 à 05, renumérotée quand un outil est masqué dans Réglages > Barre). */
+    private fun keyNumber(mode: Mode) = KeyDockModel.keys(Prefs.railTools(this)).firstOrNull { it.mode == mode }?.number.orEmpty()
+
+    /** Nom de l'écran sur l'aplat, comme la maquette : « Accueil » (pas « Écrans », le nom du mode). */
+    private fun sweepName(mode: Mode) = getString(if (mode == Mode.HOME) R.string.profile_first else mode.label)
 
     /**
      * En-tête de l'écran affiché dans le bandeau du haut : celui de l'écran (titre, retour, boutons), le nom du profil
@@ -1229,8 +1240,14 @@ class MainActivity : AppCompatActivity() {
     }
 
     /** Arrivée de l'écran `mode` dans le sens du déplacement dans la barre. Ressorts qui jouent aussi en kiosque. */
-    private fun slideTo(mode: Mode) {
+    private fun slideTo(mode: Mode, before: Bitmap?) {
         supportFragmentManager.executePendingTransactions()
+        // Thèmes Instrument : l'aplat orange découvre le nouvel écran (pas de glissement en plus).
+        if (before != null) {
+            findViewById<SweepView>(R.id.sweep).play(before, nav.lastMove, keyNumber(mode), sweepName(mode))
+            flowTravel(nav.lastMove)
+            return
+        }
         val into = supportFragmentManager.findFragmentByTag(mode.tag)?.view ?: return
         // Kiosque : l'Accueil arrive par ses widgets (Look.enterSpring), pas en glissant tout entier par-dessus.
         if (mode == Mode.HOME && Look.cascadeOnly(this)) {

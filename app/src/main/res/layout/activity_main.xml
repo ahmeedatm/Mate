@@ -193,6 +193,14 @@
                 android:layout_marginTop="@dimen/top_bar_height"
                 android:visibility="gone" />
 
+            <!-- Balayage orange des thèmes Instrument (ui/SweepView) : sous le bandeau du haut, caché au repos. -->
+            <app.mate.ui.SweepView
+                android:id="@+id/sweep"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:layout_marginTop="@dimen/top_bar_height"
+                android:visibility="gone" />
+
             <!-- Bandeau du haut, fixe (ui/topbar/TopBar) : en-tête de l'écran à gauche, éléments choisis à droite (lecture en
                  cours, heure, WiFi, batterie…) ; la barre d'état d'Android est masquée en kiosque. -->
             <app.mate.ui.topbar.TopBar
