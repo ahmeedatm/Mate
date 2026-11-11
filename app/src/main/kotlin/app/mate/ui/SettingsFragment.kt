@@ -1078,7 +1078,6 @@ class SettingsFragment :
             val failure = TextView(ctx).apply {
                 textSize = 14f
                 setTextColor(themeColor(ctx, R.attr.c_ko))
-                gravity = android.view.Gravity.END
                 visibility = View.GONE
             }
             button.setOnClickListener { install(update, Row(button, bar, cancel, failure), essai) }
@@ -1117,6 +1116,8 @@ class SettingsFragment :
         val bar = views.bar
         val cancel = views.cancel
         views.failure.visibility = View.GONE
+        // Phrase d'état d'avant l'installation : remise en cas d'échec (la raison va sous la ligne).
+        val status = updatesStatus.text
         button.isEnabled = false
         button.backgroundTintList = null
         button.setText(R.string.updates_downloading_short)
@@ -1172,7 +1173,7 @@ class SettingsFragment :
                 showResult(button, bar, ok = false)
                 views.failure.text = ctx.errorText(e)
                 views.failure.visibility = View.VISIBLE
-                if (showing()) updatesStatus.setText(R.string.updates_hint)
+                if (showing()) updatesStatus.text = status
             } finally {
                 cancel.visibility = View.GONE
                 installing = false

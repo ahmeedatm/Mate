@@ -102,8 +102,9 @@ object Updater {
         // Serveur local d'essai (`-PupdateUrl=`) : son manifeste absent vaut aussi « rien de publié ».
         if (e.code == 404) emptyList() else throw serverError(e)
     } catch (e: JSONException) {
-        Log.i("Updater", "GitHub : pas de manifest lisible", e)
-        emptyList()
+        // Page de portail WiFi, manifeste tronqué : une erreur, pas « rien de publié ».
+        Log.w("Updater", "GitHub : manifeste illisible", e)
+        throw GitHubException(GitHubException.BAD_REPLY, e)
     } catch (e: Exception) {
         throw serverError(e)
     }

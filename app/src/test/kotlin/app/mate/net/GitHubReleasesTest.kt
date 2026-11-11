@@ -65,7 +65,7 @@ class GitHubReleasesTest {
     @Test
     fun `refuse une redirection hors HTTPS`() {
         val (store, _) = store { FakeConnection(it, 302, location = "http://release-assets.githubusercontent.com/a") }
-        assertThrows(IOException::class.java) { store.open("a.apk", 1000) }
+        assertEquals(GitHubException.BAD_REPLY, assertThrows(GitHubException::class.java) { store.open("a.apk", 1000) }.code)
     }
 
     @Test
@@ -87,6 +87,7 @@ class GitHubReleasesTest {
         assertEquals(R.string.github_rate_limited, GitHubException(429).textRes())
         assertEquals(R.string.github_file_missing, GitHubException(404).textRes())
         assertEquals(R.string.github_down, GitHubException(502).textRes())
+        assertEquals(R.string.github_down, GitHubException(GitHubException.BAD_REPLY).textRes())
         assertEquals(R.string.update_server_unreachable, GitHubException(GitHubException.NETWORK).textRes())
     }
 

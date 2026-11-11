@@ -43,7 +43,7 @@ internal class GitHubStore(
                 code in REDIRECTS -> {
                     val location = conn.getHeaderField("Location")
                     conn.disconnect()
-                    target = redirectTarget(target, location)
+                    target = try { redirectTarget(target, location) } catch (e: IOException) { throw GitHubException(GitHubException.BAD_REPLY, e) }
                 }
                 else -> {
                     conn.disconnect()
@@ -51,7 +51,7 @@ internal class GitHubStore(
                 }
             }
         }
-        throw IOException("Trop de redirections")
+        throw GitHubException(GitHubException.BAD_REPLY, IOException("Trop de redirections"))
     }
 
     companion object {
@@ -72,7 +72,7 @@ internal class GitHubStore(
     }
 }
 
-/** Refus de GitHub (code HTTP) ou réseau coupé ([NETWORK]) : affiché par errorText avec [textRes], jamais tel quel. */
+/** Refus de GitHub (code HTTP), réseau coupé ([NETWORK]) ou réponse inattendue ([BAD_REPLY]) : affiché par errorText avec [textRes], jamais tel quel. */
 class GitHubException(val code: Int, cause: Throwable? = null) : IOException("GitHub $code", cause) {
     @StringRes
     fun textRes(): Int = when (code) {
@@ -84,6 +84,7 @@ class GitHubException(val code: Int, cause: Throwable? = null) : IOException("Gi
 
     companion object {
         const val NETWORK = 0
+        const val BAD_REPLY = -1
     }
 }
 
