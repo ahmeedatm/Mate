@@ -100,8 +100,9 @@ class PerfAppsView(context: Context, withTitle: Boolean) : LinearLayout(context)
             isSingleLine = true
             fontFeatureSettings = "tnum"
         }
-        val cpuBar = PerfBar(context, themeColor(context, R.attr.c_stroke), themeColor(context, R.attr.c_text_dim))
-        val ramBar = PerfBar(context, themeColor(context, R.attr.c_stroke), themeColor(context, R.attr.c_text_dim))
+        // Piste sur la surface relevée : `c_stroke` est presque aussi foncé que le remplissage dans le thème Contraste.
+        val cpuBar = PerfBar(context, themeColor(context, R.attr.c_surface_raised), themeColor(context, R.attr.c_text_dim))
+        val ramBar = PerfBar(context, themeColor(context, R.attr.c_surface_raised), themeColor(context, R.attr.c_text_dim))
         val cpuValue = value()
         val ramValue = value()
         val cpuLine = meter(R.string.perf_cpu, cpuBar, cpuValue)

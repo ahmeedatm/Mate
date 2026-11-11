@@ -144,10 +144,10 @@ fun perfIssue(perf: PcPerf, apps: List<PcApp>?): PerfIssue? {
     return if (disk.totalGb > 0 && disk.freeGb < disk.totalGb * DISK_FULL_SHARE) PerfIssue.DiskFull(disk.freeGb) else null
 }
 
-/** Mémoire à écrire : `value` en Mo, ou en Go (une décimale) si `giga`. */
+/** Mémoire à écrire : `value` en Mo, ou en Go (une décimale) si `giga`, dès 1000 Mo (« 1 Go » plutôt que « 1019 Mo »). */
 data class PerfMem(val value: Double, val giga: Boolean)
 
-fun perfMem(memMb: Int): PerfMem = if (memMb >= 1024) PerfMem(Math.round(memMb / 102.4) / 10.0, true) else PerfMem(memMb.toDouble(), false)
+fun perfMem(memMb: Int): PerfMem = if (memMb >= 1000) PerfMem(Math.round(memMb / 102.4) / 10.0, true) else PerfMem(memMb.toDouble(), false)
 
 /** Durée à écrire : `value` en secondes, ou en minutes si `minutes`. */
 data class PerfDuration(val value: Int, val minutes: Boolean)

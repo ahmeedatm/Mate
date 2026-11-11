@@ -76,6 +76,8 @@ class PerfAppsTest {
         assertEquals(PerfMem(614.0, false), perfMem(614))
         assertEquals(PerfMem(3.1, true), perfMem(3174))
         assertEquals(PerfMem(1.0, true), perfMem(1024))
+        assertEquals(PerfMem(1.0, true), perfMem(1019))
+        assertEquals(PerfMem(999.0, false), perfMem(999))
     }
 
     @Test
