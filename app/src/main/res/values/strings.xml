@@ -1747,12 +1747,12 @@
     <string name="perf_apps_outdated">Mets à jour le compagnon de l\'ordinateur pour voir les applis</string>
     <string name="perf_app_cpu">%1$d %%</string>
     <string name="perf_app_brief">%1$s · %2$s</string>
-    <string name="perf_app_warn_cpu">⚠ processeur</string>
-    <string name="perf_app_warn_ram">⚠ mémoire</string>
+    <string name="perf_app_warn_cpu">processeur</string>
+    <string name="perf_app_warn_ram">mémoire</string>
+    <string name="perf_app_warn_desc">alerte %1$s</string>
     <string name="perf_app_desc">processeur %1$d %%, mémoire %2$s</string>
     <string name="perf_mem_mb">%1$s Mo</string>
     <string name="perf_mem_gb">%1$s Go</string>
-    <string name="perf_issue_sign">⚠ %1$s</string>
     <string name="perf_issue_app_cpu_min">%1$s prend %2$d %% du processeur depuis %3$d min</string>
     <string name="perf_issue_app_cpu_s">%1$s prend %2$d %% du processeur depuis %3$d s</string>
     <string name="perf_issue_app_ram">%1$s occupe %2$s de mémoire</string>

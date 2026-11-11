@@ -72,6 +72,11 @@ class PerfWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidget(
         addView(unavailable, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, 0, 1f))
         addView(body, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, 0, 1f).apply { topMargin = dp(HEADER_GAP) })
         setOnClickListener { if (!host.editing && !sample && !notAvailable && appsView == null) showAppsPanel() }
+        // Widget retiré ou Activity recréée : le panneau part avec lui, il ne reste pas figé à l'écran.
+        addOnAttachStateChangeListener(object : View.OnAttachStateChangeListener {
+            override fun onViewAttachedToWindow(v: View) = Unit
+            override fun onViewDetachedFromWindow(v: View) = closePanel()
+        })
     }
 
     private val history = PerfHistory()
@@ -86,8 +91,9 @@ class PerfWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidget(
     private var appsOutdated = false
     private var appsView: PerfAppsView? = null
 
-    /** Contenu du panneau des petites formes, tant qu'il est ouvert. */
+    /** Contenu du panneau des petites formes et sa fenêtre, tant qu'il est ouvert. */
     private var panel: PerfAppsView? = null
+    private var panelDialog: AlertDialog? = null
     private var tick = 0
     private var error: String? = null
     private var notAvailable = false
@@ -176,6 +182,8 @@ class PerfWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidget(
     override fun setActive(active: Boolean) {
         if (sample) return
         if (!active) {
+            // Plus de relevés : le panneau fermé plutôt que laissé avec des valeurs figées.
+            closePanel()
             job?.cancel()
             job = null
             history.clear()
@@ -330,38 +338,41 @@ class PerfWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidget(
         }
     }
 
-    /** Petites formes : un appui ouvre « Ce qui consomme » dans un panneau, relu toutes les 2 s tant qu'il est ouvert. */
+    /**
+     * Petites formes : un appui ouvre « Ce qui consomme » dans un panneau. La boucle des relevés le remplit (applis relues à
+     * chaque relevé tant qu'il est ouvert) : une seule requête toutes les 2 s, « Lecture des applis… » d'ici là.
+     */
     private fun showAppsPanel() {
+        if (panelDialog != null) return
         val list = PerfAppsView(context, withTitle = false).apply { setPadding(dp(24), dp(4), dp(24), dp(8)) }
         panel = list
-        val reading = host.scope.launch {
-            loadApps()
-            render()
-        }
         val name = Computers.active(context)?.name ?: context.getString(R.string.computer_generic)
-        AlertDialog.Builder(context)
+        panelDialog = AlertDialog.Builder(context)
             .setTitle(context.getString(R.string.perf_apps_panel_title, name))
             .setView(ScrollView(context).apply { addView(list) })
             .setPositiveButton(R.string.close, null)
             .setOnDismissListener {
-                reading.cancel()
                 panel = null
+                panelDialog = null
             }
             .showImmersive()
         render()
     }
 
-    /** Le souci du moment en une phrase (« ⚠ Navigateur prend 61 % du processeur depuis 2 min »). */
-    private fun issueText(issue: PerfIssue): String = context.getString(
-        R.string.perf_issue_sign,
-        when (issue) {
-            is PerfIssue.AppCpu -> perfDuration(issue.seconds).let {
-                context.getString(if (it.minutes) R.string.perf_issue_app_cpu_min else R.string.perf_issue_app_cpu_s, issue.name, issue.cpu, it.value)
-            }
-            is PerfIssue.AppRam -> context.getString(R.string.perf_issue_app_ram, issue.name, PerfAppsView.memText(context, issue.memMb))
-            is PerfIssue.DiskFull -> context.getString(R.string.perf_issue_disk, perfNumber(issue.freeGb))
-        },
-    )
+    private fun closePanel() {
+        panelDialog?.dismiss()
+        panelDialog = null
+        panel = null
+    }
+
+    /** Le souci du moment en une phrase (« Navigateur prend 61 % du processeur depuis 2 min »), dite avec l'icône d'alerte. */
+    private fun issueText(issue: PerfIssue): String = when (issue) {
+        is PerfIssue.AppCpu -> perfDuration(issue.seconds).let {
+            context.getString(if (it.minutes) R.string.perf_issue_app_cpu_min else R.string.perf_issue_app_cpu_s, issue.name, issue.cpu, it.value)
+        }
+        is PerfIssue.AppRam -> context.getString(R.string.perf_issue_app_ram, issue.name, PerfAppsView.memText(context, issue.memMb))
+        is PerfIssue.DiskFull -> context.getString(R.string.perf_issue_disk, perfNumber(issue.freeGb))
+    }
 
     // ---- Grande taille : trois anneaux, la mémoire en Go, puis température et ventilateur ----
 
@@ -488,10 +499,11 @@ class PerfWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidget(
         val word = perfLevelWord(level)?.takeIf { !stale }?.let { "$name ${context.getString(it)}" } ?: name
         parts.value.set("${reading.percent}%")
         parts.value.setTextColor(color(perfColorAttr(reading.series, PerfMark.VALUE, level, stale)))
-        // Une appli qui abuse se nomme sous l'anneau, en rouge d'alerte avec son signe.
-        val hog = apps?.firstOrNull { it.warn != null }?.takeIf { !stale && error == null }
-        parts.name.set(error ?: hog?.let { context.getString(R.string.perf_issue_sign, it.name) } ?: word)
-        parts.name.setTextColor(color(if (hog != null) R.attr.c_accent else R.attr.c_text_dim))
+        // Une appli qui abuse : la mesure garde son nom (un nom d'appli ne tient pas dans l'anneau), avec l'icône
+        // d'alerte et en rouge ; l'appli se lit dans le panneau, d'un appui.
+        val hog = apps?.any { it.warn != null } == true && !stale && error == null
+        parts.name.setWarned(error ?: word, hog)
+        parts.name.setTextColor(color(if (hog) R.attr.c_accent else R.attr.c_text_dim))
         parts.ring.progress = reading.percent / 100f
         parts.ring.color = color(perfColorAttr(reading.series, PerfMark.FILL, level, stale))
         (parts.ring.parent as? View)?.contentDescription = context.getString(R.string.perf_pill_desc, word, reading.percent)
@@ -636,7 +648,7 @@ class PerfWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidget(
         note.setTextColor(color(if (headerIssue != null) R.attr.c_accent else R.attr.c_text_faint))
         // Alerte écrite dans l'en-tête en plus du rouge des chiffres (rien sur des valeurs grisées) ; une erreur prime.
         if (headerIssue != null) {
-            note.set(headerIssue)
+            note.setWarned(headerIssue, true)
         } else if (error == null) {
             val alerts = if (stale) "" else perfAlertText(
                 listOfNotNull(

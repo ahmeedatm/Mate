@@ -3,11 +3,15 @@ package app.mate.ui.home
 import android.annotation.SuppressLint
 import android.content.Context
 import android.graphics.drawable.GradientDrawable
+import android.text.SpannableString
+import android.text.Spanned
 import android.text.TextUtils
+import android.text.style.ImageSpan
 import android.view.Gravity
 import android.view.View
 import android.widget.LinearLayout
 import android.widget.TextView
+import androidx.core.content.ContextCompat
 import app.mate.R
 import app.mate.net.AppWarn
 import app.mate.net.PcApp
@@ -18,7 +22,7 @@ import app.mate.ui.themeFont
 /**
  * « Ce qui consomme » du widget Performances (maquette B choisie par Eliot) : le souci du moment dans un bandeau, puis les
  * applis les plus gourmandes, chacune avec une barre processeur et une barre mémoire ; une appli qui abuse porte un
- * « ⚠ processeur » ou « ⚠ mémoire » (l'alerte ne repose pas sur la seule couleur). Faute de hauteur, une appli tient sur
+ * « processeur » ou « mémoire » précédé de l'icône d'alerte (l'alerte ne repose pas sur la seule couleur). Faute de hauteur, une appli tient sur
  * une ligne (nom, %, mémoire) et seules celles qui rentrent sont montrées. Sert aussi de contenu au panneau des petites formes.
  */
 @SuppressLint("ViewConstructor")
@@ -60,8 +64,9 @@ class PerfAppsView(context: Context, withTitle: Boolean) : LinearLayout(context)
      */
     fun bind(apps: List<PcApp>?, issue: String?, note: String?, stale: Boolean) {
         this.apps = apps.orEmpty()
-        banner.set(issue?.takeIf { !stale }.orEmpty())
-        banner.shown(banner.text.isNotEmpty())
+        val shownIssue = issue?.takeIf { !stale }.orEmpty()
+        banner.setWarned(shownIssue, shownIssue.isNotEmpty())
+        banner.shown(shownIssue.isNotEmpty())
         message.set(note ?: if (apps != null && apps.isEmpty()) context.getString(R.string.perf_apps_empty) else "")
         message.shown(message.text.isNotEmpty())
         rows.forEachIndexed { i, row -> this.apps.getOrNull(i)?.let { row.bind(it, stale) } }
@@ -142,14 +147,13 @@ class PerfAppsView(context: Context, withTitle: Boolean) : LinearLayout(context)
             val mem = memText(context, app.memMb)
             name.set(app.name)
             name.setTextColor(themeColor(context, if (stale) R.attr.c_text_faint else R.attr.c_text))
-            warn.set(
-                when {
-                    cpuWarn -> context.getString(R.string.perf_app_warn_cpu)
-                    ramWarn -> context.getString(R.string.perf_app_warn_ram)
-                    else -> ""
-                },
-            )
-            warn.shown(warn.text.isNotEmpty())
+            val warnWord = when {
+                cpuWarn -> context.getString(R.string.perf_app_warn_cpu)
+                ramWarn -> context.getString(R.string.perf_app_warn_ram)
+                else -> ""
+            }
+            warn.setWarned(warnWord, warnWord.isNotEmpty())
+            warn.shown(warnWord.isNotEmpty())
             brief.set(context.getString(R.string.perf_app_brief, cpu, mem))
             cpuValue.set(cpu)
             ramValue.set(mem)
@@ -161,7 +165,8 @@ class PerfAppsView(context: Context, withTitle: Boolean) : LinearLayout(context)
             ramBar.color = if (ramWarn) alert else calm
             cpuValue.setTextColor(if (cpuWarn) alert else themeColor(context, R.attr.c_text_dim))
             ramValue.setTextColor(if (ramWarn) alert else themeColor(context, R.attr.c_text_dim))
-            box.contentDescription = listOf(app.name, warn.text.toString().removePrefix(WARN_SIGN).trim(), context.getString(R.string.perf_app_desc, app.cpu, mem))
+            val alertWord = warnWord.takeIf { it.isNotEmpty() }?.let { context.getString(R.string.perf_app_warn_desc, it) }.orEmpty()
+            box.contentDescription = listOf(app.name, alertWord, context.getString(R.string.perf_app_desc, app.cpu, mem))
                 .filter { it.isNotEmpty() }
                 .joinToString(", ")
         }
@@ -204,7 +209,6 @@ class PerfAppsView(context: Context, withTitle: Boolean) : LinearLayout(context)
 
     companion object {
         const val MAX_ROWS = 5
-        private const val WARN_SIGN = "⚠"
         private const val METER_LABEL = 44
         private const val METER_VALUE = 64
         private const val BAR_THICKNESS = 6
@@ -215,3 +219,29 @@ class PerfAppsView(context: Context, withTitle: Boolean) : LinearLayout(context)
         }
     }
 }
+
+/**
+ * Écrit `value`, précédé de l'icône d'alerte (`ic_warning`, teinte `c_accent`, à la taille de la police) si `on`. L'icône
+ * est dans le texte (`ImageSpan`) : elle suit les mots, même centrés ou coupés, et l'alerte n'est dite ni par un caractère
+ * glissé dans le texte (anti-motif de la DA), ni par la seule couleur. Rien n'est réécrit si rien ne change.
+ */
+internal fun TextView.setWarned(value: String, on: Boolean) {
+    val plain = if (on) "$ICON_SLOT $value" else value
+    if (text.toString() == plain) return
+    if (!on) {
+        text = value
+        return
+    }
+    val icon = ContextCompat.getDrawable(context, R.drawable.ic_warning)?.mutate()?.apply {
+        setTint(themeColor(context, R.attr.c_accent))
+        val size = (textSize * ICON_SCALE).toInt()
+        setBounds(0, 0, size, size)
+    }
+    text = SpannableString(plain).apply { icon?.let { setSpan(ImageSpan(it, ImageSpan.ALIGN_BASELINE), 0, 1, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE) } }
+}
+
+/** Caractère remplacé par l'icône. */
+private const val ICON_SLOT = "\uFFFC"
+
+/** Icône un peu plus petite que le corps du texte, posée sur la ligne de base. */
+private const val ICON_SCALE = 0.85f
