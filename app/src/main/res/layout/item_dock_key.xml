@@ -46,13 +46,13 @@
             android:textColor="?attr/c_text_dim"
             android:textSize="14sp" />
 
+        <!-- Groupe centré, descendu sous le numéro pour ne jamais le chevaucher, même à grande police. -->
         <LinearLayout
-            android:layout_width="match_parent"
+            android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_gravity="center"
-            android:layout_marginStart="10dp"
-            android:layout_marginEnd="10dp"
-            android:gravity="center"
+            android:layout_marginTop="16dp"
+            android:gravity="center_vertical"
             android:orientation="horizontal">
 
             <ImageView
@@ -62,25 +62,20 @@
                 android:importantForAccessibility="no"
                 app:tint="?attr/c_text" />
 
-            <!-- Largeur donnée par la touche : le libellé rétrécit (autoSize) avant d'être tronqué, à grande police. -->
+            <!-- 140 dp suffisent à « RÉGLAGES » à font_scale 1.3 ; au-delà, le libellé se coupe (la description reste). -->
             <TextView
                 android:id="@+id/dock_label"
-                android:layout_width="0dp"
+                android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_marginStart="10dp"
-                android:layout_weight="1"
                 android:ellipsize="end"
                 android:fontFamily="?attr/c_font_label"
-                android:gravity="center_vertical"
                 android:letterSpacing="0.08"
                 android:singleLine="true"
                 android:textAllCaps="?attr/c_label_caps"
                 android:textColor="?attr/c_text"
-                android:textSize="17sp"
-                app:autoSizeMaxTextSize="17sp"
-                app:autoSizeMinTextSize="11sp"
-                app:autoSizeStepGranularity="1sp"
-                app:autoSizeTextType="uniform" />
+                android:maxWidth="140dp"
+                android:textSize="17sp" />
         </LinearLayout>
 
         <TextView
