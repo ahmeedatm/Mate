@@ -92,6 +92,7 @@ POLICES (SIL Open Font License 1.1, texte plus bas)
 - Figtree : Copyright 2022 The Figtree Project Authors (https://github.com/erikdkennedy/figtree)
 - Barlow : Copyright 2017 The Barlow Project Authors (https://github.com/jpt/barlow)
 - Barlow Semi Condensed : Copyright 2017 The Barlow Project Authors (https://github.com/jpt/barlow)
+- Departure Mono : Copyright 2022 Helena Zhang (https://departuremono.com)
 - Chakra Petch : Copyright 2018 The Chakra Petch Project Authors (https://github.com/m4rc1e/Chakra-Petch.git)
 - Share Tech Mono : Copyright 2012 Carrois Type Design, Ralph du Carrois (https://github.com/google/fonts/tree/main/ofl/sharetechmono)
 - JetBrains Mono : Copyright 2020 The JetBrains Mono Project Authors (https://github.com/JetBrains/JetBrainsMono)
@@ -101,6 +102,9 @@ DONNÉES
 - Prévisions météo : MET Norway (Institut météorologique norvégien), licence CC BY 4.0,
   https://creativecommons.org/licenses/by/4.0/ ; mises en forme pour l'affichage.
 - Liste des villes : GeoNames (https://www.geonames.org), licence CC BY 4.0 ; extraite et réduite.
+- Lignes de transport d'Île-de-France (nom, mode, couleurs) : Île-de-France Mobilités, « Référentiel des lignes de transport
+  en commun d'Île-de-France » (https://data.iledefrance-mobilites.fr), licence ODbL
+  (https://opendatacommons.org/licenses/odbl/1-0/) ; extraites et réduites.
 - Modèle vocal du mot de réveil : vosk-model-small-fr-0.22, Alpha Cephei (https://alphacephei.com/vosk/models),
   licence Apache 2.0 ; téléchargé à la première activation, pas dans l'APK.
 

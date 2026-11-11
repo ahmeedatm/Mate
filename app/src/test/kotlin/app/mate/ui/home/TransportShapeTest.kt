@@ -23,4 +23,12 @@ class TransportShapeTest {
             assertEquals("${size.name} : titre", !inRow, shape.title)
         }
     }
+
+    @Test
+    fun `une ligne montre un passage, deux seulement en 4 x 1`() {
+        assertEquals(1, TransportShape.of(WidgetSize.S).rows)
+        assertEquals(1, TransportShape.of(WidgetSize.M).rows)
+        assertEquals(1, TransportShape.of(WidgetSize.M3).rows)
+        assertEquals(2, TransportShape.of(WidgetSize.W).rows)
+    }
 }
