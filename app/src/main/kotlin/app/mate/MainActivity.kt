@@ -79,6 +79,7 @@ import app.mate.ui.Look
 import app.mate.ui.MeetingAlertModel
 import app.mate.ui.MeetingAlertOverlay
 import app.mate.ui.Navigation
+import app.mate.ui.PageOverlay
 import app.mate.ui.PhotoFrameView
 import app.mate.ui.PluginsView
 import app.mate.ui.ProfileRail
@@ -135,6 +136,9 @@ class MainActivity : AppCompatActivity() {
     /** Barre fixe à gauche : Parler, profils, outils, ordinateur, Réglages. */
     private lateinit var nav: Navigation
     private lateinit var documentPanel: DocumentPanel
+
+    /** Page web en plein écran de l'ordinateur (ordre `page`, maquettes). */
+    val pageOverlay = PageOverlay(this)
     private lateinit var banner: Banner
     private lateinit var alerts: TabletAlerts
     private lateinit var welcome: WelcomeView
@@ -352,6 +356,7 @@ class MainActivity : AppCompatActivity() {
             when {
                 welcome.visibility == View.VISIBLE || plugins.visibility == View.VISIBLE -> Unit
                 agentAsk.isOpen -> agentAsk.close()
+                pageOverlay.isOpen -> pageOverlay.close()
                 current == Mode.HOME && homeFragment()?.closeCatalogue() == true -> Unit
                 current == Mode.HOME && homeFragment()?.cancelEdit() == true -> Unit
                 current == Mode.HOME && homeFragment()?.closeZoom() == true -> Unit
@@ -558,6 +563,7 @@ class MainActivity : AppCompatActivity() {
 
     override fun onResume() {
         super.onResume()
+        pageOverlay.resume()
         Kiosk.enter(this)
         Accessibility.applyAnimationScale(this, Prefs.reduceMotion(this))
         Screen.apply(this)
@@ -574,6 +580,7 @@ class MainActivity : AppCompatActivity() {
 
     /** Mate quitte l'écran (écran éteint, autre appli) : le mot de réveil n'écoute plus. */
     override fun onPause() {
+        pageOverlay.pause()
         wake.pause()
         presence.pause()
         Screen.stopAmbient(this)
@@ -603,6 +610,7 @@ class MainActivity : AppCompatActivity() {
         // Activité recréée (thème, mise à jour) pendant le cadre : sa luminosité réduite ne reste pas à l'écran suivant.
         if (::frame.isInitialized && frame.isShowing) Screen.frameCharging = null
         documentPanel.close()
+        pageOverlay.close()
         if (isFinishing) {
             NoisePlayer.stop()
             Ringer.stop()

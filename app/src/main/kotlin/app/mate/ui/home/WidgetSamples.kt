@@ -23,7 +23,7 @@ object WidgetSamples {
         WidgetType.DAY -> CalendarSample
         WidgetType.DAYLINE -> CalendarSample
         WidgetType.WEATHER -> WeatherSample.paris()
-        WidgetType.TRANSPORT -> TransportSample(R.string.widget_transport_sample_stop, R.array.widget_transport_sample, listOf(3, 7, 12))
+        WidgetType.TRANSPORT -> TransportSample(R.string.widget_transport_sample_stop, R.array.widget_transport_sample, listOf(3, 5, 7, 9, 11, 13, 16), TRANSPORT_LINES)
         WidgetType.NEXT -> CalendarSample
         WidgetType.AGENDA -> CalendarSample
 
@@ -104,3 +104,6 @@ object WidgetSamples {
         set(Calendar.MILLISECOND, 0)
     }.timeInMillis
 }
+
+/** Lignes de l'exemple Nation, par identifiant IDFM : RER A, métros 1 et 9, RER A, métros 2 et 6, bus 86 (ordre des destinations). */
+private val TRANSPORT_LINES = listOf("C01742", "C01371", "C01379", "C01742", "C01372", "C01376", "C01118")

@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Page web en plein écran par-dessus les modes (ordre `page`, ui/PageOverlay). Le WebView est ajouté dans page_slot. -->
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="?attr/c_bg"
+    android:clickable="true"
+    android:focusable="true">
+
+    <FrameLayout
+        android:id="@+id/page_slot"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent" />
+
+    <ImageButton
+        android:id="@+id/page_close"
+        style="@style/IconButton"
+        android:layout_gravity="top|end"
+        android:layout_margin="12dp"
+        android:elevation="6dp"
+        android:contentDescription="@string/close"
+        android:src="@drawable/ic_close" />
+</FrameLayout>

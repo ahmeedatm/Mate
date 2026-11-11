@@ -3,6 +3,7 @@ import { docEntry } from "../docs.ts";
 import {
   completeCommand,
   FOCUS_ACTIONS,
+  isPageUrl,
   MODES,
   NOISES,
   noteTabletAddress,
@@ -67,6 +68,7 @@ export default async function tabletRoutes(app: FastifyInstance) {
     kind?: (typeof NOISES)[number];
     volume?: number;
     on?: boolean;
+    url?: string | null;
   };
 
   app.post<{ Body: CommandBody }>(
@@ -78,7 +80,7 @@ export default async function tabletRoutes(app: FastifyInstance) {
           required: ["type"],
           additionalProperties: false,
           properties: {
-            type: { enum: ["mode", "message", "document", "focus", "noise", "screenshot", "ring"] },
+            type: { enum: ["mode", "message", "document", "focus", "noise", "screenshot", "ring", "page"] },
             mode: { enum: MODES },
             text: { type: "string", minLength: 1, maxLength: 1000 },
             speak: { type: "boolean" },
@@ -90,6 +92,7 @@ export default async function tabletRoutes(app: FastifyInstance) {
             kind: { enum: NOISES },
             volume: { type: "number", minimum: 0, maximum: 1 },
             on: { type: "boolean" },
+            url: { type: ["string", "null"], maxLength: 2000 },
           },
         },
       },
@@ -128,6 +131,11 @@ export default async function tabletRoutes(app: FastifyInstance) {
         case "ring":
           if (b.on === undefined) return missing("on");
           command = { type: "ring", on: b.on };
+          break;
+        case "page":
+          if (b.url === undefined) return missing("url");
+          if (b.url !== null && !isPageUrl(b.url)) return reply.code(400).send({ error: "Adresse http ou https attendue" });
+          command = { type: "page", url: b.url };
           break;
         case "call":
         case "alert":

@@ -33,6 +33,7 @@ describe("porte MCP", () => {
     for (const name of [
       "tablette_etat",
       "tablette_sonner",
+      "tablette_page",
       "deck_touche_affecter",
       "tablette_reglages",
       "tablette_regler",
