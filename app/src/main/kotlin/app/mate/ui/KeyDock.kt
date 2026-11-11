@@ -134,7 +134,10 @@ class KeyDock(
     }
 
     override fun showFocus(state: FocusTimer.State) {
-        focus = focusRemaining(state)
+        val remaining = focusRemaining(state)
+        // Le minuteur appelle à chaque tic : sans changement du texte, ni redécor ni nouvelle annonce TalkBack.
+        if (remaining == focus) return
+        focus = remaining
         tools.indexOf(Mode.FOCUS).takeIf { it >= 0 }?.let { decorateTool(it) }
     }
 

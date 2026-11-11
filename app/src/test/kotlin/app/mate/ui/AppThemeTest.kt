@@ -72,8 +72,8 @@ class AppThemeTest {
     }
 
     @Test
-    fun `sans choix enregistre, Instrument`() {
-        assertEquals(AppTheme.INSTRUMENT, AppTheme.current(context))
+    fun `sans choix enregistre, Chaleur`() {
+        assertEquals(AppTheme.CHALEUR, AppTheme.current(context))
     }
 
     @Test
@@ -92,10 +92,10 @@ class AppThemeTest {
     }
 
     @Test
-    fun `un theme enregistre qui n'existe plus retombe sur Instrument`() {
+    fun `un theme enregistre qui n'existe plus retombe sur Chaleur`() {
         for (old in listOf("NUIT", "NEON", "CHAUD", "DEMO")) {
             Prefs.setTheme(context, old)
-            assertEquals(old, AppTheme.INSTRUMENT, AppTheme.current(context))
+            assertEquals(old, AppTheme.CHALEUR, AppTheme.current(context))
         }
     }
 
@@ -130,6 +130,14 @@ class AppThemeTest {
     }
 
     @Test
+    fun `Instrument et Instrument nuit se choisissent et sont gardes`() {
+        for (theme in listOf(AppTheme.INSTRUMENT, AppTheme.INSTRUMENT_NUIT)) {
+            Prefs.setTheme(context, theme.name)
+            assertEquals(theme, AppTheme.current(context))
+        }
+    }
+
+    @Test
     fun `Spider-Verse enregistre est garde`() {
         Prefs.setTheme(context, "SPIDERMAN")
         assertEquals(AppTheme.SPIDERMAN, AppTheme.current(context))
@@ -144,8 +152,8 @@ class AppThemeTest {
     }
 
     @Test
-    fun `un nom de theme inconnu retombe sur Instrument`() {
+    fun `un nom de theme inconnu retombe sur Chaleur`() {
         Prefs.setTheme(context, "CONTRASTE_ELEVE")
-        assertEquals(AppTheme.INSTRUMENT, AppTheme.current(context))
+        assertEquals(AppTheme.CHALEUR, AppTheme.current(context))
     }
 }

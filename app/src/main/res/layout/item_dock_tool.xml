@@ -20,7 +20,7 @@
 
     <FrameLayout
         android:layout_width="52dp"
-        android:layout_height="55dp"
+        android:layout_height="56dp"
         android:layout_marginTop="4dp"
         android:clipChildren="false">
 
@@ -60,5 +60,5 @@
         android:singleLine="true"
         android:textAllCaps="?attr/c_label_caps"
         android:textColor="?attr/c_text"
-        android:textSize="11sp" />
+        android:textSize="12sp" />
 </LinearLayout>

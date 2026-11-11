@@ -721,7 +721,7 @@
         <item name="c_block_radius">12dp</item>
     </style>
 
-    <!-- Instrument nuit : l'appareil en graphite (#2B2B2A, touches #3A3A38, LCD #0B0B0B). Orange éclairci #FF8559 pour tenir 4,5:1
+    <!-- Instrument nuit : noir pur : fond #000000, cartes #050505, filet #3A3A3A. Orange éclairci #FF8559 pour tenir 4,5:1
          sur le panneau et la touche ; le signal vif #FF5A1F reste pour les LCD, DEL et l'aplat. -->
     <style name="Palette.InstrumentNuit" parent="">
         <item name="c_card_bg">@drawable/instrument_tile_bg</item>

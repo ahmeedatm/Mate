@@ -1036,7 +1036,7 @@ ${FAVICON}
   // Aperçu de la tablette : couleurs des thèmes (fond, tuile, texte, texte 2, accent, filet, texte sur l'accent), d'après palettes.xml.
   const THEMES = {
     INSTRUMENT: ["#E6E3DC", "#EFEDE7", "#1E1D1B", "#5A564E", "#B3380D", "#B7B2A6", "#F2F0EB"],
-    INSTRUMENT_NUIT: ["#2B2B2A", "#343432", "#ECE8DF", "#B4AFA3", "#FF8559", "#121211", "#1E1D1B"],
+    INSTRUMENT_NUIT: ["#000000", "#050505", "#ECE8DF", "#B4AFA3", "#FF8559", "#3A3A3A", "#0D0D0D"],
     CHALEUR: ["#FAF9F5", "#FFFFFF", "#141413", "#3D3D3A", "#A34A2B", "#E8E6DC", "#FFFFFF"],
     CONSOLE: ["#17181B", "#23252A", "#ECEDEF", "#B4B8C0", "#B8F34A", "#3A3D44", "#16210A"],
     CONSOLE_JOUR: ["#F4F2EE", "#FFFFFF", "#1B1C1F", "#474B54", "#3F6B00", "#D8D3CA", "#FFFFFF"],
@@ -1062,7 +1062,7 @@ ${FAVICON}
     if (c) btn.querySelector("span").style.background = "linear-gradient(135deg, " + c[0] + " 0 42%, " + c[2] + " 42% 68%, " + c[4] + " 68%)";
   }
   function showTwin(theme) {
-    const c = THEMES[theme] || THEMES.INSTRUMENT, twin = document.getElementById("twin");
+    const c = THEMES[theme] || THEMES.CHALEUR, twin = document.getElementById("twin");
     VARS.forEach((v, i) => twin.style.setProperty("--t-" + v, c[i]));
     const btn = document.querySelector('.themes button[data-theme="' + theme + '"]');
     document.getElementById("twintheme").textContent = btn ? btn.textContent : "";

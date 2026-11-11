@@ -38,9 +38,9 @@ enum class TabletTemplate(
     val railLabels: Boolean = true,
     val railTools: List<Mode> = Prefs.RAIL_TOOLS,
 ) {
-    // La config d'une tablette neuve : l'Accueil Travail, Réunion, le thème par défaut (Instrument).
+    // La config d'une tablette neuve : l'Accueil Travail, Réunion, le thème par défaut (Chaleur).
     BUREAU("bureau", R.string.template_bureau, R.string.template_bureau_desc, listOf(
-        TemplateScreen(R.string.profile_first, Template.WORK_INSTRUMENT.widgets(0)),
+        TemplateScreen(R.string.profile_first, Template.WORK_CADRAN.widgets(0)),
     ), theme = null),
 
     // Développeur : l'Accueil du jour, puis un écran plein par outil (agents Claude, MR, pipelines, tickets), Cadran nuit.

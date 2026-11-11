@@ -1,11 +1,11 @@
 # DA de Mate
 
-## Instrument tracé (thème par défaut, 11/11/2026)
+## Instrument tracé (thèmes au choix, 11/11/2026)
 
 Choisie par Ahmed sur la maquette de fusion (`fusion/index.html`, issue #216, PR #229). Un appareil d'aluminium avec des
 fenêtres LCD et des touches qui s'enfoncent, dont chaque écran se dessine à l'arrivée, sur une hiérarchie d'affiche : l'heure
 et le prochain rendez-vous en héros, le reste petit et dense. Deux thèmes : Instrument (jour) et Instrument nuit (noir pur à filets gris, 11/11 : « un écran qui se dégage du fond »),
-tous deux en tête des Réglages ; Instrument est le défaut, un thème enregistré est gardé. Aucun logo ni marque repris.
+tous deux en tête des Réglages ; Chaleur reste le thème par défaut (sans choix, rien ne change par rapport à master) ; Instrument se choisit dans les Réglages, et son Accueil Travail (`Template.WORK_INSTRUMENT`) ne s'applique qu'à lui. Aucun logo ni marque repris.
 
 D'où vient chaque idée :
 
@@ -32,13 +32,13 @@ Orange vif `#FF5A1F` réservé aux fenêtres LCD, à l'aplat de balayage et aux 
 texte dessus ; une DEL active ne tient pas par lui seul) ; le texte et les boutons de l'alu prennent le `c_accent` foncé. La DEL
 active se cerne de `c_signal_edge` (`#B3380D`, 4,7:1 sur l'alu). La DEL éteinte (1,65:1) n'a pas à se lire : c'est l'état actif qui doit
 tenir, y compris quand le capuchon est enfoncé (aussi marqué par son abaissement de 4 dp). Nouveaux attributs : `c_signal`, `c_signal_edge`, `c_on_signal`,
-`c_dock_height` (96 dp pour Instrument, 0 ailleurs : c'est ce qui allume la rangée de touches) et `c_lcd_overlay` (le style LCD), `c_home_card_outline` (la carte des widgets de l'Accueil garde son filet : Applis et Touches posés en panneau, titre en capitales en Colonne) et `c_block_radius` (12 dp au lieu de 40 : le bloc de Depuis l'ordi n'a plus de grands coins).
+`c_dock_height` (116 dp pour Instrument, 0 ailleurs : c'est ce qui allume la rangée de touches) et `c_lcd_overlay` (le style LCD), `c_home_card_outline` (la carte des widgets de l'Accueil garde son filet : Applis et Touches posés en panneau, titre en capitales en Colonne) et `c_block_radius` (12 dp au lieu de 40 : le bloc de Depuis l'ordi n'a plus de grands coins).
 
 Instrument nuit, tout en filet : chaque module de l'Accueil (LCD ou non, y compris Héros, Journée et Ligne du jour posés à nu : `c_bare_frame`)
 prend le même cadre ; « À même le fond » le retire. Boutons ronds et pastilles : noir, filet `c_btn_edge` (= `c_stroke` en nuit, transparent
 ailleurs), icône au trait ; Eau + : noir, filet gris, icône orange (Lcd.InstrumentNuit : `c_primary`). Touches du bas : plus de socle (`c_dock_socle`,
-`c_dock_socle_on` transparents), capuchon noir à filet 1 dp, 18 dp d'air sous la DEL et 12 dp avant le bord (`c_dock_cap_top`, `c_dock_cap_bottom`) ;
-Réunion en appel garde son contour orange de 2 dp. Rangées de Touches et d'Applis : 6 dp entre deux lignes (`c_list_gap`, 4 dp ailleurs).
+`c_dock_socle_on` transparents), capuchon noir à filet 1 dp, 18 dp d'air sous la DEL et 10 dp avant le bord (`c_dock_cap_bottom` = 10 dp ; `c_dock_cap_top`, `c_dock_cap_bottom`) ;
+Réunion en appel garde son contour orange de 2 dp. Rangées de Touches et d'Applis : 6 dp entre deux lignes (`c_list_gap`, 4 dp ailleurs) ; dans un panneau à filet, lignes de 56 dp et 8 dp d'écart (`TileShapes.LIST_ROW_PANEL_DP`, `LIST_GAP_PANEL_DP`). Touche active : DEL allumée, capuchon enfoncé de 4 dp et contour `c_signal` de 2 dp.
 
 Polices : Departure Mono (`c_font_display` : heure, chiffres, minuteur, numéros des touches ; OFL 1.1, convertie en TrueType
 depuis la release rektdeckard/departure-mono v1.500) ; Barlow Semi Condensed 600 pour les titres et libellés en capitales

@@ -19,9 +19,9 @@ class HomeLayoutKeyTest {
     fun `sans disposition enregistree, le modele Travail du theme s'applique`() {
         val context = FakeContext()
         assertNull(HomeLayout.raw(context))
-        assertEquals(Template.WORK_INSTRUMENT.build().widgets.map { it.type }, HomeLayout.load(context).widgets.map { it.type })
-        Prefs.setTheme(context, "CHALEUR")
         assertEquals(Template.WORK_CADRAN.build().widgets.map { it.type }, HomeLayout.load(context).widgets.map { it.type })
+        Prefs.setTheme(context, "INSTRUMENT")
+        assertEquals(Template.WORK_INSTRUMENT.build().widgets.map { it.type }, HomeLayout.load(context).widgets.map { it.type })
     }
 
     @Test

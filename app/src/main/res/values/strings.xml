@@ -1253,7 +1253,7 @@
     <string name="template_in_call">Appel en cours : choisis le template après l\'appel.</string>
     <string name="template_busy">Un template est déjà en cours de pose.</string>
     <string name="template_bureau">Bureau</string>
-    <string name="template_bureau_desc">La configuration de base : l\'Accueil du jour avec agenda, Focus, applis et raccourcis. Thème Instrument.</string>
+    <string name="template_bureau_desc">La configuration de base : l\'Accueil du jour avec agenda, Focus, applis et raccourcis. Thème Chaleur.</string>
     <string name="template_dev">Dev</string>
     <string name="template_dev_desc">Pour développer : l\'Accueil du jour, puis un écran pour les agents Claude, les MR GitLab, les pipelines et les tickets Jira. Thème Cadran nuit.</string>
     <string name="template_screen_agents">Agents</string>

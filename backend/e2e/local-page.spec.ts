@@ -349,12 +349,12 @@ test.describe("page locale GET /", () => {
       ),
     );
     expect(shown).toEqual(accents);
-    // Thème inconnu (tablette plus récente que le compagnon) : l'aperçu prend Instrument, le thème par défaut.
+    // Thème inconnu (tablette plus récente que le compagnon) : l'aperçu prend Chaleur, le thème par défaut.
     const fallback = await page.evaluate(() => {
       (window as unknown as { showTwin: (t: string) => void }).showTwin("INCONNU");
       return document.getElementById("twin")!.style.getPropertyValue("--t-now");
     });
-    expect(fallback).toBe("#B3380D");
+    expect(fallback).toBe("#A34A2B");
 
     await page.locator("#nightdim").uncheck();
     await expect(page.locator("#tabletmsg")).toHaveText("Réglé sur la tablette.");
