@@ -2,67 +2,81 @@ package app.mate.ui
 
 import app.mate.Mode
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
+import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class KeyDockModelTest {
 
-    private val allTools = listOf(Mode.FOCUS, Mode.COMPUTER)
+    private val kept = listOf(Mode.FOCUS, Mode.COMPUTER)
 
     @Test
-    fun `cinq touches numerotees Accueil Focus Ordi Camera Reglages`() {
-        val keys = KeyDockModel.keys(allTools)
-        assertEquals(listOf(Mode.HOME, Mode.FOCUS, Mode.COMPUTER, Mode.CAMERA, Mode.SETTINGS), keys.map { it.mode })
-        assertEquals(listOf("01", "02", "03", "04", "05"), keys.map { it.number })
+    fun `une touche par ecran, numerotees dans l'ordre`() {
+        val screens = KeyDockModel.screens(order = listOf(0, 2, 3), callPage = 1, inCall = false)
+        assertEquals(listOf(0, 2, 3), screens.map { it.page })
+        assertEquals(listOf("01", "02", "03"), screens.map { it.number })
+        assertEquals(listOf(false, false, false), screens.map { it.call })
     }
 
     @Test
-    fun `un outil masque dans Reglages disparait et les touches se renumerotent`() {
-        val keys = KeyDockModel.keys(listOf(Mode.COMPUTER))
-        assertEquals(listOf(Mode.HOME, Mode.COMPUTER, Mode.CAMERA, Mode.SETTINGS), keys.map { it.mode })
-        assertEquals(listOf("01", "02", "03", "04"), keys.map { it.number })
+    fun `pendant un appel Reunion apparait en dernier, marquee comme appel`() {
+        val screens = KeyDockModel.screens(order = listOf(0, 2, 1), callPage = 1, inCall = true)
+        assertEquals(listOf(0, 2, 1), screens.map { it.page })
+        assertEquals(listOf(false, false, true), screens.map { it.call })
+        assertEquals("03", screens.last().number)
     }
 
     @Test
-    fun `la touche marquee suit le mode, la Camera a la sienne`() {
-        val keys = KeyDockModel.keys(allTools)
-        assertEquals(0, KeyDockModel.marked(keys, Mode.HOME))
-        assertEquals(1, KeyDockModel.marked(keys, Mode.FOCUS))
-        assertEquals(2, KeyDockModel.marked(keys, Mode.COMPUTER))
-        assertEquals(3, KeyDockModel.marked(keys, Mode.CAMERA))
-        assertEquals(4, KeyDockModel.marked(keys, Mode.SETTINGS))
+    fun `les outils ronds sont Focus Ordi Camera Reglages, un outil masque disparait`() {
+        assertEquals(listOf(Mode.FOCUS, Mode.COMPUTER, Mode.CAMERA, Mode.SETTINGS), KeyDockModel.tools(kept))
+        assertEquals(listOf(Mode.COMPUTER, Mode.CAMERA, Mode.SETTINGS), KeyDockModel.tools(listOf(Mode.COMPUTER)))
+        assertEquals(listOf(Mode.CAMERA, Mode.SETTINGS), KeyDockModel.tools(emptyList()))
     }
 
     @Test
-    fun `aucune touche marquee quand le mode n'en a pas`() {
-        assertEquals(-1, KeyDockModel.marked(KeyDockModel.keys(listOf(Mode.COMPUTER)), Mode.FOCUS))
+    fun `le plus tant qu'il reste de la place`() {
+        assertTrue(KeyDockModel.showAdd(1))
+        assertTrue(KeyDockModel.showAdd(KeyDockModel.MAX_SCREENS - 1))
+        assertFalse(KeyDockModel.showAdd(KeyDockModel.MAX_SCREENS))
     }
 
     @Test
-    fun `la DEL de 01 a un segment par profil, allume sur celui qu'on voit`() {
-        val segments = KeyDockModel.segments(order = listOf(0, 1, 2), page = 1, callPage = 2, inCall = false)
-        assertEquals(listOf(false, true, false), segments.map { it.on })
-        assertEquals(listOf(false, false, false), segments.map { it.call })
+    fun `au-dela de cinq ecrans les touches deviennent etroites`() {
+        assertFalse(KeyDockModel.compact(5))
+        assertTrue(KeyDockModel.compact(6))
     }
 
     @Test
-    fun `pendant un appel le segment de Reunion est marque`() {
-        val segments = KeyDockModel.segments(order = listOf(0, 1, 2), page = 0, callPage = 2, inCall = true)
-        assertEquals(listOf(false, false, true), segments.map { it.call })
+    fun `l'ecran actif est celui de la page affichee sur l'Accueil, aucun ailleurs`() {
+        val screens = KeyDockModel.screens(listOf(0, 2, 1), callPage = 1, inCall = true)
+        assertEquals(1, KeyDockModel.markedScreen(screens, Mode.HOME, 2))
+        assertEquals(2, KeyDockModel.markedScreen(screens, Mode.HOME, 1))
+        assertEquals(-1, KeyDockModel.markedScreen(screens, Mode.FOCUS, 2))
     }
 
     @Test
-    fun `toucher 01 hors de l'Accueil rouvre le profil affiche`() {
-        assertEquals(KeyDockModel.HomeTap.Open(1), KeyDockModel.homeTap(Mode.FOCUS, listOf(0, 1, 2), 1))
+    fun `l'outil actif suit le mode, la Camera a le sien, un outil masque n'en a pas`() {
+        val tools = KeyDockModel.tools(kept)
+        assertEquals(0, KeyDockModel.markedTool(tools, Mode.FOCUS))
+        assertEquals(2, KeyDockModel.markedTool(tools, Mode.CAMERA))
+        assertEquals(3, KeyDockModel.markedTool(tools, Mode.SETTINGS))
+        assertEquals(-1, KeyDockModel.markedTool(tools, Mode.HOME))
+        assertEquals(-1, KeyDockModel.markedTool(KeyDockModel.tools(listOf(Mode.COMPUTER)), Mode.FOCUS))
     }
 
     @Test
-    fun `toucher 01 deja active passe au profil suivant, puis reboucle`() {
-        assertEquals(KeyDockModel.HomeTap.Open(1), KeyDockModel.homeTap(Mode.HOME, listOf(0, 1, 2), 0))
-        assertEquals(KeyDockModel.HomeTap.Open(0), KeyDockModel.homeTap(Mode.HOME, listOf(0, 1, 2), 2))
+    fun `numero de l'ecran pour l'aplat, vide sans touche`() {
+        val screens = KeyDockModel.screens(listOf(0, 2), callPage = -1, inCall = false)
+        assertEquals("02", KeyDockModel.numberOf(screens, 2))
+        assertEquals("", KeyDockModel.numberOf(screens, 7))
     }
 
     @Test
-    fun `avec un seul profil, toucher 01 active ouvre la liste des profils`() {
-        assertEquals(KeyDockModel.HomeTap.Profiles, KeyDockModel.homeTap(Mode.HOME, listOf(0), 0))
+    fun `le balayage vertical parcourt tous les ecrans puis les outils gardes`() {
+        val screens = KeyDockModel.screens(listOf(0, 1, 2, 3, 4, 5, 6), callPage = -1, inCall = false)
+        val entries = KeyDockModel.stepEntries(screens, kept)
+        assertEquals(RailEntry.Profile(6, false), RailModel.neighbor(entries, Mode.HOME, 5, 1))
+        assertEquals(RailEntry.Tool(Mode.FOCUS), RailModel.neighbor(entries, Mode.HOME, 6, 1))
+        assertEquals(RailEntry.Profile(6, false), RailModel.neighbor(entries, Mode.FOCUS, 0, -1))
     }
 }

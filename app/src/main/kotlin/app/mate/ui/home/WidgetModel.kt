@@ -534,11 +534,14 @@ enum class Template(
         // Touches remplies d'office (Verrouiller, Couper le micro, Ne pas déranger…) : pas de case vide au premier lancement.
         Placed(WidgetType.KEYS, WidgetSize.V, 0, 3, 2, JSONObject().put(KeyRef.DEFAULT_PAGE, "Raccourcis")),
     )),
-    // Instrument : l'heure et le prochain rendez-vous en grand (fenêtres LCD), le reste petit dessous.
+    // Instrument : l'heure et le prochain rendez-vous en haut (fenêtres LCD), la ligne du jour 8 h-20 h sur toute la largeur,
+    // puis l'agenda et le Focus l'un sur l'autre, les applis, les touches, l'eau et la météo (4 colonnes × 2 lignes en tout).
     WORK_INSTRUMENT(R.string.template_work, R.string.template_work_instrument_desc, listOf(
-        Placed(WidgetType.CLOCK, WidgetSize.L, 0, 0, 0),
-        Placed(WidgetType.NEXT, WidgetSize.L, 0, 2, 0),
-        Placed(WidgetType.FOCUS, WidgetSize.V, 0, 0, 2),
+        Placed(WidgetType.CLOCK, WidgetSize.M, 0, 0, 0),
+        Placed(WidgetType.NEXT, WidgetSize.M, 0, 2, 0),
+        Placed(WidgetType.DAYLINE, WidgetSize.W, 0, 0, 1),
+        Placed(WidgetType.AGENDA, WidgetSize.S, 0, 0, 2),
+        Placed(WidgetType.FOCUS, WidgetSize.S, 0, 0, 3),
         Placed(WidgetType.APPS, WidgetSize.V, 0, 1, 2),
         Placed(WidgetType.KEYS, WidgetSize.V, 0, 2, 2, JSONObject().put(KeyRef.DEFAULT_PAGE, "Raccourcis")),
         Placed(WidgetType.WATER, WidgetSize.S, 0, 3, 2),

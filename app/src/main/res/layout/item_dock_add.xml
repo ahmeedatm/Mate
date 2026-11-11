@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Touche étroite « + » de la rangée d'Instrument (créer un écran) : socle et capuchon comme les touches d'écran, sans DEL. -->
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="56dp"
+    android:layout_height="match_parent"
+    android:layout_marginStart="6dp"
+    android:layout_marginEnd="6dp"
+    android:clickable="true"
+    android:clipChildren="false"
+    android:focusable="true">
+
+    <View
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:layout_marginTop="18dp"
+        android:background="@drawable/dock_key_base"
+        android:importantForAccessibility="no" />
+
+    <FrameLayout
+        android:id="@+id/dock_cap"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:layout_marginTop="12dp"
+        android:layout_marginBottom="6dp"
+        android:background="@drawable/dock_key_add_cap"
+        android:duplicateParentState="true">
+
+        <ImageView
+            android:layout_width="24dp"
+            android:layout_height="24dp"
+            android:layout_gravity="center"
+            android:importantForAccessibility="no"
+            android:src="@drawable/ic_add"
+            app:tint="?attr/c_accent" />
+    </FrameLayout>
+</FrameLayout>

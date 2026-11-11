@@ -2,8 +2,11 @@ package app.mate.ui
 
 import android.app.Activity
 import android.content.res.ColorStateList
+import android.util.TypedValue
 import android.view.MotionEvent
 import android.view.View
+import android.view.ViewGroup
+import android.widget.HorizontalScrollView
 import android.widget.ImageView
 import android.widget.LinearLayout
 import android.widget.TextView
@@ -21,12 +24,14 @@ import app.mate.R
 import app.mate.focus.FocusTimer
 import app.mate.net.Link
 import app.mate.ui.home.HomeLayout
+import app.mate.ui.home.ProfileIcons
 import app.mate.ui.topbar.TopBar
 
 /**
- * Rangée de touches en bas (thèmes Instrument, `c_dock_height` > 0), à la place de la barre de gauche : Parler (touche ronde)
- * à gauche, les touches numérotées Accueil, Focus, Ordi, Caméra, Réglages, Verrou (touche ronde) à droite. Une DEL au-dessus
- * de la touche active ; celle d'Accueil a un segment par profil. L'ordinateur actif est la pastille LCD du bandeau du haut.
+ * Rangée de touches en bas (thèmes Instrument, `c_dock_height` > 0), à la place de la barre de gauche : Parler (touche ronde),
+ * une grande touche numérotée par écran de l'Accueil (Réunion, accentuée, pendant un appel) suivie de « + » pour en créer
+ * un (la zone défile quand il y en a beaucoup), puis des boutons ronds pour Focus, Ordi, Caméra, Réglages et Verrou (touche ronde).
+ * Une DEL au-dessus de l'élément actif, écran ou mode. L'ordinateur actif est la pastille LCD du bandeau du haut.
  * Ce que la rangée montre vient de [KeyDockModel] ; les outils masqués et les noms suivent les Réglages de la barre.
  */
 class KeyDock(
@@ -37,7 +42,9 @@ class KeyDock(
 ) : Navigation {
 
     private val dock: LinearLayout = activity.findViewById(R.id.key_dock)
+    private val scroll: HorizontalScrollView = activity.findViewById(R.id.dock_scroll)
     private val row: LinearLayout = activity.findViewById(R.id.dock_keys)
+    private val end: LinearLayout = activity.findViewById(R.id.dock_end)
     private val chip: View = activity.findViewById<TopBar>(R.id.top_bar).computerChip
     private val chipDot: ImageView = chip.findViewById(R.id.chip_dot)
     private val chipName: TextView = chip.findViewById(R.id.chip_name)
@@ -55,9 +62,12 @@ class KeyDock(
     private var notifications = false
     private var focus: String? = null
     private var pendingTasks = 0
-    private var keys: List<KeyDockModel.Key> = emptyList()
-    private val views = mutableListOf<View>()
-    private var marked = -1
+    private var screens: List<KeyDockModel.Screen> = emptyList()
+    private var tools: List<Mode> = emptyList()
+    private val screenViews = mutableListOf<View>()
+    private val toolViews = mutableListOf<View>()
+    private var drawn: RailModel.Snapshot? = null
+    private var fitted = 0
     private var position = -1
     private var resting = false
     private var linkState: Link.State? = null
@@ -69,6 +79,8 @@ class KeyDock(
         dock.visibility = View.VISIBLE
         activity.findViewById<TopBar>(R.id.top_bar).showComputerChip()
         ViewCompat.replaceAccessibilityAction(chip, AccessibilityNodeInfoCompat.AccessibilityActionCompat.ACTION_CLICK, activity.getString(R.string.dock_switch_computer), null)
+        // La largeur des touches d'écran dépend de la place de la zone : elle se refait quand cette place change.
+        scroll.addOnLayoutChangeListener { _, left, _, right, _, oldLeft, _, oldRight, _ -> if (right - left != oldRight - oldLeft) fitScreens() }
         render()
     }
 
@@ -104,9 +116,11 @@ class KeyDock(
         this.layout = layout
         this.page = page
         this.inCall = inCall
-        decorate(0)
-        mark(animate = true)
+        // Écrans, noms, icônes ou appel changés : la rangée se redessine ; sinon seule la touche active bouge.
+        if (drawn != snapshot()) render() else mark(animate = true)
     }
+
+    private fun snapshot() = RailModel.snapshot(layout, inCall, Prefs.railTools(activity), Prefs.railLabels(activity))
 
     override fun select(mode: Mode, changed: Boolean) {
         this.mode = mode
@@ -121,12 +135,12 @@ class KeyDock(
 
     override fun showFocus(state: FocusTimer.State) {
         focus = focusRemaining(state)
-        keys.indexOfFirst { it.mode == Mode.FOCUS }.takeIf { it >= 0 }?.let { decorate(it) }
+        tools.indexOf(Mode.FOCUS).takeIf { it >= 0 }?.let { decorateTool(it) }
     }
 
     override fun setPendingTasks(count: Int) {
         pendingTasks = count
-        decorate(0)
+        screens.indices.forEach { decorateScreen(it) }
     }
 
     /** L'état se lit dans la pastille LCD du bandeau : signe, nom et état écrit (couleurs de l'afficheur). */
@@ -139,42 +153,108 @@ class KeyDock(
     override fun applySettings() = render()
 
     override fun tourAnchor(step: TourModel.Step): View? = when (step) {
-        TourModel.Step.HOME, TourModel.Step.SCREENS -> views.firstOrNull()
-        TourModel.Step.SWIPE -> row
+        TourModel.Step.HOME, TourModel.Step.SCREENS -> screenViews.firstOrNull()
+        TourModel.Step.SWIPE -> scroll
         TourModel.Step.TALK -> talk
         TourModel.Step.NOTIFICATIONS, TourModel.Step.CUSTOMIZE -> null
     }
 
     private fun render() {
         talk.visibility = if (Prefs.railTalk(activity)) View.VISIBLE else View.GONE
-        keys = KeyDockModel.keys(Prefs.railTools(activity))
+        val hadCall = screens.any { it.call }
+        drawn = snapshot()
+        screens = KeyDockModel.screens(layout.profilesInOrder(inCall), layout.callProfile, inCall)
+        tools = KeyDockModel.tools(Prefs.railTools(activity))
         row.removeAllViews()
-        views.clear()
-        keys.forEachIndexed { i, key ->
+        end.removeAllViews()
+        screenViews.clear()
+        toolViews.clear()
+        screens.forEach { screen ->
             val view = activity.layoutInflater.inflate(R.layout.item_dock_key, row, false)
-            view.setOnClickListener { open(key) }
-            // Appui long sur 01 : la liste des profils (renommer, ranger, ajouter).
-            if (key.mode == Mode.HOME) {
-                view.setOnLongClickListener {
-                    onProfiles()
-                    true
-                }
-                // Le geste n'a pas d'indice visible : TalkBack l'annonce comme une action.
-                ViewCompat.addAccessibilityAction(view, activity.getString(R.string.dock_manage_screens)) { _, _ ->
-                    onProfiles()
-                    true
-                }
+            view.setOnClickListener { onProfile(screen.page) }
+            // Appui long : la liste des écrans (renommer, ranger, ajouter). Le geste n'a pas d'indice visible : TalkBack l'annonce.
+            view.setOnLongClickListener {
+                onProfiles()
+                true
             }
-            view.findViewById<TextView>(R.id.dock_number).text = key.number
-            view.findViewById<ImageView>(R.id.dock_icon).setImageResource(icon(key.mode))
+            ViewCompat.addAccessibilityAction(view, activity.getString(R.string.dock_manage_screens)) { _, _ ->
+                onProfiles()
+                true
+            }
+            view.findViewById<TextView>(R.id.dock_number).text = screen.number
             press(view, view.findViewById(R.id.dock_cap))
             row.addView(view)
-            views += view
-            decorate(i)
+            screenViews += view
         }
-        marked = -1
+        if (KeyDockModel.showAdd(screens.size)) row.addView(addKey())
+        end.addView(separator())
+        tools.forEach { tool ->
+            val view = activity.layoutInflater.inflate(R.layout.item_dock_tool, end, false)
+            view.setOnClickListener { onMode(tool) }
+            view.findViewById<ImageView>(R.id.dock_icon).setImageResource(icon(tool))
+            press(view, view.findViewById(R.id.dock_cap))
+            end.addView(view)
+            toolViews += view
+        }
+        screens.indices.forEach { decorateScreen(it) }
+        tools.indices.forEach { decorateTool(it) }
+        fitted = 0
+        fitScreens()
+        position = -1
         mark(animate = false)
+        val call = screenViews.lastOrNull()?.takeIf { !hadCall && screens.lastOrNull()?.call == true }
+        call?.let { appear(it) }
     }
+
+    private fun addKey(): View {
+        val view = activity.layoutInflater.inflate(R.layout.item_dock_add, row, false)
+        view.contentDescription = activity.getString(R.string.rail_add_desc)
+        view.setOnClickListener { onProfiles() }
+        press(view, view.findViewById(R.id.dock_cap))
+        return view
+    }
+
+    private fun separator() = View(activity).apply {
+        setBackgroundColor(themeColor(activity, R.attr.c_stroke))
+        importantForAccessibility = View.IMPORTANT_FOR_ACCESSIBILITY_NO
+        layoutParams = LinearLayout.LayoutParams(dp(1), dp(SEPARATOR_DP)).apply {
+            gravity = android.view.Gravity.CENTER_VERTICAL
+            marginStart = dp(6)
+            marginEnd = dp(6)
+        }
+    }
+
+    /** Réunion qui arrive pendant un appel : sa touche monte en fondu, et la zone défile jusqu'à elle. */
+    private fun appear(view: View) {
+        scroll.post { scroll.smoothScrollTo(row.width, 0) }
+        if (!Look.on(activity, AnimFamily.DETAILS) || Look.reduced(activity)) return
+        view.alpha = 0f
+        view.translationY = view.dp(APPEAR_DP).toFloat()
+        view.animate().alpha(1f).translationY(0f).setDuration(FLASH_MS * 2).start()
+    }
+
+    /** Largeur des touches d'écran : la zone partagée à parts égales, entre [MIN_KEY_DP] et [MAX_KEY_DP] ; plus étroit, elle défile. */
+    private fun fitScreens() {
+        val room = scroll.width - if (KeyDockModel.showAdd(screens.size)) scroll.dp(ADD_DP) else 0
+        if (room <= 0 || screenViews.isEmpty()) return
+        val each = (room / screenViews.size).coerceIn(scroll.dp(MIN_KEY_DP), scroll.dp(MAX_KEY_DP))
+        if (each == fitted) return
+        fitted = each
+        val compact = KeyDockModel.compact(screens.size)
+        screenViews.forEach { view ->
+            val params = view.layoutParams
+            params.width = each - params.margins()
+            view.layoutParams = params
+            // Touches étroites : sans icône, lettres resserrées (le nom reste lu par TalkBack).
+            view.findViewById<View>(R.id.dock_icon).visibility = if (compact) View.GONE else View.VISIBLE
+            view.findViewById<TextView>(R.id.dock_label).apply {
+                setTextSize(TypedValue.COMPLEX_UNIT_SP, if (compact) COMPACT_LABEL_SP else LABEL_SP)
+                letterSpacing = if (compact) COMPACT_SPACING else LABEL_SPACING
+            }
+        }
+    }
+
+    private fun ViewGroup.LayoutParams.margins(): Int = (this as? ViewGroup.MarginLayoutParams)?.let { it.marginStart + it.marginEnd } ?: 0
 
     private fun icon(mode: Mode) = when (mode) {
         Mode.HOME -> R.drawable.ic_key_home
@@ -184,99 +264,84 @@ class KeyDock(
         Mode.SETTINGS -> R.drawable.ic_key_settings
     }
 
-    private fun open(key: KeyDockModel.Key) {
-        if (key.mode != Mode.HOME) return onMode(key.mode)
-        when (val tap = KeyDockModel.homeTap(mode, layout.profilesInOrder(inCall), page)) {
-            is KeyDockModel.HomeTap.Open -> onProfile(tap.page)
-            KeyDockModel.HomeTap.Profiles -> onProfiles()
+    /** Nom du profil, couleur d'appel pour Réunion, pastille des tâches sur l'Accueil ; nom et tâches lus par TalkBack. */
+    private fun decorateScreen(i: Int) {
+        val screen = screens.getOrNull(i) ?: return
+        val view = screenViews.getOrNull(i) ?: return
+        val name = layout.nameOf(screen.page, activity.getString(R.string.profile_first), activity.getString(R.string.profile_default))
+        val label = view.findViewById<TextView>(R.id.dock_label)
+        label.text = name
+        label.typeface = themeFont(activity, R.attr.c_font_label)
+        label.visibility = if (Prefs.railLabels(activity)) View.VISIBLE else View.GONE
+        // Réunion en appel : contour et texte orange (le contour dit « en appel » sans la couleur seule).
+        val tone = themeColor(activity, if (screen.call) R.attr.c_accent else R.attr.c_text)
+        label.setTextColor(tone)
+        view.findViewById<ImageView>(R.id.dock_icon).apply {
+            setImageResource(ProfileIcons.of(layout, screen.page))
+            imageTintList = ColorStateList.valueOf(tone)
+        }
+        view.isActivated = screen.call
+        val tasks = if (screen.page == layout.homeProfile) pendingTasks else 0
+        view.contentDescription = name + if (tasks > 0) activity.resources.getQuantityString(R.plurals.dock_desc_tasks, tasks, tasks) else ""
+        view.findViewById<TextView>(R.id.dock_badge).apply {
+            text = tasks.toString()
+            visibility = if (tasks > 0) View.VISIBLE else View.GONE
         }
     }
 
-    /** Libellé (nom du profil sur 01, minuteur sur Focus lancé), couleur du « maintenant » et pastille des tâches. */
-    private fun decorate(i: Int) {
-        val key = keys.getOrNull(i) ?: return
-        val view = views.getOrNull(i) ?: return
+    /** Libellé (minuteur sur Focus lancé, avec l'accent comme signe qui reste noms coupés) et description de l'outil. */
+    private fun decorateTool(i: Int) {
+        val tool = tools.getOrNull(i) ?: return
+        val view = toolViews.getOrNull(i) ?: return
         val label = view.findViewById<TextView>(R.id.dock_label)
-        val timer = focus.takeIf { key.mode == Mode.FOCUS }
-        label.text = when (key.mode) {
-            Mode.HOME -> layout.nameOf(page, activity.getString(R.string.profile_first), activity.getString(R.string.profile_default))
-            else -> timer ?: activity.getString(key.mode.label)
-        }
+        val timer = focus.takeIf { tool == Mode.FOCUS }
+        val name = activity.getString(tool.label)
+        label.text = timer ?: name
         label.typeface = themeFont(activity, if (timer != null) R.attr.c_font_display else R.attr.c_font_label)
         val tone = themeColor(activity, if (timer != null) R.attr.c_accent else R.attr.c_text)
         label.setTextColor(tone)
-        // Focus en cours : l'icône prend aussi l'accent, un signe qui reste quand les noms sont coupés (comme la barre de gauche).
-        view.findViewById<ImageView>(R.id.dock_icon).imageTintList = ColorStateList.valueOf(tone)
         label.visibility = if (Prefs.railLabels(activity)) View.VISIBLE else View.GONE
-        view.contentDescription = describe(key.mode, label.text.toString(), timer)
-        view.findViewById<TextView>(R.id.dock_badge).apply {
-            text = pendingTasks.toString()
-            visibility = if (key.mode == Mode.HOME && pendingTasks > 0) View.VISIBLE else View.GONE
-        }
+        view.findViewById<ImageView>(R.id.dock_icon).imageTintList = ColorStateList.valueOf(tone)
+        view.contentDescription = if (timer != null) activity.getString(R.string.dock_desc_timer, name, timer) else name
     }
 
-    /** Ce que lit TalkBack : le nom de la touche (même quand son libellé est masqué), puis le profil, le minuteur ou les tâches. */
-    private fun describe(mode: Mode, shown: String, timer: String?): String {
-        val name = activity.getString(mode.label)
-        return when {
-            mode == Mode.HOME -> {
-                val profile = activity.getString(R.string.dock_desc_profile, name, shown)
-                if (pendingTasks > 0) {
-                    profile + activity.resources.getQuantityString(R.plurals.dock_desc_tasks, pendingTasks, pendingTasks)
-                } else {
-                    profile
-                }
-            }
-            timer != null -> activity.getString(R.string.dock_desc_timer, name, timer)
-            else -> name
-        }
-    }
-
-    /** Touche active : capuchon enfoncé et DEL allumée (elle clignote une fois en s'allumant). */
+    /** Élément actif (écran ou outil) : capuchon enfoncé et DEL allumée (elle clignote une fois en s'allumant). */
     private fun mark(animate: Boolean) {
-        val selected = if (notifications && mode == Mode.COMPUTER) -1 else KeyDockModel.marked(keys, mode)
-        val order = layout.profilesInOrder(inCall)
-        val next = if (selected < 0) -1 else selected * PROFILE_SPAN + if (selected == 0) order.indexOf(page).coerceAtLeast(0) else 0
+        val screen = KeyDockModel.markedScreen(screens, mode, page)
+        val tool = if (notifications && mode == Mode.COMPUTER) -1 else KeyDockModel.markedTool(tools, mode)
+        val next = if (screen >= 0) screen else if (tool >= 0) screens.size + tool else -1
         if (next != position) lastMove = RailModel.direction(position, next)
         position = next
-        marked = selected
-        views.forEachIndexed { i, view ->
-            view.isSelected = i == selected
-            val cap = view.findViewById<View>(R.id.dock_cap)
-            if (animate) Look.keyCap(cap, pressed = false, rest = restOf(view)) else cap.translationY = restOf(view)
-            fillLeds(view.findViewById(R.id.dock_led), keys[i].mode, i == selected, order, animate)
-        }
+        screenViews.forEachIndexed { i, view -> light(view, i == screen, screens[i].call, animate) }
+        toolViews.forEachIndexed { i, view -> light(view, i == tool, false, animate) }
+        screenViews.getOrNull(screen)?.let { reveal(it) }
     }
 
-    /** DEL d'une touche : un segment ; sur 01, un par profil (allumé sur celui qu'on voit, contour pour Réunion en appel). */
-    private fun fillLeds(led: LinearLayout, mode: Mode, selected: Boolean, order: List<Int>, animate: Boolean) {
-        val segments = if (mode == Mode.HOME) {
-            KeyDockModel.segments(order, if (selected) page else -1, layout.callProfile, inCall)
-        } else {
-            listOf(KeyDockModel.Segment(0, selected, false))
-        }
-        while (led.childCount > segments.size) led.removeViewAt(led.childCount - 1)
-        while (led.childCount < segments.size) led.addView(segmentView())
-        segments.forEachIndexed { i, segment ->
-            val view = led.getChildAt(i)
-            val lit = segment.on && !view.isSelected
-            view.isSelected = segment.on
-            view.isActivated = segment.call && !segment.on
+    private fun light(view: View, selected: Boolean, call: Boolean, animate: Boolean) {
+        val lit = selected && !view.isSelected
+        view.isSelected = selected
+        val cap = view.findViewById<View>(R.id.dock_cap)
+        if (animate) Look.keyCap(cap, pressed = false, rest = restOf(view)) else cap.translationY = restOf(view)
+        view.findViewById<View>(R.id.dock_led).apply {
+            isSelected = selected
+            isActivated = call
             if (lit && animate && Look.on(activity, AnimFamily.DETAILS) && !Look.reduced(activity)) {
-                view.alpha = FLASH_ALPHA
-                view.animate().alpha(1f).setDuration(FLASH_MS).start()
+                alpha = FLASH_ALPHA
+                animate().alpha(1f).setDuration(FLASH_MS).start()
             }
         }
     }
 
-    private fun segmentView() = View(activity).apply {
-        setBackgroundResource(R.drawable.dock_led)
-        layoutParams = LinearLayout.LayoutParams(dp(SEGMENT_DP), dp(5)).apply { marginStart = dp(2); marginEnd = dp(2) }
+    /** La touche de l'écran affiché reste visible quand la zone défile : elle vient au centre si elle est en partie cachée. */
+    private fun reveal(view: View) {
+        scroll.post {
+            if (view.left >= scroll.scrollX && view.right <= scroll.scrollX + scroll.width) return@post
+            scroll.smoothScrollTo(view.left - (scroll.width - view.width) / 2, 0)
+        }
     }
 
     override fun step(delta: Int): Boolean {
-        val entry = neighbor(delta) ?: return false
-        when (entry) {
+        when (val entry = neighbor(delta) ?: return false) {
             is RailEntry.Profile -> onProfile(entry.page)
             is RailEntry.Tool -> onMode(entry.mode)
             RailEntry.More, RailEntry.Add -> return false
@@ -288,7 +353,7 @@ class KeyDock(
 
     // Notifications (cloche) : hors du balayage, comme dans la barre de gauche.
     private fun neighbor(delta: Int): RailEntry? =
-        if (notifications && mode == Mode.COMPUTER) null else RailModel.neighbor(RailModel.entries(layout, inCall, Prefs.railTools(activity)), mode, page, delta)
+        if (notifications && mode == Mode.COMPUTER) null else RailModel.neighbor(KeyDockModel.stepEntries(screens, Prefs.railTools(activity)), mode, page, delta)
 
     /** Repos : la rangée passe à 40 %, un toucher la ravive. Rien ne disparaît. */
     override fun setResting(resting: Boolean) {
@@ -301,12 +366,21 @@ class KeyDock(
         const val RESTING_ALPHA = 0.4f
         const val FLASH_ALPHA = 0.25f
         const val FLASH_MS = 140L
-        const val SEGMENT_DP = 24
 
         /** Enfoncement du capuchon de la touche active, au repos. */
         const val SELECTED_DP = 4
 
-        /** Place d'un profil derrière sa touche, pour le sens du mouvement ([lastMove]). */
-        const val PROFILE_SPAN = 1000
+        /** Largeurs d'une touche d'écran, marges comprises : jamais sous 112 dp (cible), au plus 230 dp. */
+        const val MIN_KEY_DP = 112
+        const val MAX_KEY_DP = 230
+        const val SEPARATOR_DP = 56
+
+        /** Place de « + » après les touches d'écran, marges comprises (56 dp + 2 × 6 dp du layout). */
+        const val ADD_DP = 68
+        const val APPEAR_DP = 12
+        const val LABEL_SP = 17f
+        const val COMPACT_LABEL_SP = 15f
+        const val LABEL_SPACING = 0.08f
+        const val COMPACT_SPACING = 0.04f
     }
 }

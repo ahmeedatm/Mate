@@ -77,14 +77,15 @@ class WidgetModelTest {
     }
 
     @Test
-    fun `Accueil Instrument, heure et prochain rendez-vous en 2 x 2 en haut, le reste petit en bas`() {
+    fun `Accueil Instrument, heure et rendez-vous en haut, ligne du jour dessous, puis les petits`() {
         val widgets = Template.WORK_INSTRUMENT.build().widgets
         assertEquals(
-            listOf(Triple(WidgetType.CLOCK, WidgetSize.L, 0 to 0), Triple(WidgetType.NEXT, WidgetSize.L, 2 to 0)),
+            listOf(Triple(WidgetType.CLOCK, WidgetSize.M, 0 to 0), Triple(WidgetType.NEXT, WidgetSize.M, 2 to 0)),
             widgets.filter { it.row == 0 }.sortedBy { it.col }.map { Triple(it.type, it.size, it.col to it.row) },
         )
+        assertEquals(listOf(Triple(WidgetType.DAYLINE, WidgetSize.W, 0 to 1)), widgets.filter { it.row == 1 }.map { Triple(it.type, it.size, it.col to it.row) })
         assertEquals(
-            listOf(WidgetType.FOCUS, WidgetType.APPS, WidgetType.KEYS, WidgetType.WATER, WidgetType.WEATHER),
+            listOf(WidgetType.AGENDA, WidgetType.FOCUS, WidgetType.APPS, WidgetType.KEYS, WidgetType.WATER, WidgetType.WEATHER),
             widgets.filter { it.row >= 2 }.sortedWith(compareBy({ it.col }, { it.row })).map { it.type },
         )
         // `parse` refuse un chevauchement ou une taille non permise : la disposition se relit telle quelle.

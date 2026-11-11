@@ -1,0 +1,64 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Bouton rond d'un outil (Focus, Ordi, Caméra, Réglages) dans la rangée d'Instrument : DEL au-dessus quand il est actif, socle
+     et capuchon ronds, petit libellé dessous. 60 dp de large sur toute la hauteur : une cible bien au-dessus de 48 dp. -->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="60dp"
+    android:layout_height="match_parent"
+    android:clickable="true"
+    android:clipChildren="false"
+    android:focusable="true"
+    android:gravity="center_horizontal"
+    android:orientation="vertical">
+
+    <View
+        android:id="@+id/dock_led"
+        android:layout_width="22dp"
+        android:layout_height="5dp"
+        android:background="@drawable/dock_led"
+        android:importantForAccessibility="no" />
+
+    <FrameLayout
+        android:layout_width="46dp"
+        android:layout_height="49dp"
+        android:layout_marginTop="4dp"
+        android:clipChildren="false">
+
+        <View
+            android:layout_width="46dp"
+            android:layout_height="46dp"
+            android:layout_gravity="bottom"
+            android:background="@drawable/dock_round_base"
+            android:importantForAccessibility="no" />
+
+        <FrameLayout
+            android:id="@+id/dock_cap"
+            android:layout_width="46dp"
+            android:layout_height="46dp"
+            android:background="@drawable/dock_round_cap"
+            android:duplicateParentState="true">
+
+            <ImageView
+                android:id="@+id/dock_icon"
+                android:layout_width="22dp"
+                android:layout_height="22dp"
+                android:layout_gravity="center"
+                android:importantForAccessibility="no"
+                app:tint="?attr/c_text" />
+        </FrameLayout>
+    </FrameLayout>
+
+    <TextView
+        android:id="@+id/dock_label"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="2dp"
+        android:ellipsize="end"
+        android:fontFamily="?attr/c_font_label"
+        android:gravity="center"
+        android:letterSpacing="0.06"
+        android:singleLine="true"
+        android:textAllCaps="?attr/c_label_caps"
+        android:textColor="?attr/c_text"
+        android:textSize="11sp" />
+</LinearLayout>

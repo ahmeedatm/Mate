@@ -1200,11 +1200,24 @@ class MainActivity : AppCompatActivity() {
     /** Attente (ms) avant que l'écran qui arrive trace ses cadres : celle du balayage, ou rien. */
     fun traceLead(): Long = if (sweeping) FrameTracerModel.AFTER_SWEEP_MS else 0L
 
-    /** Numéro de la touche du mode sur la rangée (01 à 05, renumérotée quand un outil est masqué dans Réglages > Barre). */
-    private fun keyNumber(mode: Mode) = KeyDockModel.keys(Prefs.railTools(this)).firstOrNull { it.mode == mode }?.number.orEmpty()
+    /** Écran de l'Accueil que le balayage annonce : celui qu'on ouvre (touche d'écran), sinon celui qui s'affiche. */
+    private var sweepPage: Int? = null
 
-    /** Nom de l'écran sur l'aplat, comme la maquette : « Accueil » (pas « Écrans », le nom du mode). */
-    private fun sweepName(mode: Mode) = getString(if (mode == Mode.HOME) R.string.profile_first else mode.label)
+    /** Numéro écrit sur l'aplat du balayage : celui de l'écran de l'Accueil (01…), vide pour un outil (bouton rond, sans numéro). */
+    private fun keyNumber(mode: Mode): String {
+        if (mode != Mode.HOME) return ""
+        val layout = HomeLayout.load(this)
+        return KeyDockModel.numberOf(KeyDockModel.screens(layout.profilesInOrder(inCall), layout.callProfile, inCall), sweepTarget(layout))
+    }
+
+    private fun sweepTarget(layout: HomeLayout) = sweepPage ?: homeFragment()?.shownPage ?: layout.homeProfile
+
+    /** Nom de l'écran sur l'aplat : celui du profil de l'Accueil (« Accueil » par défaut), sinon le nom du mode. */
+    private fun sweepName(mode: Mode): String {
+        if (mode != Mode.HOME) return getString(mode.label)
+        val layout = HomeLayout.load(this)
+        return layout.nameOf(sweepTarget(layout), getString(R.string.profile_first), getString(R.string.profile_default))
+    }
 
     /**
      * En-tête de l'écran affiché dans le bandeau du haut : celui de l'écran (titre, retour, boutons), le nom du profil
@@ -1286,7 +1299,9 @@ class MainActivity : AppCompatActivity() {
     private fun showProfile(page: Int) {
         // Déjà sur l'Accueil : seul le profil change (et glisse) ; sinon l'écran arrive en entier, sur ce profil.
         val within = current == Mode.HOME
+        sweepPage = page
         show(Mode.HOME)
+        sweepPage = null
         supportFragmentManager.executePendingTransactions()
         homeFragment()?.showProfile(page, animate = within)
     }

@@ -235,13 +235,13 @@
             android:visibility="gone" />
         </LinearLayout>
 
-        <!-- Rangée de touches (ui/KeyDock) : Parler, les touches numérotées au milieu (posées par KeyDock), Verrou. -->
+        <!-- Rangée de touches (ui/KeyDock) : Parler, les touches d'écran (dans une zone qui défile quand elles sont nombreuses),
+             « + », un séparateur, les boutons ronds des outils (posés par KeyDock), Verrou. -->
         <LinearLayout
             android:id="@+id/key_dock"
             android:layout_width="match_parent"
             android:layout_height="?attr/c_dock_height"
             android:background="@drawable/dock_panel_bg"
-            android:clipChildren="false"
             android:clipToPadding="false"
             android:orientation="horizontal"
             android:paddingStart="18dp"
@@ -250,11 +250,26 @@
             android:paddingBottom="8dp"
             android:visibility="gone">
 
-            <LinearLayout
-                android:id="@+id/dock_keys"
+            <HorizontalScrollView
+                android:id="@+id/dock_scroll"
                 android:layout_width="0dp"
                 android:layout_height="match_parent"
                 android:layout_weight="1"
+                android:overScrollMode="never"
+                android:scrollbars="none">
+
+                <LinearLayout
+                    android:id="@+id/dock_keys"
+                    android:layout_width="wrap_content"
+                    android:layout_height="match_parent"
+                    android:clipChildren="false"
+                    android:orientation="horizontal" />
+            </HorizontalScrollView>
+
+            <LinearLayout
+                android:id="@+id/dock_end"
+                android:layout_width="wrap_content"
+                android:layout_height="match_parent"
                 android:clipChildren="false"
                 android:orientation="horizontal" />
         </LinearLayout>
