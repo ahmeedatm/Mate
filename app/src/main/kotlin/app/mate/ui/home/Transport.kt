@@ -90,6 +90,21 @@ object Transport {
     /** Attente en minutes, arrondie vers le bas (« dans 3 min » = le passage arrive dans 3 à 4 min), jamais négative. */
     fun waitMinutes(ms: Long): Int = (ms.coerceAtLeast(0) / 60_000L).toInt()
 
+    /** Attente façon afficheur de quai : « À quai » fixe, « À l'approche » et le nombre à 2 min clignotent, le reste est fixe. */
+    data class Wait(val kind: Kind, val minutes: Int, val blink: Boolean) {
+        enum class Kind { AT_STOP, APPROACHING, NUMBER }
+    }
+
+    fun waitOf(minutes: Int): Wait = when {
+        minutes <= 0 -> Wait(Wait.Kind.AT_STOP, 0, blink = false)
+        minutes == 1 -> Wait(Wait.Kind.APPROACHING, 1, blink = true)
+        else -> Wait(Wait.Kind.NUMBER, minutes, blink = minutes == 2)
+    }
+
+    /** « puis N min » : le passage qui suit [d] dans [all] (trié par attente), même ligne et même destination. */
+    fun following(all: List<Departure>, d: Departure): Departure? =
+        all.dropWhile { it !== d }.drop(1).firstOrNull { it.lineRef == d.lineRef && it.destination == d.destination }
+
     /** Premier `[{ "value": … }]` d'un champ SIRI (DestinationName, DestinationDisplay) ; vide s'il manque. */
     private fun firstValue(obj: JSONObject, field: String) =
         obj.optJSONArray(field)?.optJSONObject(0)?.optString("value").orEmpty()

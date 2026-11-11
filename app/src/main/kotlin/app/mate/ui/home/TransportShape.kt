@@ -13,10 +13,11 @@ data class TransportShape(
 ) {
     companion object {
         private const val MAX = 7
+        private const val WIDE = 4
 
         fun of(size: WidgetSize) = when (size.family) {
             ShapeFamily.PILL -> TransportShape(rows = 1, side = true, title = false)
-            ShapeFamily.ROW -> TransportShape(rows = size.w - 1, side = true, title = false, sp = 16f)
+            ShapeFamily.ROW -> TransportShape(rows = if (size.w >= WIDE) 2 else 1, side = true, title = false, sp = 16f)
             ShapeFamily.COLUMN -> TransportShape(rows = size.h, side = false, title = true)
             ShapeFamily.BLOCK -> TransportShape(rows = minOf(MAX, size.w * size.h - 1), side = false, title = true, sp = 18f)
             ShapeFamily.LARGE -> TransportShape(rows = MAX, side = false, title = true, sp = 19f)

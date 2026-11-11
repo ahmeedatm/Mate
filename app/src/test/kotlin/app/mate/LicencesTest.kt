@@ -32,7 +32,7 @@ class LicencesTest {
             "outfit_" to "Outfit", "nunito_" to "Nunito", "abril_" to "Abril Fatface", "ibm_plex_sans_" to "IBM Plex Sans",
             "ibm_plex_mono_" to "IBM Plex Mono", "instrument_serif_" to "Instrument Serif", "instrument_sans_" to "Instrument Sans",
             "young_serif_" to "Young Serif", "barlow_" to "Barlow", "barlow_semicondensed_" to "Barlow Semi Condensed",
-            "jetbrains_mono_" to "JetBrains Mono", "source_serif_" to "Source Serif 4", "hanken_grotesk_" to "Hanken Grotesk",
+            "departure_mono_" to "Departure Mono", "jetbrains_mono_" to "JetBrains Mono", "source_serif_" to "Source Serif 4", "hanken_grotesk_" to "Hanken Grotesk",
         )
         for (file in File("src/main/res/font").list()!!) {
             val name = cited.entries.filter { file.startsWith(it.key) }.maxByOrNull { it.key.length }?.value

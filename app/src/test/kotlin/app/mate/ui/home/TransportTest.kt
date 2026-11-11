@@ -113,4 +113,27 @@ class TransportTest {
         assertEquals(3, Transport.waitMinutes(239_000L))
         assertEquals(0, Transport.waitMinutes(-10_000L))
     }
+
+    @Test
+    fun `l'attente se lit comme un afficheur de quai`() {
+        assertEquals(Transport.Wait(Transport.Wait.Kind.AT_STOP, 0, blink = false), Transport.waitOf(0))
+        assertEquals(Transport.Wait(Transport.Wait.Kind.APPROACHING, 1, blink = true), Transport.waitOf(1))
+        assertEquals(Transport.Wait(Transport.Wait.Kind.NUMBER, 2, blink = true), Transport.waitOf(2))
+        assertEquals(Transport.Wait(Transport.Wait.Kind.NUMBER, 3, blink = false), Transport.waitOf(3))
+        assertEquals(Transport.Wait(Transport.Wait.Kind.NUMBER, 12, blink = false), Transport.waitOf(12))
+    }
+
+    @Test
+    fun `puis N min est le passage suivant de la meme ligne et de la meme destination`() {
+        val a = Transport.Departure("STIF:Line::C01742:", "Boissy", 60_000L)
+        val otherDest = Transport.Departure("STIF:Line::C01742:", "Marne", 120_000L)
+        val otherLine = Transport.Departure("STIF:Line::C01371:", "Boissy", 150_000L)
+        val b = Transport.Departure("STIF:Line::C01742:", "Boissy", 420_000L)
+        val c = Transport.Departure("STIF:Line::C01742:", "Boissy", 900_000L)
+        val all = listOf(a, otherDest, otherLine, b, c)
+        assertEquals(b, Transport.following(all, a))
+        assertEquals(c, Transport.following(all, b))
+        assertEquals(null, Transport.following(all, c))
+        assertEquals(null, Transport.following(all, otherDest))
+    }
 }
