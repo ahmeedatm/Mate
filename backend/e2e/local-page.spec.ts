@@ -453,6 +453,38 @@ test.describe("page locale GET /", () => {
     void tablet.catch(() => {});
   });
 
+  test("mise à jour d'ici refusée : appli d'essai, ou tablette d'avant hors kiosque", async ({ page, server }) => {
+    let update: Record<string, unknown> = { checked: false, available: null, installing: false, error: null, kiosk: false, confirm: false };
+    const actions: string[] = [];
+    const state = () => ({ mode: "home", app: "0.2.11", model: "Tab 4.2", battery: null, settings: null, update });
+    let running = true;
+    const tablet = (async () => {
+      while (running) {
+        const { json } = await server.call("POST", "/tablet/poll", { state: state() });
+        for (const { id, command } of json.commands ?? []) {
+          if (command.type === "update") actions.push(command.action);
+          await server.call("POST", "/tablet/result", { id, ok: true, state: state() });
+        }
+      }
+    })();
+
+    await page.goto("/");
+    await expect(page.locator("#updatestate")).toHaveText(
+      "Mise à jour depuis cette page impossible dans l'appli d'essai : choisis l'essai dans les Réglages de la tablette.",
+    );
+    // Tablette d'avant : elle n'annonce pas `confirm`.
+    update = { checked: false, available: null, installing: false, error: null, kiosk: false };
+    void server.call("POST", "/tablet/poll", { state: state() }).catch(() => {});
+    await expect(page.locator("#updatestate")).toHaveText(
+      "Mise à jour depuis cette page impossible : mets à jour l'appli de la tablette depuis ses Réglages.",
+    );
+    await expect(page.locator("#updatebtn")).toBeHidden();
+    expect(actions).toEqual([]);
+
+    running = false;
+    void tablet.catch(() => {});
+  });
+
   test("le bouton « Faire sonner » lance la sonnerie de la tablette", async ({ page, server }) => {
     const rings: boolean[] = [];
     const settings = { theme: "CONSOLE", brightness: 0.6, volume: 0.4, nightDim: true, focusDnd: true };

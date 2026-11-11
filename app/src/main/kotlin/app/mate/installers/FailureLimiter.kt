@@ -1,7 +1,7 @@
 package app.mate.installers
 
 /**
- * Plafond d'échecs par adresse sur le port 8080 (testé dans app/src/test) : au-delà de `max` refus dans les `windowMs`
+ * Plafond d'échecs par adresse sur le port des installeurs (testé dans app/src/test) : au-delà de `max` refus dans les `windowMs`
  * dernières millisecondes, l'adresse est bloquée, même avec le bon code. Le code n'a que 5 caractères : sans plafond,
  * quelqu'un sur le WiFi pourrait tous les essayer.
  */

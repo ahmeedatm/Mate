@@ -790,7 +790,9 @@ ${FAVICON}
     let text, action = null;
     if (u.installing && u.confirm) text = "Installation de la version " + u.available + " : confirme sur la tablette.";
     else if (u.installing) text = "Installation de la version " + u.available + " en cours : la tablette redémarre l'appli à la fin.";
-    else if (!allowed) text = "Mise à jour d'ici impossible dans l'appli d'essai.";
+    else if (!allowed && u.confirm === false)
+      text = "Mise à jour depuis cette page impossible dans l'appli d'essai : choisis l'essai dans les Réglages de la tablette.";
+    else if (!allowed) text = "Mise à jour depuis cette page impossible : mets à jour l'appli de la tablette depuis ses Réglages.";
     else if (u.error) [text, action] = [u.error, "check"];
     else if (!u.checked) text = "Recherche d'une mise à jour…";
     else if (u.available)

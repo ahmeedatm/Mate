@@ -451,7 +451,16 @@ class SettingsFragment :
         when (talkBackRoute) {
             TalkBackRoute.MISSING -> hint.setText(R.string.a11y_talkback_missing)
             TalkBackRoute.LOCKED -> hint.setText(R.string.a11y_talkback_locked)
-            TalkBackRoute.SYSTEM_SETTINGS -> hint.setText(R.string.a11y_talkback_system)
+            TalkBackRoute.SYSTEM_SETTINGS -> {
+                hint.setText(R.string.a11y_talkback_system)
+                // TalkBack annonce « ouvrir l'accessibilité d'Android » plutôt qu'un simple interrupteur.
+                androidx.core.view.ViewCompat.replaceAccessibilityAction(
+                    talkBack,
+                    androidx.core.view.accessibility.AccessibilityNodeInfoCompat.AccessibilityActionCompat.ACTION_CLICK,
+                    getString(R.string.a11y_talkback_open),
+                    null,
+                )
+            }
             TalkBackRoute.DIRECT -> Unit
         }
         renderTalkBack()
@@ -490,6 +499,7 @@ class SettingsFragment :
             }
             // Hors kiosque sans la permission : Android règle TalkBack lui-même ; l'interrupteur suivra au retour (onResume).
             runCatching { startActivity(android.content.Intent(android.provider.Settings.ACTION_ACCESSIBILITY_SETTINGS)) }
+                .onFailure { (activity as? MainActivity)?.showBanner(getString(R.string.a11y_settings_missing), 6) }
             renderTalkBack()
         }
     }

@@ -1,5 +1,6 @@
 package app.mate.kiosk
 
+import android.app.ActivityManager
 import android.app.PendingIntent
 import android.content.BroadcastReceiver
 import android.content.Context
@@ -136,7 +137,7 @@ object Updater {
     }
 
     /**
-     * Désinstalle un paquet sans confirmation (device owner) : l'essai d'une PR à la version plus ancienne que l'essai
+     * Désinstalle un paquet, sans confirmation en device owner (sinon Android la demande, voir [awaitFinal]) : l'essai d'une PR à la version plus ancienne que l'essai
      * installé, qu'Android refuserait de remplacer. Ses données partent avec ; il reprend les ordinateurs de la stable.
      * Appelé pendant [install] et par [FreshStart.forgetTrial], installations déjà permises ([Kiosk.lockApps]).
      */
@@ -153,6 +154,8 @@ object Updater {
             app.packageManager.packageInstaller.uninstall(pkg, pending.intentSender)
             val intent = awaitFinal(app, results, 2 * 60_000L)
             val status = intent?.getIntExtra(PackageInstaller.EXTRA_STATUS, PackageInstaller.STATUS_FAILURE)
+            // Refusée par la personne (hors kiosque) : rien n'a changé, l'essai est toujours là.
+            if (status == PackageInstaller.STATUS_FAILURE_ABORTED) throw UserFacingException(R.string.update_uninstall_refused)
             if ((intent == null && installed(app, pkg) != null) || (status != null && status != PackageInstaller.STATUS_SUCCESS)) {
                 throw UserFacingException(R.string.update_uninstall_failed, status ?: -1)
             }
@@ -186,11 +189,15 @@ object Updater {
                 val installedCode = installed(app, update.pkg)?.let { versionCode(it) }
                 if (update.source == UpdateSource.TRIALS && EssaiPlan.install(update.versionCode, installedCode) == EssaiPlan.Install.UNINSTALL_FIRST) {
                     // Plus d'annulation une fois l'ancien essai parti : « Annuler » laisserait la tablette sans essai.
-                    committed()
-                    withContext(NonCancellable) {
+                    // Hors kiosque, Android demande d'abord de confirmer : « Annuler » reste possible jusque-là.
+                    if (Kiosk.isDeviceOwner(app)) {
+                        committed()
+                        withContext(NonCancellable) { uninstall(app, update.pkg) }
+                    } else {
                         uninstall(app, update.pkg)
-                        installApk(app, file, update, committed)
+                        committed()
                     }
+                    withContext(NonCancellable) { installApk(app, file, update, committed) }
                 } else {
                     installApk(app, file, update, committed)
                 }
@@ -239,10 +246,18 @@ object Updater {
             committed()
             // Android installe une appli à la fois (le Play Store peut passer avant) et prépare le code : long
             // sur cette tablette. Sans réponse au bout de 15 min, on regarde la version réellement installée.
-            val intent = awaitFinal(context, results, 15 * 60_000L)
+            val intent = try {
+                awaitFinal(context, results, 15 * 60_000L)
+            } catch (e: UserFacingException) {
+                // Confirmation impossible à afficher : la session ne doit pas s'installer plus tard, à l'insu de tous.
+                runCatching { installer.abandonSession(id) }
+                throw e
+            }
             if (intent == null) {
                 val info = installed(context, pkg)
                 if (info != null && versionCode(info) >= update.versionCode) return
+                // Écran de confirmation resté sans réponse : retiré, l'installation ne se fera pas après coup.
+                runCatching { installer.abandonSession(id) }
                 throw UserFacingException(R.string.update_unfinished)
             }
             when (val status = intent.getIntExtra(PackageInstaller.EXTRA_STATUS, PackageInstaller.STATUS_FAILURE)) {
@@ -264,14 +279,31 @@ object Updater {
      * demandée » avec son écran : on l'ouvre et on attend la réponse suivante (installée, ou annulée par la personne).
      * Autorisation « Sources inconnues » pas encore donnée à Mate : c'est cet écran qui la propose.
      */
-    private suspend fun awaitFinal(context: Context, results: Channel<Intent>, timeoutMs: Long): Intent? = withTimeoutOrNull(timeoutMs) {
-        var intent = results.receive()
-        while (intent.getIntExtra(PackageInstaller.EXTRA_STATUS, PackageInstaller.STATUS_FAILURE) == PackageInstaller.STATUS_PENDING_USER_ACTION) {
+    private suspend fun awaitFinal(context: Context, results: Channel<Intent>, timeoutMs: Long): Intent? {
+        var intent = withTimeoutOrNull(timeoutMs) { results.receive() } ?: return null
+        while (true) {
             @Suppress("DEPRECATION")
-            val confirm = intent.getParcelableExtra<Intent>(Intent.EXTRA_INTENT) ?: break
-            context.startActivity(confirm.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
-            intent = results.receive()
+            val confirm = intent.getParcelableExtra<Intent>(Intent.EXTRA_INTENT)
+            val status = intent.getIntExtra(PackageInstaller.EXTRA_STATUS, PackageInstaller.STATUS_FAILURE)
+            when (InstallStep.of(status, confirm != null, foreground(context))) {
+                InstallStep.DONE -> return intent
+                InstallStep.NOT_VISIBLE -> throw UserFacingException(R.string.update_open_mate)
+                InstallStep.SHOW_CONFIRMATION -> {
+                    context.startActivity(confirm!!.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
+                    // Le temps de la personne devant l'écran d'Android ne compte pas dans celui de l'installation.
+                    intent = withTimeoutOrNull(CONFIRM_MS + timeoutMs) { results.receive() } ?: return null
+                }
+            }
         }
-        intent
     }
+
+    /** Mate à l'écran : Android 10 n'ouvre l'écran de confirmation que depuis l'appli affichée. */
+    private fun foreground(context: Context): Boolean {
+        val info = ActivityManager.RunningAppProcessInfo()
+        ActivityManager.getMyMemoryState(info)
+        return info.importance <= ActivityManager.RunningAppProcessInfo.IMPORTANCE_FOREGROUND
+    }
+
+    /** Laissé à la personne pour répondre à l'écran de confirmation d'Android (hors kiosque). */
+    private const val CONFIRM_MS = 10 * 60_000L
 }

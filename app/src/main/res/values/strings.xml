@@ -811,11 +811,13 @@
     <string name="updates_downloading">Téléchargement %1$d %%</string>
     <string name="updates_installing">Installation…</string>
     <string name="updates_done">✓ Installé</string>
-    <string name="update_not_in_trial">Mise à jour d\'ici impossible dans l\'appli d\'essai : choisis l\'essai dans ses Réglages.</string>
+    <string name="update_not_in_trial">Mise à jour depuis l\'ordinateur impossible dans l\'appli d\'essai : choisis l\'essai dans ses Réglages.</string>
     <string name="update_file_corrupt">Fichier abîmé ou modifié : empreinte différente, installation annulée.</string>
     <string name="update_unfinished">Android n\'a pas fini l\'installation : réessaie plus tard.</string>
-    <string name="update_refused">Installation annulée sur la tablette : rien n\'a changé.</string>
-    <string name="update_needs_confirmation">Android demande une confirmation : installation annulée.</string>
+    <string name="update_refused">Installation refusée sur la tablette : rien n\'a changé.</string>
+    <string name="update_uninstall_refused">Désinstallation de l\'essai refusée sur la tablette : rien n\'a changé.</string>
+    <string name="update_open_mate">Ouvre Mate sur la tablette, puis réessaie : Android y demande de confirmer.</string>
+    <string name="update_needs_confirmation">Android n\'a pas pu afficher sa confirmation : installation annulée.</string>
     <string name="update_busy">Une mise à jour est déjà en cours : réessaie dans quelques minutes.</string>
     <string name="update_server_download_failed">Téléchargement impossible depuis GitHub : réessaie plus tard.</string>
     <string name="update_server_unreachable">GitHub injoignable, vérifie le WiFi.</string>
@@ -853,7 +855,7 @@
     <string name="trial_backend_gone">Cet essai n\'est plus publié : son backend ne peut plus être envoyé à l\'ordinateur.</string>
     <string name="trial_backend_os">Cet essai n\'a pas de backend pour cet ordinateur (%1$s).</string>
     <string name="kiosk_title">Mode kiosque</string>
-    <string name="kiosk_off">Inactif : Mate tourne comme une appli ordinaire, à côté des autres. Le kiosque se prépare à l\'installation de la tablette (docs/kiosque.md).</string>
+    <string name="kiosk_off">Inactif : Mate tourne comme une appli ordinaire (kiosque : docs/kiosque.md).</string>
     <!-- Premier lancement (WelcomeView) et écrans sans ordinateur -->
     <string name="welcome_title">Bienvenue</string>
     <string name="welcome_subtitle">Trois étapes, et la tablette pilote ton ordinateur.</string>
@@ -1807,7 +1809,9 @@
     <string name="a11y_title">Accessibilité</string>
     <string name="a11y_talkback">Lecteur d\'écran (TalkBack)</string>
     <string name="a11y_talkback_hint">Lit à voix haute ce qui est touché. Raccourci, même sans voir l\'écran : maintenir les deux touches de volume 3 secondes.</string>
-    <string name="a11y_talkback_system">Ouvre l\'accessibilité d\'Android, où TalkBack se règle, comme le raccourci des deux touches de volume.</string>
+    <string name="a11y_talkback_system">Touche l\'interrupteur : l\'accessibilité d\'Android s\'ouvre, TalkBack et le raccourci des touches de volume s\'y règlent.</string>
+    <string name="a11y_talkback_open">ouvrir l\'accessibilité d\'Android</string>
+    <string name="a11y_settings_missing">L\'accessibilité d\'Android ne s\'ouvre pas sur cette tablette.</string>
     <string name="a11y_talkback_locked">À autoriser à l\'installation de la tablette (voir la documentation du kiosque). Le raccourci des deux touches de volume reste à régler dans Paramètres d\'Android.</string>
     <string name="a11y_talkback_missing">TalkBack n\'est pas installé sur cette tablette.</string>
     <string name="a11y_text_size">Taille du texte</string>
