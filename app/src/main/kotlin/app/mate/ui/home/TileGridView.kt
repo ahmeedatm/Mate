@@ -22,6 +22,7 @@ import android.widget.GridView
 import android.widget.ImageView
 import android.widget.LinearLayout
 import android.widget.TextView
+import androidx.dynamicanimation.animation.SpringAnimation
 import app.mate.R
 import app.mate.net.BackendClient
 import app.mate.ui.IconCache
@@ -423,6 +424,7 @@ class TileGridView(context: Context, private val scope: CoroutineScope) : GridVi
             icon.setImageBitmap(null)
             icon.imageTintList = null
             icon.colorFilter = null
+            initial.paint.colorFilter = null
             initial.visibility = View.VISIBLE
             val empty = cell.add || cell.type == EMPTY
             view.tag = if (empty) null else key.id
@@ -432,6 +434,7 @@ class TileGridView(context: Context, private val scope: CoroutineScope) : GridVi
             val lit = !empty && (cell.lit || TileStates.isLit(key.id))
             view.isSelected = lit
             cap.animate().cancel()
+            (cap.getTag(R.id.key_spring) as? SpringAnimation)?.cancel()
             cap.translationY = capRest(view)
             view.contentDescription = if (lit) context.getString(R.string.call_key_on, key.label) else name
             if (empty) {
@@ -443,8 +446,10 @@ class TileGridView(context: Context, private val scope: CoroutineScope) : GridVi
             }
             cap.setBackgroundResource(R.drawable.dock_key_cap)
             led.visibility = View.VISIBLE
-            val ink = key.color?.let { runCatching { Color.parseColor(it) }.getOrNull() } ?: themeColor(context, R.attr.c_text)
+            // Orange seul sur le capuchon (variante B) : icône et initiale en c_text, la couleur de la touche n'y passe pas, l'emoji est grisé.
+            val ink = themeColor(context, R.attr.c_text)
             initial.setTextColor(ink)
+            initial.paint.colorFilter = GRAY
             TileIcons.of(key.symbol, key.glyph)?.let {
                 icon.setImageResource(it)
                 icon.imageTintList = ColorStateList.valueOf(ink)

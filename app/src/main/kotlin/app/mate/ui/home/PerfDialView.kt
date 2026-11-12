@@ -50,7 +50,7 @@ class PerfDialView(context: Context) : View(context) {
             invalidate()
             return
         }
-        if (target == angle) return
+        if (target == angle) return invalidate()
         animator = ValueAnimator.ofFloat(angle, target).apply {
             duration = NEEDLE_MS
             interpolator = OvershootInterpolator(NEEDLE_OVERSHOOT)

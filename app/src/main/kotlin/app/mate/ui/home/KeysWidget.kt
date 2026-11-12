@@ -307,7 +307,6 @@ class KeysWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidget(
 
     private fun push(key: KeyRef, down: Boolean) {
         if (down) held += key.id else if (!held.remove(key.id)) return
-        if (down) showSent(key.label, ok = true)
         pushScope.launch {
             pushOrder.withLock {
                 // Un relâchement raté laisserait le micro ouvert : on réessaie avant de le dire.
@@ -318,6 +317,7 @@ class KeysWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidget(
                         result = runCatchingCancellable { BackendClient(context).deck.pushTile(key.id, down) }
                     }
                 }
+                if (down) showSent(key.label, result.isSuccess)
                 result.onFailure { Toast.makeText(context, context.errorText(it), Toast.LENGTH_LONG).show() }
             }
         }

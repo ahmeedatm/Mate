@@ -580,8 +580,9 @@ class PerfWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidget(
         }
         val gb = caption(" ", R.attr.c_text_faint).takeIf { !plan.stacked && !plan.extrasBeside }
         ramGb = gb
-        cpu = dial(R.string.perf_cpu, PerfSeries.CPU, null)
-        gpu = dial(R.string.perf_gpu, PerfSeries.GPU, null)
+        // Une ligne de détail sous chaque cadran dès que la RAM en a une : les cadrans gardent le même rayon et la même base.
+        cpu = dial(R.string.perf_cpu, PerfSeries.CPU, gb?.let { caption(" ") })
+        gpu = dial(R.string.perf_gpu, PerfSeries.GPU, gb?.let { caption(" ") })
         ram = dial(R.string.perf_ram, PerfSeries.RAM, gb)
         val line = extrasView(14f, maxLines = if (plan.extrasBeside) 3 else 2)
         if (!plan.extrasBeside) line.gravity = Gravity.CENTER
