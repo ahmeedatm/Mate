@@ -1,5 +1,6 @@
 package app.mate.ui.home
 
+import android.app.Dialog
 import android.content.Context
 import android.content.res.ColorStateList
 import android.graphics.drawable.GradientDrawable
@@ -26,6 +27,8 @@ import app.mate.ui.Look
 import app.mate.ui.errorText
 import app.mate.ui.showImmersive
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 
 /** Entité montrée par la Pastille : celle choisie ([id]) si elle existe encore, sinon la première lumière ou prise. */
 internal fun haPick(entities: List<HaEntity>, id: String?): HaEntity? =
@@ -90,6 +93,16 @@ class HaWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidget(co
     private var tallRow = false
 
     init {
+        view.addOnAttachStateChangeListener(
+            object : View.OnAttachStateChangeListener {
+                override fun onViewAttachedToWindow(v: View) = Unit
+
+                override fun onViewDetachedFromWindow(v: View) {
+                    lightPanel?.dismiss()
+                    lightPanel = null
+                }
+            },
+        )
         view.addOnLayoutChangeListener { _, _, top, _, bottom, _, _, _, _ ->
             val tall = family == ShapeFamily.ROW && bottom - top >= dp(TALL_ROW_DP)
             if (tall != tallRow) {
@@ -368,17 +381,26 @@ class HaWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidget(co
     /** Lumière qui se règle : son appui long ouvre le panneau, pas le mode Modifier de l'Accueil. */
     private fun adjustable(e: HaEntity) = e.light != null && !preview
 
+    /** Panneau de lumière ouvert : fermé quand le widget quitte l'écran. */
+    private var lightPanel: Dialog? = null
+
+    /** Réglages envoyés un par un, dans l'ordre des gestes : une valeur ancienne ne passe pas après la récente. */
+    private val lightOrders = Mutex()
+
     /** Panneau de la lumière : chaque réglage part à l'ordinateur, puis l'état est relu. */
     private fun adjust(entity: HaEntity) {
         if (!entity.available) return toast(context.getString(R.string.ha_unavailable_hint, entity.name))
-        HaLightPanel(
+        lightPanel?.dismiss()
+        lightPanel = HaLightPanel(
             context,
             entity,
             onSet = { brightness, rgb ->
                 reads++
                 host.scope.launch {
-                    runCatchingCancellable { BackendClient(context).ha.setLight(entity.id, brightness, rgb) }
-                        .onFailure { toast(context.errorText(it)) }
+                    lightOrders.withLock {
+                        runCatchingCancellable { BackendClient(context).ha.setLight(entity.id, brightness, rgb) }
+                            .onFailure { toast(context.errorText(it)) }
+                    }
                     load()
                 }
             },

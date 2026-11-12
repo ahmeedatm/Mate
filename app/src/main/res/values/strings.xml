@@ -1653,12 +1653,13 @@
     <string name="ha_entity_inline">%1$s · %2$s</string>
     <string name="ha_on_level">Allumé · %1$d %%</string>
     <string name="ha_percent">%1$d %%</string>
-    <string name="ha_light_hint">Glisse pour la luminosité, touche une couleur</string>
+    <string name="ha_light_hint">Glisse la jauge, touche une couleur</string>
     <string name="ha_light_hint_dim">Cette lumière règle seulement sa luminosité</string>
     <string name="ha_light_brightness">Luminosité de %1$s, %2$d %%</string>
     <string name="ha_light_brighter">Plus fort</string>
     <string name="ha_light_dimmer">Moins fort</string>
     <string name="ha_light_adjust">Régler la lumière</string>
+    <string name="ha_light_color_chosen">choisie</string>
     <string name="ha_light_turn_off">Éteindre</string>
     <string name="ha_light_turn_on">Allumer</string>
     <string-array name="ha_light_colors">

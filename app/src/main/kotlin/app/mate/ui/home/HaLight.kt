@@ -6,7 +6,7 @@ import kotlin.math.min
 import kotlin.math.pow
 
 /** Contraste sous lequel la couleur d'une lampe se perd sur le fond de la case : l'icône garde alors l'accent. */
-private const val MIN_TINT_CONTRAST = 2.0
+private const val MIN_TINT_CONTRAST = 3.0
 
 private const val OPAQUE = -0x1000000
 

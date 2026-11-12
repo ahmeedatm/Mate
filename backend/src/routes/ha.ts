@@ -3,13 +3,13 @@ import { HA_ENTITY_ID, haActivate, haConfigured, haEntities, haSetLight } from "
 
 const BYTE = { type: "integer", minimum: 0, maximum: 255 } as const;
 
-/** Réglage d'une lumière : au moins la luminosité (0 à 100 %) ou la couleur (trois octets RVB), rien d'autre. */
+/** Réglage d'une lumière : au moins la luminosité (1 à 100 % ; on éteint par la bascule) ou la couleur (trois octets RVB), rien d'autre. */
 const LIGHT_BODY = {
   type: "object",
   additionalProperties: false,
   minProperties: 1,
   properties: {
-    brightness: { type: "integer", minimum: 0, maximum: 100 },
+    brightness: { type: "integer", minimum: 1, maximum: 100 },
     rgb: { type: "array", minItems: 3, maxItems: 3, items: BYTE },
   },
 } as const;

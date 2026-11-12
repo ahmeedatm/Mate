@@ -80,6 +80,7 @@ describe("home assistant : API", () => {
   it("sans configuration : 501", async () => {
     assert.equal((await bare.call("GET", "/ha/entities")).status, 501);
     assert.equal((await bare.call("POST", "/ha/entities/light.salon/toggle")).status, 501);
+    assert.equal((await bare.call("POST", "/ha/entities/light.salon/light", { brightness: 50 })).status, 501);
   });
 
   it("jeton d'appairage exigé", async () => {
@@ -152,7 +153,7 @@ describe("home assistant : API", () => {
   it("POST light : refuse hors liste (403), hors bornes, vide ou sur une prise (400), sans appeler Home Assistant", async () => {
     seen.length = 0;
     assert.equal((await server.call("POST", "/ha/entities/light.cave/light", { brightness: 50 })).status, 403);
-    for (const body of [{}, { brightness: 101 }, { brightness: -1 }, { brightness: 2.5 }, { rgb: [0, 0, 256] }, { rgb: [0, 0] }])
+    for (const body of [{}, { brightness: 101 }, { brightness: 0 }, { brightness: 2.5 }, { rgb: [0, 0, 256] }, { rgb: [0, 0] }])
       assert.equal((await server.call("POST", "/ha/entities/light.salon/light", body)).status, 400, JSON.stringify(body));
     assert.equal((await server.call("POST", "/ha/entities/switch.cafetiere/light", { brightness: 50 })).status, 400);
     assert.equal(seen.length, 0);

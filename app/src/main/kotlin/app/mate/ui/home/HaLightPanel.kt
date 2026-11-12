@@ -12,7 +12,9 @@ import android.view.ViewGroup
 import android.widget.Button
 import android.widget.FrameLayout
 import android.widget.GridLayout
+import android.widget.LinearLayout
 import android.widget.TextView
+import androidx.core.view.ViewCompat
 import app.mate.R
 import app.mate.net.HaEntity
 import app.mate.ui.Look
@@ -34,9 +36,14 @@ class HaLightPanel(
 ) {
     private val light = requireNotNull(entity.light)
     private var rgb: Int? = light.rgb
+
+    /** Allumée selon le panneau : un réglage l'allume, le bouton suit (Éteindre / Allumer). */
+    private var on = entity.on
+    private var power: Button? = null
     private val swatches = mutableListOf<Pair<View, Int>>()
 
-    fun show() {
+    /** Le panneau ouvert, pour que le widget le ferme en partant. */
+    fun show(): Dialog {
         val root = LayoutInflater.from(context).inflate(R.layout.view_ha_light, null)
         val dialog = Dialog(context)
         dialog.setContentView(root)
@@ -51,24 +58,39 @@ class HaLightPanel(
             label = entity.name
             value = if (entity.on) light.brightness ?: FULL else 0
             fill = tint()
-            onChange = { value, final -> if (final) onSet(value, null) }
+            onChange = { value, final ->
+                if (final) {
+                    lit()
+                    onSet(value, null)
+                }
+            }
         }
         root.findViewById<FrameLayout>(R.id.ha_light_fader).addView(fader, ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT)
         val colors = root.findViewById<GridLayout>(R.id.ha_light_colors)
         if (light.color) {
             val names = context.resources.getStringArray(R.array.ha_light_colors)
             COLORS.forEachIndexed { i, color -> colors.addView(swatch(color, names[i], fader), swatchParams()) }
+            mark()
         } else {
+            // Luminosité seule : nom, aide et bouton groupés au milieu, pas un trou au-dessus du bouton.
             colors.visibility = View.GONE
+            root.findViewById<View>(R.id.ha_light_space).visibility = View.GONE
+            root.findViewById<LinearLayout>(R.id.ha_light_side).gravity = Gravity.CENTER_VERTICAL
         }
-        root.findViewById<Button>(R.id.ha_light_power).apply {
-            setText(if (entity.on) R.string.ha_light_turn_off else R.string.ha_light_turn_on)
+        power = root.findViewById<Button>(R.id.ha_light_power).apply {
+            setText(if (on) R.string.ha_light_turn_off else R.string.ha_light_turn_on)
             setOnClickListener {
                 onToggle()
                 dialog.dismiss()
             }
         }
-        dialog.showImmersive()
+        return dialog.showImmersive()
+    }
+
+    private fun lit() {
+        if (on) return
+        on = true
+        power?.setText(R.string.ha_light_turn_off)
     }
 
     private fun tint() = rgb?.let { OPAQUE or it } ?: themeColor(context, R.attr.c_accent)
@@ -80,21 +102,22 @@ class HaLightPanel(
             fader.fill = tint()
             if (fader.value == 0) fader.value = FULL
             mark()
+            lit()
             onSet(null, color)
         }
         Look.pressSpring(this)
         swatches += this to color
-        mark()
     }
 
     /** Pastille choisie : cerclée d'encre ; les autres, d'un trait fin. */
     private fun mark() = swatches.forEach { (view, color) ->
         val chosen = color == rgb
         view.isSelected = chosen
+        ViewCompat.setStateDescription(view, if (chosen) context.getString(R.string.ha_light_color_chosen) else null)
         view.background = GradientDrawable().apply {
             shape = GradientDrawable.OVAL
             setColor(OPAQUE or color)
-            setStroke(context.dp(if (chosen) RING_ON_DP else RING_DP), themeColor(context, if (chosen) R.attr.c_text else R.attr.c_stroke))
+            setStroke(context.dp(if (chosen) RING_ON_DP else RING_DP), themeColor(context, if (chosen) R.attr.c_text else R.attr.c_text_faint))
         }
     }
 

@@ -6,9 +6,13 @@ import android.graphics.Canvas
 import android.graphics.Paint
 import android.graphics.Path
 import android.graphics.RectF
+import android.util.TypedValue
 import android.view.MotionEvent
 import android.view.View
+import android.widget.SeekBar
+import androidx.core.view.AccessibilityDelegateCompat
 import androidx.core.view.ViewCompat
+import androidx.core.view.accessibility.AccessibilityNodeInfoCompat
 import app.mate.R
 import app.mate.ui.dp
 import app.mate.ui.themeColor
@@ -33,9 +37,13 @@ class LightFader(context: Context) : View(context) {
     var value: Int = 0
         set(v) {
             field = v.coerceIn(0, MAX)
+            shown = context.getString(R.string.ha_percent, field)
             describe()
             invalidate()
         }
+
+    /** Pourcentage écrit, formaté une fois par valeur (pas à chaque image du glissement). */
+    private var shown = context.getString(R.string.ha_percent, 0)
 
     /** Couleur du remplissage : celle de la lampe, ou l'accent si elle n'en a pas. */
     var fill: Int = themeColor(context, R.attr.c_accent)
@@ -49,11 +57,13 @@ class LightFader(context: Context) : View(context) {
     private val filled = Paint(Paint.ANTI_ALIAS_FLAG)
     private val text = Paint(Paint.ANTI_ALIAS_FLAG).apply {
         textAlign = Paint.Align.CENTER
-        textSize = dp(TEXT_DP).toFloat()
+        textSize = TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_SP, TEXT_SP, resources.displayMetrics)
         typeface = themeFont(context, R.attr.c_font_medium)
     }
     private val inkDark = themeColor(context, R.attr.c_text)
     private val inkLight = themeColor(context, R.attr.c_surface)
+    private var startY = 0f
+    private var startValue = 0
     private val box = RectF()
     private val clip = Path()
 
@@ -61,6 +71,21 @@ class LightFader(context: Context) : View(context) {
         isFocusable = true
         ViewCompat.addAccessibilityAction(this, context.getString(R.string.ha_light_brighter)) { _, _ -> step(STEP) }
         ViewCompat.addAccessibilityAction(this, context.getString(R.string.ha_light_dimmer)) { _, _ -> step(-STEP) }
+        ViewCompat.setAccessibilityDelegate(
+            this,
+            object : AccessibilityDelegateCompat() {
+                override fun onInitializeAccessibilityNodeInfo(host: View, info: AccessibilityNodeInfoCompat) {
+                    super.onInitializeAccessibilityNodeInfo(host, info)
+                    info.className = SeekBar::class.java.name
+                    info.rangeInfo = AccessibilityNodeInfoCompat.RangeInfoCompat.obtain(
+                        AccessibilityNodeInfoCompat.RangeInfoCompat.RANGE_TYPE_PERCENT,
+                        0f,
+                        MAX.toFloat(),
+                        value.toFloat(),
+                    )
+                }
+            },
+        )
     }
 
     private fun step(delta: Int): Boolean {
@@ -91,27 +116,26 @@ class LightFader(context: Context) : View(context) {
         // Le chiffre est posé sur le remplissage dès qu'il le couvre, sinon sur la piste vide.
         val under = if (top < baseline - text.textSize) fill else track.color
         text.color = readableInk(under, inkDark, inkLight)
-        canvas.drawText(context.getString(R.string.ha_percent, value), width / 2f, baseline, text)
+        canvas.drawText(shown, width / 2f, baseline, text)
     }
 
     @SuppressLint("ClickableViewAccessibility")
     override fun onTouchEvent(event: MotionEvent): Boolean {
-        val at = ((1f - event.y / height.coerceAtLeast(1)) * MAX).toInt().coerceIn(1, MAX)
         when (event.actionMasked) {
             MotionEvent.ACTION_DOWN -> {
                 parent?.requestDisallowInterceptTouchEvent(true)
-                value = at
-                onChange?.invoke(value, false)
+                startY = event.y
+                startValue = value
             }
-            MotionEvent.ACTION_MOVE -> if (at != value) {
-                value = at
-                onChange?.invoke(value, false)
+            MotionEvent.ACTION_MOVE -> {
+                // La valeur suit le doigt depuis où elle était : toucher la jauge ne la fait pas sauter.
+                val at = (startValue + (startY - event.y) / height.coerceAtLeast(1) * MAX).toInt().coerceIn(1, MAX)
+                if (at != value) {
+                    value = at
+                    onChange?.invoke(value, false)
+                }
             }
-            MotionEvent.ACTION_UP -> {
-                value = at
-                onChange?.invoke(value, true)
-            }
-            MotionEvent.ACTION_CANCEL -> onChange?.invoke(value, true)
+            MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> if (value != startValue) onChange?.invoke(value, true)
         }
         return true
     }
@@ -120,7 +144,7 @@ class LightFader(context: Context) : View(context) {
         const val MAX = 100
         const val STEP = 10
         const val RADIUS_DP = 32
-        const val TEXT_DP = 30
+        const val TEXT_SP = 30f
         const val TEXT_BOTTOM_DP = 22
     }
 }
