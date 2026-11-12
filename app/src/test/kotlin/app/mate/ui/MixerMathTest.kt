@@ -78,4 +78,11 @@ class MixerMathTest {
         assertEquals(5f, MixerMath.meterStep(5f, 8, -10, 24), 0.001f)
         assertEquals(8f, MixerMath.meterStep(8f, 8, 50, 24), 0.001f)
     }
+
+    @Test
+    fun `vumetre instrument avance aussi sur une image de 18 ms`() {
+        // 55 Hz : 16 LED × 18 ms / 300 ms = 0,96 LED en descente, 2,4 en montée (pas 0 ni 2 par division entière).
+        assertEquals(15.04f, MixerMath.meterStep(16f, 0, 18, 16), 0.001f)
+        assertEquals(2.4f, MixerMath.meterStep(0f, 16, 18, 16), 0.001f)
+    }
 }

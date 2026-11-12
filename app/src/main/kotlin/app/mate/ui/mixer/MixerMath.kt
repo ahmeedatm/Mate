@@ -40,7 +40,7 @@ object MixerMath {
     fun meterStep(shown: Float, target: Int, elapsedMs: Long, leds: Int): Float {
         if (elapsedMs <= 0) return shown
         val goal = target.toFloat()
-        return if (goal > shown) minOf(goal, shown + elapsedMs * leds / METER_RISE_MS) else maxOf(goal, shown - elapsedMs * leds / METER_FALL_MS)
+        return if (goal > shown) minOf(goal, shown + elapsedMs.toFloat() * leds / METER_RISE_MS) else maxOf(goal, shown - elapsedMs.toFloat() * leds / METER_FALL_MS)
     }
 
     /** Morceau du vumètre continu (Hush) : de `from` à `to` (fractions de la hauteur), couleur de [ledZone] `zone`. */

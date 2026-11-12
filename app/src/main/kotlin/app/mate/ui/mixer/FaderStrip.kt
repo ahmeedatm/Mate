@@ -86,9 +86,13 @@ class FaderStrip(context: Context, private val instrument: Boolean = false) : Vi
         set(value) {
             if (field == value) return
             field = value
+            shownTitle = if (instrument) value.uppercase(Locale.FRENCH) else value
             describe()
             invalidate()
         }
+
+    /** Nom dessiné : en capitales sur l'afficheur d'Instrument, calculé au changement plutôt qu'à chaque image du vumètre. */
+    private var shownTitle = ""
 
     /** Appli choisie sans son en ce moment (MixerApps) : « pas de son » à la place du volume, rien à piloter. */
     var silent = false
@@ -651,7 +655,6 @@ class FaderStrip(context: Context, private val instrument: Boolean = false) : Vi
      */
     private fun drawName(canvas: Canvas, room: Float, x: Float, centerY: Float, centered: Boolean) {
         val caret = if (onTitle != null) dp(CARET_DP + CARET_GAP_DP).toFloat() else 0f
-        val shownTitle = if (instrument) title.uppercase(Locale.FRENCH) else title
         val name = TextUtils.ellipsize(shownTitle, text, room - caret, TextUtils.TruncateAt.END).toString()
         val width = text.measureText(name)
         val left = if (centered) x - (width + caret) / 2 else x

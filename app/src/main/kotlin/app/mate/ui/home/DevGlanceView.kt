@@ -32,8 +32,8 @@ data class GlanceContent(val count: Int, val countLabel: String, val lines: List
  * l'icône de son état. Pastille (1 × 1) : le nombre seul. Ligne (2 × 1 à 4 × 1) : le nombre à gauche, les éléments à
  * droite. Colonne (1 × 2 à 1 × 4) : le nombre en haut, les éléments dessous. Seules les lignes entières sont montrées.
  * Pas de réseau ici : le widget, ou l'aperçu du catalogue, donne le contenu.
+ * [digits] : le nombre en Departure Mono (`c_font_display`), pour Instrument ; sinon la police légère du thème.
  */
-/** [digits] : le nombre en Departure Mono (`c_font_display`), pour Instrument ; sinon la police légère du thème. */
 class DevGlanceView(context: Context, private val title: Int, private val digits: Boolean = false) : LinearLayout(context) {
 
     /** Dernier affichage demandé : refait quand la hauteur réelle change de classe (rangées de hauteur variable). */
