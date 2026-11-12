@@ -4,6 +4,7 @@ import android.content.Context
 import android.view.Gravity
 import android.view.View
 import android.view.ViewGroup
+import android.widget.FrameLayout
 import android.widget.LinearLayout
 import android.widget.TextView
 import app.mate.R
@@ -45,6 +46,7 @@ enum class TileLook {
 
     /** À rappeler après chaque [TileGridView.bind] : il remet le libellé, pas l'habit. */
     fun apply(tile: View) {
+        if (tile.findViewById<View>(R.id.key_cap) != null) return applyCap(tile)
         val label = tile.findViewById<TextView>(R.id.tile_label)
         when (this) {
             TILE -> Unit
@@ -61,5 +63,37 @@ enum class TileLook {
                 label.layoutParams = LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f).apply { marginStart = tile.context.dp(12) }
             }
         }
+    }
+
+    /**
+     * Capuchon d'Instrument ([KeyCaps]) : il garde son nom en Ligne et en Pastille ; en Colonne il se couche, numéro à
+     * gauche, icône et nom au milieu, DEL à droite.
+     */
+    private fun applyCap(tile: View) {
+        if (this != LIST) return
+        val context = tile.context
+        (tile.findViewById<View>(R.id.key_number).layoutParams as FrameLayout.LayoutParams).apply {
+            gravity = Gravity.START or Gravity.CENTER_VERTICAL
+            topMargin = 0
+        }
+        (tile.findViewById<View>(R.id.key_led).layoutParams as FrameLayout.LayoutParams).apply {
+            gravity = Gravity.END or Gravity.CENTER_VERTICAL
+            topMargin = 0
+        }
+        tile.findViewById<LinearLayout>(R.id.key_face).apply {
+            orientation = LinearLayout.HORIZONTAL
+            gravity = Gravity.START or Gravity.CENTER_VERTICAL
+            setPadding(context.dp(CAP_LIST_START_DP), 0, context.dp(CAP_LIST_END_DP), 0)
+        }
+        tile.findViewById<TextView>(R.id.tile_label).apply {
+            gravity = Gravity.START or Gravity.CENTER_VERTICAL
+            layoutParams = LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f).apply { marginStart = context.dp(12) }
+        }
+    }
+
+    private companion object {
+        /** Capuchon couché : place du numéro avant l'icône, et de la DEL après le nom. */
+        const val CAP_LIST_START_DP = 38
+        const val CAP_LIST_END_DP = 30
     }
 }

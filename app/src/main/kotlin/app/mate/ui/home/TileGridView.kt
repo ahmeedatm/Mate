@@ -1,7 +1,11 @@
 package app.mate.ui.home
 
 import android.content.Context
+import android.content.res.ColorStateList
+import android.graphics.Bitmap
 import android.graphics.Color
+import android.graphics.ColorMatrix
+import android.graphics.ColorMatrixColorFilter
 import android.graphics.Outline
 import android.graphics.drawable.ColorDrawable
 import android.graphics.drawable.GradientDrawable
@@ -28,6 +32,7 @@ import app.mate.ui.themeColor
 import app.mate.ui.themeRes
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
+import java.util.Locale
 
 /**
  * Grille de touches d'un widget (Touches, Apps, Discord, Réunion, sites de Média) : colonnes de 96 dp qui se
@@ -54,6 +59,14 @@ class TileGridView(context: Context, private val scope: CoroutineScope) : GridVi
             field = value
             setColumnWidth(dp(value.columnDp))
             // Les vues recyclées ont les anciennes cotes : la grille repart de vues neuves.
+            setAdapter(adapter)
+        }
+
+    /** Capuchons d'Instrument ([KeyCaps]) au lieu des plaques : Touches et Applis dans un thème à fenêtre LCD. */
+    var keyCaps = false
+        set(value) {
+            if (value == field) return
+            field = value
             setAdapter(adapter)
         }
 
@@ -121,8 +134,8 @@ class TileGridView(context: Context, private val scope: CoroutineScope) : GridVi
 
         override fun getView(position: Int, convertView: View?, parent: ViewGroup): View {
             val type = getItemViewType(position)
-            if (type == TYPE_BLANK) return convertView ?: View(context).apply { layoutParams = AbsListView.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, cellHeight(context, cellMetrics)) }
-            val view = convertView ?: newCell(context, cellMetrics, wide = type == TYPE_WIDE)
+            if (type == TYPE_BLANK) return convertView ?: View(context).apply { layoutParams = AbsListView.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, if (keyCaps) dp(KeyCaps.CELL_DP) else cellHeight(context, cellMetrics)) }
+            val view = convertView ?: newCell(context, cellMetrics, wide = type == TYPE_WIDE, caps = keyCaps)
             // Deux colonnes et l'espace entre elles : la largeur change avec les colonnes, la vue recyclée la reprend.
             if (type == TYPE_WIDE) {
                 val width = 2 * columnWidth + horizontalSpacing
@@ -131,7 +144,11 @@ class TileGridView(context: Context, private val scope: CoroutineScope) : GridVi
                     view.requestLayout()
                 }
             }
-            return view.also { bind(it, cellAt(position)!!) }
+            val cell = cellAt(position)!!
+            bind(view, cell)
+            // Numéro gravé : la place de la touche dans le widget, rien sur « + » ni sur un emplacement libre.
+            view.findViewById<TextView>(R.id.key_number)?.text = if (cell.add || cell.type == EMPTY) "" else KeyCaps.number(slots[ownerOf(position)].cell)
+            return view
         }
     }
 
@@ -185,7 +202,7 @@ class TileGridView(context: Context, private val scope: CoroutineScope) : GridVi
                 pushed = cell
                 viewAt(position)?.let {
                     pressed += it
-                    Look.pressTo(it, true)
+                    press(it, true)
                 }
                 performHapticFeedback(HapticFeedbackConstants.VIRTUAL_KEY)
                 onPush?.invoke(cell, true)
@@ -198,7 +215,7 @@ class TileGridView(context: Context, private val scope: CoroutineScope) : GridVi
                 if (cellAt(position) != null) {
                     viewAt(position)?.let {
                         pressed += it
-                        Look.pressTo(it, true)
+                        press(it, true)
                     }
                 }
             }
@@ -215,7 +232,7 @@ class TileGridView(context: Context, private val scope: CoroutineScope) : GridVi
     }
 
     private fun releaseAll() {
-        pressed.forEach { Look.pressTo(it, false) }
+        pressed.forEach { press(it, false) }
         pressed.clear()
     }
 
@@ -260,7 +277,12 @@ class TileGridView(context: Context, private val scope: CoroutineScope) : GridVi
          * de lignes du libellé. La case grandit si la taille du texte (Réglages > Accessibilité) lui prend plus de place.
          * [wide] (touche large) : la plaque prend toute la largeur de la case, en pastille.
          */
-        fun newCell(context: Context, metrics: TileMetrics = TileMetrics.NORMAL, wide: Boolean = false): View {
+        fun newCell(context: Context, metrics: TileMetrics = TileMetrics.NORMAL, wide: Boolean = false, caps: Boolean = false): View {
+            if (caps) {
+                return LayoutInflater.from(context).inflate(R.layout.item_key_cap, null).apply {
+                    layoutParams = AbsListView.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, context.dp(KeyCaps.CELL_DP))
+                }
+            }
             val view = LayoutInflater.from(context).inflate(R.layout.item_tile, null)
             view.background = null
             view.stateListAnimator = null
@@ -289,6 +311,7 @@ class TileGridView(context: Context, private val scope: CoroutineScope) : GridVi
          * (pointillés, couleur, icône). L'icône chargée plus tard n'est posée que si la vue montre encore la même touche.
          */
         fun bind(view: View, cell: Cell, scope: CoroutineScope) {
+            if (view.findViewById<View>(R.id.key_cap) != null) return bindCap(view, cell, scope)
             val context = view.context
             val key = cell.key
             val plate = view.findViewById<ImageView>(R.id.tile_icon).parent as FrameLayout
@@ -367,6 +390,81 @@ class TileGridView(context: Context, private val scope: CoroutineScope) : GridVi
                     icon.setImageBitmap(bitmap)
                     initial.visibility = View.GONE
                 }
+            }
+        }
+
+        /**
+         * Appui sur une case : le capuchon d'Instrument s'enfonce et revient sur son ressort ([Look.keyCap]), à sa place de
+         * touche allumée s'il l'est ; une plaque se tasse ([Look.pressTo]).
+         */
+        fun press(view: View, pressed: Boolean) {
+            val cap = view.findViewById<View>(R.id.key_cap) ?: return Look.pressTo(view, pressed)
+            Look.keyCap(cap, pressed, rest = capRest(view))
+        }
+
+        private fun capRest(view: View) = if (view.isSelected) view.context.dp(KeyCaps.LIT_DP).toFloat() else 0f
+
+        /** Grise une icône d'appli : sur un capuchon d'Instrument, seule la DEL est en couleur. */
+        private val GRAY = ColorMatrixColorFilter(ColorMatrix().apply { setSaturation(0f) })
+
+        /**
+         * Remplit un capuchon ([KeyCaps]) : icône au trait (symbole, emoji connu, icône d'appli grisée) ou initiale en
+         * Departure Mono, dans la couleur choisie pour la touche s'il y en a une ; allumée (micro coupé…), la DEL s'allume, le
+         * contour passe à l'orange et le capuchon reste enfoncé. Tout est remis à zéro : la vue a pu servir à une autre case.
+         */
+        private fun bindCap(view: View, cell: Cell, scope: CoroutineScope) {
+            val context = view.context
+            val key = cell.key
+            val cap = view.findViewById<View>(R.id.key_cap)
+            val icon = view.findViewById<ImageView>(R.id.tile_icon)
+            val initial = view.findViewById<TextView>(R.id.tile_initial)
+            val label = view.findViewById<TextView>(R.id.tile_label)
+            val led = view.findViewById<View>(R.id.key_led)
+            icon.setImageBitmap(null)
+            icon.imageTintList = null
+            icon.colorFilter = null
+            initial.visibility = View.VISIBLE
+            val empty = cell.add || cell.type == EMPTY
+            view.tag = if (empty) null else key.id
+            val name = if (cell.type == EMPTY) context.getString(R.string.key_empty_label) else key.label
+            // Capitales posées ici : `textAllCaps` empêche les « … » d'un nom trop long, qui déborderait des deux côtés.
+            label.text = if (themeBool(context, R.attr.c_label_caps)) name.uppercase(Locale.FRENCH) else name
+            val lit = !empty && (cell.lit || TileStates.isLit(key.id))
+            view.isSelected = lit
+            cap.animate().cancel()
+            cap.translationY = capRest(view)
+            view.contentDescription = if (lit) context.getString(R.string.call_key_on, key.label) else name
+            if (empty) {
+                cap.setBackgroundResource(R.drawable.tile_empty_bg)
+                led.visibility = View.INVISIBLE
+                initial.text = "+"
+                initial.setTextColor(themeColor(context, R.attr.c_accent))
+                return
+            }
+            cap.setBackgroundResource(R.drawable.dock_key_cap)
+            led.visibility = View.VISIBLE
+            val ink = key.color?.let { runCatching { Color.parseColor(it) }.getOrNull() } ?: themeColor(context, R.attr.c_text)
+            initial.setTextColor(ink)
+            TileIcons.of(key.symbol, key.glyph)?.let {
+                icon.setImageResource(it)
+                icon.imageTintList = ColorStateList.valueOf(ink)
+                initial.visibility = View.GONE
+                return
+            }
+            if (key.glyph != null) {
+                initial.text = key.glyph
+                return
+            }
+            initial.text = key.label.take(1).uppercase()
+            val show = { bitmap: Bitmap ->
+                icon.setImageBitmap(bitmap)
+                icon.colorFilter = GRAY
+                initial.visibility = View.GONE
+            }
+            IconCache.peek(key.id)?.let { return show(it) }
+            scope.launch {
+                val bitmap = IconCache.load(BackendClient(context), key.id)
+                if (bitmap != null && view.tag == key.id) show(bitmap)
             }
         }
     }
