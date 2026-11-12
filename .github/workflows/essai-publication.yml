@@ -101,7 +101,7 @@ jobs:
             cp "$IN/$f" dist/
           done
           echo "version=$VERSION" >> "$GITHUB_OUTPUT"
-      # Seule étape qui voit la clé.
+      # Seule étape qui voit la clé de l'APK.
       - name: Signer
         env:
           KEYSTORE_BASE64: ${{ secrets.RELEASE_KEYSTORE_BASE64 }}
@@ -111,6 +111,12 @@ jobs:
       - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
           node-version: 22
+      # Archives du backend de la PR (s'il y en a) signées par le script de master : sans signature, le compagnon les
+      # refuse (backend/src/essai-backend.ts). Seule étape qui voit la clé de signature du backend.
+      - name: Signer les archives du backend
+        env:
+          BACKEND_SIGNING_KEY: ${{ secrets.BACKEND_SIGNING_KEY }}
+        run: node scripts/backend-signe.mjs dist
       # Revérifiée juste avant : fermée ou dépassée pendant la signature, la PR n'est pas publiée. PR_TITLE : texte libre,
       # passé par l'environnement, jamais dans une commande.
       - env:

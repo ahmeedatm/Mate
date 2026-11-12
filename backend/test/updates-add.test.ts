@@ -29,8 +29,8 @@ fs.writeFileSync(
     ],
     installers: [{ os: "mac", file: "Mate-Mac.zip", size: 3, sha256: "x", version: "0.4.0" }],
     backends: [
-      { os: "mac", file: "backend-0.4.0-mac.tar.gz", size: 3, sha256: "x", version: "0.4.0" },
-      { os: "windows", file: "backend-0.4.0-windows.tar.gz", size: 7, sha256: "x", version: "0.4.0" },
+      { os: "mac", file: "backend-0.4.0-mac.tar.gz", size: 3, sha256: "x", signature: "sig-mac", version: "0.4.0" },
+      { os: "windows", file: "backend-0.4.0-windows.tar.gz", size: 7, sha256: "x", signature: "sig-windows", version: "0.4.0" },
     ],
   }),
 );
@@ -80,10 +80,10 @@ describe("updates:add release", () => {
       { package: "app.mate", label: "Mate", versionCode: 400_000, versionName: "0.4.0", file: "companion-0.4.0.apk" },
     ]);
     assert.deepEqual(
-      manifest.backends.map((b: any) => [b.os, b.version]),
+      manifest.backends.map((b: any) => [b.os, b.version, b.signature]),
       [
-        ["mac", "0.4.0"],
-        ["windows", "0.4.0"],
+        ["mac", "0.4.0", "sig-mac"],
+        ["windows", "0.4.0", "sig-windows"],
       ],
     );
     assert.ok(!fs.readFileSync(downloaded, "utf8").includes("Mate-Mac.zip"));

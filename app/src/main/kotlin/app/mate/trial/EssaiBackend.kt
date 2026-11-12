@@ -45,7 +45,7 @@ object EssaiBackend {
             val api = UpdatesApi.essais() ?: throw UserFacingException(R.string.update_server_unreachable)
             val sha256 = api.download(archive.file, archive.size, file) {}
             if (!sha256.equals(archive.sha256, ignoreCase = true)) throw UserFacingException(R.string.update_file_corrupt)
-            updates.sendBackend(mr, sha256, file.readBytes())
+            updates.sendBackend(mr, sha256, archive.signature, file.readBytes())
         } finally {
             file.delete()
         }

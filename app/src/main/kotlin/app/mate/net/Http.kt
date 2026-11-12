@@ -91,7 +91,10 @@ class Http(
     /** Ouvre la connexion et vérifie le code HTTP ; l'appelant lit puis déconnecte. */
     fun request(
         method: String, path: String, body: ByteArray? = null, contentType: String? = null, timeoutMs: Int = 60_000,
-        bodyLength: Long = body?.size?.toLong() ?: -1L, writeBody: ((OutputStream) -> Unit)? = null,
+        bodyLength: Long = body?.size?.toLong() ?: -1L,
+        // Avant writeBody : celui-ci reste le dernier paramètre, passé en lambda finale (envoi en flux plus haut).
+        requestHeaders: Map<String, String> = emptyMap(),
+        writeBody: ((OutputStream) -> Unit)? = null,
     ): HttpURLConnection {
         // DELETE sans corps : Android y met quand même un type de contenu, que Fastify refuse (415).
         if (method == "DELETE" && body == null) return request(method, path, "{}".toByteArray(), "application/json", timeoutMs)
@@ -103,6 +106,7 @@ class Http(
         conn.readTimeout = timeoutMs
         if (token.isNotEmpty()) conn.setRequestProperty("Authorization", "Bearer $token")
         headers.forEach { (name, value) -> conn.setRequestProperty(name, value) }
+        requestHeaders.forEach { (name, value) -> conn.setRequestProperty(name, value) }
         if (body != null || writeBody != null) {
             conn.doOutput = true
             conn.setRequestProperty("Content-Type", contentType)

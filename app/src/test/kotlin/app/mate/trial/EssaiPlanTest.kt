@@ -69,14 +69,15 @@ class EssaiPlanTest {
             {"mr":109,"title":"Essais par PR","package":"app.mate.essai","label":"Mate essai","versionCode":202014,
              "versionName":"0.2.2-essai.14","file":"companion-0.2.2-essai.14.apk","size":4300000,"sha256":"1a",
              "backend":{"mac":{"file":"backend-mr109-mac.tar.gz","size":900,"sha256":"2b"},
-                        "windows":{"file":"backend-mr109-windows.tar.gz","size":950,"sha256":"3c"}}}]}"""
+                        "windows":{"file":"backend-mr109-windows.tar.gz","size":950,"sha256":"3c","signature":"c2ln"}}}]}"""
         val essais = parseEssais(json)
         assertEquals(listOf(109, 98), essais.map { it.mr })
         val mr109 = essais[0]
         assertEquals("Essais par PR", mr109.title)
         assertEquals(AppUpdate("app.mate.essai", "Mate essai", 202014, "0.2.2-essai.14", "companion-0.2.2-essai.14.apk", 4_300_000, "1a", UpdateSource.TRIALS), mr109.update)
         assertTrue(mr109.hasBackend)
-        assertEquals(BackendArchive("backend-mr109-windows.tar.gz", 950, "3c"), mr109.backends["windows"])
+        assertEquals(BackendArchive("backend-mr109-windows.tar.gz", 950, "3c", "c2ln"), mr109.backends["windows"])
+        assertEquals(BackendArchive("backend-mr109-mac.tar.gz", 900, "2b", null), mr109.backends["mac"])
         assertFalse(essais[1].hasBackend)
     }
 

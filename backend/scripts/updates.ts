@@ -57,11 +57,17 @@ function addEntry(entry: Update, from: string, origin: string) {
   console.log(`${entry.package} ${entry.versionName} (${entry.versionCode}) annoncé dans ${manifestFile}`);
 }
 
-function addBackend(archive: string) {
+/**
+ * `signature` : celle du manifest de la release, sinon le fichier `<archive>.sig` posé par la CI. Sans signature,
+ * l'archive est annoncée quand même (avertissement) : le compagnon qui la reçoit la refusera.
+ */
+function addBackend(archive: string, signature?: string) {
   const file = path.basename(archive);
   const match = /^backend-(\d+\.\d+\.\d+)-(mac|windows)\.tar\.gz$/.exec(file);
   if (!match) throw new Error(`${file} : backend-X.Y.Z-mac.tar.gz ou backend-X.Y.Z-windows.tar.gz attendu`);
-  const backend: Backend = { os: match[2] as Backend["os"], file, version: match[1] };
+  const sig = signature ?? (fs.existsSync(`${archive}.sig`) ? fs.readFileSync(`${archive}.sig`, "utf8").trim() : undefined);
+  if (!sig) console.warn(`${file} : sans signature de la CI, le compagnon la refusera`);
+  const backend: Backend = { os: match[2] as Backend["os"], file, version: match[1], ...(sig ? { signature: sig } : {}) };
   const manifest = readManifest();
   const backends = manifest.backends ?? [];
   place(
@@ -91,7 +97,7 @@ function addRelease(tag: string) {
     // Pas les installeurs de l'ordinateur : l'ordinateur ne sert que l'APK et les archives du backend.
     download([...(announced.updates ?? []), ...(announced.backends ?? [])].map((e) => path.basename(e.file)));
     for (const update of announced.updates ?? []) addEntry(update, tmp, `${repo} ${tag}`);
-    for (const backend of announced.backends ?? []) addBackend(path.join(tmp, path.basename(backend.file)));
+    for (const backend of announced.backends ?? []) addBackend(path.join(tmp, path.basename(backend.file)), backend.signature);
   } finally {
     fs.rmSync(tmp, { recursive: true, force: true });
   }

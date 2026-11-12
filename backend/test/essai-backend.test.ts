@@ -1,11 +1,11 @@
 import assert from "node:assert/strict";
 import { execFileSync } from "node:child_process";
-import { createHash, generateKeyPairSync, sign as signBytes, type KeyObject } from "node:crypto";
+import { createHash, createPublicKey, generateKeyPairSync, sign as signBytes, type KeyObject } from "node:crypto";
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { after, before, describe, it } from "node:test";
-import { applyEssai, applyUpdate, backendState, restoreOrigin, type Layout } from "../src/essai-backend.ts";
+import { applyEssai, applyUpdate, backendState, defaultLayout, restoreOrigin, type Layout } from "../src/essai-backend.ts";
 import { startServer, TOKEN, type TestServer } from "./server.ts";
 
 const tmp = fs.mkdtempSync(path.join(os.tmpdir(), "companion-essai-test-"));
@@ -294,6 +294,14 @@ describe("mise à jour stable du backend", () => {
     assert.equal(read(layout.root, "dist/ancien.mjs"), "fichier qui n'est plus dans l'essai");
     assert.equal(read(layout.root, "config/calls.json"), "calls origine");
     assert.equal(read(layout.root, "config/deck.json"), "deck de l'ordinateur");
+  });
+});
+
+describe("clé de vérification livrée", () => {
+  it("le compagnon lit la clé publique Ed25519 de la CI dans config/ (copiée par npm run package)", () => {
+    const { publicKey } = defaultLayout();
+    assert.ok(publicKey, "config/backend-signature.pub manquant : le compagnon refuserait toute mise à jour");
+    assert.equal(createPublicKey(publicKey).asymmetricKeyType, "ed25519");
   });
 });
 

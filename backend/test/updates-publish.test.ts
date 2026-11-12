@@ -72,14 +72,20 @@ const manifest = (tag: string) => JSON.parse(fs.readFileSync(path.join(releases,
 const meta = (tag: string): string[] => JSON.parse(fs.readFileSync(path.join(releases, tag, ".meta"), "utf8"));
 
 /** dist/ d'une compilation d'essai (+ backend) : APK, entrée .json, archives backend. */
-function dist(version: string, { code = 1000, pkg = "app.mate.essai", backend = [] as string[] } = {}) {
+/** Signature (base64) que la CI pose à côté d'une archive : 64 octets, le contenu n'est pas vérifié ici (essai-backend.ts). */
+const fakeSig = (platform: string, version: string) => Buffer.alloc(64, `${platform} ${version}`).toString("base64");
+
+function dist(version: string, { code = 1000, pkg = "app.mate.essai", backend = [] as string[], signed = true } = {}) {
   const dir = fs.mkdtempSync(path.join(tmp, "dist-"));
   fs.writeFileSync(path.join(dir, `companion-${version}.apk`), `apk ${version}`);
   fs.writeFileSync(
     path.join(dir, `companion-${version}.json`),
     JSON.stringify({ package: pkg, label: "Mate essai", versionCode: code, versionName: version, file: `companion-${version}.apk` }),
   );
-  for (const platform of backend) fs.writeFileSync(path.join(dir, `backend-${platform}.tar.gz`), `backend ${platform} ${version}`);
+  for (const platform of backend) {
+    fs.writeFileSync(path.join(dir, `backend-${platform}.tar.gz`), `backend ${platform} ${version}`);
+    if (signed) fs.writeFileSync(path.join(dir, `backend-${platform}.tar.gz.sig`), fakeSig(platform, version) + "\n");
+  }
   return dir;
 }
 
@@ -117,6 +123,7 @@ describe("publication des essais par PR", () => {
       file: "backend-0.2.2-essai.10-mac.tar.gz",
       size: "backend mac 0.2.2-essai.10".length,
       sha256: sha("backend mac 0.2.2-essai.10"),
+      signature: fakeSig("mac", "0.2.2-essai.10"),
     });
     assert.equal(essai.backend.windows.file, "backend-0.2.2-essai.10-windows.tar.gz");
     assert.deepEqual(names("essais"), [
@@ -257,12 +264,20 @@ describe("publication d'une release", () => {
     await publish([dir, out()]);
     const { backends } = manifest("latest");
     assert.deepEqual(backends, [
-      { os: "mac", file: "backend-0.3.2-mac.tar.gz", size: "backend mac 0.3.2".length, sha256: sha("backend mac 0.3.2"), version: "0.3.2" },
+      {
+        os: "mac",
+        file: "backend-0.3.2-mac.tar.gz",
+        size: "backend mac 0.3.2".length,
+        sha256: sha("backend mac 0.3.2"),
+        signature: fakeSig("mac", "0.3.2"),
+        version: "0.3.2",
+      },
       {
         os: "windows",
         file: "backend-0.3.2-windows.tar.gz",
         size: "backend windows 0.3.2".length,
         sha256: sha("backend windows 0.3.2"),
+        signature: fakeSig("windows", "0.3.2"),
         version: "0.3.2",
       },
     ]);
@@ -270,6 +285,17 @@ describe("publication d'une release", () => {
     await assert.rejects(
       publish([dist("0.3.3", { code: 303_000, pkg: "app.mate", backend: ["mac"] }), out()]),
       /une archive backend par plateforme/,
+    );
+  });
+
+  it("refuse une archive du backend sans signature de la CI : le compagnon la refuserait", async () => {
+    await assert.rejects(
+      publish([dist("0.3.4", { code: 304_000, pkg: "app.mate", backend: ["mac", "windows"], signed: false }), out()]),
+      /signature/,
+    );
+    await assert.rejects(
+      publish(["--essai", "112", dist("0.3.4-essai.1", { backend: ["mac", "windows"], signed: false }), out()]),
+      /signature/,
     );
   });
 

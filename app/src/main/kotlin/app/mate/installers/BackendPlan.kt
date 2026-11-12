@@ -3,10 +3,17 @@ package app.mate.installers
 import app.mate.net.BackendState
 import app.mate.net.Identity
 import app.mate.net.UpdateSource
+import app.mate.net.optStringOrNull
 import org.json.JSONObject
 
-/** Archive du backend d'une release (clé `backends` du manifest), lue sur GitHub ou sur l'ordinateur. */
-data class BackendRelease(val os: String, val file: String, val size: Long, val sha256: String, val version: String, val source: UpdateSource)
+/**
+ * Archive du backend d'une release (clé `backends` du manifest), lue sur GitHub ou sur l'ordinateur. `signature` : celle
+ * de la CI (base64), transmise telle quelle au compagnon, qui la vérifie ; null pour une release d'avant la signature.
+ */
+data class BackendRelease(
+    val os: String, val file: String, val size: Long, val sha256: String, val version: String, val source: UpdateSource,
+    val signature: String? = null,
+)
 
 /** Ce que la tablette peut faire pour le compagnon de l'ordinateur actif, sans Android (testé dans app/src/test). */
 object BackendPlan {
@@ -33,7 +40,7 @@ object BackendPlan {
         data class Available(val release: BackendRelease) : Decision()
     }
 
-    /** `{"backends":[{os, file, size, sha256, version}]}` ; clé absente, nom de fichier ou version suspects : ignorés. */
+    /** `{"backends":[{os, file, size, sha256, signature?, version}]}` ; clé absente, nom de fichier ou version suspects : ignorés. */
     fun parse(json: String, source: UpdateSource): List<BackendRelease> {
         val a = JSONObject(json).optJSONArray("backends") ?: return emptyList()
         return (0 until a.length()).mapNotNull { i ->
@@ -42,7 +49,7 @@ object BackendPlan {
             val version = o.optString("version")
             if (file.isEmpty() || file.any { it == '/' || it == '\\' } || file.startsWith(".")) return@mapNotNull null
             if (InstallerPlan.numbers(version) == null || o.optLong("size") <= 0 || !o.optString("sha256").matches(SHA256)) return@mapNotNull null
-            BackendRelease(o.optString("os"), file, o.getLong("size"), o.getString("sha256"), version, source)
+            BackendRelease(o.optString("os"), file, o.getLong("size"), o.getString("sha256"), version, source, o.optStringOrNull("signature"))
         }
     }
 

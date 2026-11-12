@@ -21,8 +21,8 @@ data class AppUpdate(
     val source: UpdateSource = UpdateSource.COMPUTER,
 )
 
-/** Fichier d'une archive du backend d'un essai : `sha256` vérifiée après téléchargement. */
-data class BackendArchive(val file: String, val size: Long, val sha256: String)
+/** Fichier d'une archive du backend d'un essai : `sha256` vérifiée après téléchargement, `signature` de la CI transmise au compagnon. */
+data class BackendArchive(val file: String, val size: Long, val sha256: String, val signature: String? = null)
 
 /** Essai d'une PR publié dans la release `essais` : son APK, et son backend par système s'il change (`mr` : numéro de la PR). */
 data class Essai(val mr: Int, val title: String, val update: AppUpdate, val backends: Map<String, BackendArchive>) {
@@ -82,18 +82,37 @@ class UpdatesApi internal constructor(
         }
     }
 
-    /** Envoie l'archive du backend de la PR `mr` à l'ordinateur, qui la pose puis redémarre. */
-    suspend fun sendBackend(mr: Int, sha256: String, archive: ByteArray) {
-        io { computer.text(computer.request("POST", "/companion/backend/essai?mr=$mr&sha256=$sha256", archive, "application/gzip", 120_000)) }
+    /**
+     * Envoie l'archive du backend de la PR `mr` à l'ordinateur, qui vérifie la signature de la CI, la pose puis redémarre.
+     * Signature en en-tête : un compagnon plus ancien l'ignore (un paramètre inconnu dans l'adresse serait refusé).
+     */
+    suspend fun sendBackend(mr: Int, sha256: String, signature: String?, archive: ByteArray) {
+        io {
+            computer.text(
+                computer.request(
+                    "POST", "/companion/backend/essai?mr=$mr&sha256=$sha256", archive, "application/gzip", 120_000,
+                    requestHeaders = signatureHeader(signature),
+                ),
+            )
+        }
     }
 
     /** Archives du backend d'une release (clé `backends`) : manifeste de GitHub, ou `GET /updates` de l'ordinateur. */
     suspend fun backends(): List<BackendRelease> = io { BackendPlan.parse(store.manifest(), source) }
 
-    /** Envoie l'archive du backend de la release `version` à l'ordinateur, qui remplace le sien puis redémarre. */
-    suspend fun sendBackendUpdate(version: String, sha256: String, archive: ByteArray) {
-        io { computer.text(computer.request("POST", "/companion/backend/update?version=$version&sha256=$sha256", archive, "application/gzip", 120_000)) }
+    /** Envoie l'archive du backend de la release `version` à l'ordinateur, qui vérifie la signature, remplace le sien puis redémarre. */
+    suspend fun sendBackendUpdate(version: String, sha256: String, signature: String?, archive: ByteArray) {
+        io {
+            computer.text(
+                computer.request(
+                    "POST", "/companion/backend/update?version=$version&sha256=$sha256", archive, "application/gzip", 120_000,
+                    requestHeaders = signatureHeader(signature),
+                ),
+            )
+        }
     }
+
+    private fun signatureHeader(signature: String?) = signature?.let { mapOf("X-Mate-Signature" to it) }.orEmpty()
 
     /** Remet le backend d'origine de l'ordinateur (sans effet s'il y est déjà). */
     suspend fun restoreBackend() {
@@ -172,7 +191,7 @@ internal fun parseUpdates(json: String, source: UpdateSource): List<AppUpdate> {
     }
 }
 
-/** `{"essais":[{mr (numéro de la PR), title, package, label, versionCode, versionName, file, size, sha256, backend?: {mac?, windows?: {file, size, sha256}}}]}`, la plus récente PR d'abord. */
+/** `{"essais":[{mr (numéro de la PR), title, package, label, versionCode, versionName, file, size, sha256, backend?: {mac?, windows?: {file, size, sha256, signature?}}}]}`, la plus récente PR d'abord. */
 internal fun parseEssais(json: String): List<Essai> {
     val a = JSONObject(json).getJSONArray("essais")
     return (0 until a.length()).map { a.getJSONObject(it) }.map { e ->
@@ -180,7 +199,7 @@ internal fun parseEssais(json: String): List<Essai> {
             e.getString("file"), e.getLong("size"), e.getString("sha256"), UpdateSource.TRIALS)
         val backend = e.optJSONObject("backend")
         val backends = backend?.keys()?.asSequence()?.associateWith { os ->
-            backend.getJSONObject(os).let { BackendArchive(it.getString("file"), it.getLong("size"), it.getString("sha256")) }
+            backend.getJSONObject(os).let { BackendArchive(it.getString("file"), it.getLong("size"), it.getString("sha256"), it.optStringOrNull("signature")) }
         }.orEmpty()
         Essai(e.getInt("mr"), e.getString("title"), update, backends)
     }.sortedByDescending { it.mr }

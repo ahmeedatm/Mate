@@ -53,7 +53,7 @@ object CompanionUpdater {
             else UpdatesApi.server() ?: throw UserFacingException(R.string.update_server_unreachable)
             val sha256 = api.download(release.file, release.size, file, progress)
             if (!sha256.equals(release.sha256, ignoreCase = true)) throw UserFacingException(R.string.update_file_corrupt)
-            client.updates.sendBackendUpdate(release.version, sha256, file.readBytes())
+            client.updates.sendBackendUpdate(release.version, sha256, release.signature, file.readBytes())
             waitFor(context, release.version)
         } finally {
             file.delete()
