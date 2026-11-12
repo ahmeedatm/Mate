@@ -47,7 +47,14 @@ export const haEntityIds = [
 
 export const haConfigured = Boolean(base && token && haEntityIds.length > 0);
 
-export type HaEntity = { id: string; name: string; kind: "toggle" | "run"; on: boolean; available: boolean };
+/** Ce qu'une lumière sait régler : `color` faux = luminosité seule ; `brightness` en %, null éteinte ; `rgb` null sans couleur lue. */
+export type HaLight = { color: boolean; brightness: number | null; rgb: [number, number, number] | null };
+
+/** `light` : seulement pour une lumière joignable qui se règle (pas « onoff » seul). */
+export type HaEntity = { id: string; name: string; kind: "toggle" | "run"; on: boolean; available: boolean; light?: HaLight };
+
+/** Modes de Home Assistant où la lumière prend une couleur ; « brightness », « color_temp » et « white » n'en prennent pas. */
+const COLOR_MODES = new Set(["hs", "xy", "rgb", "rgbw", "rgbww"]);
 
 const domainOf = (id: string) => id.split(".")[0] as keyof typeof SERVICES;
 
@@ -76,7 +83,25 @@ async function ha<T>(path: string, init?: { body: object }): Promise<T> {
   }
 }
 
-type RawState = { entity_id: string; state: string; attributes?: { friendly_name?: string } };
+type RawState = {
+  entity_id: string;
+  state: string;
+  attributes?: { friendly_name?: string; supported_color_modes?: unknown; brightness?: unknown; rgb_color?: unknown };
+};
+
+const isByte = (n: unknown): n is number => Number.isInteger(n) && (n as number) >= 0 && (n as number) <= 255;
+
+/** Réglages d'une lumière, lus dans ses attributs ; rien pour une lumière qui ne fait qu'allumer et éteindre. */
+function lightOf(s: RawState): HaLight | undefined {
+  const modes = Array.isArray(s.attributes?.supported_color_modes) ? (s.attributes.supported_color_modes as unknown[]) : [];
+  if (!modes.some((m) => m !== "onoff")) return undefined;
+  const { brightness, rgb_color: rgb } = s.attributes ?? {};
+  return {
+    color: modes.some((m) => COLOR_MODES.has(m as string)),
+    brightness: isByte(brightness) ? Math.round((brightness / 255) * 100) : null,
+    rgb: Array.isArray(rgb) && rgb.length === 3 && rgb.every(isByte) ? (rgb as [number, number, number]) : null,
+  };
+}
 
 /** État des entités de la liste blanche. Une entité que Home Assistant ne connaît pas ou n'atteint plus reste listée, grisée. */
 export async function haEntities(): Promise<HaEntity[]> {
@@ -84,12 +109,14 @@ export async function haEntities(): Promise<HaEntity[]> {
   return haEntityIds.map((id) => {
     const s = byId.get(id);
     const available = Boolean(s) && s?.state !== "unavailable" && s?.state !== "unknown";
+    const light = s && available && domainOf(id) === "light" ? lightOf(s) : undefined;
     return {
       id,
       name: s?.attributes?.friendly_name || id,
       kind: SERVICES[domainOf(id)].kind,
       on: available && s?.state === "on",
       available,
+      ...(light && { light }),
     };
   });
 }
@@ -99,6 +126,18 @@ export async function haActivate(id: string): Promise<boolean> {
   if (!haEntityIds.includes(id)) return false;
   const domain = domainOf(id);
   await ha(`/api/services/${domain}/${SERVICES[domain].service}`, { body: { entity_id: id } });
+  return true;
+}
+
+/** Règle une lumière de la liste blanche (luminosité en %, couleur RVB) ; l'allume si elle est éteinte. Faux : hors liste. */
+export async function haSetLight(id: string, set: { brightness?: number; rgb?: [number, number, number] }): Promise<boolean> {
+  if (!id.startsWith("light.") || !haEntityIds.includes(id)) return false;
+  const body = {
+    entity_id: id,
+    ...(set.brightness !== undefined && { brightness_pct: set.brightness }),
+    ...(set.rgb && { rgb_color: set.rgb }),
+  };
+  await ha("/api/services/light/turn_on", { body });
   return true;
 }
 
