@@ -474,6 +474,14 @@
     <string name="deck_voice_with">Avec %1$s</string>
     <string name="call_photos_show">Montrer les photos</string>
     <string name="call_photos_waiting">Autorise dans Discord sur l\'ordinateur</string>
+    <!-- Console Discord (thèmes Instrument) : libellés courts sous les touches, état en tête de la fenêtre LCD. -->
+    <string name="console_key_mic">Micro</string>
+    <string name="console_key_deafen">Casque</string>
+    <string name="console_key_leave">Quitter</string>
+    <string name="console_key_share">Partage</string>
+    <string name="console_key_open">Ouvrir</string>
+    <string name="console_in_call">En appel</string>
+    <string name="console_photos_waiting">Autorise dans Discord…</string>
     <string name="deck_voice_mic_off">Ton micro est coupé</string>
     <string name="deck_voice_deafened">Sourdine</string>
     <string name="app_audio_closed">Fermé sur l\'ordi</string>
