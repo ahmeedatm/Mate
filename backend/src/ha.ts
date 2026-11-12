@@ -157,3 +157,6 @@ export async function haSensorStates(ids: string[]): Promise<Record<string, { st
 
 /** Home Assistant joignable par l'ordinateur (URL sûre et jeton), sans exiger de liste blanche pour le widget. */
 export const haReachable = Boolean(base && token);
+
+/** Ce que la tablette copie une fois pour parler à Home Assistant sans l'ordinateur (`GET /ha/settings`, routes/ha-settings.ts). */
+export const haSettings = base && token ? { url: base, token, allowHttp } : undefined;

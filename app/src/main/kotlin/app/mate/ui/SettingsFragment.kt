@@ -185,6 +185,7 @@ class SettingsFragment :
         autoJoinHint = view.findViewById(R.id.settings_autojoin_hint)
         wifiStatus = view.findViewById(R.id.settings_wifi_status)
         view.findViewById<Button>(R.id.settings_wifi).setOnClickListener { wifi.show() }
+        view.findViewById<Button>(R.id.settings_home).setOnClickListener { HomeSettingsDialog(main).show() }
         view.findViewById<Button>(R.id.settings_tablet_remote).setOnClickListener { openOnComputer() }
         view.findViewById<Button>(R.id.settings_schedule).setOnClickListener {
             ScheduleDialog(requireContext(), viewLifecycleOwner.lifecycleScope).show()

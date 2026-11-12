@@ -51,6 +51,9 @@ object Computers {
     private const val KEY_LIST = "computers"
     private const val KEY_ACTIVE = "active_computer"
 
+    /** Identifiant de l'entrée Maison : ses écrans, son bandeau et sa barre sont rangés sous lui ([ComputerConfig]). */
+    const val HOME = "maison"
+
     private fun prefs(context: Context) = context.getSharedPreferences(FILE, Context.MODE_PRIVATE)
 
     fun all(context: Context): List<Computer> {
@@ -60,9 +63,18 @@ object Computers {
     }
 
     fun active(context: Context): Computer? {
-        val list = all(context)
         val id = prefs(context).getString(KEY_ACTIVE, null)
+        if (id == HOME) return null
+        val list = all(context)
         return list.firstOrNull { it.id == id } ?: list.maxByOrNull { it.lastUsedMs }
+    }
+
+    /** Maison est choisie : la tablette sert de tableau de bord sans piloter aucun ordinateur ([active] est null). */
+    fun homeActive(context: Context): Boolean = prefs(context).getString(KEY_ACTIVE, null) == HOME
+
+    /** Passe sur Maison (choisie à la main, ou aucun ordinateur ne répond) ; choisir un ordinateur la quitte. */
+    fun setHome(context: Context) {
+        prefs(context).edit().putString(KEY_ACTIVE, HOME).apply()
     }
 
     /** Ajoute ou remplace (même `id`) ; remplace aussi un ordinateur provisoire de même adresse. */

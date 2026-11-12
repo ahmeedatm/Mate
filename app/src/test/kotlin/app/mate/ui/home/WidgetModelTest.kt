@@ -216,7 +216,8 @@ class WidgetModelTest {
     // Instrument fait exception : l'heure et le prochain rendez-vous en 2 x 2, pas de bandeau.
     @Test
     fun `chaque modele d'Accueil commence par un bandeau (heure ou Ma journee) puis la ligne du jour`() {
-        for (template in Template.entries.filter { !it.role && it != Template.WORK_INSTRUMENT }) {
+        // Maison n'a pas d'ordinateur : pas de ligne du jour, qui lit son agenda.
+        for (template in Template.entries.filter { !it.role && it != Template.WORK_INSTRUMENT && it != Template.HOUSE }) {
             val widgets = template.build().widgets
             val hero = widgets.single { it.type == WidgetType.HERO || it.type == WidgetType.DAY }
             val line = widgets.single { it.type == WidgetType.DAYLINE }

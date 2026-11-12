@@ -9,7 +9,8 @@ import kotlinx.coroutines.coroutineScope
 
 /** État de la liaison avec l'ordinateur actif (pastille de la barre latérale). */
 data class Link(val computer: Computer?, val state: State) {
-    enum class State { ONLINE, OFFLINE, UNAUTHORIZED, NONE }
+    /** HOME : Maison est choisie, aucun ordinateur n'est piloté (Computers.homeActive). */
+    enum class State { ONLINE, OFFLINE, UNAUTHORIZED, NONE, HOME }
 }
 
 /**
@@ -67,5 +68,27 @@ object Connection {
         val ok = probes.filterIsInstance<Probe.Ok>().firstOrNull()?.computer ?: return@coroutineScope null
         Computers.setActive(context, ok.id)
         ok
+    }
+
+    /** Coupure après laquelle on vérifie si plus aucun PC ne répond (PC éteints : Maison en ~10 s). */
+    private const val HOME_AFTER_MS = 8_000L
+
+    /** Intervalle entre deux vérifications pendant une même coupure. */
+    private const val HOME_CHECK_EVERY_MS = 15_000L
+
+    /** Faut-il vérifier maintenant si un PC répond encore ? `sinceCheckMs` : depuis la dernière vérification. */
+    fun homeCheckDue(offlineForMs: Long, sinceCheckMs: Long): Boolean =
+        offlineForMs >= HOME_AFTER_MS && sinceCheckMs >= HOME_CHECK_EVERY_MS
+
+    /**
+     * Aucun ordinateur enregistré ne répond (même en refusant le jeton) : la tablette passe sur Maison et rend true.
+     * Un seul qui répond suffit à ne rien changer : jamais Maison tant qu'un PC répond, et l'actif reste le même.
+     */
+    suspend fun homeIfNoneAnswers(context: Context): Boolean = coroutineScope {
+        // Une autre machine à l'ancienne adresse d'un PC (Mismatch) n'est pas ce PC : elle ne compte pas.
+        val answers = Computers.all(context).map { c -> async { runCatchingCancellable { probe(context, c, connectTimeoutMs = 2_000) }.getOrNull() } }.awaitAll()
+        if (answers.any { it is Probe.Ok || it == Probe.Unauthorized }) return@coroutineScope false
+        Computers.setHome(context)
+        true
     }
 }

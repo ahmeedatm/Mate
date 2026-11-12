@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import http from "node:http";
 import type { AddressInfo } from "node:net";
 import { after, before, describe, it } from "node:test";
-import { startServer, type TestServer } from "./server.ts";
+import { startServer, TOKEN, type TestServer } from "./server.ts";
 
 const HA_TOKEN = "jeton-ha";
 
@@ -57,6 +57,7 @@ let site = "";
 let server: TestServer;
 let bare: TestServer;
 let media: TestServer;
+let settingsOnly: TestServer;
 before(async () => {
   await new Promise<void>((r) => haServer.listen(0, "127.0.0.1", r));
   site = `http://127.0.0.1:${(haServer.address() as AddressInfo).port}`;
@@ -68,6 +69,7 @@ before(async () => {
       HA_ENTITIES: "light.salon,light.ruban,light.applique, switch.cafetiere,scene.film,light.bureau,lock.porte,light.absente,pas un id",
     },
   });
+  settingsOnly = await startServer({ env: { HA_URL: site, HA_TOKEN, HA_ENTITIES: "" } });
   bare = await startServer({ env: { HA_URL: "", HA_TOKEN: "", HA_ENTITIES: "" } });
   media = await startServer({
     env: { HA_URL: site, HA_TOKEN, HA_ENTITIES: "media_player.tv,media_player.chambre,media_player.salon,media_player.bureau" },
@@ -77,6 +79,7 @@ after(async () => {
   await server?.stop();
   await bare?.stop();
   await media?.stop();
+  await settingsOnly?.stop();
   haServer.close();
 });
 
@@ -90,6 +93,24 @@ describe("home assistant : API", () => {
     assert.equal((await bare.call("GET", "/ha/entities")).status, 501);
     assert.equal((await bare.call("POST", "/ha/entities/light.salon/toggle")).status, 501);
     assert.equal((await bare.call("POST", "/ha/entities/light.salon/light", { brightness: 50 })).status, 501);
+  });
+
+  it("GET /ha/settings : URL, jeton et HTTP au porteur du jeton, sans cache, même sans liste blanche", async () => {
+    const want = { url: site, token: HA_TOKEN, allowHttp: false };
+    for (const s of [server, settingsOnly]) {
+      const res = await fetch(`${s.url}/ha/settings`, { headers: { authorization: `Bearer ${TOKEN}` } });
+      assert.equal(res.status, 200);
+      assert.equal(res.headers.get("cache-control"), "no-store");
+      assert.deepEqual(await res.json(), want);
+    }
+    assert.equal((await server.call("GET", "/ha/settings", undefined, false)).status, 401);
+    assert.ok(!server.output().includes(HA_TOKEN), "le jeton Home Assistant ne doit jamais être journalisé");
+  });
+
+  it("GET /ha/settings sans Home Assistant : 404 en français, jamais 501", async () => {
+    const { status, json } = await bare.call("GET", "/ha/settings");
+    assert.equal(status, 404);
+    assert.equal(json.error, "Home Assistant n'est pas configuré sur l'ordinateur.");
   });
 
   it("jeton d'appairage exigé", async () => {
@@ -234,5 +255,16 @@ describe("home assistant : télé et Apple TV", () => {
     seen.length = 0;
     assert.equal((await media.call("POST", "/ha/entities/media_player.tv/toggle")).status, 200);
     assert.deepEqual(seen, [{ method: "POST", url: "/api/services/media_player/toggle", body: { entity_id: "media_player.tv" } }]);
+  });
+});
+
+describe("ha-settings : le jeton Home Assistant ne part jamais en clair", () => {
+  it("HTTPS de partout, HTTP seulement depuis la machine elle-même", async () => {
+    const { mayHandOverHaToken } = await import("../src/routes/ha-settings.ts");
+    assert.equal(mayHandOverHaToken("https", "192.168.1.5"), true);
+    assert.equal(mayHandOverHaToken("http", "127.0.0.1"), true);
+    assert.equal(mayHandOverHaToken("http", "::1"), true);
+    assert.equal(mayHandOverHaToken("http", "192.168.1.5"), false);
+    assert.equal(mayHandOverHaToken("http", "::ffff:192.168.1.5"), false);
   });
 });

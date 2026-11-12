@@ -17,6 +17,8 @@ Commande vocale. Quand vous touchez « Parler », votre voix est transcrite par 
 
 Météo. La tablette demande la météo de la ville choisie à l'Institut météorologique norvégien (MET Norway), qui reçoit les coordonnées de cette ville et l'adresse IP de la connexion. Si vous l'activez dans les Réglages, ou si vous touchez « Ma position », la tablette trouve la ville la plus proche grâce aux services de localisation de Google, qui reçoivent les réseaux WiFi visibles ; seule la ville trouvée est ensuite utilisée, jamais votre position exacte.
 
+Maison. Sans ordinateur, la tablette parle directement, sur votre réseau local, à votre Home Assistant et à vos lumières WLED : rien ne sort de chez vous. Si vous réglez Home Assistant sur la tablette (ou le copiez depuis l'ordinateur appairé), son jeton d'accès y est gardé chiffré par la puce de sécurité d'Android, jamais en clair, jamais dans une sauvegarde. Si vous cochez « Autoriser HTTP », ce jeton passe en clair sur votre WiFi.
+
 Page Média. Sur Mac, pour afficher la pochette du morceau en cours, l'ordinateur peut transmettre son titre et son artiste à Apple, ou l'identifiant de la vidéo à YouTube.
 
 Comptes que vous reliez. Si vous reliez un compte Microsoft ou Google, l'ordinateur lit votre agenda directement chez ce fournisseur, et, pour Microsoft, l'expéditeur, l'objet et la date de vos derniers courriels (jamais leur contenu). Si vous reliez un compte GitHub (ou indiquez un jeton GitHub sur l'ordinateur), l'ordinateur lit chez GitHub, avec ce compte, vos pull requests, leurs vérifications et les exécutions GitHub Actions de leurs dépôts, et fusionne une pull request quand vous le demandez depuis la tablette ; l'autorisation reste sur l'ordinateur. Vous pouvez délier le compte à tout moment.

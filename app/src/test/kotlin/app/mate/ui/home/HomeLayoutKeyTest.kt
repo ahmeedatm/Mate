@@ -32,4 +32,14 @@ class HomeLayoutKeyTest {
         HomeLayout.save(context, HomeLayout(mutableListOf(Placed(WidgetType.NOTE, WidgetSize.S, 0, 0, 0)), 1))
         assertFalse(HomeLayout.has(context, WidgetType.WATER))
     }
+
+    @Test
+    fun `sur Maison, l'Accueil par defaut montre l'heure, la meteo, les transports et la maison, sans rien du PC`() {
+        val context = FakeContext()
+        app.mate.Computers.setHome(context)
+        val types = HomeLayout.load(context).widgets.map { it.type }
+        assertEquals(setOf(WidgetType.CLOCK, WidgetType.WEATHER, WidgetType.TRANSPORT, WidgetType.HA), types.toSet())
+        Prefs.setTheme(context, "INSTRUMENT")
+        assertEquals(setOf(WidgetType.CLOCK, WidgetType.WEATHER, WidgetType.TRANSPORT, WidgetType.HA), HomeLayout.load(context).widgets.map { it.type }.toSet())
+    }
 }

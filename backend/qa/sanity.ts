@@ -1119,6 +1119,17 @@ export async function runSanity(opts: { url: string; token: string; os?: Os; hoo
       },
     },
     {
+      name: "Home Assistant : réglages pour la tablette",
+      run: async () => {
+        // Lecture seule : le jeton Home Assistant n'est jamais affiché, seulement la forme de la réponse est contrôlée.
+        const settings = await call("GET", "/ha/settings");
+        if (settings.status === 404) return;
+        expectStatus(settings, 200, "/ha/settings");
+        expect(typeof settings.json.url === "string" && typeof settings.json.token === "string", "forme de /ha/settings inattendue");
+        expect(typeof settings.json.allowHttp === "boolean", "allowHttp de /ha/settings inattendu");
+      },
+    },
+    {
       name: "Home Assistant : réglage d'une lumière",
       run: async () => {
         // Lecture seule : un réglage hors bornes est refusé avant Home Assistant, aucune lampe ne change.

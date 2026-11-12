@@ -21,7 +21,7 @@ object ComputerConfig {
 
     /** Clé de `base` pour l'ordinateur actif. */
     fun key(context: Context, base: String): String {
-        val id = Computers.active(context)?.id ?: return base
+        val id = Computers.active(context)?.id ?: Computers.HOME.takeIf { Computers.homeActive(context) } ?: return base
         migrate(context)
         return scoped(base, id)
     }

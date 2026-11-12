@@ -54,11 +54,12 @@ class RemoteChannel(private val activity: MainActivity) {
     /**
      * Boucle tant que l'appli est à l'écran. `onStatus` : pastille de connexion ; `onSwitched` : un autre
      * ordinateur enregistré répond alors que l'actif est injoignable, il devient l'actif (la boucle s'arrête,
-     * l'activité en relance une).
+     * l'activité en relance une) ; null : plus aucun ordinateur ne répond, la tablette passe sur Maison.
      */
-    suspend fun run(onStatus: (Link) -> Unit, onSwitched: (Computer) -> Unit) {
+    suspend fun run(onStatus: (Link) -> Unit, onSwitched: (Computer?) -> Unit) {
         var online = false
         var lastResolve = 0L
+        var lastHomeCheck = 0L
         /** Début de la coupure en cours (0 : en ligne) : on ne change d'ordinateur qu'après [SWITCH_AFTER_MS]. */
         var offlineSince = 0L
         // Dernier contact (Prefs.lastContact) : le verrou renforcé compte depuis lui, même après une relance de la boucle.
@@ -66,7 +67,7 @@ class RemoteChannel(private val activity: MainActivity) {
         while (true) {
             val computer = Computers.active(activity)
             if (computer == null) {
-                onStatus(Link(null, Link.State.NONE))
+                onStatus(Link(null, if (Computers.homeActive(activity)) Link.State.HOME else Link.State.NONE))
                 touch()
                 delay(5_000)
                 continue
@@ -110,6 +111,15 @@ class RemoteChannel(private val activity: MainActivity) {
                     }
                     // Même ordinateur, peut-être à une nouvelle adresse : nouvel essai tout de suite.
                     if (found != null) continue
+                }
+                val now = SystemClock.elapsedRealtime()
+                if (Connection.homeCheckDue(now - offlineSince, if (lastHomeCheck == 0L) Long.MAX_VALUE else now - lastHomeCheck)) {
+                    lastHomeCheck = now
+                    // PC tous éteints : Maison (heure, météo, transports, lumières) plutôt qu'un écran qui attend.
+                    if (Connection.homeIfNoneAnswers(activity)) {
+                        onSwitched(null)
+                        return
+                    }
                 }
                 delay(5_000)
                 continue

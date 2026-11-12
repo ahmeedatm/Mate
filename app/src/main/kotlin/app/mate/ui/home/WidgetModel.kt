@@ -4,6 +4,7 @@ import android.content.Context
 import androidx.annotation.DrawableRes
 import androidx.annotation.StringRes
 import app.mate.ComputerConfig
+import app.mate.Computers
 import app.mate.R
 import app.mate.net.HomeFeatures
 import app.mate.ui.AppTheme
@@ -468,9 +469,9 @@ class HomeLayout(val widgets: MutableList<Placed>, val names: MutableList<String
             return raw?.let { runCatching { parse(it) }.getOrNull() } ?: defaultTemplate(context).build()
         }
 
-        /** Le modèle d'une tablette neuve : celui d'Instrument (heure et rendez-vous en grand) ou, aux autres thèmes, Travail. */
+        /** Le modèle d'une tablette neuve : Maison sur Maison, sinon celui d'Instrument (heure et rendez-vous en grand) ou, aux autres thèmes, Travail. */
         private fun defaultTemplate(context: Context) =
-            if (AppTheme.current(context).group == ThemeGroup.INSTRUMENT) Template.WORK_INSTRUMENT else Template.WORK_CADRAN
+            if (Computers.homeActive(context)) Template.HOUSE else if (AppTheme.current(context).group == ThemeGroup.INSTRUMENT) Template.WORK_INSTRUMENT else Template.WORK_CADRAN
 
         /** Ce widget est-il sur l'Accueil (modèle par défaut si rien n'est enregistré) ? */
         fun has(context: Context, type: WidgetType) = load(context).widgets.any { it.type == type }
@@ -566,6 +567,14 @@ enum class Template(
         Placed(WidgetType.CALL, WidgetSize.XL, 0, 0, 0),
         Placed(WidgetType.NEXT, WidgetSize.L, 0, 0, 2),
         Placed(WidgetType.AUDIO, WidgetSize.L, 0, 2, 2),
+    ), listed = false),
+
+    // Maison : la tablette sans ordinateur. Rien qui lise le PC : l'heure, la météo et les transports se lisent seuls.
+    HOUSE(R.string.template_house, R.string.template_house_desc, listOf(
+        Placed(WidgetType.CLOCK, WidgetSize.M, 0, 0, 0),
+        Placed(WidgetType.WEATHER, WidgetSize.M, 0, 2, 0),
+        Placed(WidgetType.TRANSPORT, WidgetSize.L23, 0, 0, 1),
+        Placed(WidgetType.HA, WidgetSize.L23, 0, 2, 1),
     ), listed = false);
 
     /** Modèle d'un rôle (Deck, Réunion) : une page pour agir, pas un Accueil (ni héros ni ligne du jour). */

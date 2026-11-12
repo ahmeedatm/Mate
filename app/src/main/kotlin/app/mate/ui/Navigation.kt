@@ -93,6 +93,8 @@ internal fun linkMark(state: Link.State, locked: Boolean = false): LinkMark = wh
     Link.State.UNAUTHORIZED -> LinkMark(LinkShape.ALERT, R.string.link_state_unauthorized, R.string.unauthorized)
     Link.State.OFFLINE -> LinkMark(LinkShape.CROSS, R.string.link_state_offline, R.string.offline)
     Link.State.NONE -> LinkMark(LinkShape.CROSS, null, R.string.no_computer)
+    // Maison marche sans ordinateur : rien n'est en panne, le nom suffit.
+    Link.State.HOME -> LinkMark(LinkShape.OK, null, R.string.home_spoken)
 }
 
 /**
@@ -105,12 +107,13 @@ internal fun renderLink(activity: Activity, dot: ImageView, name: TextView, stat
     val color = when (link.state) {
         Link.State.ONLINE -> if (locked) R.attr.c_warn else R.attr.c_ok
         Link.State.UNAUTHORIZED -> R.attr.c_warn
+        Link.State.HOME -> R.attr.c_ok
         else -> offline
     }
     val mark = linkMark(link.state, locked)
     dot.setImageResource(mark.shape.drawable)
     dot.imageTintList = ColorStateList.valueOf(themeColor(colors, color))
-    name.text = link.computer?.name ?: activity.getString(R.string.no_computer_short)
+    name.text = link.computer?.name ?: activity.getString(if (link.state == Link.State.HOME) R.string.home_name else R.string.no_computer_short)
     stateText.text = mark.label?.let { activity.getString(it) }
     stateText.visibility = if (mark.label == null) View.GONE else View.VISIBLE
     val spoken = activity.getString(mark.spoken)
