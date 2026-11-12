@@ -39,6 +39,8 @@ import app.mate.ui.LatestSender
 import app.mate.ui.dp
 import app.mate.ui.errorText
 import app.mate.ui.home.HomeCard
+import app.mate.ui.home.KeyCaps
+import app.mate.ui.home.TileGridView
 import app.mate.ui.inputField
 import app.mate.ui.showForTyping
 import app.mate.ui.showImmersive
@@ -49,6 +51,7 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
+import java.util.Locale
 
 /**
  * Onglet « Son » du deck : console de mixage de l'ordinateur, sur fond uni. En haut, les scènes (volumes
@@ -87,6 +90,25 @@ class MixerView @JvmOverloads constructor(
 
     /** Console basse (widget d'un profil) : rangée des scènes et tranches resserrées. */
     private var tight = false
+
+    /** Widget Mixage d'un thème Instrument (posé par `MixerWidget`) : tranches de [FaderInstrument], scènes en touches-capuchons. */
+    var instrument = false
+        set(value) {
+            if (field == value) return
+            field = value
+            renderScenes()
+        }
+
+    /** Instrument, widget de 3 rangées ou plus : la rangée des scènes passe sous les voies. */
+    var scenesBelow = false
+        set(value) {
+            if (field == value) return
+            field = value
+            val params = sceneScroll.layoutParams
+            removeView(sceneScroll)
+            addView(sceneScroll, if (value) indexOfChild(stripScroll) + 1 else 0, params)
+            invalidate()
+        }
 
     // Plaque unie (c_mx_plate), dessinée derrière tout ; aucune À même le fond (HomeCard.plate).
     private val plate = Paint().apply { color = HomeCard.plate(HomeCard.look(context), themeColor(context, R.attr.c_mx_plate)) }
@@ -309,7 +331,7 @@ class MixerView @JvmOverloads constructor(
         else -> c.name
     }
 
-    private fun newStrip(c: MixerChannel) = FaderStrip(context).apply {
+    private fun newStrip(c: MixerChannel) = FaderStrip(context, instrument).apply {
         master = c.id == "master"
         iconRes = when (c.id) {
             "master" -> R.drawable.ic_volume
@@ -409,6 +431,7 @@ class MixerView @JvmOverloads constructor(
         sceneRow.setPadding(dp(24), dp(if (tight) 6 else 10), dp(24), dp(6))
         if (editing && scenes.isEmpty()) editing = false
         if (editing) return renderEditing()
+        if (instrument) return renderCaps()
         scenes.forEach { scene ->
             sceneRow.addView(ConsoleKey(context).apply {
                 text = scene.name
@@ -417,6 +440,11 @@ class MixerView @JvmOverloads constructor(
                 setOnLongClickListener { confirmDelete(scene); true }
             }, keyParams())
         }
+        addSceneTools()
+    }
+
+    /** « + » enregistrer, crayon d'édition, et l'aide quand il n'y a encore aucune scène. */
+    private fun addSceneTools() {
         sceneRow.addView(
             iconButton(R.drawable.ic_add, R.attr.c_text_dim, context.getString(R.string.mixer_scene_save)) { askSceneName() }.apply {
                 (layoutParams as LinearLayout.LayoutParams).marginEnd = dp(8)
@@ -430,6 +458,36 @@ class MixerView @JvmOverloads constructor(
             })
         }
         if (scenes.isEmpty()) sceneRow.addView(engraved(R.string.mixer_scenes_hint).apply { setPadding(dp(6), 0, 0, dp(3)) })
+    }
+
+    /**
+     * Instrument : chaque scène est une touche-capuchon numérotée (`item_key_cap`, comme les Touches), DEL allumée sur la
+     * scène rappelée ; toucher la rappelle, appui long la supprime.
+     */
+    @SuppressLint("ClickableViewAccessibility")
+    private fun renderCaps() {
+        val inflater = LayoutInflater.from(context)
+        scenes.forEachIndexed { i, scene ->
+            val key = inflater.inflate(R.layout.item_key_cap, sceneRow, false)
+            (key.findViewById<View>(R.id.tile_icon).parent as View).visibility = GONE
+            key.findViewById<TextView>(R.id.tile_label).text = scene.name.uppercase(Locale.FRENCH)
+            key.findViewById<TextView>(R.id.key_number).text = KeyCaps.number(i)
+            val lit = scene.id == litScene
+            key.isSelected = lit
+            key.findViewById<View>(R.id.key_cap).translationY = if (lit) dp(KeyCaps.LIT_DP).toFloat() else 0f
+            key.contentDescription = scene.name
+            key.setOnClickListener { apply(scene) }
+            key.setOnLongClickListener { confirmDelete(scene); true }
+            key.setOnTouchListener { v, e ->
+                when (e.actionMasked) {
+                    MotionEvent.ACTION_DOWN -> TileGridView.press(v, true)
+                    MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> TileGridView.press(v, false)
+                }
+                false
+            }
+            sceneRow.addView(key, LinearLayout.LayoutParams(dp(CAP_W_DP), dp(if (tight) 40 else 48)).apply { marginEnd = dp(10) })
+        }
+        addSceneTools()
     }
 
     // --- Mode édition des scènes (crayon) : glisser pour déplacer, ⟳ mettre à jour, ✕ supprimer, « Terminé ».
@@ -681,10 +739,10 @@ class MixerView @JvmOverloads constructor(
         val h = height.toFloat()
         canvas.drawRect(0f, 0f, w, h, plate)
         if (!scenesShown || !stripsShown) return
-        // Rainure sous les scènes.
+        // Rainure sous les scènes (au-dessus d'elles quand elles sont sous les voies).
         brush.alpha = 255
         brush.color = cShadow
-        val groove = sceneHeight().toFloat()
+        val groove = if (scenesBelow) h - sceneHeight() - 2 else sceneHeight().toFloat()
         canvas.drawRect(dp(24).toFloat(), groove, w - dp(24), groove + 1, brush)
         brush.color = cHighlight
         canvas.drawRect(dp(24).toFloat(), groove + 1, w - dp(24), groove + 2, brush)
@@ -692,6 +750,7 @@ class MixerView @JvmOverloads constructor(
 
     private companion object {
         const val SCENES_DP = 66
+        const val CAP_W_DP = 84
         const val DRAGGED_ALPHA = 0.35f
         const val EDGE_DP = 48
         const val SCROLL_STEP_DP = 16

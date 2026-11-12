@@ -32,6 +32,17 @@ object MixerMath {
         else -> 0
     }
 
+    /** Vumètre d'Instrument : montée en 120 ms et retombée en 300 ms sur toute l'échelle, comme `ConsoleMetersView`. */
+    const val METER_RISE_MS = 120L
+    const val METER_FALL_MS = 300L
+
+    /** Niveau affiché (en LED) après `elapsedMs` : il avance vers `target` sans le dépasser ; temps nul ou négatif : inchangé. */
+    fun meterStep(shown: Float, target: Int, elapsedMs: Long, leds: Int): Float {
+        if (elapsedMs <= 0) return shown
+        val goal = target.toFloat()
+        return if (goal > shown) minOf(goal, shown + elapsedMs * leds / METER_RISE_MS) else maxOf(goal, shown - elapsedMs * leds / METER_FALL_MS)
+    }
+
     /** Morceau du vumètre continu (Hush) : de `from` à `to` (fractions de la hauteur), couleur de [ledZone] `zone`. */
     data class Span(val from: Float, val to: Float, val zone: Int)
 
