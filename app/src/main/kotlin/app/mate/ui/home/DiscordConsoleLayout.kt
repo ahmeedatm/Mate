@@ -7,9 +7,9 @@ import app.mate.net.DeckTile
 /**
  * Ce que la console Discord (thèmes Instrument) montre dans une forme : [keys] les touches, celle de l'état de l'appel
  * d'abord ; [lcd] la fenêtre LCD (salon, qui parle, vumètres) ; [labels] les libellés sous les touches ; [vertical] les
- * vumètres en colonne.
+ * vumètres en colonne ; [side] les touches à droite de la fenêtre (Ligne, et carte très large comme le Grand 4 × 2).
  */
-data class ConsolePlan(val keys: List<DeckTile>, val lcd: Boolean, val labels: Boolean, val vertical: Boolean)
+data class ConsolePlan(val keys: List<DeckTile>, val lcd: Boolean, val labels: Boolean, val vertical: Boolean, val side: Boolean)
 
 object ConsoleMetrics {
     /** Place d'une touche ronde du dock (`item_dock_tool`, 68 dp) et de son écart. */
@@ -21,8 +21,12 @@ object ConsoleMetrics {
     /** Hauteur minimale de la fenêtre LCD au-dessus des touches. */
     const val LCD_MIN_DP = 64
 
-    /** Pastille : sous cette hauteur utile, la touche seule (pas de LCD au-dessus). */
-    const val PILL_LCD_DP = 120
+    /** Pastille : sous cette hauteur utile, la touche seule ; au-dessus, une ligne de LCD de [PILL_LINE_DP] la coiffe. */
+    const val PILL_LCD_DP = 110
+    const val PILL_LINE_DP = 44
+
+    /** Carte au moins 4 fois plus large que haute : touches à droite, la fenêtre LCD garde toute la hauteur. */
+    const val SIDE_RATIO = 4
 
     /** Ligne : les touches prennent au plus la moitié de la largeur, la fenêtre LCD le reste. */
     const val ROW_KEYS_SHARE = 0.5
@@ -35,9 +39,11 @@ object ConsoleMetrics {
  */
 fun planConsole(family: ShapeFamily, tiles: List<DeckTile>, innerW: Int, innerH: Int): ConsolePlan = with(ConsoleMetrics) {
     val main = tiles.firstOrNull { it.whenState != null } ?: tiles.firstOrNull()
-    val slots = when (family) {
-        ShapeFamily.PILL -> 1
-        ShapeFamily.ROW -> (innerW * ROW_KEYS_SHARE / KEY_SLOT_DP).toInt()
+    val side = family == ShapeFamily.ROW ||
+        (family != ShapeFamily.PILL && family != ShapeFamily.COLUMN && innerH > 0 && innerW >= SIDE_RATIO * innerH)
+    val slots = when {
+        family == ShapeFamily.PILL -> 1
+        side -> (innerW * ROW_KEYS_SHARE / KEY_SLOT_DP).toInt()
         else -> innerW / KEY_SLOT_DP
     }.coerceAtLeast(1)
     val rest = tiles - listOfNotNull(main).toSet()
@@ -50,8 +56,12 @@ fun planConsole(family: ShapeFamily, tiles: List<DeckTile>, innerW: Int, innerH:
         listOf(main) + calls + other.take((slots - 1 - calls.size).coerceAtLeast(0))
     }
     val lcd = family != ShapeFamily.PILL || innerH >= PILL_LCD_DP
-    val keyRoom = if (family == ShapeFamily.ROW || !lcd) innerH else innerH - LCD_MIN_DP
-    ConsolePlan(keys, lcd, labels = keyRoom >= KEY_WITH_LABEL_DP, vertical = family == ShapeFamily.COLUMN)
+    val keyRoom = when {
+        side || !lcd -> innerH
+        family == ShapeFamily.PILL -> innerH - PILL_LINE_DP
+        else -> innerH - LCD_MIN_DP
+    }
+    ConsolePlan(keys, lcd, labels = keyRoom >= KEY_WITH_LABEL_DP, vertical = family == ShapeFamily.COLUMN, side = side)
 }
 
 /** Libellé court sous une touche de la console, tiré de son symbole ; null : le libellé de la touche (touche maison). */

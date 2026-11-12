@@ -481,6 +481,7 @@
     <string name="console_key_share">Partage</string>
     <string name="console_key_open">Ouvrir</string>
     <string name="console_in_call">En appel</string>
+    <string name="console_mic_off">Micro coupé</string>
     <string name="console_photos_waiting">Autorise dans Discord…</string>
     <string name="deck_voice_mic_off">Ton micro est coupé</string>
     <string name="deck_voice_deafened">Sourdine</string>

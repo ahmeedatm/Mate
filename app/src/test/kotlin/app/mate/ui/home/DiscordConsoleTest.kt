@@ -72,6 +72,22 @@ class DiscordConsoleTest {
     }
 
     @Test
+    fun `carte tres large, les touches a droite de la fenetre LCD, comme en Ligne`() {
+        assertTrue(planConsole(ShapeFamily.ROW, inCall, 520, 68).side)
+        assertTrue("Grand 4 x 2", planConsole(ShapeFamily.LARGE, inCall, 1160, 230).side)
+        assertFalse("Bloc 2 x 2", planConsole(ShapeFamily.BLOCK, inCall, 560, 280).side)
+        assertFalse(planConsole(ShapeFamily.FULL, inCall, 1160, 560).side)
+        assertFalse(planConsole(ShapeFamily.PILL, inCall, 240, 60).side)
+    }
+
+    @Test
+    fun `pastille basse, la ligne du LCD tient au-dessus de la touche sans libelle`() {
+        val plan = planConsole(ShapeFamily.PILL, inCall, 240, 114)
+        assertTrue(plan.lcd)
+        assertFalse(plan.labels)
+    }
+
+    @Test
     fun `libelle court d'une touche, tire de son symbole`() {
         assertEquals(R.string.console_key_mic, consoleLabel(mic))
         assertEquals(R.string.console_key_deafen, consoleLabel(deaf))
