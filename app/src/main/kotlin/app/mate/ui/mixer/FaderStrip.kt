@@ -325,7 +325,7 @@ class FaderStrip(context: Context, private val instrument: Boolean = false) : Vi
      */
     private fun layoutInstrument(w: Int, h: Int) {
         val side = dp(6).toFloat()
-        val key = dp(KEY_DP).toFloat()
+        val key = dp(if (tight) KEY_TIGHT_DP else KEY_DP).toFloat()
         valueX = w / 2f
         thumbW = dp(30).toFloat()
         thumbH = dp(if (tight) 18 else 22).toFloat()
@@ -878,6 +878,9 @@ class FaderStrip(context: Context, private val instrument: Boolean = false) : Vi
         /** Instrument : segments du vumètre, et hauteur de la touche Muet (dp, socle compris : ≥ 48 au toucher). */
         private const val SEGMENTS = 16
         private const val KEY_DP = 52
+
+        /** Serré (Pastille, Colonne) : touche Muet plus basse, le curseur garde de la course (36 dp avant Instrument). */
+        private const val KEY_TIGHT_DP = 44
         private const val SHADOW_RADIUS_PX = 6f
         private const val SILENT_SP = 16f
 
