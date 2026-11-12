@@ -1,9 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Socle vide du témoin, aucun ordinateur : carré arrondi en pointillé, teinte posée dans le code. -->
+<!-- Socle vide du témoin, aucun ordinateur : carré arrondi en pointillé, couleurs de l'afficheur (attributs du thème LCD). -->
 <shape xmlns:android="http://schemas.android.com/apk/res/android" android:shape="rectangle">
     <stroke
         android:width="1.5dp"
-        android:color="#FFFFFFFF"
+        android:color="?attr/c_text_faint"
         android:dashWidth="3dp"
         android:dashGap="3dp" />
     <corners android:radius="4dp" />

@@ -40,7 +40,6 @@ internal class ComputerLampView(private val chip: View) {
         val before = shown
         shown = look
         val text = themeColor(chip.context, R.attr.c_text)
-        val faint = themeColor(chip.context, R.attr.c_text_faint)
         val color = themeColor(chip.context, look.color)
         glyph.setImageResource(
             when (look.glyph) {
@@ -50,7 +49,8 @@ internal class ComputerLampView(private val chip: View) {
                 ComputerLamp.Glyph.EMPTY -> R.drawable.lamp_socket
             },
         )
-        glyph.imageTintList = ColorStateList.valueOf(if (look.glyph == ComputerLamp.Glyph.EMPTY) faint else text)
+        // Le socle vide porte ses couleurs (pointillé c_text_faint) : pas de teinte.
+        glyph.imageTintList = if (look.glyph == ComputerLamp.Glyph.EMPTY) null else ColorStateList.valueOf(text)
         glyph.alpha = if (look.tone == ComputerLamp.Tone.FULL) 1f else DIM_ALPHA
         slash.visibility = if (look.tone == ComputerLamp.Tone.CROSSED) View.VISIBLE else View.GONE
         slash.imageTintList = ColorStateList.valueOf(color)
@@ -65,22 +65,19 @@ internal class ComputerLampView(private val chip: View) {
         led.imageTintList = ColorStateList.valueOf(color)
         halo.visibility = if (look.led == ComputerLamp.Led.ON) View.VISIBLE else View.GONE
         halo.imageTintList = ColorStateList.valueOf(color)
-        showDots(look, text, faint)
+        showDots(look)
         breathe(look.led == ComputerLamp.Led.BREATHING)
         if (before != null && before.led != look.led) Look.blip(led)
     }
 
-    private fun showDots(look: ComputerLamp.Look, active: Int, other: Int) {
+    /** Un point par ordinateur (plein c_text pour l'actif, creux c_text_faint), couleurs portées par les dessins. */
+    private fun showDots(look: ComputerLamp.Look) {
         dots.removeAllViews()
         dots.visibility = if (look.dots == 0) View.GONE else View.VISIBLE
         val size = chip.dp(DOT_DP)
         repeat(look.dots) { i ->
-            val on = i == look.activeDot
             dots.addView(
-                View(chip.context).apply {
-                    setBackgroundResource(if (on) R.drawable.lamp_dot else R.drawable.lamp_dot_ring)
-                    backgroundTintList = ColorStateList.valueOf(if (on) active else other)
-                },
+                View(chip.context).apply { setBackgroundResource(if (i == look.activeDot) R.drawable.lamp_dot else R.drawable.lamp_dot_ring) },
                 LinearLayout.LayoutParams(size, size).apply { if (i > 0) marginStart = chip.dp(DOT_GAP_DP) },
             )
         }
