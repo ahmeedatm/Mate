@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Voyant du cadre de console : discret, le ton signal à demi éteint. -->
+<selector xmlns:android="http://schemas.android.com/apk/res/android">
+    <item android:alpha="0.55" android:color="?attr/c_signal" />
+</selector>

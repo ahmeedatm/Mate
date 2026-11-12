@@ -157,7 +157,7 @@ abstract class HomeWidget(val context: Context, val host: HomeHost, val placed: 
     /** Carte de fond commune : la tuile du thème au style choisi dans Réglages > Thème (HomeCard). */
     protected fun <T : View> T.asCard(padding: Int? = null): T = apply {
         background = HomeCard.background(context)
-        val px = padding?.let { dp(it) } ?: themePx(context, R.attr.c_card_pad)
+        val px = HomeCard.padding(padding?.let { dp(it) } ?: themePx(context, R.attr.c_card_pad), HomeCard.framed(context), dp(HomeCard.FRAME_PAD_DP))
         setPadding(px, px, px, px)
     }
 

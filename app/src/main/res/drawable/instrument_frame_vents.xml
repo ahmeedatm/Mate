@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Ouïes rainurées des côtés du cadre de console (instrument_frame). -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android" android:width="6dp" android:height="32dp" android:viewportWidth="6" android:viewportHeight="32">
+    <path android:fillColor="?attr/c_on_signal" android:pathData="M0,0h6v2h-6zM0,5h6v2h-6zM0,10h6v2h-6zM0,15h6v2h-6zM0,20h6v2h-6zM0,25h6v2h-6zM0,30h6v2h-6z" />
+</vector>

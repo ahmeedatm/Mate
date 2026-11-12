@@ -110,6 +110,7 @@
         <item name="c_dock_height">0dp</item>
         <item name="c_lcd_overlay">@null</item>
         <item name="c_home_card_outline">false</item>
+        <item name="c_home_card_frame">@null</item>
         <item name="c_block_radius">40dp</item>
     </style>
 
@@ -218,6 +219,7 @@
         <item name="c_dock_height">0dp</item>
         <item name="c_lcd_overlay">@null</item>
         <item name="c_home_card_outline">false</item>
+        <item name="c_home_card_frame">@null</item>
         <item name="c_block_radius">40dp</item>
     </style>
 
@@ -330,6 +332,7 @@
         <item name="c_dock_height">0dp</item>
         <item name="c_lcd_overlay">@null</item>
         <item name="c_home_card_outline">false</item>
+        <item name="c_home_card_frame">@null</item>
         <item name="c_block_radius">40dp</item>
     </style>
 
@@ -445,6 +448,7 @@
         <item name="c_dock_height">0dp</item>
         <item name="c_lcd_overlay">@null</item>
         <item name="c_home_card_outline">false</item>
+        <item name="c_home_card_frame">@null</item>
         <item name="c_block_radius">40dp</item>
     </style>
 
@@ -559,6 +563,7 @@
         <item name="c_dock_height">0dp</item>
         <item name="c_lcd_overlay">@null</item>
         <item name="c_home_card_outline">false</item>
+        <item name="c_home_card_frame">@null</item>
         <item name="c_block_radius">40dp</item>
     </style>
 
@@ -718,6 +723,7 @@
         <item name="c_dock_height">116dp</item>
         <item name="c_lcd_overlay">@style/Lcd.Instrument</item>
         <item name="c_home_card_outline">true</item>
+        <item name="c_home_card_frame">@drawable/instrument_frame</item>
         <item name="c_block_radius">12dp</item>
     </style>
 
@@ -828,6 +834,7 @@
         <item name="c_dock_height">116dp</item>
         <item name="c_lcd_overlay">@style/Lcd.InstrumentNuit</item>
         <item name="c_home_card_outline">true</item>
+        <item name="c_home_card_frame">@drawable/instrument_frame</item>
         <item name="c_block_radius">12dp</item>
     </style>
 
@@ -939,6 +946,7 @@
         <item name="c_dock_height">0dp</item>
         <item name="c_lcd_overlay">@null</item>
         <item name="c_home_card_outline">false</item>
+        <item name="c_home_card_frame">@null</item>
         <item name="c_block_radius">40dp</item>
     </style>
 
@@ -1049,6 +1057,7 @@
         <item name="c_dock_height">0dp</item>
         <item name="c_lcd_overlay">@null</item>
         <item name="c_home_card_outline">false</item>
+        <item name="c_home_card_frame">@null</item>
         <item name="c_block_radius">40dp</item>
     </style>
 
@@ -1157,6 +1166,7 @@
         <item name="c_dock_height">0dp</item>
         <item name="c_lcd_overlay">@null</item>
         <item name="c_home_card_outline">false</item>
+        <item name="c_home_card_frame">@null</item>
         <item name="c_block_radius">40dp</item>
     </style>
 
@@ -1269,6 +1279,7 @@
         <item name="c_dock_height">0dp</item>
         <item name="c_lcd_overlay">@null</item>
         <item name="c_home_card_outline">false</item>
+        <item name="c_home_card_frame">@null</item>
         <item name="c_block_radius">40dp</item>
     </style>
 
@@ -1379,6 +1390,7 @@
         <item name="c_dock_height">0dp</item>
         <item name="c_lcd_overlay">@null</item>
         <item name="c_home_card_outline">false</item>
+        <item name="c_home_card_frame">@null</item>
         <item name="c_block_radius">40dp</item>
     </style>
 
@@ -1495,6 +1507,7 @@
         <item name="c_dock_height">0dp</item>
         <item name="c_lcd_overlay">@null</item>
         <item name="c_home_card_outline">false</item>
+        <item name="c_home_card_frame">@null</item>
         <item name="c_block_radius">40dp</item>
     </style>
 
@@ -1529,6 +1542,7 @@
         <item name="c_dock_height">0dp</item>
         <item name="c_lcd_overlay">@null</item>
         <item name="c_home_card_outline">false</item>
+        <item name="c_home_card_frame">@null</item>
         <item name="c_block_radius">40dp</item>
         <item name="colorBackgroundFloating">?attr/c_surface</item>
         <item name="android:colorBackgroundFloating">?attr/c_surface</item>
@@ -1643,6 +1657,7 @@
         <item name="c_dock_height">0dp</item>
         <item name="c_lcd_overlay">@null</item>
         <item name="c_home_card_outline">false</item>
+        <item name="c_home_card_frame">@null</item>
         <item name="c_block_radius">40dp</item>
         <item name="c_primary">#FF513FFF</item>
         <item name="c_on_primary">#FFFFFFFF</item>
@@ -1831,6 +1846,7 @@
         <item name="c_dock_height">0dp</item>
         <item name="c_lcd_overlay">@null</item>
         <item name="c_home_card_outline">false</item>
+        <item name="c_home_card_frame">@null</item>
         <item name="c_block_radius">40dp</item>
     </style>
 
@@ -1866,6 +1882,7 @@
         <item name="c_dock_height">0dp</item>
         <item name="c_lcd_overlay">@null</item>
         <item name="c_home_card_outline">false</item>
+        <item name="c_home_card_frame">@null</item>
         <item name="c_block_radius">40dp</item>
         <item name="c_primary">#FF005592</item>
         <item name="c_on_primary">#FFFFFFFF</item>
@@ -1976,6 +1993,7 @@
         <item name="c_dock_height">0dp</item>
         <item name="c_lcd_overlay">@null</item>
         <item name="c_home_card_outline">false</item>
+        <item name="c_home_card_frame">@null</item>
         <item name="c_block_radius">40dp</item>
         <item name="c_primary">#FF43E188</item>
         <item name="c_on_primary">#FF00391C</item>

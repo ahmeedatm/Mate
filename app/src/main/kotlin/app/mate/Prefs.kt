@@ -393,7 +393,7 @@ object Prefs {
         prefs(context).edit().putBoolean(KEY_GRAIN, value).apply()
     }
 
-    /** Réglages > Thème : style des widgets de l'Accueil sur le fond (ui/home/HomeCard). Voile par défaut. */
+    /** Réglages > Thème : style des widgets de l'Accueil sur le fond (ui/home/HomeCard). Cadre (VEIL) par défaut. */
     fun homeCardStyle(context: Context): HomeCardStyle =
         prefs(context).getString(KEY_HOME_CARD, null).let { v -> HomeCardStyle.entries.firstOrNull { it.name == v } } ?: HomeCardStyle.VEIL
 

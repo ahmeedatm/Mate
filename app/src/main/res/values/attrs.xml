@@ -128,6 +128,9 @@
     <!-- Instrument : la carte d'un widget de l'Accueil garde son filet (le voile seul disparaît sur l'alu), et le grand bloc de
          Depuis l'ordi arrondit ses coins du dehors au rayon des tuiles (c_block_radius) au lieu de 40 dp. -->
     <attr name="c_home_card_outline" format="boolean" />
+    <!-- Cadre de console posé sur chaque widget de l'Accueil au choix « Cadre » (HomeCard.framed) ; @null = pas de cadre, la tuile seule.
+         Instrument et Instrument nuit seulement. -->
+    <attr name="c_home_card_frame" format="reference" />
     <attr name="c_block_radius" format="dimension" />
     <!-- Console de l'onglet Son du deck (plaque unie, afficheurs, curseurs, LED) : ui/mixer/. -->
     <attr name="c_mx_plate" format="color" />
