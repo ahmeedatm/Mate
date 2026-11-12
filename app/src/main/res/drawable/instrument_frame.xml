@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- Cadre de console de salon (choix « Cadre », HomeCard), Instrument et Instrument nuit : coque de plastique (c_stroke) de 9 dp
-     posée sur la tuile, arête claire en haut (c_mx_highlight), liseré foncé autour de l'écran, ouïes sur les côtés, plaque « MATE »
-     et voyant discret en bas. Encre c_on_signal : la fenêtre LCD (Lcd.*) ne la redéfinit pas, le cadre reste le même sur les
+     posée sur la tuile, arête claire en haut (c_mx_highlight), liseré foncé autour de l'écran, ouïes sur les côtés et
+     petit voyant rouge en bas, sans écriture. Encre c_on_signal : la fenêtre LCD (Lcd.*) ne la redéfinit pas, le cadre reste le même sur les
      afficheurs. Vecteurs seulement. -->
 <layer-list xmlns:android="http://schemas.android.com/apk/res/android">
     <item><shape android:shape="rectangle"><stroke android:width="9dp" android:color="?attr/c_stroke" /><corners android:radius="12dp" /></shape></item>
@@ -9,6 +9,5 @@
     <item android:bottom="7dp" android:left="7dp" android:right="7dp" android:top="7dp"><shape android:shape="rectangle"><stroke android:width="2dp" android:color="?attr/c_on_signal" /><corners android:radius="5dp" /></shape></item>
     <item android:drawable="@drawable/instrument_frame_vents" android:gravity="left|center_vertical" android:left="1dp" />
     <item android:drawable="@drawable/instrument_frame_vents" android:gravity="right|center_vertical" android:right="1dp" />
-    <item android:drawable="@drawable/instrument_frame_plate" android:gravity="bottom|left" android:left="16dp" />
     <item android:gravity="bottom|right" android:width="4dp" android:height="4dp" android:bottom="3dp" android:right="18dp"><shape android:shape="oval"><solid android:color="@color/instrument_frame_led" /></shape></item>
 </layer-list>

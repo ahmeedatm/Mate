@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Voyant du cadre de console : discret, le ton signal à demi éteint. -->
+<!-- Voyant du cadre de console : discret, petit point rouge (c_hue_red) un peu éteint. -->
 <selector xmlns:android="http://schemas.android.com/apk/res/android">
-    <item android:alpha="0.55" android:color="?attr/c_signal" />
+    <item android:alpha="0.85" android:color="?attr/c_hue_red" />
 </selector>
