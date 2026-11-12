@@ -22,11 +22,15 @@ import app.mate.net.ComputerWindow
 import app.mate.net.OpenApp
 import app.mate.net.OpenWindows
 import app.mate.net.WindowsApi
+import app.mate.ui.home.KeyCaps
+import app.mate.ui.home.TileGridView
+import app.mate.ui.home.WindowCapViews
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
+import java.util.Locale
 
 /**
  * Vue « Ouvertes » du deck : toutes les applis ouvertes sur l'ordinateur, chaque fenêtre dans le schéma de son écran
@@ -40,13 +44,18 @@ import kotlinx.coroutines.launch
 class OpenWindowsView @JvmOverloads constructor(
     context: Context,
     attrs: AttributeSet? = null,
+    /** Thème Instrument, posé par le widget de l'Accueil seulement (jamais par l'onglet Ouvertes du Deck) : capuchons à DEL, LCD par écran. */
+    private val instrument: Boolean = false,
 ) : LinearLayout(context, attrs) {
 
     private class Drag(val app: OpenApp, val window: ComputerWindow)
 
-    private val map = ScreenMap(context).apply { stretch = true }
+    private val map = ScreenMap(context).apply {
+        stretch = true
+        instrument = this@OpenWindowsView.instrument
+    }
     /** Corbeille sur le bas des écrans pendant un glisser (y garder une fenêtre la ferme). */
-    private val trash = TrashZone(context) { payload -> (payload as? Drag)?.let(::close) }
+    private val trash = TrashZone(context, instrument) { payload -> (payload as? Drag)?.let(::close) }
     private val pagesBar = HorizontalScrollView(context)
     private val pagesList = LinearLayout(context)
     private val elsewhere = HorizontalScrollView(context)
@@ -234,17 +243,37 @@ class OpenWindowsView @JvmOverloads constructor(
         val windows = data.apps.sortedBy { it.name.lowercase() }.flatMap { a -> a.windows.sortedBy { it.title.lowercase() }.map { a to it } }
         // Fenêtres en plein écran : dans la bande des pages, pas sur les écrans.
         val onScreens = windows.filter { it.second.page == null }
-        map.setScreens(data.displays) { d -> onScreens.filter { it.second.display == d.id }.map { (a, w) -> card(a, w) } }
+        map.setScreens(data.displays) { d -> onScreens.filter { it.second.display == d.id }.mapIndexed { i, (a, w) -> card(a, w, number = i) } }
         renderPages(data, windows)
         val away = onScreens.filter { (_, w) -> data.displays.none { it.id == w.display } }
         elsewhereList.removeAllViews()
-        away.forEach { (a, w) ->
-            elsewhereList.addView(card(a, w), LayoutParams(dp(240), LayoutParams.WRAP_CONTENT).apply { marginEnd = dp(8) })
+        away.forEachIndexed { i, (a, w) ->
+            val size = if (instrument) LayoutParams(dp(ELSEWHERE_CAP_DP), dp(KeyCaps.CELL_DP)) else LayoutParams(dp(240), LayoutParams.WRAP_CONTENT)
+            elsewhereList.addView(card(a, w, number = i), size.apply { marginEnd = dp(8) })
         }
         elsewhere.visibility = if (away.isEmpty()) GONE else VISIBLE
     }
 
-    private fun card(app: OpenApp, w: ComputerWindow): View {
+    /** `cap` : capuchon d'Instrument, numéroté [number] dans son écran ; la bande des pages garde ses tuiles ordinaires. */
+    private fun card(app: OpenApp, w: ComputerWindow, cap: Boolean = instrument, number: Int = 0): View {
+        val card = if (cap) capCard(app, w, number) else plainCard(app, w)
+        return gestures(card, app, w)
+    }
+
+    private fun capCard(app: OpenApp, w: ComputerWindow, number: Int): View {
+        val title = w.title.ifBlank { context.getString(R.string.windows_untitled) }
+        val description = context.getString(R.string.widget_open_row_desc, app.name, title)
+        val lit = w.front && !w.minimized
+        val card = WindowCapViews.inflate(context)
+        WindowCapViews.bind(
+            card, KeyCaps.number(number), app, title.uppercase(Locale.FRENCH), lit,
+            if (lit) context.getString(R.string.widget_open_front_desc, description) else description, scope.takeUnless { sample },
+        )
+        if (pending == app.key to w) card.alpha = PENDING_ALPHA
+        return card
+    }
+
+    private fun plainCard(app: OpenApp, w: ComputerWindow): View {
         val card = LayoutInflater.from(context).inflate(R.layout.item_open_window, this, false)
         val icon = card.findViewById<ImageView>(R.id.open_icon)
         fun showIcon(bitmap: android.graphics.Bitmap) {
@@ -270,8 +299,16 @@ class OpenWindowsView @JvmOverloads constructor(
             card.setBackgroundResource(R.drawable.page_bg)
             card.isSelected = page.current
         }
+        return card
+    }
+
+    /** Les gestes d'une fenêtre, sur son capuchon ou sa carte : toucher, double, triple, glisser sur un écran. */
+    private fun gestures(card: View, app: OpenApp, w: ComputerWindow): View {
+        val page = w.page?.let { id -> shown?.pages?.firstOrNull { it.id == id } }
+        val caps = card.findViewById<View>(R.id.key_cap) != null
         card.dragToScreens(
             Drag(app, w), canDrag = { true }, onDragStarted = { dragged = it },
+            onPressed = { pressed -> if (caps) TileGridView.press(card, pressed) },
             onDoubleTap = {
                 card.performHapticFeedback(HapticFeedbackConstants.VIRTUAL_KEY)
                 // Sortir du plein écran rend aussi sa taille d'avant.
@@ -319,7 +356,7 @@ class OpenWindowsView @JvmOverloads constructor(
         data.pages.forEach { page ->
             val owner = windows.firstOrNull { it.second.page == page.id }
             val tile = if (owner != null) {
-                card(owner.first, owner.second)
+                card(owner.first, owner.second, cap = false)
             } else {
                 val desktops = data.pages.filter { !it.fullscreen && it.display == page.display }
                 val name = when {
@@ -345,7 +382,7 @@ class OpenWindowsView @JvmOverloads constructor(
 
     /** Tuile étroite : sans sous-titre, le nom seul tient. */
     private fun fit(tile: View, tileWidth: Int) = tile.apply {
-        if (tileWidth < dp(150)) findViewById<View>(R.id.open_title).visibility = GONE
+        if (tileWidth < dp(150)) findViewById<View>(R.id.open_title)?.visibility = GONE
     }
 
     private fun pageTile(icon: Int, name: String, hint: String): View {
@@ -443,5 +480,6 @@ class OpenWindowsView @JvmOverloads constructor(
         const val PENDING_ALPHA = 0.55f
         const val IDLE_ALPHA = 0.6f
         const val NEW_PAGE = -1
+        const val ELSEWHERE_CAP_DP = 130
     }
 }

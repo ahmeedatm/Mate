@@ -3,7 +3,9 @@ package app.mate.ui.home
 import android.content.Context
 import android.view.View
 import android.view.ViewGroup
+import app.mate.R
 import app.mate.ui.OpenWindowsView
+import app.mate.ui.themeRes
 
 /**
  * Les fenêtres de l'ordinateur sur un profil, comme l'onglet Ouvertes du Deck. En Bloc, Grand et Plein écran, les
@@ -16,6 +18,9 @@ class OpenWindowsWidget(context: Context, host: HomeHost, placed: Placed) : Home
     private var compact = OpenWindowsSummary.compact(family)
     private var active = false
     private var sample = false
+
+    /** Thème Instrument (fenêtre LCD) : le « patch de régie », des capuchons à DEL à la place des cartes. Le Deck ne le pose jamais. */
+    private val instrument = KeyCaps.applies(themeRes(context, R.attr.c_lcd_overlay))
 
     /** Créées à la demande : la vue des écrans ne sert qu'aux grandes formes, le résumé qu'aux petites. */
     private var screens: OpenWindowsView? = null
@@ -38,12 +43,12 @@ class OpenWindowsWidget(context: Context, host: HomeHost, placed: Placed) : Home
         val shown: View = if (compact) {
             // Le résumé dépend de la famille (Pastille, Ligne, Colonne) : refait à chaque changement de forme.
             // La liste déjà lue passe à la nouvelle forme : pas de « Lecture… » ni de relecture en plus.
-            OpenWindowsCompact(context, host.scope, family, summary?.data).apply {
+            OpenWindowsCompact(context, host.scope, family, summary?.data, instrument).apply {
                 if (sample) showSample(OpenWindowsSample.data(context))
                 summary = this
             }
         } else {
-            (screens ?: OpenWindowsView(context).apply { attach(host.scope) }.also { screens = it }).apply { if (sample) showSample(OpenWindowsSample.data(context)) }
+            (screens ?: OpenWindowsView(context, instrument = instrument).apply { attach(host.scope) }.also { screens = it }).apply { if (sample) showSample(OpenWindowsSample.data(context)) }
         }
         view.addView(shown, ViewGroup.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT))
         if (active) setActive(true)

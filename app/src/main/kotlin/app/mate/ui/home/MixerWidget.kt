@@ -30,6 +30,7 @@ import app.mate.ui.mixer.MixerView
 import app.mate.ui.showImmersive
 import app.mate.ui.themeColor
 import app.mate.ui.themeFont
+import app.mate.ui.themeRes
 import java.util.UUID
 
 /**
@@ -42,7 +43,11 @@ import java.util.UUID
  * masquées par un appui long sur leur voie (`MixerHidden`, communes à toutes les tables de l'ordinateur).
  */
 class MixerWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidget(context, host, placed) {
+    /** Thème Instrument (fenêtre LCD) : tranches à faders et scènes en touches-capuchons ; les autres thèmes gardent la console. */
+    private val caps = KeyCaps.applies(themeRes(context, R.attr.c_lcd_overlay))
+
     private val mixer = MixerView(context).apply {
+        instrument = caps
         attach(host.scope)
         appFilter = { state -> MixerApps.channels(chosen(), state.apps, state.front, hiddenIds()) }
         groupMembers = { id -> MixerApps.membersOf(chosen(), id, liveApps, frontApp, hiddenIds()) }
@@ -66,6 +71,8 @@ class MixerWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidget
         mixer.channelFilter = if (all) null else { channels -> channels.filter { it.id == "master" } }
         mixer.stripsShown = family != ShapeFamily.ROW
         mixer.scenesShown = family != ShapeFamily.PILL
+        // Instrument : à 3 rangées ou plus, les scènes passent sous les voies (maquette A).
+        mixer.scenesBelow = caps && placed.size.h >= SCENES_BELOW_ROWS
         // L'état déjà reçu (ou l'exemple du catalogue) suit tout de suite les nouvelles voies.
         mixer.refreshApps()
     }
@@ -310,6 +317,7 @@ class MixerWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidget
 
     private companion object {
         const val DRAGGED_ALPHA = 0.35f
+        const val SCENES_BELOW_ROWS = 3
         const val GROUP_KEY_LENGTH = 8
         const val GROUP_NAME_MAX = 30
     }

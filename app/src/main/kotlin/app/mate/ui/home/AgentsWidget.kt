@@ -18,6 +18,8 @@ import app.mate.ui.AgentsView
 import app.mate.ui.errorText
 import app.mate.ui.stateColor
 import app.mate.ui.stateLabel
+import app.mate.ui.themeFont
+import app.mate.ui.themeRes
 import java.util.Locale
 
 /**
@@ -28,10 +30,12 @@ import java.util.Locale
  * balayage ; sur 2 lignes seulement il se resserre (`compact`). Relu tant que la page de l'Accueil est à l'écran.
  */
 class AgentsWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidget(context, host, placed) {
+    /** Thème à fenêtre LCD (Instrument) : compteurs sur écran LCD, états par DEL, chiffres en Departure Mono (#243). Les autres thèmes gardent leur rendu. */
+    private val instrument = KeyCaps.applies(themeRes(context, R.attr.c_lcd_overlay))
     private val counters = LinearLayout(context)
     private val list = LinearLayout(context).apply { orientation = LinearLayout.VERTICAL }
     private val note = label(14f, R.attr.c_text_dim)
-    private val board = AgentsView(context).apply { attach(host.owner) }
+    private val board = AgentsView(context, instrument = instrument).apply { attach(host.owner) }
     private var observer: ((AgentsFeed.Snapshot) -> Unit)? = null
     private var last: AgentsFeed.Snapshot? = null
     private var active = false
@@ -43,13 +47,21 @@ class AgentsWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidge
     private val summary = LinearLayout(context).apply {
         orientation = LinearLayout.VERTICAL
         addView(cardTitle(R.string.agents_title))
-        addView(counters, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT).apply { topMargin = dp(8) })
+        val countersView = if (instrument) {
+            LcdPanel(context).apply {
+                setPadding(dp(10), dp(8), dp(10), dp(8))
+                addView(counters, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT))
+            }
+        } else {
+            counters
+        }
+        addView(countersView, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT).apply { topMargin = dp(8) })
         addView(list, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, 0, 1f).apply { topMargin = dp(8) })
         addView(note)
     }
 
     /** Pastille (1 × 1) : le nombre de sessions qui attendent, comme les autres widgets Dev ([DevGlanceView]). */
-    private val pill = DevGlanceView(context, R.string.agents_title)
+    private val pill = DevGlanceView(context, R.string.agents_title, digits = instrument)
 
     private val full get() = placed.size.w >= 3 && family != ShapeFamily.ROW
     private val small get() = family == ShapeFamily.PILL
@@ -141,7 +153,7 @@ class AgentsWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidge
             list.addView(
                 LinearLayout(context).apply {
                     gravity = Gravity.CENTER_VERTICAL
-                    addView(app.mate.ui.AgentStatusIcon(context).apply { bind(s.state, s.monitoring) }, LinearLayout.LayoutParams(dp(16), dp(16)))
+                    addView(app.mate.ui.AgentStatusIcon(context).apply { if (instrument) asLed(); bind(s.state, s.monitoring) }, LinearLayout.LayoutParams(dp(16), dp(16)))
                     addView(
                         label(15f).apply { text = sessionTitle(s, Prefs.agentsPrivate(context)); maxLines = 1; ellipsize = android.text.TextUtils.TruncateAt.END },
                         LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f).apply { marginStart = dp(10) },
@@ -153,7 +165,7 @@ class AgentsWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidge
         }
         state.quota?.let { q ->
             fun pct(w: app.mate.net.QuotaWindow?) = w?.let { context.getString(R.string.agent_quota_value, it.used) } ?: "?"
-            list.addView(label(13f, R.attr.c_text_dim).apply { text = context.getString(R.string.agent_quota_line, pct(q.fiveHour), pct(q.sevenDay)) }, LinearLayout.LayoutParams(-2, -2).apply { topMargin = dp(10) })
+            list.addView(label(13f, R.attr.c_text_dim).apply { text = context.getString(R.string.agent_quota_line, pct(q.fiveHour), pct(q.sevenDay)); if (instrument) typeface = themeFont(context, R.attr.c_font_display) }, LinearLayout.LayoutParams(-2, -2).apply { topMargin = dp(10) })
         }
         val more = state.sessions.count { it.state != AgentState.IDLE } - shown.size
         if (more > 0) {
@@ -173,19 +185,31 @@ class AgentsWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidge
             LinearLayout(context).apply {
                 orientation = LinearLayout.HORIZONTAL
                 gravity = Gravity.CENTER_VERTICAL
-                addView(AgentStatusIcon(context).apply { bind(if (n == 0) AgentState.IDLE else kind, monitoring) }, LinearLayout.LayoutParams(dp(16), dp(16)))
                 addView(
-                    TextView(context).apply {
+                    AgentStatusIcon(context).apply {
+                        if (instrument) asLed(R.attr.c_mx_led_off)
+                        bind(if (n == 0) AgentState.IDLE else kind, monitoring)
+                    },
+                    LinearLayout.LayoutParams(dp(16), dp(16)),
+                )
+                val size = if (listRows > 0 && !vertical) 26f else 20f
+                addView(
+                    (if (instrument) lcdText(context, size) else TextView(context).apply { textSize = size; setTextColor(color) }).apply {
                         this.text = String.format(Locale.getDefault(), "%d", n)
-                        textSize = if (listRows > 0 && !vertical) 26f else 20f
-                        setTextColor(color)
                     },
                     LinearLayout.LayoutParams(-2, -2).apply { marginStart = dp(6) },
                 )
                 if (placed.size != WidgetSize.M) {
+                    val labelSize = if (vertical) 12f else 13f
                     addView(
-                        label(if (vertical) 12f else 13f, R.attr.c_text_dim).apply { this.text = context.resources.getQuantityString(text, n) },
-                        LinearLayout.LayoutParams(-2, -2).apply { marginStart = dp(6) },
+                        (if (instrument) lcdText(context, labelSize) else label(labelSize, R.attr.c_text_dim)).apply {
+                            this.text = context.resources.getQuantityString(text, n)
+                            if (instrument) {
+                                maxLines = 1
+                                ellipsize = android.text.TextUtils.TruncateAt.END
+                            }
+                        },
+                        if (instrument) LinearLayout.LayoutParams(0, -2, 1f).apply { marginStart = dp(6) } else LinearLayout.LayoutParams(-2, -2).apply { marginStart = dp(6) },
                     )
                 }
             },

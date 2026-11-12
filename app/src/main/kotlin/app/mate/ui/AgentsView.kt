@@ -36,6 +36,7 @@ import app.mate.net.AgentSession
 import app.mate.net.AgentState
 import app.mate.net.AgentsState
 import app.mate.net.BackendClient
+import app.mate.ui.home.lcdText
 import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
 import java.util.Date
@@ -87,7 +88,12 @@ fun dot(context: Context, state: AgentState): GradientDrawable =
  * [compact] : place comptée (widget de 2 lignes) : usage Claude sur une ligne, sans l'astuce du bas, pour laisser la
  * place aux cartes. Sans lecture (ordinateur injoignable, Windows), aucune colonne : le message seul, au milieu.
  */
-class AgentsView @JvmOverloads constructor(context: Context, attrs: AttributeSet? = null) : LinearLayout(context, attrs) {
+class AgentsView @JvmOverloads constructor(
+    context: Context,
+    attrs: AttributeSet? = null,
+    /** Habillage Instrument (widget de l'Accueil dans un thème à fenêtre LCD) : en-têtes sur écran LCD, états par DEL, chiffres en Departure Mono. */
+    private val instrument: Boolean = false,
+) : LinearLayout(context, attrs) {
 
     private val quota = LinearLayout(context)
     private val board = LinearLayout(context)
@@ -160,9 +166,17 @@ class AgentsView @JvmOverloads constructor(context: Context, attrs: AttributeSet
         board.orientation = HORIZONTAL
         for ((i, column) in Column.entries.withIndex()) {
             val cards = LinearLayout(context).apply { orientation = VERTICAL }
-            val header = TextView(context).apply {
-                textSize = 16f
-                typeface = themeFont(context, R.attr.c_font_medium)
+            val header = (if (instrument) lcdText(context, 14f) else TextView(context)).apply {
+                if (instrument) {
+                    background = GradientDrawable().apply {
+                        setColor(themeColor(context, R.attr.c_mx_lcd_bg))
+                        cornerRadius = dp(8).toFloat()
+                    }
+                    setPadding(dp(8), dp(4), dp(8), dp(4))
+                } else {
+                    textSize = 16f
+                    typeface = themeFont(context, R.attr.c_font_medium)
+                }
                 gravity = Gravity.CENTER_VERTICAL
                 compoundDrawablePadding = dp(8)
                 // Colonne étroite (widget de 3 cases) : le titre se coupe, il ne sort pas de la colonne.
@@ -176,7 +190,7 @@ class AgentsView @JvmOverloads constructor(context: Context, attrs: AttributeSet
                     orientation = VERTICAL
                     addView(LinearLayout(context).apply {
                         gravity = Gravity.CENTER_VERTICAL
-                        addView(AgentStatusIcon(context).apply { tag = column }, LayoutParams(dp(18), dp(18)))
+                        addView(AgentStatusIcon(context).apply { tag = column; if (instrument) asLed() }, LayoutParams(dp(18), dp(18)))
                         addView(header, LayoutParams(0, LayoutParams.WRAP_CONTENT, 1f).apply { marginStart = dp(8) })
                     }, LayoutParams(LayoutParams.MATCH_PARENT, dp(36)))
                     addView(
@@ -210,7 +224,7 @@ class AgentsView @JvmOverloads constructor(context: Context, attrs: AttributeSet
             }
             headers[column]?.apply {
                 text = context.getString(R.string.agent_col_header, context.getString(label), n)
-                setTextColor(color)
+                if (!instrument) setTextColor(color)
             }
             board.findViewWithTag<AgentStatusIcon>(column)?.bind(if (n == 0) AgentState.IDLE else state, monitoring)
         }
@@ -310,7 +324,11 @@ class AgentsView @JvmOverloads constructor(context: Context, attrs: AttributeSet
         if (age(ms) == Age.Now) context.getString(R.string.agent_worked_short) else context.getString(R.string.agent_worked, ageLabel(context, ms))
 
     private fun bind(row: View, s: AgentSession) {
-        row.findViewById<AgentStatusIcon>(R.id.agent_status_icon).bind(s.state, s.monitoring)
+        row.findViewById<AgentStatusIcon>(R.id.agent_status_icon).apply {
+            if (instrument) asLed()
+            bind(s.state, s.monitoring)
+        }
+        if (instrument) row.findViewById<TextView>(R.id.agent_age).typeface = themeFont(context, R.attr.c_font_display)
         row.findViewById<TextView>(R.id.agent_name).text = sessionTitle(s, Prefs.agentsPrivate(context))
         row.findViewById<TextView>(R.id.agent_where).text = listOfNotNull(
             context.getString(R.string.agent_kind_claude),
@@ -417,7 +435,8 @@ class AgentsView @JvmOverloads constructor(context: Context, attrs: AttributeSet
             TextView(context).apply {
                 setText(R.string.agent_quota_title)
                 textSize = 15f
-                typeface = themeFont(context, R.attr.c_font_medium)
+                typeface = themeFont(context, if (instrument) R.attr.c_font_label else R.attr.c_font_medium)
+                isAllCaps = instrument && themeBool(context, R.attr.c_label_caps)
                 setTextColor(themeColor(context, R.attr.c_text))
                 // Icône neutre, jamais le logo d'Anthropic (marque déposée, pas de licence pour un produit vendu).
                 setCompoundDrawablesRelativeWithIntrinsicBounds(R.drawable.ic_agents, 0, 0, 0)
@@ -461,6 +480,7 @@ class AgentsView @JvmOverloads constructor(context: Context, attrs: AttributeSet
                         TextView(context).apply {
                             setText(label)
                             textSize = 14f
+                            if (instrument) typeface = themeFont(context, R.attr.c_font_display)
                             setTextColor(dim)
                         },
                         LayoutParams(0, LayoutParams.WRAP_CONTENT, 1f),

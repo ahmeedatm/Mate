@@ -30,6 +30,7 @@ import app.mate.ui.home.HomeCard
 import app.mate.ui.themeBool
 import app.mate.ui.themeColor
 import app.mate.ui.themeFont
+import java.util.Locale
 import kotlin.math.abs
 import kotlin.math.max
 
@@ -49,8 +50,11 @@ import kotlin.math.max
  * Le curseur se saisit sans sauter : glisser n'importe où dans sa colonne le déplace d'autant (pas de saut de
  * volume en touchant la piste). Un glisser de côté laisse défiler la console. Toucher le volume (« 35 % ») ouvre le pavé
  * numérique ([onValue]) ; un appui long hors du curseur et de Muet ouvre [onLongPress] (« Ne plus afficher »).
+ *
+ * `instrument` (widget Mixage d'un thème Instrument, jamais l'onglet Son) : même toucher, autre dessin, celui de
+ * [FaderInstrument] ; la géométrie est celle de [layoutInstrument].
  */
-class FaderStrip(context: Context) : View(context) {
+class FaderStrip(context: Context, private val instrument: Boolean = false) : View(context) {
 
     /** Volume choisi en glissant ; `final` au lâcher. */
     var onVolume: ((volume: Int, final: Boolean) -> Unit)? = null
@@ -82,9 +86,13 @@ class FaderStrip(context: Context) : View(context) {
         set(value) {
             if (field == value) return
             field = value
+            shownTitle = if (instrument) value.uppercase(Locale.FRENCH) else value
             describe()
             invalidate()
         }
+
+    /** Nom dessiné : en capitales sur l'afficheur d'Instrument, calculé au changement plutôt qu'à chaque image du vumètre. */
+    private var shownTitle = ""
 
     /** Appli choisie sans son en ce moment (MixerApps) : « pas de son » à la place du volume, rien à piloter. */
     var silent = false
@@ -167,6 +175,7 @@ class FaderStrip(context: Context) : View(context) {
     private var heldAt = 0L
     private var lastFrame = 0L
 
+    private val ins = if (instrument) FaderInstrument(context) else null
     private val paint = Paint(Paint.ANTI_ALIAS_FLAG)
     private val text = TextPaint(Paint.ANTI_ALIAS_FLAG)
 
@@ -197,6 +206,8 @@ class FaderStrip(context: Context) : View(context) {
     private var travelBottom = 0f
     private var meterX = 0f
     private var cap: Bitmap? = null
+    private var thumbW = 0f
+    private var thumbH = 0f
 
     // Couleurs du thème (palettes.xml, tirées des tons de Console).
     private val cText = themeColor(context, R.attr.c_mx_text)
@@ -247,8 +258,9 @@ class FaderStrip(context: Context) : View(context) {
     /** Niveau 0-100 relu de l'ordinateur, null s'il ne le donne pas. */
     fun setLevel(level: Int?) {
         metered = level != null
-        targetLeds = MixerMath.ledsLit(level ?: 0, LEDS)
         val now = SystemClock.uptimeMillis()
+        if (instrument) return setInstrumentLevel(level, now)
+        targetLeds = MixerMath.ledsLit(level ?: 0, LEDS)
         // Réduire les animations : le vumètre saute au niveau lu, sans retombée animée.
         if (targetLeds >= shownLeds || Look.still(context)) {
             shownLeds = targetLeds.toFloat()
@@ -258,8 +270,28 @@ class FaderStrip(context: Context) : View(context) {
         invalidate()
     }
 
+    /** Instrument : le vumètre monte en 120 ms et retombe en 300 ms ([MixerMath.meterStep]) ; saut direct si animations réduites. */
+    private fun setInstrumentLevel(level: Int?, now: Long) {
+        targetLeds = MixerMath.ledsLit(level ?: 0, SEGMENTS)
+        if (Look.still(context)) shownLeds = targetLeds.toFloat() else if (lastFrame == 0L) lastFrame = now
+        invalidate()
+    }
+
+    /** Avance le vumètre d'Instrument ; ne rejoue une image que tant qu'il n'a pas atteint sa cible (rien en boucle ensuite). */
+    private fun advanceInstrumentMeter() {
+        val now = SystemClock.uptimeMillis()
+        shownLeds = MixerMath.meterStep(shownLeds, targetLeds, if (lastFrame == 0L) 0 else now - lastFrame, SEGMENTS)
+        if (shownLeds == targetLeds.toFloat()) {
+            lastFrame = 0L
+        } else {
+            lastFrame = now
+            postInvalidateOnAnimation()
+        }
+    }
+
     override fun onSizeChanged(w: Int, h: Int, oldw: Int, oldh: Int) {
         tight = h < dp(TIGHT_DP)
+        if (instrument) return layoutInstrument(w, h)
         if (bare) return layoutBare(w, h)
         capH = dp(if (tight) 24 else 34).toFloat()
         valueX = w / 2f
@@ -288,6 +320,36 @@ class FaderStrip(context: Context) : View(context) {
         travelBottom = faderArea.bottom - capH / 2
         ledH = (faderArea.height() + ledGap) / LEDS - ledGap
         cap = buildCap()
+    }
+
+    /**
+     * Instrument : afficheur du nom en haut, rail, curseur à capuchon et vumètre au milieu, volume sous le curseur, touche
+     * Muet en bas (serré : volume et Muet côte à côte). Mêmes zones logiques que les autres styles : `lcd`, `faderArea`,
+     * `muteBox` et `valueY`, le toucher n'a pas changé.
+     */
+    private fun layoutInstrument(w: Int, h: Int) {
+        val side = dp(6).toFloat()
+        val key = dp(if (tight) KEY_TIGHT_DP else KEY_DP).toFloat()
+        valueX = w / 2f
+        thumbW = dp(30).toFloat()
+        thumbH = dp(if (tight) 18 else 22).toFloat()
+        if (tight) {
+            lcd.set(side, dp(4).toFloat(), w - side, dp(26).toFloat())
+            muteBox.set(w / 2f + dp(2), h - dp(4) - key, w - side, h - dp(4).toFloat())
+            valueX = (side + w / 2f) / 2
+            valueY = ins?.valueBaseline(muteBox.centerY()) ?: 0f
+            faderArea.set(0f, lcd.bottom + dp(6), w.toFloat(), muteBox.top - dp(4))
+        } else {
+            lcd.set(side, dp(8).toFloat(), w - side, dp(36).toFloat())
+            muteBox.set(side + dp(2), h - dp(8) - key, w - side - dp(2), h - dp(8).toFloat())
+            valueY = muteBox.top - dp(12)
+            faderArea.set(0f, lcd.bottom + dp(10), w.toFloat(), valueY - dp(24))
+        }
+        val group = thumbW + dp(6) + dp(8)
+        cx = w / 2f - group / 2 + thumbW / 2
+        meterX = cx + thumbW / 2 + dp(6)
+        travelTop = faderArea.top + thumbH / 2
+        travelBottom = faderArea.bottom - thumbH / 2
     }
 
     /** Table nue : icône (et sa zone Muet) puis nom en haut, rail et vumètre au milieu, volume en bas. */
@@ -338,6 +400,7 @@ class FaderStrip(context: Context) : View(context) {
     override fun onDraw(canvas: Canvas) {
         val w = width.toFloat()
         val h = height.toFloat()
+        if (instrument) return drawInstrument(canvas)
 
         // Filet entre deux tranches (ton plus sombre puis plus clair : une rainure) et vis du module. Table nue (Hush) :
         // ni vis ni filet après la dernière tranche, le trait ne sert qu'à séparer deux voies.
@@ -398,6 +461,28 @@ class FaderStrip(context: Context) : View(context) {
 
         drawValue(canvas, v)
         drawMute(canvas)
+    }
+
+    /** Instrument : afficheur du nom, rail, vumètre, curseur, volume et touche Muet ([FaderInstrument]). */
+    private fun drawInstrument(canvas: Canvas) {
+        val ins = ins ?: return
+        ins.drawLcd(canvas, lcd)
+        text.typeface = ins.display
+        text.color = ins.lcdText
+        text.textSize = sp(if (tight) 10f else 11f)
+        drawName(canvas, lcd.width() - dp(8), lcd.centerX(), lcd.centerY(), centered = true)
+        ins.drawRail(canvas, cx, travelTop, travelBottom)
+        advanceInstrumentMeter()
+        ins.drawMeter(canvas, meterX, travelTop - thumbH / 2, travelBottom + thumbH / 2, shownLeds.toInt(), SEGMENTS, metered)
+        val v = volume
+        ins.drawThumb(canvas, cx, capY(v ?: 0), thumbW, thumbH, enabled = v != null)
+        val shown = when {
+            v != null -> "$v%"
+            silent -> context.getString(R.string.mixer_no_sound)
+            else -> "—"
+        }
+        ins.drawValue(canvas, shown, valueX, valueY, muted, small = silent, tight = tight)
+        ins.drawKey(canvas, muteBox, muted, pressingMute, context.getString(if (muted) R.string.mixer_key_muted else R.string.mixer_key_mute))
     }
 
     /** Volume en gros, chiffres fins (comme les valeurs de l'Accueil). */
@@ -570,7 +655,7 @@ class FaderStrip(context: Context) : View(context) {
      */
     private fun drawName(canvas: Canvas, room: Float, x: Float, centerY: Float, centered: Boolean) {
         val caret = if (onTitle != null) dp(CARET_DP + CARET_GAP_DP).toFloat() else 0f
-        val name = TextUtils.ellipsize(title, text, room - caret, TextUtils.TruncateAt.END).toString()
+        val name = TextUtils.ellipsize(shownTitle, text, room - caret, TextUtils.TruncateAt.END).toString()
         val width = text.measureText(name)
         val left = if (centered) x - (width + caret) / 2 else x
         text.textAlign = Paint.Align.LEFT
@@ -792,6 +877,13 @@ class FaderStrip(context: Context) : View(context) {
 
     companion object {
         private const val LEDS = 24
+
+        /** Instrument : segments du vumètre, et hauteur de la touche Muet (dp, socle compris : ≥ 48 au toucher). */
+        private const val SEGMENTS = 16
+        private const val KEY_DP = 52
+
+        /** Serré (Pastille, Colonne) : touche Muet plus basse, le curseur garde de la course (36 dp avant Instrument). */
+        private const val KEY_TIGHT_DP = 44
         private const val SHADOW_RADIUS_PX = 6f
         private const val SILENT_SP = 16f
 

@@ -60,4 +60,29 @@ class MixerMathTest {
         assertEquals(null, MixerMath.typedVolume(""))
         assertEquals(null, MixerMath.typedVolume("3,5"))
     }
+
+    @Test
+    fun `vumetre instrument monte en 120 ms et retombe en 300 ms`() {
+        // 24 LED : 0,2 LED/ms en montée, 0,08 LED/ms en descente.
+        assertEquals(12f, MixerMath.meterStep(0f, 24, 60, 24), 0.001f)
+        assertEquals(24f, MixerMath.meterStep(0f, 24, 120, 24), 0.001f)
+        assertEquals(10f, MixerMath.meterStep(20f, 0, 125, 24), 0.001f)
+        assertEquals(0f, MixerMath.meterStep(20f, 0, 300, 24), 0.001f)
+    }
+
+    @Test
+    fun `vumetre instrument ne depasse pas la cible et reste en place sans temps`() {
+        assertEquals(8f, MixerMath.meterStep(5f, 8, 1000, 24), 0.001f)
+        assertEquals(8f, MixerMath.meterStep(20f, 8, 1000, 24), 0.001f)
+        assertEquals(5f, MixerMath.meterStep(5f, 8, 0, 24), 0.001f)
+        assertEquals(5f, MixerMath.meterStep(5f, 8, -10, 24), 0.001f)
+        assertEquals(8f, MixerMath.meterStep(8f, 8, 50, 24), 0.001f)
+    }
+
+    @Test
+    fun `vumetre instrument avance aussi sur une image de 18 ms`() {
+        // 55 Hz : 16 LED × 18 ms / 300 ms = 0,96 LED en descente, 2,4 en montée (pas 0 ni 2 par division entière).
+        assertEquals(15.04f, MixerMath.meterStep(16f, 0, 18, 16), 0.001f)
+        assertEquals(2.4f, MixerMath.meterStep(0f, 16, 18, 16), 0.001f)
+    }
 }
