@@ -1,0 +1,95 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Une touche des widgets Touches et Applis en thème Instrument (KeyCaps) : la touche du dock en petit. Socle fixe, puis le
+     capuchon qui s'enfonce de 4 dp (appui, touche allumée) : numéro en haut à gauche, DEL en haut à droite, icône au trait et
+     nom en capitales. Les id tile_* sont ceux d'item_tile : TileGridView.bind et TileLook les retrouvent. -->
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:clipChildren="false">
+
+    <View
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:layout_marginTop="4dp"
+        android:background="@drawable/dock_key_base"
+        android:duplicateParentState="true"
+        android:importantForAccessibility="no" />
+
+    <FrameLayout
+        android:id="@+id/key_cap"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:layout_marginBottom="4dp"
+        android:background="@drawable/dock_key_cap"
+        android:duplicateParentState="true">
+
+        <TextView
+            android:id="@+id/key_number"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_gravity="top|start"
+            android:layout_marginStart="9dp"
+            android:layout_marginTop="5dp"
+            android:fontFamily="?attr/c_font_display"
+            android:importantForAccessibility="no"
+            android:textColor="?attr/c_text_dim"
+            android:textSize="11sp" />
+
+        <View
+            android:id="@+id/key_led"
+            android:layout_width="14dp"
+            android:layout_height="4dp"
+            android:layout_gravity="top|end"
+            android:layout_marginTop="9dp"
+            android:layout_marginEnd="9dp"
+            android:background="@drawable/dock_led"
+            android:duplicateParentState="true"
+            android:importantForAccessibility="no" />
+
+        <LinearLayout
+            android:id="@+id/key_face"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:gravity="center"
+            android:orientation="vertical"
+            android:paddingStart="6dp"
+            android:paddingTop="18dp"
+            android:paddingEnd="6dp"
+            android:paddingBottom="4dp">
+
+            <FrameLayout
+                android:layout_width="26dp"
+                android:layout_height="26dp">
+
+                <ImageView
+                    android:id="@+id/tile_icon"
+                    android:layout_width="match_parent"
+                    android:layout_height="match_parent"
+                    android:importantForAccessibility="no" />
+
+                <TextView
+                    android:id="@+id/tile_initial"
+                    android:layout_width="match_parent"
+                    android:layout_height="match_parent"
+                    android:fontFamily="?attr/c_font_display"
+                    android:gravity="center"
+                    android:importantForAccessibility="no"
+                    android:textColor="?attr/c_text"
+                    android:textSize="20sp" />
+            </FrameLayout>
+
+            <TextView
+                android:id="@+id/tile_label"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="3dp"
+                android:ellipsize="end"
+                android:fontFamily="?attr/c_font_label"
+                android:gravity="center"
+                android:letterSpacing="0.06"
+                android:singleLine="true"
+                android:textColor="?attr/c_text_dim"
+                android:textSize="11sp" />
+        </LinearLayout>
+    </FrameLayout>
+</FrameLayout>

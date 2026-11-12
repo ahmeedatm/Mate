@@ -30,6 +30,7 @@ import app.mate.ui.ProgressRing
 import app.mate.ui.errorText
 import app.mate.ui.showImmersive
 import app.mate.ui.themeFont
+import app.mate.ui.themeRes
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
@@ -78,6 +79,8 @@ class PerfWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidget(
             override fun onViewDetachedFromWindow(v: View) = closePanel()
         })
     }
+
+    private val instrument = themeRes(context, R.attr.c_lcd_overlay) != 0
 
     private val history = PerfHistory()
     private var last: PcPerf? = null
@@ -166,11 +169,14 @@ class PerfWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidget(
         spark = null
         pill = null
         appsView = null
-        body.addView(when (perfLayout(placed.size)) {
-            PerfLayout.PILL -> pill()
-            PerfLayout.GAUGES -> gauges()
-            PerfLayout.BARS -> bars()
-            PerfLayout.FIGURES -> figures()
+        val layout = perfLayout(placed.size)
+        body.addView(when {
+            // Thème à fenêtre LCD (Instrument) : des cadrans à aiguille, la Pastille comprise.
+            instrument -> if (layout == PerfLayout.PILL) dialPill() else dials()
+            layout == PerfLayout.PILL -> pill()
+            layout == PerfLayout.GAUGES -> gauges()
+            layout == PerfLayout.BARS -> bars()
+            else -> figures()
         }, FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT))
         render()
     }
@@ -446,8 +452,8 @@ class PerfWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidget(
 
     // ---- Pastille : un seul anneau ----
 
-    /** La Pastille : son anneau, son chiffre et le nom de la mesure. */
-    private class Pill(val ring: ProgressRing, val value: TextView, val name: TextView)
+    /** La Pastille : de quoi remplir son anneau (ou son cadran), sa boîte, son chiffre et le nom de la mesure. */
+    private class Pill(val meter: (Float, Int) -> Unit, val box: View, val value: TextView, val name: TextView)
 
     private var pill: Pill? = null
 
@@ -459,7 +465,8 @@ class PerfWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidget(
             maxLines = 2
             ellipsize = TextUtils.TruncateAt.END
         }
-        pill = Pill(ring, value, name)
+        val box = FrameLayout(context)
+        pill = Pill({ fraction, tint -> ring.progress = fraction; ring.color = tint }, box, value, name)
         // Les trois relevés des autres formes ne sont pas montrés : la Pastille a son propre affichage (`showPill`).
         cpu = Reading(View(context), TextView(context), PerfSeries.CPU)
         gpu = Reading(View(context), TextView(context), PerfSeries.GPU)
@@ -471,7 +478,7 @@ class PerfWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidget(
             val size = figureInCircle(diameter / 2 - ProgressRing.strokeFor(diameter, minStroke) - dp(RING_INSET), natural(name).toFloat())
             value.fontPx(minOf(sp(MAX_PILL_SP), size))
         }
-        return FrameLayout(context).apply {
+        return box.apply {
             addView(ring, FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT))
             addView(LinearLayout(context).apply {
                 orientation = LinearLayout.VERTICAL
@@ -504,9 +511,113 @@ class PerfWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidget(
         val hog = apps?.any { it.warn != null } == true && !stale && error == null
         parts.name.setWarned(error ?: word, hog)
         parts.name.setTextColor(color(if (hog) R.attr.c_accent else R.attr.c_text_dim))
-        parts.ring.progress = reading.percent / 100f
-        parts.ring.color = color(perfColorAttr(reading.series, PerfMark.FILL, level, stale))
-        (parts.ring.parent as? View)?.contentDescription = context.getString(R.string.perf_pill_desc, word, reading.percent)
+        parts.meter(reading.percent / 100f, color(perfColorAttr(reading.series, PerfMark.FILL, level, stale)))
+        parts.box.contentDescription = context.getString(R.string.perf_pill_desc, word, reading.percent)
+    }
+
+    // ---- Thème Instrument : des cadrans à aiguille (variante C, #243) ----
+
+    /** Pastille d'Instrument : le cadran de la mesure la plus chargée, son chiffre en Departure Mono et son nom dessous. */
+    private fun dialPill(): View {
+        val face = PerfDialView(context)
+        val value = dialFigure()
+        val name = label(PILL_NAME_SP, R.attr.c_text_dim).apply {
+            gravity = Gravity.CENTER
+            maxLines = 1
+            ellipsize = TextUtils.TruncateAt.END
+        }
+        val box = LinearLayout(context).apply {
+            orientation = LinearLayout.VERTICAL
+            gravity = Gravity.CENTER
+            addView(face, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, 0, 1f))
+            addView(value, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT))
+            addView(name, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT))
+        }
+        pill = Pill({ fraction, tint -> face.set(fraction, tint) }, box, value, name)
+        cpu = Reading(View(context), TextView(context), PerfSeries.CPU)
+        gpu = Reading(View(context), TextView(context), PerfSeries.GPU)
+        ram = Reading(View(context), TextView(context), PerfSeries.RAM)
+        fitter = { height, width ->
+            showHeader(false)
+            value.fontPx(minOf(sp(MAX_PILL_SP), height * DIAL_FIGURE_SHARE, width / figureWidth / 1.2f))
+        }
+        return box
+    }
+
+    /**
+     * Les autres formes d'Instrument ([perfDialPlan]) : un cadran par mesure cochée, son chiffre et son nom dessous (la RAM
+     * en Go sous elle), les infos en texte dessous ou à droite en Ligne ; Grand et Plein écran ajoutent la courbe et la liste.
+     */
+    private fun dials(): View {
+        val plan = perfDialPlan(placed.size)
+        val row = LinearLayout(context).apply {
+            orientation = if (plan.stacked) LinearLayout.VERTICAL else LinearLayout.HORIZONTAL
+            gravity = Gravity.CENTER
+        }
+        val values = mutableListOf<TextView>()
+        fun dial(name: Int, series: PerfSeries, under: TextView?): Reading {
+            val face = PerfDialView(context)
+            val value = dialFigure()
+            val readout = LinearLayout(context).apply {
+                gravity = Gravity.CENTER
+                addView(value)
+                addView(caption(context.getString(name)), LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT).apply { marginStart = dp(6) })
+            }
+            val column = LinearLayout(context).apply {
+                orientation = LinearLayout.VERTICAL
+                gravity = Gravity.CENTER
+                addView(face, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, 0, 1f))
+                addView(readout, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT))
+                under?.let { addView(it.apply { gravity = Gravity.CENTER }, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT)) }
+            }
+            row.addView(
+                column,
+                if (plan.stacked) LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, 0, 1f).apply { if (row.childCount > 0) topMargin = dp(DIAL_GAP) }
+                else LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.MATCH_PARENT, 1f).apply { marginStart = dp(DIAL_GAP / 2); marginEnd = dp(DIAL_GAP / 2) },
+            )
+            values += value
+            return Reading(column, value, series) { fraction, tint -> face.set(fraction, tint) }
+        }
+        val gb = caption(" ", R.attr.c_text_faint).takeIf { !plan.stacked && !plan.extrasBeside }
+        ramGb = gb
+        // Une ligne de détail sous chaque cadran dès que la RAM en a une : les cadrans gardent le même rayon et la même base.
+        cpu = dial(R.string.perf_cpu, PerfSeries.CPU, gb?.let { caption(" ") })
+        gpu = dial(R.string.perf_gpu, PerfSeries.GPU, gb?.let { caption(" ") })
+        ram = dial(R.string.perf_ram, PerfSeries.RAM, gb)
+        val line = extrasView(14f, maxLines = if (plan.extrasBeside) 3 else 2)
+        if (!plan.extrasBeside) line.gravity = Gravity.CENTER
+        extras = line
+        val sparkline = PerfSparkline(context, history.capacity).takeIf { plan.curve }
+        spark = sparkline
+        val boxes = listOf(cpu.box, gpu.box, ram.box)
+        fitter = { height, width ->
+            showHeader(!plan.extrasBeside)
+            line.shown(line.text.isNotEmpty())
+            sparkline?.shown(curve)
+            val count = boxes.count { it.visibility != View.GONE }.coerceAtLeast(1)
+            val cell = if (plan.stacked) height / count else height
+            val across = if (plan.stacked) width else width / count
+            values.forEach { it.fontPx(minOf(sp(MAX_DIAL_SP), cell * DIAL_FIGURE_SHARE, across / figureWidth / 2.2f)) }
+        }
+        val dialsBox = LinearLayout(context).apply {
+            if (plan.extrasBeside) {
+                addView(row, LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.MATCH_PARENT, 1f))
+                addView(line.apply { gravity = Gravity.CENTER_VERTICAL }, LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.MATCH_PARENT).apply { marginStart = dp(CHIPS_START) })
+            } else {
+                orientation = LinearLayout.VERTICAL
+                addView(row, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, 0, 1f))
+                addView(line, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT).apply { topMargin = dp(CHIPS_GAP) })
+                sparkline?.let { addView(it, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, 0, CURVE_WEIGHT).apply { topMargin = dp(CURVE_GAP) }) }
+            }
+        }
+        return if (plan.apps) withApps(dialsBox) else dialsBox
+    }
+
+    /** Chiffre d'un cadran : Departure Mono, centré, sur une ligne. */
+    private fun dialFigure() = label(MAX_DIAL_SP).apply {
+        typeface = themeFont(context, R.attr.c_font_display)
+        gravity = Gravity.CENTER
+        maxLines = 1
     }
 
     // ---- Bandeau : trois barres, température et ventilateur à droite ----
@@ -906,6 +1017,12 @@ class PerfWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidget(
         private const val BAR_GROUP_GAP = 24
         private const val BAR_THICKNESS = 8
         private const val BAR_MIN = 48
+
+        /** Cadrans d'Instrument : plus grand chiffre, part de la hauteur d'un cadran qu'il prend, écart entre deux (dp), poids de la courbe sous eux. */
+        private const val MAX_DIAL_SP = 30f
+        private const val DIAL_FIGURE_SHARE = 0.16f
+        private const val DIAL_GAP = 8
+        private const val CURVE_WEIGHT = 0.7f
     }
 }
 

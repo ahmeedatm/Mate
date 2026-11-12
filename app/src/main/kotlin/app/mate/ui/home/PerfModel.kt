@@ -185,3 +185,22 @@ object PerfSample : WidgetSample {
     private const val WAVE_STEPS = 9.0
     private const val WAVE_PERCENT = 12
 }
+
+/** Début de la zone rouge des cadrans d'Instrument : le seuil d'alerte de [usageLevel]. */
+const val DIAL_ALERT_FROM = 85
+
+/** Angle de l'aiguille d'un cadran, en degrés depuis la verticale : -90 à 0 %, +90 à 100 %. */
+fun dialAngle(percent: Int): Float = -90f + percent.coerceIn(0, 100) * 1.8f
+
+/**
+ * Cadrans d'Instrument (variante « C · Cadrans » choisie par Ahmed, #243), par famille : en Colonne empilés, en Ligne les
+ * infos en texte à droite ; Grand et Plein écran gardent la courbe des 5 minutes et la liste des applis.
+ */
+data class PerfDialPlan(val stacked: Boolean, val extrasBeside: Boolean, val curve: Boolean, val apps: Boolean)
+
+fun perfDialPlan(size: WidgetSize) = PerfDialPlan(
+    stacked = size.family == ShapeFamily.COLUMN,
+    extrasBeside = size.family == ShapeFamily.ROW,
+    curve = size.family == ShapeFamily.LARGE || size.family == ShapeFamily.FULL,
+    apps = perfShowsApps(size),
+)
