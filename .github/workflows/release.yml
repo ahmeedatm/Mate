@@ -1,4 +1,4 @@
-# Release : un tag vX.Y.Z sur master (seuls les admins posent un tag v*, règle « tags de version ») publie l'APK signé,
+# Release : un tag vX.Y.Z sur master (tout membre en écriture pose un tag v*, seuls les admins le déplacent ou le suppriment : règle « tags de version ») publie l'APK signé,
 # les applis portables de l'ordinateur et les archives du backend dans la release `latest`, lue par les tablettes
 # (scripts/updates-publish.mjs, docs/developpement.md, section Release). Le helper Windows n'est pas recompilé ici.
 
