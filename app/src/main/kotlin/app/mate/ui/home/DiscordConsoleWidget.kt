@@ -31,7 +31,7 @@ import app.mate.ui.themeRes
 
 /**
  * Le widget Discord des thèmes Instrument (`c_lcd_overlay`) : une console. En haut une fenêtre LCD (salon, état du
- * micro, qui parle, un vumètre par participant, « Montrer les photos »), en bas les touches de la page Discord du Deck en
+ * micro, un vumètre par participant avec sa photo et un halo quand il parle, « Montrer les photos »), en bas les touches de la page Discord du Deck en
  * touches rondes du dock, avec leur DEL (allumée : micro coupé, sourdine). Mêmes données et mêmes gestes que
  * [DiscordWidget] (relectures, photos, qui parle, aperçu) ; pas de réglette « Son de Discord ». Une mise en page par
  * famille de formes ([planConsole]) : Pastille, la touche de l'état (et le LCD si la hauteur le permet) ; Ligne, le LCD
@@ -226,10 +226,14 @@ class DiscordConsoleWidget(context: Context, host: HomeHost, placed: Placed) : C
 
     private fun marked(members: List<VoiceMember>) = members.map { it.copy(speaking = it.id in speaking) }
 
-    /** Grande ligne du LCD : qui parle, sinon avec qui, sinon l'état ; en Pastille, le nom seul ou l'état du micro. */
+    /**
+     * Grande ligne du LCD : hors appel, l'état ; en appel sans photos (Pastille, Ligne, salon sans participants lus), qui
+     * parle, sinon avec qui ; en Pastille, le nom seul ou l'état du micro. Les photos la remplacent : le halo dit qui parle.
+     */
     private fun renderTalker() {
         val v = voice
         val inCall = v?.connected == true
+        line2.visibility = if (inCall && meters?.visibility == View.VISIBLE) View.GONE else View.VISIBLE
         val talker = v?.members?.firstOrNull { it.id in speaking }?.takeIf { inCall }
         val quiet = !inCall || (talker == null && pill)
         line2.setTextColor(themeColor(lcdContext, if (quiet && talker == null) R.attr.c_text_dim else R.attr.c_text))
