@@ -10,6 +10,7 @@ import android.util.AttributeSet
 import android.view.View
 import app.mate.R
 import app.mate.net.AgentState
+import app.mate.ui.home.AgentsLook
 import kotlin.math.PI
 import kotlin.math.cos
 
@@ -29,6 +30,38 @@ class AgentStatusIcon @JvmOverloads constructor(context: Context, attrs: Attribu
     private val paint = Paint(Paint.ANTI_ALIAS_FLAG).apply { strokeCap = Paint.Cap.ROUND; strokeJoin = Paint.Join.ROUND }
     private val arc = RectF()
     private val path = Path()
+
+    private var led = false
+    private var ledOff = R.attr.c_stroke
+
+    /**
+     * Instrument : l'état se lit sur une DEL rectangulaire de `dock_led` (14 × 4 dp, orange `c_signal` cernée de
+     * `c_signal_edge` si l'état demande l'œil, [off] sinon) au lieu de l'icône. Rien n'est animé. [off] : l'attribut de
+     * la DEL éteinte (`c_mx_led_off` sur une fenêtre LCD).
+     */
+    fun asLed(off: Int = R.attr.c_stroke) {
+        led = true
+        ledOff = off
+        invalidate()
+    }
+
+    private fun drawLed(canvas: Canvas) {
+        val lit = AgentsLook.lit(state, monitoring)
+        val halfW = context.dp(AgentsLook.LED_WIDTH_DP) / 2f
+        val halfH = context.dp(AgentsLook.LED_HEIGHT_DP) / 2f
+        arc.set(width / 2f - halfW, height / 2f - halfH, width / 2f + halfW, height / 2f + halfH)
+        val radius = context.dp(LED_RADIUS_DP).toFloat()
+        paint.style = Paint.Style.FILL
+        paint.alpha = 255
+        paint.color = themeColor(context, if (lit) R.attr.c_signal else ledOff)
+        canvas.drawRoundRect(arc, radius, radius, paint)
+        if (lit) {
+            paint.style = Paint.Style.STROKE
+            paint.strokeWidth = context.dp(1).toFloat()
+            paint.color = themeColor(context, R.attr.c_signal_edge)
+            canvas.drawRoundRect(arc, radius, radius, paint)
+        }
+    }
 
     fun bind(state: AgentState, monitoring: Boolean) {
         if (this.state == state && this.monitoring == monitoring) return
@@ -58,6 +91,7 @@ class AgentStatusIcon @JvmOverloads constructor(context: Context, attrs: Attribu
     }
 
     override fun onDraw(canvas: Canvas) {
+        if (led) return drawLed(canvas)
         // Réduire les animations : roue arrêtée, voyant allumé en plein (pulsation à son maximum), pas d'image suivante.
         val still = Look.still(context)
         val now = if (still) 0L else SystemClock.uptimeMillis()
@@ -109,6 +143,7 @@ class AgentStatusIcon @JvmOverloads constructor(context: Context, attrs: Attribu
     }
 
     private companion object {
+        const val LED_RADIUS_DP = 2
         const val SPIN_MS = 900L
         const val FRAME_MS = 50L
     }

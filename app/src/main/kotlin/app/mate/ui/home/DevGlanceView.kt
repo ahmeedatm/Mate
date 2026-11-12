@@ -33,7 +33,8 @@ data class GlanceContent(val count: Int, val countLabel: String, val lines: List
  * droite. Colonne (1 × 2 à 1 × 4) : le nombre en haut, les éléments dessous. Seules les lignes entières sont montrées.
  * Pas de réseau ici : le widget, ou l'aperçu du catalogue, donne le contenu.
  */
-class DevGlanceView(context: Context, private val title: Int) : LinearLayout(context) {
+/** [digits] : le nombre en Departure Mono (`c_font_display`), pour Instrument ; sinon la police légère du thème. */
+class DevGlanceView(context: Context, private val title: Int, private val digits: Boolean = false) : LinearLayout(context) {
 
     /** Dernier affichage demandé : refait quand la hauteur réelle change de classe (rangées de hauteur variable). */
     private var shown: (() -> Unit)? = null
@@ -142,7 +143,7 @@ class DevGlanceView(context: Context, private val title: Int) : LinearLayout(con
         addView(text(c.countLabel, 13f, R.attr.c_text_dim), LayoutParams(-2, -2).apply { marginStart = dp(6); bottomMargin = dp(4) })
     }
 
-    private fun count(c: GlanceContent, size: Float) = text(c.count.toString(), size, R.attr.c_text, font = R.attr.c_font_light)
+    private fun count(c: GlanceContent, size: Float) = text(c.count.toString(), size, R.attr.c_text, font = if (digits) R.attr.c_font_display else R.attr.c_font_light)
 
     private fun lines(list: List<GlanceLine>, gravity: Int) = WholeLines(context, dp(LINE_DP)).apply {
         this.gravity = gravity
