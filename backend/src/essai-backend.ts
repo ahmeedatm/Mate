@@ -1,5 +1,5 @@
 import { execFileSync } from "node:child_process";
-import { createHash } from "node:crypto";
+import { createHash, verify } from "node:crypto";
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
@@ -20,6 +20,22 @@ export type Layout = {
   dataDir: string;
   platform: "mac" | "windows";
   packaged: boolean;
+  /**
+   * Clé publique Ed25519 (PEM) de la CI du projet, livrée dans `config/backend-signature.pub` : seule une archive signée
+   * par la clé privée de la CI (environnement « signature ») est posée. null : pas de clé, rien n'est accepté.
+   */
+  publicKey: string | null;
+};
+
+/** Clé publique de vérification, dans le backend installé (remplacée avec config/ par une archive signée). */
+export const SIGNATURE_KEY = "config/backend-signature.pub";
+
+const readPublicKey = (root: string) => {
+  try {
+    return fs.readFileSync(path.join(root, SIGNATURE_KEY), "utf8");
+  } catch {
+    return null;
+  }
 };
 
 /** `sha256` : empreinte de l'archive posée, pour qu'une PR republiée soit renvoyée par la tablette. */
@@ -45,6 +61,7 @@ export const defaultLayout = (): Layout => ({
   dataDir: config.dataDir,
   platform: process.platform === "win32" ? "windows" : "mac",
   packaged,
+  publicKey: readPublicKey(backendRoot),
 });
 
 const serverSha = (layout: Layout) =>
@@ -115,15 +132,41 @@ export function restoreOrigin(layout: Layout = defaultLayout()): boolean {
   return true;
 }
 
+const UNSIGNED = "Cette archive n'est pas signée par Mate : rien n'est changé.";
+
 /**
- * Archive vérifiée (SHA-256 si donné, fichiers de la plateforme) et extraite dans `tmp` ; renvoie le dossier extrait.
- * Rien n'est touché dans l'installation.
+ * Signature Ed25519 (`signature` : base64, en-tête `X-Mate-Signature`) de l'archive entière par la clé privée de la CI,
+ * vérifiée avec `publicKey`. L'empreinte SHA-256 seule ne prouve rien : elle vient du même expéditeur que l'archive.
+ * Erreur 403 ([UNSIGNED]) si la signature manque, est mal formée, ne correspond pas, ou si le compagnon n'a pas de clé.
  */
-function extract(archive: Buffer, sha256: string | undefined, layout: Layout, tmp: string): { files: string; received: string } {
+export function checkSignature(archive: Buffer, signature: string | undefined, publicKey: string | null): void {
+  // Base64 stricte : Buffer.from ignore en silence les caractères invalides. Une signature Ed25519 fait 64 octets.
+  if (!publicKey || !signature || !/^[A-Za-z0-9+/]{86}==$/.test(signature)) fail(UNSIGNED, 403);
+  let valid = false;
+  try {
+    valid = verify(null, archive, publicKey, Buffer.from(signature, "base64"));
+  } catch {
+    // Clé illisible : dans le doute, refusé.
+  }
+  if (!valid) fail(UNSIGNED, 403);
+}
+
+/**
+ * Archive vérifiée (SHA-256 si donné, signature de la CI, fichiers de la plateforme) et extraite dans `tmp` ; renvoie le
+ * dossier extrait. Rien n'est touché dans l'installation ; rien n'est écrit sur le disque avant la signature.
+ */
+function extract(
+  archive: Buffer,
+  sha256: string | undefined,
+  signature: string | undefined,
+  layout: Layout,
+  tmp: string,
+): { files: string; received: string } {
   const received = createHash("sha256").update(archive).digest("hex");
   if (sha256 && received !== sha256.toLowerCase()) {
     fail("L'archive du backend reçue est abîmée (SHA-256 différent) : rien n'est changé.", 400);
   }
+  checkSignature(archive, signature, layout.publicKey);
   fs.writeFileSync(path.join(tmp, "backend.tar.gz"), archive);
   fs.mkdirSync(path.join(tmp, "backend"));
   // bsdtar sur Mac et Windows 10 : chemins relatifs (une lettre de lecteur serait prise pour un hôte par GNU tar).
@@ -143,15 +186,21 @@ const notPackaged = (what: string) =>
   fail(`Ce compagnon est lancé depuis le dépôt : ${what} marche seulement avec le compagnon installé par paquet.`, 409);
 
 /**
- * Remplace le backend par celui de la PR `mr`. Archive vérifiée (SHA-256 si donné, fichiers attendus) et extraite à
+ * Remplace le backend par celui de la PR `mr`. Archive vérifiée (SHA-256 si donné, signature de la CI, fichiers attendus) et extraite à
  * part avant de toucher à quoi que ce soit ; un échec en cours de remplacement remet le backend d'origine.
  * L'appelant redémarre le compagnon.
  */
-export function applyEssai(archive: Buffer, mr: number, sha256: string | undefined, layout: Layout = defaultLayout()) {
+export function applyEssai(
+  archive: Buffer,
+  mr: number,
+  sha256: string | undefined,
+  signature: string | undefined,
+  layout: Layout = defaultLayout(),
+) {
   if (!layout.packaged) notPackaged("l'essai du backend");
   const tmp = fs.mkdtempSync(path.join(os.tmpdir(), "companion-essai-"));
   try {
-    const { files, received } = extract(archive, sha256, layout, tmp);
+    const { files, received } = extract(archive, sha256, signature, layout, tmp);
 
     // Copie d'origine : prise à la première bascule seulement (pas d'essai en cours), jamais écrasée par un essai.
     const copy = path.join(layout.dataDir, ORIGIN);
@@ -186,13 +235,14 @@ const newer = (a: number[], b: number[]) => a[0] - b[0] || a[1] - b[1] || a[2] -
 
 /**
  * Mise à jour stable : remplace le backend installé par celui de la release `version` (archive de la release, sans node
- * ni lanceur). SHA-256 exigée. Version pas plus récente que `current` (celle qui tourne) : refus (409). Un essai de PR
+ * ni lanceur). SHA-256 et signature de la CI exigées. Version pas plus récente que `current` (celle qui tourne) : refus (409). Un essai de PR
  * posé est oublié (marque et copie d'origine) : la nouvelle version devient l'origine. Copie temporaire de l'installation
  * pendant le remplacement, remise si une copie échoue. L'appelant redémarre le compagnon.
  */
 export function applyUpdate(
   archive: Buffer,
   sha256: string,
+  signature: string | undefined,
   version: string,
   current: string | undefined = process.env.COMPANION_VERSION,
   layout: Layout = defaultLayout(),
@@ -204,7 +254,7 @@ export function applyUpdate(
   if (running && newer(target, running) <= 0) fail(`Ce compagnon est déjà en version ${current} : rien n'est changé.`, 409);
   const tmp = fs.mkdtempSync(path.join(os.tmpdir(), "companion-update-"));
   try {
-    const { files } = extract(archive, sha256, layout, tmp);
+    const { files } = extract(archive, sha256, signature, layout, tmp);
     const backup = path.join(tmp, "installed");
     replaceManaged(layout.root, backup);
     try {
