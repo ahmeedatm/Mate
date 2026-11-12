@@ -157,6 +157,15 @@ class DiscordConsoleWidget(context: Context, host: HomeHost, placed: Placed) : C
                 screen.layoutParams = lp
             }
         }
+        // Côte à côte (Grand 4 × 2) hors appel : la fenêtre se tasse au milieu de la hauteur.
+        (screen.layoutParams as? LinearLayout.LayoutParams)?.takeIf { arranged == true && family != ShapeFamily.ROW }?.let { lp ->
+            val height = if (inCall) ViewGroup.LayoutParams.MATCH_PARENT else ViewGroup.LayoutParams.WRAP_CONTENT
+            if (lp.height != height) {
+                lp.height = height
+                lp.gravity = Gravity.CENTER_VERTICAL
+                screen.layoutParams = lp
+            }
+        }
         dot.background = GradientDrawable().apply {
             shape = GradientDrawable.OVAL
             setColor(themeColor(lcdContext, if (inCall) R.attr.c_ok else R.attr.c_text_faint))

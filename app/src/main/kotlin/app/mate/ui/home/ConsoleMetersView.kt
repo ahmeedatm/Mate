@@ -246,7 +246,7 @@ class ConsoleMetersView(context: Context, private val vertical: Boolean) : View(
         const val COLUMN_AVATAR_DP = 30
         const val AVATAR_SHARE = 0.3f
         const val INITIALS_SHARE = 0.4f
-        const val MAX_SEGMENTS = 16
+        const val MAX_SEGMENTS = 32
 
         /** Le quart du haut de la colonne s'allume en jaune. */
         const val PEAK_SHARE = 4
