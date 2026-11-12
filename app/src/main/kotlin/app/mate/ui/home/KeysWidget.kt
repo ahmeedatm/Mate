@@ -189,6 +189,7 @@ class KeysWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidget(
     private fun renderGrid(keys: List<KeyRef>) {
         view.orientation = LinearLayout.VERTICAL
         view.asCard(PANEL_PAD_DP)
+        grid.bigCaps = caps && KeyCaps.labelLines(placed.size) == 2
         grid.cells = keys.map { TileGridView.Cell(it) } + TileGridView.Cell(KeyRef(ADD_ID, context.getString(R.string.widget_keys_add)), add = true)
         (grid.parent as? ViewGroup)?.removeView(grid)
         lcdState = null

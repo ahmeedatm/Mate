@@ -34,4 +34,15 @@ class KeyCapsTest {
     fun `la fenetre LCD des Touches ne se pose que sur la grille`() {
         for (size in WidgetSize.entries) assertEquals("$size", TileShapes.usesGrid(size), KeyCaps.lcd(size))
     }
+
+    @Test
+    fun `en Grand et Plein ecran les capuchons grandissent et le nom tient sur deux lignes`() {
+        for (size in WidgetSize.entries) {
+            val big = size.family == ShapeFamily.LARGE || size.family == ShapeFamily.FULL
+            assertEquals("$size", if (big) KeyCaps.BIG_CELL_DP else KeyCaps.CELL_DP, KeyCaps.cellDp(size))
+            assertEquals("$size", if (big) 2 else 1, KeyCaps.labelLines(size))
+        }
+        assertTrue(KeyCaps.BIG_CELL_DP > KeyCaps.CELL_DP)
+        assertTrue(KeyCaps.BIG_COLUMN_DP > KeyCaps.COLUMN_DP)
+    }
 }

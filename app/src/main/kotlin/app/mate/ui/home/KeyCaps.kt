@@ -13,6 +13,17 @@ object KeyCaps {
     const val CELL_DP = 76
     const val LIT_DP = 4
 
+    /** Grand et Plein écran (choix d'Ahmed) : capuchons plus hauts et plus larges, le nom sur deux lignes. */
+    const val COLUMN_DP = 96
+    const val BIG_COLUMN_DP = 128
+    const val BIG_CELL_DP = 108
+
+    private fun big(size: WidgetSize) = size.family == ShapeFamily.LARGE || size.family == ShapeFamily.FULL
+
+    fun cellDp(size: WidgetSize) = if (big(size)) BIG_CELL_DP else CELL_DP
+
+    fun labelLines(size: WidgetSize) = if (big(size)) 2 else 1
+
     fun applies(lcdOverlay: Int) = lcdOverlay != 0
 
     /** Numéro gravé sur le capuchon n° [index] (0 = le premier) : « 01 », « 02 »… */

@@ -91,6 +91,7 @@ class AppsWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidget(
 
     override fun applySize() {
         section.shown = inGrid
+        section.grid.bigCaps = caps && KeyCaps.labelLines(placed.size) == 2
         strip.visibility = if (inGrid) View.GONE else View.VISIBLE
         if (inGrid) view.asCard(PANEL_PAD_DP) else if (framed) view.asCard(TileShapes.PANEL_STRIP_PAD_DP) else view.apply { background = null; setPadding(0, 0, 0, 0) }
         caption.visibility = if (titled) View.VISIBLE else View.GONE

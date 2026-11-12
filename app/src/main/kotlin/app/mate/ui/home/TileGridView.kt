@@ -71,6 +71,15 @@ class TileGridView(context: Context, private val scope: CoroutineScope) : GridVi
             setAdapter(adapter)
         }
 
+    /** Grands capuchons (Grand et Plein écran, [KeyCaps.cellDp]) : colonnes plus larges, nom sur deux lignes. */
+    var bigCaps = false
+        set(value) {
+            if (value == field) return
+            field = value
+            setColumnWidth(dp(if (value) KeyCaps.BIG_COLUMN_DP else cellMetrics.columnDp))
+            setAdapter(adapter)
+        }
+
     /** Colonnes de la grille, comptées comme `AUTO_FIT` : la grille ne les donne qu'une fois mesurée. */
     private var columns = 1
     private var usableWidth = 0
@@ -135,8 +144,8 @@ class TileGridView(context: Context, private val scope: CoroutineScope) : GridVi
 
         override fun getView(position: Int, convertView: View?, parent: ViewGroup): View {
             val type = getItemViewType(position)
-            if (type == TYPE_BLANK) return convertView ?: View(context).apply { layoutParams = AbsListView.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, if (keyCaps) dp(KeyCaps.CELL_DP) else cellHeight(context, cellMetrics)) }
-            val view = convertView ?: newCell(context, cellMetrics, wide = type == TYPE_WIDE, caps = keyCaps)
+            if (type == TYPE_BLANK) return convertView ?: View(context).apply { layoutParams = AbsListView.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, if (keyCaps) dp(if (bigCaps) KeyCaps.BIG_CELL_DP else KeyCaps.CELL_DP) else cellHeight(context, cellMetrics)) }
+            val view = convertView ?: newCell(context, cellMetrics, wide = type == TYPE_WIDE, caps = keyCaps, bigCap = bigCaps)
             // Deux colonnes et l'espace entre elles : la largeur change avec les colonnes, la vue recyclée la reprend.
             if (type == TYPE_WIDE) {
                 val width = 2 * columnWidth + horizontalSpacing
@@ -278,10 +287,11 @@ class TileGridView(context: Context, private val scope: CoroutineScope) : GridVi
          * de lignes du libellé. La case grandit si la taille du texte (Réglages > Accessibilité) lui prend plus de place.
          * [wide] (touche large) : la plaque prend toute la largeur de la case, en pastille.
          */
-        fun newCell(context: Context, metrics: TileMetrics = TileMetrics.NORMAL, wide: Boolean = false, caps: Boolean = false): View {
+        fun newCell(context: Context, metrics: TileMetrics = TileMetrics.NORMAL, wide: Boolean = false, caps: Boolean = false, bigCap: Boolean = false): View {
             if (caps) {
                 return LayoutInflater.from(context).inflate(R.layout.item_key_cap, null).apply {
-                    layoutParams = AbsListView.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, context.dp(KeyCaps.CELL_DP))
+                    layoutParams = AbsListView.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, context.dp(if (bigCap) KeyCaps.BIG_CELL_DP else KeyCaps.CELL_DP))
+                    if (bigCap) enlargeCap(this)
                 }
             }
             val view = LayoutInflater.from(context).inflate(R.layout.item_tile, null)
@@ -402,6 +412,25 @@ class TileGridView(context: Context, private val scope: CoroutineScope) : GridVi
             val cap = view.findViewById<View>(R.id.key_cap) ?: return Look.pressTo(view, pressed)
             Look.keyCap(cap, pressed, rest = capRest(view))
         }
+
+        /** Grand capuchon : icône plus grande, nom sur deux lignes (sans espacement des lettres, qui fausse la coupure en « … »). */
+        private fun enlargeCap(view: View) {
+            (view.findViewById<View>(R.id.tile_icon).parent as View).layoutParams.apply {
+                width = view.context.dp(BIG_ICON_DP)
+                height = view.context.dp(BIG_ICON_DP)
+            }
+            view.findViewById<TextView>(R.id.tile_initial).textSize = BIG_INITIAL_SP
+            view.findViewById<TextView>(R.id.tile_label).apply {
+                isSingleLine = false
+                maxLines = 2
+                letterSpacing = 0f
+                textSize = BIG_LABEL_SP
+            }
+        }
+
+        private const val BIG_ICON_DP = 32
+        private const val BIG_INITIAL_SP = 24f
+        private const val BIG_LABEL_SP = 12f
 
         private fun capRest(view: View) = if (view.isSelected) view.context.dp(KeyCaps.LIT_DP).toFloat() else 0f
 
