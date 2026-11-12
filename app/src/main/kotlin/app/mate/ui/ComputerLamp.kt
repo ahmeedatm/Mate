@@ -20,7 +20,7 @@ internal object ComputerLamp {
     /** Logo plein, pâli (connexion en cours) ou pâli et barré (injoignable). */
     enum class Tone { FULL, DIM, CROSSED }
 
-    /** Diode allumée, qui respire (connexion), creuse (éteinte), triangle (jeton refusé) ou cadenas (session verrouillée). */
+    /** Diode allumée, à demi pleine qui respire (connexion), creuse (éteinte), triangle (jeton refusé) ou cadenas (session verrouillée). */
     enum class Led { ON, BREATHING, RING, ALERT, LOCK }
 
     data class Look(

@@ -17,6 +17,7 @@ import androidx.core.content.ContextCompat
 import androidx.core.view.ViewCompat
 import androidx.core.view.accessibility.AccessibilityNodeInfoCompat
 import androidx.dynamicanimation.animation.DynamicAnimation
+import androidx.lifecycle.LifecycleOwner
 import app.mate.AnimFamily
 import app.mate.Computers
 import app.mate.Mode
@@ -47,7 +48,7 @@ class KeyDock(
     private val row: LinearLayout = activity.findViewById(R.id.dock_keys)
     private val end: LinearLayout = activity.findViewById(R.id.dock_end)
     private val chip: View = activity.findViewById<TopBar>(R.id.top_bar).computerChip
-    private val lamp = ComputerLampView(chip)
+    private val lamp = ComputerLampView(chip, (activity as LifecycleOwner).lifecycle)
     override val root: View = dock
     override val status: View = chip
     override val talk: View = round(R.drawable.dock_talk_cap, R.drawable.ic_key_mic, R.color.dock_talk_icon, R.string.voice_button, atEnd = false)
@@ -150,7 +151,10 @@ class KeyDock(
         lamp.show(link, Prefs.computerLocked(activity), Computers.all(activity), name)
     }
 
-    override fun applySettings() = render()
+    override fun applySettings() {
+        render()
+        lamp.refresh()
+    }
 
     override fun tourAnchor(step: TourModel.Step): View? = when (step) {
         TourModel.Step.HOME, TourModel.Step.SCREENS -> screenViews.firstOrNull()

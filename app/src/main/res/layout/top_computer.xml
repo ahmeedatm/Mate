@@ -45,30 +45,30 @@
         <LinearLayout
             android:id="@+id/chip_dots"
             android:layout_width="wrap_content"
-            android:layout_height="5dp"
+            android:layout_height="6dp"
             android:layout_marginTop="3dp"
             android:orientation="horizontal"
             android:visibility="gone" />
     </LinearLayout>
 
     <FrameLayout
-        android:layout_width="22dp"
-        android:layout_height="22dp"
+        android:layout_width="26dp"
+        android:layout_height="26dp"
         android:layout_marginStart="8dp"
         android:importantForAccessibility="noHideDescendants">
 
         <ImageView
             android:id="@+id/chip_halo"
-            android:layout_width="20dp"
-            android:layout_height="20dp"
+            android:layout_width="26dp"
+            android:layout_height="26dp"
             android:layout_gravity="center"
             android:alpha="0.22"
             android:src="@drawable/lamp_halo" />
 
         <ImageView
             android:id="@+id/chip_led"
-            android:layout_width="14dp"
-            android:layout_height="14dp"
+            android:layout_width="18dp"
+            android:layout_height="18dp"
             android:layout_gravity="center" />
     </FrameLayout>
 </LinearLayout>
