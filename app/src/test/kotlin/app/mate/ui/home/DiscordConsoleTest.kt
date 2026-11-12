@@ -96,4 +96,45 @@ class DiscordConsoleTest {
         assertEquals(R.string.console_key_open, consoleLabel(open))
         assertNull("touche maison : son propre libelle", consoleLabel(tile("autre", symbol = "lock")))
     }
+
+    @Test
+    fun `photos, plus grandes quand il y a peu de monde, sans depasser la hauteur`() {
+        val two = planFaces(2, lengthDp = 500f, maxAvatarDp = 56f, nameDp = 50f)
+        val eight = planFaces(8, lengthDp = 500f, maxAvatarDp = 56f, nameDp = 50f)
+        assertEquals(2, two.fits)
+        assertEquals(56f, two.avatarDp, 0.01f)
+        assertTrue(eight.avatarDp < two.avatarDp)
+        assertTrue(eight.avatarDp >= FaceMetrics.MIN_AVATAR_DP)
+    }
+
+    @Test
+    fun `photos, l'espace se partage entre les participants`() {
+        assertEquals(250f, planFaces(2, 500f, 56f, 50f).slotDp, 0.01f)
+        assertEquals(125f, planFaces(4, 500f, 56f, 50f).slotDp, 0.01f)
+    }
+
+    @Test
+    fun `un nom court n'est jamais coupe, meme dans un salon plein`() {
+        for (count in 1..30) {
+            val plan = planFaces(count, lengthDp = 500f, maxAvatarDp = 56f, nameDp = 50f)
+            assertTrue("$count participants", plan.slotDp - FaceMetrics.GAP_DP >= 50f)
+            assertTrue(plan.avatarDp + FaceMetrics.HALO_DP + FaceMetrics.GAP_DP <= plan.slotDp + 0.01f)
+        }
+        // Salon plein : moins de places que de participants, la derniere devient « +N » (planMembers).
+        assertEquals(8, planFaces(30, 500f, 56f, 50f).fits)
+    }
+
+    @Test
+    fun `photos, rien ne tient dans une rangee trop courte`() {
+        assertEquals(0, planFaces(3, lengthDp = 30f, maxAvatarDp = 56f, nameDp = 50f).fits)
+        assertEquals(0, planFaces(0, lengthDp = 500f, maxAvatarDp = 56f, nameDp = 50f).fits)
+        assertEquals("vue pas encore mesuree", 0, planFaces(3, lengthDp = 0f, maxAvatarDp = 56f, nameDp = 50f).fits)
+    }
+
+    @Test
+    fun `colonne sans nom, la photo garde sa taille minimale`() {
+        val plan = planFaces(3, lengthDp = 300f, maxAvatarDp = 10f, nameDp = 0f)
+        assertEquals(3, plan.fits)
+        assertEquals(FaceMetrics.MIN_AVATAR_DP, plan.avatarDp, 0.01f)
+    }
 }

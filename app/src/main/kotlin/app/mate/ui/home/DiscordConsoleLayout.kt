@@ -64,6 +64,37 @@ fun planConsole(family: ShapeFamily, tiles: List<DeckTile>, innerW: Int, innerH:
     ConsolePlan(keys, lcd, labels = keyRoom >= KEY_WITH_LABEL_DP, vertical = family == ShapeFamily.COLUMN, side = side)
 }
 
+/**
+ * Photos de la fenêtre LCD : [fits] places le long de la rangée (la dernière devient « +N » quand le salon est plein,
+ * `planMembers`), [avatarDp] diamètre d'une photo, [slotDp] place de chacun (photo, halo, nom, écart).
+ */
+data class FacePlan(val fits: Int, val avatarDp: Float, val slotDp: Float)
+
+object FaceMetrics {
+    const val MIN_AVATAR_DP = 24f
+    const val MAX_AVATAR_DP = 64f
+
+    /** Anneau de qui parle autour de la photo, des deux côtés : 2 dp d'écart et 3 dp de trait. */
+    const val HALO_DP = 10f
+
+    /** Écart minimal entre deux places. */
+    const val GAP_DP = 8f
+}
+
+/**
+ * [count] participants sur une rangée de [lengthDp] (largeur ; hauteur pour la Colonne) ; [maxAvatarDp] : la plus
+ * grande photo que l'autre axe laisse ; [nameDp] : largeur d'un nom court (0 sans nom), qui tient toujours dans sa
+ * place. La place se partage entre ceux qui tiennent : peu de monde, grandes photos espacées ; salon plein, plus petites.
+ */
+fun planFaces(count: Int, lengthDp: Float, maxAvatarDp: Float, nameDp: Float): FacePlan = with(FaceMetrics) {
+    val minSlot = maxOf(MIN_AVATAR_DP + HALO_DP, nameDp) + GAP_DP
+    val fits = if (count <= 0) 0 else minOf(count, (lengthDp / minSlot).toInt())
+    if (fits == 0) return FacePlan(0, 0f, 0f)
+    val slot = lengthDp / fits
+    val top = maxAvatarDp.coerceIn(MIN_AVATAR_DP, MAX_AVATAR_DP)
+    FacePlan(fits, (slot - GAP_DP - HALO_DP).coerceIn(MIN_AVATAR_DP, top), slot)
+}
+
 /** Libellé court sous une touche de la console, tiré de son symbole ; null : le libellé de la touche (touche maison). */
 @StringRes
 fun consoleLabel(tile: DeckTile): Int? = when {
