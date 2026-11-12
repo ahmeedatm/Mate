@@ -36,7 +36,16 @@ class HomeSettingsDialog(private val activity: MainActivity) {
 
     private val root = LayoutInflater.from(activity).inflate(R.layout.view_dialog_form, null)
     private val body: LinearLayout = root.findViewById(R.id.dialog_body)
-    private val message: TextView = root.findViewById(R.id.dialog_message)
+    private val message: TextView = root.findViewById<TextView>(R.id.dialog_message).apply {
+        // Le retour d'un bouton du bas s'écrit en haut : la boîte y remonte pour qu'on le lise.
+        addTextChangedListener(object : android.text.TextWatcher {
+            override fun afterTextChanged(s: android.text.Editable?) {
+                (root as? android.widget.ScrollView)?.smoothScrollTo(0, 0)
+            }
+            override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) = Unit
+            override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) = Unit
+        })
+    }
     private val list = LinearLayout(activity).apply { orientation = LinearLayout.VERTICAL }
     private lateinit var dialog: AlertDialog
 
@@ -58,7 +67,7 @@ class HomeSettingsDialog(private val activity: MainActivity) {
         body.addView(http)
         body.addView(hint(R.string.home_ha_http_warning))
         val actions = row()
-        actions.addView(button(R.string.home_ha_save) {
+        actions.addView(button(R.string.home_ha_save, R.style.PrimaryButton) {
             val address = normalizeHaUrl(url.text.toString())
             val problem = haUrlProblem(address, http.isChecked)
             val secret = token.text.toString().trim()
@@ -174,7 +183,7 @@ class HomeSettingsDialog(private val activity: MainActivity) {
         marginStart = activity.dp(12)
     }
 
-    private fun button(text: Int, onClick: () -> Unit) = Button(activity, null, 0, R.style.ActionButton).apply {
+    private fun button(text: Int, style: Int = R.style.ActionButton, onClick: () -> Unit) = Button(activity, null, 0, style).apply {
         setText(text)
         setOnClickListener {
             it.dismissKeyboard()

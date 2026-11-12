@@ -33,6 +33,7 @@ class ProfileRail(
     private val settings: View = activity.findViewById(R.id.rail_settings)
     private val items: View = activity.findViewById(R.id.rail_items)
     private val statusDot: ImageView = activity.findViewById(R.id.status_dot)
+    private val statusIcon: ImageView = activity.findViewById(R.id.status_icon)
     private val statusName: TextView = activity.findViewById(R.id.status_name)
     private val statusState: TextView = activity.findViewById(R.id.status_state)
     override val status: View = activity.findViewById(R.id.status)
@@ -130,6 +131,8 @@ class ProfileRail(
     /** Le rouge est réservé au « maintenant » : signe vert si l'ordinateur répond, neutre sinon ; son symbole et l'état écrit disent le reste. */
     override fun showLink(link: Link) {
         renderLink(activity, statusDot, statusName, statusState, status, link, offline = R.attr.c_text_faint)
+        // Maison n'est pas un ordinateur : une maison à la place de l'ordinateur portable.
+        statusIcon.setImageResource(if (link.state == Link.State.HOME) R.drawable.ic_home else R.drawable.ic_laptop)
         // L'état change (en ligne ↔ injoignable…) : la pastille gonfle une fois, pour qu'on le remarque.
         if (linkState != null && linkState != link.state) Look.blip(statusDot)
         linkState = link.state
