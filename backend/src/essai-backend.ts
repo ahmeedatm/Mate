@@ -133,21 +133,32 @@ export function restoreOrigin(layout: Layout = defaultLayout()): boolean {
 }
 
 const UNSIGNED = "Cette archive n'est pas signée par Mate : rien n'est changé.";
+/** Compagnon installé avant la signature : la première clé ne peut arriver que par l'installeur, jamais par une archive. */
+const NO_KEY = "Ce compagnon ne sait pas encore vérifier les mises à jour : réinstalle-le une fois avec l'installeur.";
+
+/** Clés publiques d'un fichier PEM : plusieurs pendant un changement de clé (l'ancienne et la nouvelle). */
+export const publicKeys = (pem: string) => pem.match(/-----BEGIN PUBLIC KEY-----[\s\S]*?-----END PUBLIC KEY-----/g) ?? [];
 
 /**
  * Signature Ed25519 (`signature` : base64, en-tête `X-Mate-Signature`) de l'archive entière par la clé privée de la CI,
- * vérifiée avec `publicKey`. L'empreinte SHA-256 seule ne prouve rien : elle vient du même expéditeur que l'archive.
- * Erreur 403 ([UNSIGNED]) si la signature manque, est mal formée, ne correspond pas, ou si le compagnon n'a pas de clé.
+ * vérifiée avec les clés de `publicKey` : une seule suffit (changement de clé, docs/developpement.md). L'empreinte
+ * SHA-256 seule ne prouve rien : elle vient du même expéditeur que l'archive. Erreur 403 si le compagnon n'a pas de clé
+ * ([NO_KEY]), ou si la signature manque, est mal formée ou ne correspond à aucune clé ([UNSIGNED]).
  */
 export function checkSignature(archive: Buffer, signature: string | undefined, publicKey: string | null): void {
+  const keys = publicKeys(publicKey ?? "");
+  if (keys.length === 0) fail(NO_KEY, 403);
   // Base64 stricte : Buffer.from ignore en silence les caractères invalides. Une signature Ed25519 fait 64 octets.
-  if (!publicKey || !signature || !/^[A-Za-z0-9+/]{86}==$/.test(signature)) fail(UNSIGNED, 403);
-  let valid = false;
-  try {
-    valid = verify(null, archive, publicKey, Buffer.from(signature, "base64"));
-  } catch {
-    // Clé illisible : dans le doute, refusé.
-  }
+  if (!signature || !/^[A-Za-z0-9+/]{85}[AQgw]==$/.test(signature)) fail(UNSIGNED, 403);
+  const bytes = Buffer.from(signature, "base64");
+  const valid = keys.some((key) => {
+    try {
+      return verify(null, archive, key, bytes);
+    } catch {
+      // Clé illisible : elle ne valide rien.
+      return false;
+    }
+  });
   if (!valid) fail(UNSIGNED, 403);
 }
 

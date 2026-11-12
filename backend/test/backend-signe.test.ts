@@ -60,6 +60,21 @@ describe("signature des archives du backend par la CI", () => {
     assert.equal(fs.existsSync(path.join(repo, "cle.pem")), false);
   });
 
+  it("changement de clé : --cle ajoute la nouvelle clé publique, l'ancienne et la nouvelle signent toutes les deux", async () => {
+    const publicOut = path.join(tmp, "rotation.pub");
+    const oldKey = path.join(tmp, "ancienne.pem");
+    const newKey = path.join(tmp, "nouvelle-rotation.pem");
+    await signe(["--cle", oldKey], { BACKEND_SIGNING_PUB: publicOut });
+    await signe(["--cle", newKey], { BACKEND_SIGNING_PUB: publicOut });
+    assert.equal(fs.readFileSync(publicOut, "utf8").match(/BEGIN PUBLIC KEY/g)?.length, 2);
+    // Release de transition signée par l'ancienne (elle livre les deux clés), puis les suivantes par la nouvelle.
+    for (const key of [oldKey, newKey]) {
+      const dir = dist();
+      await signe([dir], { BACKEND_SIGNING_PUB: publicOut, BACKEND_SIGNING_KEY: fs.readFileSync(key, "utf8") });
+      assert.ok(fs.existsSync(path.join(dir, "backend-mac.tar.gz.sig")));
+    }
+  });
+
   it("sans archive (essai qui ne touche pas au backend) : rien à signer, la clé n'est pas demandée", async () => {
     await signe([dist([])], { BACKEND_SIGNING_KEY: "" });
   });

@@ -195,11 +195,28 @@ describe("essai du backend d'une MR", () => {
     assert.throws(() => applyEssai(tgz, 109, undefined, "pas de la base64 !", layout), /signée/);
     assert.throws(() => applyEssai(tgz, 109, undefined, sign(tgz, other), layout), /signée/);
     assert.throws(() => applyEssai(tgz, 109, undefined, sign(archive("windows", "autre")), layout), /signée/);
-    // Compagnon sans clé de vérification (installé avant la signature) : rien n'est accepté.
-    assert.throws(() => applyEssai(tgz, 109, undefined, sign(tgz), { ...layout, publicKey: null }), /signée/);
+    // Compagnon sans clé de vérification (installé avant la signature) : rien n'est accepté, il faut l'installeur une fois.
+    assert.throws(() => applyEssai(tgz, 109, undefined, sign(tgz), { ...layout, publicKey: null }), /installeur/);
     assert.equal(read(layout.root, "dist/server.mjs"), "serveur origine");
     assert.equal(backendState(layout).mode, "origin");
     assert.equal(exists(layout.dataDir, "backend-origin"), false);
+  });
+
+  it("changement de clé : accepte une signature de n'importe laquelle des clés livrées, jamais d'une autre", () => {
+    const next = generateKeyPairSync("ed25519");
+    const nextPublic = next.publicKey.export({ type: "spki", format: "pem" }).toString();
+    // Release de transition : l'ancienne et la nouvelle clé dans le même fichier.
+    const layout = { ...install("mac"), publicKey: PUBLIC_KEY + nextPublic };
+    const byNext = archive("mac", "nouvelle clé");
+    applyEssai(byNext, 109, undefined, sign(byNext, next.privateKey), layout);
+    assert.equal(read(layout.root, "dist/server.mjs"), "serveur nouvelle clé");
+    const byOld = archive("mac", "ancienne clé");
+    applyEssai(byOld, 110, undefined, sign(byOld), layout);
+    assert.equal(read(layout.root, "dist/server.mjs"), "serveur ancienne clé");
+    const stranger = generateKeyPairSync("ed25519").privateKey;
+    const pirate = archive("mac", "pirate");
+    assert.throws(() => applyEssai(pirate, 111, undefined, sign(pirate, stranger), layout), /signée/);
+    assert.equal(read(layout.root, "dist/server.mjs"), "serveur ancienne clé");
   });
 
   it("remet l'origine si le remplacement échoue en route", () => {

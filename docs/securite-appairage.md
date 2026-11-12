@@ -51,6 +51,7 @@ Blocage possible : un appareil du réseau qui répond « j'attends » en permane
 - Le WiFi transporte toujours des données lisibles par l'ordinateur lui-même : la protection vaut contre les autres appareils du réseau, pas contre un logiciel malveillant installé sur l'ordinateur.
 - Paquets du pavé rejoués : un attaquant qui capte des paquets signés peut les renvoyer depuis sa propre adresse (la séquence est suivie par adresse source) : il ne fait que rejouer des mouvements de souris déjà faits.
 - Nouveau certificat (dossier `.data` effacé) : toutes les tablettes doivent être réappairées.
+- Backend d'un essai de PR : signé par la CI comme une release, il s'exécute sur l'ordinateur où la tablette le pose. L'étiquette `essai` vaut donc autorisation d'exécuter le code de la PR chez les testeurs (`docs/developpement.md`, « Signature des archives du backend »).
 - La recherche WiFi interroge toujours le port 3000 : un compagnon lancé sur un autre `PORT` se saisit à la main (adresse et port HTTPS affichés sur la page locale).
 
 ## Tests
