@@ -65,7 +65,10 @@ class HomeSettingsDialog(private val activity: MainActivity) {
             when {
                 problem != null -> message.setText(problem)
                 secret.isEmpty() -> message.setText(R.string.home_ha_token_missing)
-                else -> if (save(address, secret, http.isChecked)) token.text.clear()
+                else -> if (save(address, secret, http.isChecked)) {
+                    token.text.clear()
+                    token.setHint(R.string.home_ha_token_kept)
+                }
             }
         })
         if (Computers.all(activity).isNotEmpty()) actions.addView(button(R.string.home_ha_copy) { copyFromComputer(http.isChecked) }, margin())

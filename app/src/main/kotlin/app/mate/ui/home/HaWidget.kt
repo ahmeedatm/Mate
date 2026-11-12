@@ -218,13 +218,14 @@ class HaWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidget(co
     }
 
     private fun render() {
-        if (drawn == entities to pending) return
-        drawn = entities to pending
-        body.removeAllViews()
+        // Avant le saut : une liste vide relue (load vient de cacher l'état) garde son message, même sans redessin.
         if (entities.isEmpty() && status.visibility != View.VISIBLE) {
             status.setText(emptyText())
             status.visibility = View.VISIBLE
         }
+        if (drawn == entities to pending) return
+        drawn = entities to pending
+        body.removeAllViews()
         when (family) {
             ShapeFamily.PILL -> haPick(entities, placed.config.optString("entity").ifEmpty { null })?.let {
                 body.addView(pill(it), LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT))
