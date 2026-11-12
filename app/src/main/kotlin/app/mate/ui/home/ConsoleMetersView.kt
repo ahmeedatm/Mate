@@ -144,8 +144,11 @@ class ConsoleMetersView(context: Context, private val vertical: Boolean) : View(
         level.keys.retainAll(shownIds)
         levelTarget.keys.retainAll(shownIds)
         shaders.keys.retainAll(shownIds)
-        // Noms seulement : « qui parle » change deux fois par seconde, TalkBack relirait la rangée en boucle.
-        val description = members.takeIf { it.isNotEmpty() }?.let { m -> context.getString(R.string.deck_voice_with, m.joinToString(", ") { it.name }) }
+        // Qui parle, comme la grande ligne que les photos remplacent : relu seulement quand il change (le texte est comparé).
+        val talker = members.firstOrNull { it.speaking }?.let { context.getString(R.string.call_speaking, it.name) }
+        val description = members.takeIf { it.isNotEmpty() }?.let { m ->
+            listOfNotNull(context.getString(R.string.deck_voice_with, m.joinToString(", ") { it.name }), talker).joinToString(". ")
+        }
         if (description != contentDescription) contentDescription = description
         invalidate()
     }
