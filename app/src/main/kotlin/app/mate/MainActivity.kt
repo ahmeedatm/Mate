@@ -1237,22 +1237,11 @@ class MainActivity : AppCompatActivity() {
         return layout.nameOf(sweepTarget(layout), getString(R.string.profile_first), getString(R.string.profile_default))
     }
 
-    /**
-     * En-tête de l'écran affiché dans le bandeau du haut : celui de l'écran (titre, retour, boutons), le nom du profil
-     * sur l'Accueil, sinon le nom du mode.
-     */
+    /** En-tête de l'écran affiché dans le bandeau du haut : celui de l'écran (titre, retour, boutons), sinon rien. */
     private fun showTopHeader() {
         val screen = supportFragmentManager.findFragmentByTag(current.tag)
-        val header = (screen as? TopHeader)?.topHeader
-        when {
-            header != null -> topBar.setHeader(header)
-            current == Mode.HOME -> topBar.setTitle(profileName.orEmpty())
-            else -> topBar.setTitle(getString(current.label))
-        }
+        topBar.setHeader((screen as? TopHeader)?.topHeader)
     }
-
-    /** Nom du profil affiché sur l'Accueil, pour le bandeau du haut. */
-    private var profileName: String? = null
 
     /** Ce que les éléments du bandeau demandent à l'appli. */
     private val topHost = object : TopBarHost {
@@ -1349,8 +1338,6 @@ class MainActivity : AppCompatActivity() {
     /** L'Accueil prévient à chaque profil affiché et à chaque changement des profils : la barre suit. */
     fun onProfileShown(layout: HomeLayout, page: Int) {
         nav.showProfiles(layout, page, inCall = call.active)
-        profileName = layout.names.getOrNull(page)
-        if (current == Mode.HOME) topBar.setTitle(profileName.orEmpty())
     }
 
     private fun homeFragment() = supportFragmentManager.findFragmentByTag(Mode.HOME.tag) as? HomeFragment

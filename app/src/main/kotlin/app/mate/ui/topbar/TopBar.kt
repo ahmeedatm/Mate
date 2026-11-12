@@ -26,7 +26,6 @@ import app.mate.ui.MusicChip
 import app.mate.ui.dp
 import app.mate.ui.showImmersive
 import app.mate.ui.themeColor
-import app.mate.ui.themeFont
 import app.mate.ui.themeRes
 import kotlinx.coroutines.CoroutineScope
 import org.json.JSONObject
@@ -64,8 +63,8 @@ interface TopBarHost {
 }
 
 /**
- * Bandeau du haut, fixe au-dessus de l'écran du mode (rien ne défile dessous) : à gauche l'en-tête de l'écran (titre,
- * retour, boutons : la vue de l'écran lui-même, [setHeader]), à droite les éléments choisis (Prefs.topBar), dans l'ordre.
+ * Bandeau du haut, fixe au-dessus de l'écran du mode (rien ne défile dessous) : à gauche l'en-tête de l'écran s'il en a
+ * un (retour, onglets, boutons : la vue de l'écran lui-même, [setHeader]), sinon rien, à droite les éléments choisis (Prefs.topBar), dans l'ordre.
  * Place qui manque : ceux du début sautent ([TopBarModel.firstShown]). Mode Modifier ([edit]) : appui long sur l'Accueil ou
  * appui long sur le bandeau ; chaque élément devient une pastille à glisser, avec ✕, et « Ajouter ».
  */
@@ -73,13 +72,6 @@ class TopBar @JvmOverloads constructor(context: Context, attrs: AttributeSet? = 
 
     private lateinit var host: TopBarHost
     private val header = FrameLayout(context)
-    private val title = TextView(context).apply {
-        textSize = 24f
-        isSingleLine = true
-        ellipsize = android.text.TextUtils.TruncateAt.END
-        typeface = themeFont(context, R.attr.c_font_title)
-        setTextColor(themeColor(context, R.attr.c_text))
-    }
     private var headerView: View? = null
 
     /** Voyant de la caméra avant (veille à la présence, presence/Presence), juste avant celui du mot de réveil. */
@@ -137,7 +129,6 @@ class TopBar @JvmOverloads constructor(context: Context, attrs: AttributeSet? = 
         orientation = HORIZONTAL
         gravity = Gravity.CENTER_VERTICAL
         setPadding(dp(24), 0, dp(24), 0)
-        header.addView(title, FrameLayout.LayoutParams(-1, -2, Gravity.CENTER_VERTICAL or Gravity.START))
         addView(header, LayoutParams(0, LayoutParams.MATCH_PARENT, 1f))
         addView(presenceEye, LayoutParams(dp(20), dp(20)).apply { marginEnd = dp(12) })
         addView(wakeMic, LayoutParams(dp(20), dp(20)).apply { marginEnd = dp(12) })
@@ -204,18 +195,11 @@ class TopBar @JvmOverloads constructor(context: Context, attrs: AttributeSet? = 
     /** Pastille Lecture en cours, si elle est dans le bandeau (relue tout de suite après un changement d'état). */
     val music: MusicChip? get() = (elements[TopItem.MUSIC] as? MusicElement)?.chip
 
-    /** Titre seul, pour les écrans sans en-tête propre (Accueil : le nom du profil ; Focus). */
-    fun setTitle(text: CharSequence) {
-        setHeader(null)
-        title.text = text
-    }
-
-    /** En-tête d'un écran (retiré de sa mise en page par l'écran) ; null : le titre seul. */
+    /** En-tête d'un écran (retiré de sa mise en page par l'écran) ; null : rien à gauche (Accueil, Focus…). */
     fun setHeader(view: View?) {
         if (view === headerView) return
         headerView?.let { header.removeView(it) }
         headerView = view
-        title.visibility = if (view == null) VISIBLE else GONE
         if (view != null) {
             (view.parent as? ViewGroup)?.removeView(view)
             header.addView(view, FrameLayout.LayoutParams(-1, -2, Gravity.CENTER_VERTICAL))
