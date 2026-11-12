@@ -96,6 +96,7 @@ class DiscordConsoleTest {
         assertEquals(R.string.console_key_open, consoleLabel(open))
         assertNull("touche maison : son propre libelle", consoleLabel(tile("autre", symbol = "lock")))
     }
+
     @Test
     fun `photos, plus grandes quand il y a peu de monde, sans depasser la hauteur`() {
         val two = planFaces(2, lengthDp = 500f, maxAvatarDp = 56f, nameDp = 50f)
@@ -127,5 +128,13 @@ class DiscordConsoleTest {
     fun `photos, rien ne tient dans une rangee trop courte`() {
         assertEquals(0, planFaces(3, lengthDp = 30f, maxAvatarDp = 56f, nameDp = 50f).fits)
         assertEquals(0, planFaces(0, lengthDp = 500f, maxAvatarDp = 56f, nameDp = 50f).fits)
+        assertEquals("vue pas encore mesuree", 0, planFaces(3, lengthDp = 0f, maxAvatarDp = 56f, nameDp = 50f).fits)
+    }
+
+    @Test
+    fun `colonne sans nom, la photo garde sa taille minimale`() {
+        val plan = planFaces(3, lengthDp = 300f, maxAvatarDp = 10f, nameDp = 0f)
+        assertEquals(3, plan.fits)
+        assertEquals(FaceMetrics.MIN_AVATAR_DP, plan.avatarDp, 0.01f)
     }
 }

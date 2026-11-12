@@ -31,6 +31,13 @@ class ConsoleMetersView(context: Context, private val vertical: Boolean) : View(
     /** Photo déjà chargée d'un participant ; null : initiales. */
     var photoOf: (String) -> Bitmap? = { null }
 
+    /** Appelé quand des photos apparaissent ou disparaissent ([showsFaces]) : la grande ligne du LCD les remplace. */
+    var onFacesChanged: () -> Unit = {}
+
+    /** Au moins une photo dessinée (place suffisante, participants lus). */
+    var showsFaces = false
+        private set
+
     private var members: List<VoiceMember> = emptyList()
     private var lastSpoke: Map<String, Long> = emptyMap()
     private var plan = MemberRowPlan(emptyList(), 0)
@@ -50,6 +57,7 @@ class ConsoleMetersView(context: Context, private val vertical: Boolean) : View(
     private val levelTarget = HashMap<String, Float>()
     private val levelAnim = HashMap<String, ValueAnimator>()
 
+    private val density = resources.displayMetrics.density
     private val segment = dp(SEGMENT_DP).toFloat()
     private val segmentGap = dp(SEGMENT_GAP_DP).toFloat()
     private val haloGap = dp(HALO_GAP_DP).toFloat()
@@ -77,6 +85,7 @@ class ConsoleMetersView(context: Context, private val vertical: Boolean) : View(
         textSize = dp(NAME_DP).toFloat()
         typeface = themeFont(context, R.attr.c_font_display)
     }
+    private val shortNameDp = namePaint.measureText(SHORT_NAME) / resources.displayMetrics.density
     private val dim = themeColor(context, R.attr.c_text_dim)
     private val bright = themeColor(context, R.attr.c_text)
     private val photo = Paint(Paint.ANTI_ALIAS_FLAG)
@@ -99,8 +108,6 @@ class ConsoleMetersView(context: Context, private val vertical: Boolean) : View(
 
     override fun onSizeChanged(w: Int, h: Int, oldw: Int, oldh: Int) = replan()
 
-    private val density = resources.displayMetrics.density
-
     /** Diamètre d'une photo, en px. */
     private fun avatar(): Float = faces.avatarDp * density
 
@@ -113,10 +120,14 @@ class ConsoleMetersView(context: Context, private val vertical: Boolean) : View(
     private fun replan() {
         val length = (if (vertical) height else width) / density
         val cross = (if (vertical) width else height) / density
-        // Un nom court (SHORT_NAME_CHARS lettres, police à chasse fixe) tient toujours dans sa place ; la Colonne n'a pas de nom.
-        val nameDp = if (vertical) 0f else namePaint.measureText(SHORT_NAME) / density
+        // Un nom court (SHORT_NAME : 7 fois la lettre la plus large) tient toujours dans sa place ; la Colonne n'a pas de nom.
+        val nameDp = if (vertical) 0f else shortNameDp
         faces = planFaces(members.size, length, cross * if (vertical) COLUMN_AVATAR_SHARE else AVATAR_SHARE, nameDp)
         plan = planMembers(members, lastSpoke, faces.fits, faceFirst = vertical)
+        if (plan.shown.isNotEmpty() != showsFaces) {
+            showsFaces = plan.shown.isNotEmpty()
+            onFacesChanged()
+        }
         labels = plan.shown.associate { it.id to initials(it.name) }
         names = plan.shown.associate { it.id to ellipsize(it.name.uppercase(), slot() - dp(FaceMetrics.GAP_DP.toInt())) }
         moreLabel = if (plan.more > 0) "+${plan.more}" else ""

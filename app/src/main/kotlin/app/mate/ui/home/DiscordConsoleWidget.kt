@@ -52,8 +52,14 @@ class DiscordConsoleWidget(context: Context, host: HomeHost, placed: Placed) : C
         addView(flag, LinearLayout.LayoutParams(wrap, wrap).apply { marginStart = dp(8) })
     }
     private val line2 = lcdLabel(LINE_SP, R.attr.c_text)
-    private val metersRow = ConsoleMetersView(lcdContext, vertical = false).apply { photoOf = IconCache::peekDiscord }
-    private val metersColumn = ConsoleMetersView(lcdContext, vertical = true).apply { photoOf = IconCache::peekDiscord }
+    private val metersRow = ConsoleMetersView(lcdContext, vertical = false).apply {
+        photoOf = IconCache::peekDiscord
+        onFacesChanged = ::renderTalker
+    }
+    private val metersColumn = ConsoleMetersView(lcdContext, vertical = true).apply {
+        photoOf = IconCache::peekDiscord
+        onFacesChanged = ::renderTalker
+    }
     private val photos = lcdLabel(CAPTION_SP, R.attr.c_text).apply {
         minHeight = dp(MIN_TOUCH_DP)
         gravity = Gravity.CENTER_VERTICAL
@@ -227,13 +233,15 @@ class DiscordConsoleWidget(context: Context, host: HomeHost, placed: Placed) : C
     private fun marked(members: List<VoiceMember>) = members.map { it.copy(speaking = it.id in speaking) }
 
     /**
-     * Grande ligne du LCD : hors appel, l'état ; en appel sans photos (Pastille, Ligne, salon sans participants lus), qui
+     * Grande ligne du LCD : hors appel, l'état ; en appel sans photos (Pastille, Ligne, participants non lus, place trop courte), qui
      * parle, sinon avec qui ; en Pastille, le nom seul ou l'état du micro. Les photos la remplacent : le halo dit qui parle.
      */
     private fun renderTalker() {
         val v = voice
         val inCall = v?.connected == true
-        line2.visibility = if (inCall && meters?.visibility == View.VISIBLE) View.GONE else View.VISIBLE
+        val faces = meters?.takeIf { it.visibility == View.VISIBLE }?.showsFaces == true
+        line2.visibility = if (inCall && faces) View.GONE else View.VISIBLE
+        if (line2.visibility == View.GONE) return
         val talker = v?.members?.firstOrNull { it.id in speaking }?.takeIf { inCall }
         val quiet = !inCall || (talker == null && pill)
         line2.setTextColor(themeColor(lcdContext, if (quiet && talker == null) R.attr.c_text_dim else R.attr.c_text))
