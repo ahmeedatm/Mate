@@ -39,6 +39,7 @@ class ComputersDialog(
     private val link: Link,
     private val adder: ComputerAdder,
     private val onSwitch: (Computer) -> Unit,
+    private val onHome: () -> Unit,
     private val onRename: (Computer) -> Unit,
     private val onSettings: () -> Unit,
     private val onClosed: () -> Unit = {},
@@ -65,6 +66,7 @@ class ComputersDialog(
             computers.forEachIndexed { n, computer ->
                 addView(card(computer, computer.id == active?.id), wide(top = if (n == 0) 20 else 8))
             }
+            addView(homeCard(Computers.homeActive(activity)), wide(top = 8))
             addView(TextView(activity, null, 0, R.style.CardTitle).apply { setText(R.string.computers_add) }, wide(top = 24))
             addView(addRow(), wide(top = 10))
             addView(settingsLink(), wide(top = 12))
@@ -167,6 +169,44 @@ class ComputersDialog(
         setOnClickListener {
             dialog.dismiss()
             if (!active) onSwitch(computer)
+        }
+    }
+
+    /** Maison, toujours là : la tablette sans ordinateur (heure, météo, transports, lumières) ; toucher = y passer. */
+    private fun homeCard(active: Boolean) = LinearLayout(activity).apply {
+        gravity = Gravity.CENTER_VERTICAL
+        setBackgroundResource(R.drawable.row_bg)
+        setPadding(activity.dp(14), activity.dp(12), activity.dp(14), activity.dp(12))
+        addView(ImageView(activity).apply {
+            setImageDrawable(Look.badge(activity, R.drawable.ic_home, themeColor(activity, R.attr.c_hue_green), sizeDp = 44, iconDp = 24))
+            importantForAccessibility = View.IMPORTANT_FOR_ACCESSIBILITY_NO
+        }, LinearLayout.LayoutParams(activity.dp(44), activity.dp(44)))
+        addView(LinearLayout(activity).apply {
+            orientation = LinearLayout.VERTICAL
+            addView(TextView(activity).apply {
+                setText(R.string.home_name)
+                textSize = 18f
+                if (active) typeface = fontMedium
+                setTextColor(themeColor(activity, R.attr.c_text))
+            })
+            addView(TextView(activity).apply {
+                setText(R.string.home_card_text)
+                textSize = 13f
+                setTextColor(themeColor(activity, R.attr.c_text_dim))
+            })
+        }, LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f).apply { marginStart = activity.dp(14) })
+        addView(if (active) tag(R.string.home_chosen) else TextView(activity).apply {
+            setText(R.string.home_choose)
+            textSize = 13f
+            typeface = fontMedium
+            setTextColor(themeColor(activity, R.attr.c_text_dim))
+        })
+        isClickable = true
+        isFocusable = true
+        contentDescription = listOfNotNull(activity.getString(R.string.home_name), activity.getString(R.string.home_chosen).takeIf { active }).joinToString(", ")
+        setOnClickListener {
+            dialog.dismiss()
+            if (!active) onHome()
         }
     }
 

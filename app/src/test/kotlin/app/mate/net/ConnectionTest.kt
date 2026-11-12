@@ -142,4 +142,35 @@ class ConnectionTest {
         Computers.save(context, computer("a", backend("a")), makeActive = true)
         assertEquals("a", Connection.resolve(context) { throw IOException("pas de WiFi") }?.id)
     }
+
+    @Test
+    fun `aucun PC ne repond, la tablette passe sur Maison`() = runBlocking {
+        Computers.save(context, computer("a", deadUrl()), makeActive = true)
+        Computers.save(context, computer("b", deadUrl()))
+        assertTrue(Connection.homeIfNoneAnswers(context))
+        assertTrue(Computers.homeActive(context))
+    }
+
+    @Test
+    fun `un PC repond encore, pas de Maison et l'actif ne change pas`() = runBlocking {
+        Computers.save(context, computer("a", deadUrl()), makeActive = true)
+        Computers.save(context, computer("b", backend("b")))
+        assertEquals(false, Connection.homeIfNoneAnswers(context))
+        assertEquals(false, Computers.homeActive(context))
+        assertEquals("a", Computers.active(context)?.id)
+    }
+
+    @Test
+    fun `un PC qui repond mais refuse le jeton compte comme un PC qui repond`() = runBlocking {
+        Computers.save(context, computer("a", backend("a", token = "autre")), makeActive = true)
+        assertEquals(false, Connection.homeIfNoneAnswers(context))
+    }
+
+    @Test
+    fun `la bascule vers Maison attend une coupure de quelques secondes, puis se reessaie a intervalle`() {
+        assertEquals(false, Connection.homeCheckDue(offlineForMs = 3_000, sinceCheckMs = Long.MAX_VALUE))
+        assertTrue(Connection.homeCheckDue(offlineForMs = 9_000, sinceCheckMs = Long.MAX_VALUE))
+        assertEquals(false, Connection.homeCheckDue(offlineForMs = 20_000, sinceCheckMs = 5_000))
+        assertTrue(Connection.homeCheckDue(offlineForMs = 40_000, sinceCheckMs = 16_000))
+    }
 }

@@ -37,6 +37,12 @@
     <string name="no_computer">Aucun ordinateur : Réglages, Ajouter</string>
     <string name="no_computer_short">Aucun</string>
     <string name="computer_switched">Connecté à %1$s</string>
+    <string name="home_switched">Aucun ordinateur ne répond : Mate passe sur Maison</string>
+    <string name="home_name">Maison</string>
+    <string name="home_spoken">Maison, sans ordinateur</string>
+    <string name="home_chosen">Affichée</string>
+    <string name="home_choose">Afficher</string>
+    <string name="home_card_text">Sans ordinateur : heure, météo, transports, lumières</string>
 
     <!-- Accueil -->
     <string name="greeting_morning">Bonjour</string>
@@ -1267,6 +1273,8 @@
     <string name="template_deck_desc">Applis, son de l\'ordi, touches et lecture en cours : agir sur l\'ordinateur.</string>
     <string name="template_call">Réunion</string>
     <string name="template_call_desc">Micro, caméra, partage et son de l\'appel : s\'affiche pendant un appel.</string>
+    <string name="template_house">Maison</string>
+    <string name="template_house_desc">Sans ordinateur : l\'heure, la météo, les transports et les lumières.</string>
     <string name="profile_call">Réunion</string>
     <string name="rail_more">Plus</string>
     <string name="rail_add">Écran</string>

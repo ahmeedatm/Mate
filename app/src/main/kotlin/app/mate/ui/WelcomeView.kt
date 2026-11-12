@@ -63,8 +63,8 @@ class WelcomeView @JvmOverloads constructor(context: Context, attrs: AttributeSe
         searchStatus = findViewById(R.id.welcome_search_status)
     }
 
-    /** `onAdded` : ordinateur appairé (MainActivity ferme cet écran et recrée les modes). */
-    fun attach(activity: MainActivity, onAdded: (Computer) -> Unit) {
+    /** `onAdded` : ordinateur appairé (MainActivity ferme cet écran et recrée les modes) ; `onLater` : « Plus tard ». */
+    fun attach(activity: MainActivity, onLater: () -> Unit = {}, onAdded: (Computer) -> Unit) {
         this.activity = activity
         adder = ComputerAdder(activity, activity.lifecycleScope, onAdded)
         auto = AutoPairing(
@@ -89,7 +89,10 @@ class WelcomeView @JvmOverloads constructor(context: Context, attrs: AttributeSe
             clearCode()
             adder.manual()
         }
-        findViewById<Button>(R.id.welcome_later).setOnClickListener { hide() }
+        findViewById<Button>(R.id.welcome_later).setOnClickListener {
+            hide()
+            onLater()
+        }
     }
 
     fun show() {

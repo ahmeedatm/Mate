@@ -12,12 +12,12 @@ import kotlinx.coroutines.launch
 /**
  * Canal avec l'ordinateur actif tant que l'appli est à l'écran : ordres de Claude (extension MCP),
  * pastille de connexion (la requête en attente prouve que l'ordinateur répond), bascule vers un autre
- * ordinateur enregistré quand l'actif ne répond plus.
+ * ordinateur enregistré quand l'actif ne répond plus, ou vers Maison (null) quand plus aucun ne répond.
  */
 class RemoteLink(
     private val activity: MainActivity,
     private val onStatus: (Link) -> Unit,
-    private val onSwitched: (Computer) -> Unit,
+    private val onSwitched: (Computer?) -> Unit,
 ) {
     private var job: Job? = null
 

@@ -325,7 +325,13 @@ class MainActivity : AppCompatActivity() {
         noComputer = findViewById(R.id.no_computer)
         noComputer.findViewById<View>(R.id.connect_button).setOnClickListener { showWelcome() }
         welcome = findViewById(R.id.welcome)
-        welcome.attach(this) { computer ->
+        welcome.attach(this, onLater = {
+            // Sans aucun ordinateur, « Plus tard » ouvre Maison : la tablette sert déjà de tableau de bord.
+            if (Computers.all(this).isEmpty() && !Computers.homeActive(this)) {
+                Computers.setHome(this)
+                onComputerChanged(null)
+            }
+        }) { computer ->
             welcome.hide()
             // Levé avant onComputerChanged : les plugins (offerPlugins) attendent le choix du template.
             templatePending = !Prefs.templatesOffered(this)
@@ -430,10 +436,10 @@ class MainActivity : AppCompatActivity() {
         topBar.reload()
         nav.applySettings()
         refreshRail()
-        showLink(Link(computer, Link.State.OFFLINE))
+        showLink(Link(computer, if (computer == null && Computers.homeActive(this)) Link.State.HOME else Link.State.OFFLINE))
         remote.restart()
         topBar.restart()
-        if (automatic && computer != null) showBanner(getString(R.string.computer_switched, computer.name), 6)
+        if (automatic) showBanner(if (computer != null) getString(R.string.computer_switched, computer.name) else getString(R.string.home_switched), 6)
         // Ordinateur appairé depuis la config par ordinateur : choix du modèle, une fois (Bienvenue le fait déjà lever).
         if (computer != null && !automatic && !templatePending && !Prefs.templatesOffered(this)) {
             templatePending = true
@@ -523,6 +529,10 @@ class MainActivity : AppCompatActivity() {
             onSwitch = { chosen ->
                 Computers.setActive(this, chosen.id)
                 onComputerChanged(Computers.active(this))
+            },
+            onHome = {
+                Computers.setHome(this)
+                onComputerChanged(null)
             },
             onRename = { computer ->
                 computerDialogs.rename(computer) {
@@ -1178,8 +1188,8 @@ class MainActivity : AppCompatActivity() {
         // L'écran quitté est masqué tout de suite : deux écrans en fondu l'un sur l'autre se mêlent (double image), et
         // remettre l'ancien à 100 % à la fin de son fondu le montrait en entier une image avant son masquage (flash).
         fm.fragments.forEach { tx.hide(it) }
-        // Sans ordinateur, un mode qui en a besoin n'est pas créé (caméra, requêtes) : renderNoComputer le remplace.
-        val needsComputer = mode.connect != null && Computers.all(this).isEmpty()
+        // Sans ordinateur (ou sur Maison), un mode qui en a besoin n'est pas créé (caméra, requêtes) : renderNoComputer le remplace.
+        val needsComputer = mode.connect != null && Computers.active(this) == null
         val existing = fm.findFragmentByTag(mode.tag)
         if (existing != null) tx.show(existing) else if (!needsComputer) tx.add(R.id.mode_container, create(mode), mode.tag)
         tx.commit()
@@ -1371,9 +1381,9 @@ class MainActivity : AppCompatActivity() {
         window.decorView.postDelayed(rest, REST_MS)
     }
 
-    /** Modes qui ont besoin de l'ordinateur : « Aucun ordinateur connecté » par-dessus, tant qu'il n'y en a pas. */
+    /** Modes qui ont besoin de l'ordinateur : « Aucun ordinateur connecté » par-dessus, tant qu'il n'y en a pas (ou sur Maison). */
     private fun renderNoComputer() {
-        val text = current.connect?.takeIf { Computers.all(this).isEmpty() }
+        val text = current.connect?.takeIf { Computers.active(this) == null }
         noComputer.visibility = if (text != null) View.VISIBLE else View.GONE
         if (text != null) noComputer.findViewById<TextView>(R.id.connect_text).setText(text)
     }
