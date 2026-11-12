@@ -18,6 +18,7 @@ import androidx.core.view.ViewCompat
 import androidx.core.view.accessibility.AccessibilityNodeInfoCompat
 import androidx.dynamicanimation.animation.DynamicAnimation
 import app.mate.AnimFamily
+import app.mate.Computers
 import app.mate.Mode
 import app.mate.Prefs
 import app.mate.R
@@ -46,9 +47,7 @@ class KeyDock(
     private val row: LinearLayout = activity.findViewById(R.id.dock_keys)
     private val end: LinearLayout = activity.findViewById(R.id.dock_end)
     private val chip: View = activity.findViewById<TopBar>(R.id.top_bar).computerChip
-    private val chipDot: ImageView = chip.findViewById(R.id.chip_dot)
-    private val chipName: TextView = chip.findViewById(R.id.chip_name)
-    private val chipState: TextView = chip.findViewById(R.id.chip_state)
+    private val lamp = ComputerLampView(chip)
     override val root: View = dock
     override val status: View = chip
     override val talk: View = round(R.drawable.dock_talk_cap, R.drawable.ic_key_mic, R.color.dock_talk_icon, R.string.voice_button, atEnd = false)
@@ -70,7 +69,6 @@ class KeyDock(
     private var fitted = 0
     private var position = -1
     private var resting = false
-    private var linkState: Link.State? = null
     override var lastMove = 0
         private set
 
@@ -146,11 +144,10 @@ class KeyDock(
         screens.indices.forEach { decorateScreen(it) }
     }
 
-    /** L'état se lit dans la pastille LCD du bandeau : signe, nom et état écrit (couleurs de l'afficheur). */
+    /** L'état se lit sans texte dans la pastille LCD du bandeau : logo de l'ordinateur et diode ([ComputerLamp]). */
     override fun showLink(link: Link) {
-        renderLink(activity, chipDot, chipName, chipState, chip, link, offline = R.attr.c_text_faint, colors = chip.context)
-        if (linkState != null && linkState != link.state) Look.blip(chipDot)
-        linkState = link.state
+        val name = link.computer?.name ?: activity.getString(if (link.state == Link.State.HOME) R.string.home_name else R.string.no_computer_short)
+        lamp.show(link, Prefs.computerLocked(activity), Computers.all(activity), name)
     }
 
     override fun applySettings() = render()
