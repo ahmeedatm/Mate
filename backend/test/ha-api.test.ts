@@ -17,6 +17,10 @@ const STATES = [
   { entity_id: "light.bureau", state: "unavailable", attributes: {} },
   { entity_id: "lock.porte", state: "locked", attributes: { friendly_name: "Porte" } },
   { entity_id: "light.cave", state: "on", attributes: { friendly_name: "Cave (hors liste)" } },
+  { entity_id: "media_player.tv", state: "playing", attributes: { friendly_name: "Télé" } },
+  { entity_id: "media_player.chambre", state: "standby", attributes: { friendly_name: "Apple TV" } },
+  { entity_id: "media_player.salon", state: "idle", attributes: { friendly_name: "Enceinte" } },
+  { entity_id: "media_player.bureau", state: "off", attributes: { friendly_name: "Écran" } },
 ];
 const haServer = http.createServer((req, res) => {
   let raw = "";
@@ -46,6 +50,7 @@ const haServer = http.createServer((req, res) => {
 let site = "";
 let server: TestServer;
 let bare: TestServer;
+let media: TestServer;
 before(async () => {
   await new Promise<void>((r) => haServer.listen(0, "127.0.0.1", r));
   site = `http://127.0.0.1:${(haServer.address() as AddressInfo).port}`;
@@ -58,10 +63,14 @@ before(async () => {
     },
   });
   bare = await startServer({ env: { HA_URL: "", HA_TOKEN: "", HA_ENTITIES: "" } });
+  media = await startServer({
+    env: { HA_URL: site, HA_TOKEN, HA_ENTITIES: "media_player.tv,media_player.chambre,media_player.salon,media_player.bureau" },
+  });
 });
 after(async () => {
   await server?.stop();
   await bare?.stop();
+  await media?.stop();
   haServer.close();
 });
 
@@ -160,5 +169,24 @@ describe("home assistant : API", () => {
     } finally {
       htmlStates = false;
     }
+  });
+});
+
+describe("home assistant : télé et Apple TV", () => {
+  it("GET /ha/entities : un media_player est allumé dans tout état autre que off ou standby", async () => {
+    const { status, json } = await media.call("GET", "/ha/entities");
+    assert.equal(status, 200);
+    assert.deepEqual(json.entities, [
+      { id: "media_player.tv", name: "Télé", kind: "toggle", on: true, available: true },
+      { id: "media_player.chambre", name: "Apple TV", kind: "toggle", on: false, available: true },
+      { id: "media_player.salon", name: "Enceinte", kind: "toggle", on: true, available: true },
+      { id: "media_player.bureau", name: "Écran", kind: "toggle", on: false, available: true },
+    ]);
+  });
+
+  it("POST toggle : allume ou éteint la télé par media_player.toggle", async () => {
+    seen.length = 0;
+    assert.equal((await media.call("POST", "/ha/entities/media_player.tv/toggle")).status, 200);
+    assert.deepEqual(seen, [{ method: "POST", url: "/api/services/media_player/toggle", body: { entity_id: "media_player.tv" } }]);
   });
 });
