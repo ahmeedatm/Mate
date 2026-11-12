@@ -435,7 +435,7 @@ class TileGridView(context: Context, private val scope: CoroutineScope) : GridVi
         private fun capRest(view: View) = if (view.isSelected) view.context.dp(KeyCaps.LIT_DP).toFloat() else 0f
 
         /** Grise une icône d'appli : sur un capuchon d'Instrument, seule la DEL est en couleur. */
-        private val GRAY = ColorMatrixColorFilter(ColorMatrix().apply { setSaturation(0f) })
+        internal val GRAY = ColorMatrixColorFilter(ColorMatrix().apply { setSaturation(0f) })
 
         /**
          * Remplit un capuchon ([KeyCaps]) : icône au trait (symbole, emoji connu, icône d'appli grisée) ou initiale en

@@ -2370,4 +2370,7 @@
     <!-- Instrument lot 2 : Mixage -->
     <string name="mixer_key_mute">MUET</string>
     <string name="mixer_key_muted">COUPÉ</string>
+
+    <!-- Instrument lot 2 : widget Fenêtres -->
+    <string name="trash_idle_key">Garder ici pour fermer</string>
 </resources>

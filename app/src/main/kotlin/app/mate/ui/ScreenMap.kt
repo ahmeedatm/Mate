@@ -18,6 +18,9 @@ import android.widget.TextView
 import androidx.core.content.ContextCompat
 import app.mate.R
 import app.mate.net.ComputerDisplay
+import app.mate.ui.home.LcdPanel
+import app.mate.ui.home.WindowCaps
+import app.mate.ui.home.lcdText
 import kotlin.math.abs
 import kotlin.math.hypot
 
@@ -37,6 +40,9 @@ class ScreenMap @JvmOverloads constructor(
 
     /** Étire les écrans pour remplir la vue (vue « Ouvertes » : des listes de fenêtres, la forme exacte compte peu). */
     var stretch = false
+
+    /** Thème Instrument : un LCD « ÉCRAN 1 · PRINCIPAL » en tête de chaque écran, ses fenêtres en grille de capuchons ([CapGrid]). */
+    var instrument = false
 
     private var displays: List<ComputerDisplay> = emptyList()
     private val gap = dp(12)
@@ -104,7 +110,7 @@ class ScreenMap @JvmOverloads constructor(
 
     /** Un écran : nom, fenêtres (défilables), et aperçu de la place prise pendant un glisser. */
     private inner class Pane(val screen: ComputerDisplay) : FrameLayout(context) {
-        private val cards = LinearLayout(context).apply { orientation = LinearLayout.VERTICAL }
+        private val cards: ViewGroup = if (instrument) CapGrid(context) else LinearLayout(context).apply { orientation = LinearLayout.VERTICAL }
         val scroll = ScrollView(context)
         private val preview = View(context).apply {
             background = rounded(R.attr.c_accent_soft, dp(8)).apply { setStroke(dp(2), color(R.attr.c_accent)) }
@@ -124,7 +130,24 @@ class ScreenMap @JvmOverloads constructor(
                 orientation = LinearLayout.VERTICAL
                 setPadding(dp(10), dp(8), dp(10), dp(8))
             }
-            // Nom de l'écran et son rôle : le principal porte la barre des menus et le Dock.
+            content.addView(if (instrument) lcdHeader() else header())
+            content.addView(scroll.apply {
+                isVerticalScrollBarEnabled = false
+                addView(cards)
+            }, LinearLayout.LayoutParams(LayoutParams.MATCH_PARENT, 0, 1f))
+            addView(content, LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.MATCH_PARENT))
+            addView(preview, LayoutParams(0, 0))
+            addView(previewLabel, LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.MATCH_PARENT))
+            setOnDragListener { _, event -> onDrag(event) }
+        }
+
+        fun addCard(card: View) {
+            if (instrument) return cards.addView(card)
+            cards.addView(card, LinearLayout.LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.WRAP_CONTENT).apply { bottomMargin = dp(6) })
+        }
+
+        /** Nom de l'écran et son rôle : le principal porte la barre des menus et le Dock. */
+        private fun header(): View {
             val header = LinearLayout(context).apply {
                 orientation = LinearLayout.HORIZONTAL
                 gravity = Gravity.CENTER_VERTICAL
@@ -144,19 +167,22 @@ class ScreenMap @JvmOverloads constructor(
                 setPadding(dp(8), dp(2), dp(8), dp(2))
                 maxLines = 1
             }, LinearLayout.LayoutParams(LayoutParams.WRAP_CONTENT, LayoutParams.WRAP_CONTENT).apply { marginStart = dp(8) })
-            content.addView(header)
-            content.addView(scroll.apply {
-                isVerticalScrollBarEnabled = false
-                addView(cards)
-            }, LinearLayout.LayoutParams(LayoutParams.MATCH_PARENT, 0, 1f))
-            addView(content, LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.MATCH_PARENT))
-            addView(preview, LayoutParams(0, 0))
-            addView(previewLabel, LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.MATCH_PARENT))
-            setOnDragListener { _, event -> onDrag(event) }
+            return header
         }
 
-        fun addCard(card: View) {
-            cards.addView(card, LinearLayout.LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.WRAP_CONTENT).apply { bottomMargin = dp(6) })
+        /** Instrument : le nom et le rôle de l'écran sur un LCD, en capitales. */
+        private fun lcdHeader(): View {
+            val lcd = LcdPanel(context).apply {
+                setPadding(dp(10), dp(6), dp(10), dp(6))
+                addView(lcdText(context, 12f).apply {
+                    maxLines = 1
+                    text = WindowCaps.screenTitle(screen.label, context.getString(if (screen.main) R.string.screen_main else R.string.screen_secondary))
+                })
+            }
+            return FrameLayout(context).apply {
+                setPadding(0, 0, 0, dp(6))
+                addView(lcd)
+            }
         }
 
         private fun onDrag(event: DragEvent): Boolean {
@@ -218,7 +244,8 @@ class ScreenMap @JvmOverloads constructor(
         }
 
         private fun frameBackground(highlight: Boolean) = rounded(R.attr.c_bg, dp(12)).apply {
-            setStroke(dp(2), color(if (highlight) R.attr.c_accent else R.attr.c_stroke))
+            if (instrument) setStroke(dp(1), color(if (highlight) R.attr.c_signal else R.attr.c_stroke))
+            else setStroke(dp(2), color(if (highlight) R.attr.c_accent else R.attr.c_stroke))
         }
     }
 
@@ -245,16 +272,20 @@ class ScreenMap @JvmOverloads constructor(
 @SuppressLint("ClickableViewAccessibility")
 fun View.dragToScreens(
     payload: Any, canDrag: () -> Boolean, onDragStarted: (View) -> Unit, onDoubleTap: (() -> Unit)? = null,
-    onTripleTap: (() -> Unit)? = null, onTap: () -> Unit,
+    onTripleTap: (() -> Unit)? = null, onPressed: ((Boolean) -> Unit)? = null, onTap: () -> Unit,
 ) {
     val slop = ViewConfiguration.get(context).scaledTouchSlop
     var downX = 0f
     var downY = 0f
     var moved = false
     var dragging = false
+    fun press(v: View, pressed: Boolean) {
+        v.isPressed = pressed
+        onPressed?.invoke(pressed)
+    }
     fun startDrag(v: View) {
         dragging = true
-        v.isPressed = false
+        press(v, false)
         v.parent.requestDisallowInterceptTouchEvent(true)
         if (canDrag() && v.startDragAndDrop(null, View.DragShadowBuilder(v), payload, 0)) {
             v.performHapticFeedback(HapticFeedbackConstants.LONG_PRESS)
@@ -294,23 +325,23 @@ fun View.dragToScreens(
                 downY = e.y
                 moved = false
                 dragging = false
-                v.isPressed = true
+                press(v, true)
                 v.postDelayed(hold, ViewConfiguration.getLongPressTimeout().toLong())
             }
             MotionEvent.ACTION_MOVE -> if (!moved && !dragging && hypot(e.x - downX, e.y - downY) > slop) {
                 moved = true
-                v.isPressed = false
+                press(v, false)
                 v.removeCallbacks(hold)
                 // De côté : glisser vers un écran. Vers le haut ou le bas : la liste de l'écran défile (elle prend le geste).
                 if (abs(e.x - downX) > abs(e.y - downY)) startDrag(v)
             }
             MotionEvent.ACTION_UP -> {
-                v.isPressed = false
+                press(v, false)
                 v.removeCallbacks(hold)
                 if (!moved && !dragging) tapped(v)
             }
             MotionEvent.ACTION_CANCEL -> {
-                v.isPressed = false
+                press(v, false)
                 v.removeCallbacks(hold)
             }
         }

@@ -1,11 +1,13 @@
 package app.mate.ui.home
 
+import android.annotation.SuppressLint
 import android.content.Context
 import android.graphics.Bitmap
 import android.text.TextUtils
 import android.util.TypedValue
 import android.view.Gravity
 import android.view.HapticFeedbackConstants
+import android.view.MotionEvent
 import android.view.View
 import android.view.ViewGroup
 import android.widget.FrameLayout
@@ -40,6 +42,8 @@ class OpenWindowsCompact(
     private val scope: CoroutineScope,
     private val family: ShapeFamily,
     initial: OpenWindows? = null,
+    /** Thème Instrument (fenêtre LCD) : un capuchon par appli, au lieu des icônes et de la liste. */
+    private val instrument: Boolean = false,
 ) : FrameLayout(context) {
     /** Dernière liste lue, gardée par le widget quand la forme change. */
     var data: OpenWindows? = initial
@@ -96,7 +100,7 @@ class OpenWindowsCompact(
         addView(icons(apps, OpenWindowsSummary.total(current)), LayoutParams(MATCH, MATCH))
     }
 
-    private fun icons(apps: List<OpenWindowsSummary.Entry>, total: Int): View = when (family) {
+    private fun icons(apps: List<OpenWindowsSummary.Entry>, total: Int): View = if (instrument) caps(apps) else when (family) {
         ShapeFamily.PILL -> pill(apps.first(), total)
         ShapeFamily.ROW -> LinearLayout(context).apply {
             gravity = Gravity.CENTER_VERTICAL
@@ -123,6 +127,66 @@ class OpenWindowsCompact(
             apps.take(fit).forEachIndexed { i, entry ->
                 addView(row(entry), LinearLayout.LayoutParams(MATCH, dp(TileShapes.LIST_ROW_DP)).apply { if (i > 0) topMargin = dp(TileShapes.LIST_GAP_DP) })
             }
+        }
+    }
+
+    /**
+     * Instrument : Pastille, l'appli devant ; Ligne, les capuchons côte à côte ; Colonne, empilés ([KeyCaps.stripFit]).
+     * Numéro « 01 », icône grisée, « CHROME · 2 », DEL allumée pour l'appli au premier plan.
+     */
+    private fun caps(apps: List<OpenWindowsSummary.Entry>): View {
+        val density = resources.displayMetrics.density
+        val gap = dp(TileShapes.ICON_GAP_DP)
+        fun cap(entry: OpenWindowsSummary.Entry, index: Int) = WindowCapViews.inflate(context).also {
+            val windows = context.resources.getQuantityString(R.plurals.widget_open_windows, entry.windows, entry.windows)
+            WindowCapViews.bind(
+                it, KeyCaps.number(index), entry.app, WindowCaps.appLabel(entry.app.name, entry.windows), entry.front,
+                context.getString(R.string.widget_open_row_desc, describe(entry), windows), scope.takeUnless { sample },
+            )
+            tappable(it, entry, it.contentDescription.toString())
+            press(it)
+        }
+        return when (family) {
+            ShapeFamily.PILL -> FrameLayout(context).apply {
+                addView(cap(apps.first(), 0), LayoutParams(MATCH, minOf(dp(KeyCaps.CELL_DP), room.height), Gravity.CENTER))
+            }
+            ShapeFamily.ROW -> LinearLayout(context).apply {
+                gravity = Gravity.CENTER_VERTICAL
+                apps.take(KeyCaps.stripFit(family, room.width, room.height, density)).forEachIndexed { i, entry ->
+                    addView(cap(entry, i), LinearLayout.LayoutParams(0, minOf(dp(KeyCaps.CELL_DP), room.height), 1f).apply { if (i > 0) marginStart = gap })
+                }
+            }
+            else -> LinearLayout(context).apply {
+                orientation = LinearLayout.VERTICAL
+                val row = dp(TileShapes.LIST_ROW_PANEL_DP)
+                apps.take(KeyCaps.stripFit(family, room.width, room.height, density)).forEachIndexed { i, entry ->
+                    val view = cap(entry, i)
+                    tighten(view)
+                    addView(view, LinearLayout.LayoutParams(MATCH, row).apply { if (i > 0) topMargin = dp(TileShapes.LIST_GAP_PANEL_DP) })
+                }
+            }
+        }
+    }
+
+    /** Colonne : des capuchons de 56 dp, l'icône et le haut du capuchon se serrent pour que le nom tienne. */
+    private fun tighten(cap: View) {
+        cap.findViewById<View>(R.id.key_face).setPadding(dp(6), dp(TIGHT_TOP_DP), dp(6), dp(2))
+        (cap.findViewById<View>(R.id.tile_icon).parent as View).layoutParams.apply {
+            width = dp(TIGHT_ICON_DP)
+            height = dp(TIGHT_ICON_DP)
+        }
+        cap.findViewById<TextView>(R.id.tile_initial).textSize = TIGHT_INITIAL_SP
+    }
+
+    /** Le capuchon s'enfonce sous le doigt et revient sur son ressort ; le toucher reste à `tappable`. */
+    @SuppressLint("ClickableViewAccessibility")
+    private fun press(cap: View) {
+        cap.setOnTouchListener { v, e ->
+            when (e.actionMasked) {
+                MotionEvent.ACTION_DOWN -> TileGridView.press(v, true)
+                MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> TileGridView.press(v, false)
+            }
+            false
         }
     }
 
@@ -233,5 +297,8 @@ class OpenWindowsCompact(
         const val ICON_DP = 40
         const val FRONT_MARK_DP = 20
         const val LIST_ICON_DP = 28
+        const val TIGHT_TOP_DP = 12
+        const val TIGHT_ICON_DP = 20
+        const val TIGHT_INITIAL_SP = 16f
     }
 }

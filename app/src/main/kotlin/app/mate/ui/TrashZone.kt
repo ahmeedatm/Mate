@@ -21,6 +21,7 @@ import android.widget.TextView
 import androidx.core.content.ContextCompat
 import app.mate.R
 import app.mate.audio.Crunch
+import java.util.Locale
 
 /**
  * Corbeille de la vue « Ouvertes », posée sur le bas des écrans : invisible au repos, grande pendant un glisser.
@@ -29,11 +30,17 @@ import app.mate.audio.Crunch
  * tôt ne fait rien. Fenêtre avalée : petit croc (son généré, [Crunch]) et « Miam ! ».
  * Toujours VISIBLE (seule l'opacité change) : Android ne prévient pas une vue masquée qu'un glisser commence.
  */
-class TrashZone(context: Context, private val onDrop: (payload: Any?) -> Unit) : FrameLayout(context) {
+class TrashZone(
+    context: Context,
+    /** Thème Instrument : une longue touche façon dock (socle, capuchon, DEL qui s'allume au survol), libellé en capitales. */
+    private val instrument: Boolean = false,
+    private val onDrop: (payload: Any?) -> Unit,
+) : FrameLayout(context) {
 
     private val bin = LinearLayout(context)
     private val icon = ImageView(context)
     private val label = TextView(context)
+    private val led = View(context)
     private val fill = ClipDrawable(rounded(R.attr.c_ko_soft), Gravity.START, ClipDrawable.HORIZONTAL)
     private val frame = rounded(R.attr.c_surface)
     private var armed = false
@@ -56,14 +63,24 @@ class TrashZone(context: Context, private val onDrop: (payload: Any?) -> Unit) :
             orientation = LinearLayout.HORIZONTAL
             gravity = Gravity.CENTER
             // Fond opaque d'abord : posée sur les cartes, une surface en verre (Hush, Spider-Man) les laisserait transparaître.
-            background = LayerDrawable(arrayOf(rounded(R.attr.c_bg), frame, fill))
+            background = if (instrument) keyBackground() else LayerDrawable(arrayOf(rounded(R.attr.c_bg), frame, fill))
             alpha = 0f
         }
         icon.setImageResource(R.drawable.ic_delete)
         icon.importantForAccessibility = View.IMPORTANT_FOR_ACCESSIBILITY_NO
-        bin.addView(icon, LinearLayout.LayoutParams(dp(44), dp(44)).apply { marginEnd = dp(14) })
-        label.textSize = 20f
-        label.typeface = Typeface.DEFAULT_BOLD
+        if (instrument) {
+            // Petite DEL éteinte à gauche du libellé ; l'icône ne sert plus (ses animations restent sans effet).
+            led.setBackgroundResource(R.drawable.dock_led)
+            led.importantForAccessibility = View.IMPORTANT_FOR_ACCESSIBILITY_NO
+            bin.addView(led, LinearLayout.LayoutParams(dp(14), dp(4)).apply { marginEnd = dp(10) })
+            label.textSize = 12f
+            label.typeface = themeFont(context, R.attr.c_font_label)
+            label.letterSpacing = 0.06f
+        } else {
+            bin.addView(icon, LinearLayout.LayoutParams(dp(44), dp(44)).apply { marginEnd = dp(14) })
+            label.textSize = 20f
+            label.typeface = Typeface.DEFAULT_BOLD
+        }
         bin.addView(label)
         addView(bin, LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.MATCH_PARENT))
 
@@ -75,7 +92,7 @@ class TrashZone(context: Context, private val onDrop: (payload: Any?) -> Unit) :
         when (event.action) {
             DragEvent.ACTION_DRAG_STARTED -> { removeCallbacks(backToRest); reset(); show(dragging = true) }
             DragEvent.ACTION_DRAG_ENTERED -> {
-                label.setText(R.string.trash_hold)
+                label.text = text(R.string.trash_hold)
                 tint(R.attr.c_ko)
                 icon.animate().scaleX(1.15f).scaleY(1.15f).setDuration(150).start()
                 arming.start()
@@ -86,14 +103,14 @@ class TrashZone(context: Context, private val onDrop: (payload: Any?) -> Unit) :
             }
             // Après « Miam ! », on laisse voir la corbeille un instant avant de revenir au repos.
             // (Toujours : un glisser annulé pendant que la corbeille tremble la laissait affichée.)
-            DragEvent.ACTION_DRAG_ENDED -> postDelayed(backToRest, if (label.text == context.getString(R.string.trash_done)) DONE_MS else 0)
+            DragEvent.ACTION_DRAG_ENDED -> postDelayed(backToRest, if (label.text == text(R.string.trash_done)) DONE_MS else 0)
         }
         return true
     }
 
     private fun arm() {
         armed = true
-        label.setText(R.string.trash_release)
+        label.text = text(R.string.trash_release)
         performHapticFeedback(HapticFeedbackConstants.LONG_PRESS)
         // Prête à avaler : la corbeille tremble (pas avec Réduire les animations : le texte suffit).
         if (Look.still(context)) return
@@ -107,7 +124,7 @@ class TrashZone(context: Context, private val onDrop: (payload: Any?) -> Unit) :
     private fun swallow(payload: Any?) {
         stopWobble()
         armed = false
-        label.setText(R.string.trash_done)
+        label.text = text(R.string.trash_done)
         Crunch.play(context)
         icon.animate().scaleX(1.5f).scaleY(1.5f).setDuration(110).withEndAction {
             icon.animate().scaleX(1f).scaleY(1f).setDuration(220).start()
@@ -128,7 +145,7 @@ class TrashZone(context: Context, private val onDrop: (payload: Any?) -> Unit) :
         icon.animate().cancel()
         icon.scaleX = 1f
         icon.scaleY = 1f
-        label.setText(R.string.trash_idle)
+        label.text = text(if (instrument) R.string.trash_idle_key else R.string.trash_idle)
         tint(R.attr.c_text_dim)
     }
 
@@ -139,10 +156,34 @@ class TrashZone(context: Context, private val onDrop: (payload: Any?) -> Unit) :
     }
 
     private fun tint(colorRes: Int) {
+        if (instrument) {
+            // Survolée (couleur d'alerte) : la DEL c_signal s'allume et le capuchon prend son contour orange.
+            val hovered = colorRes == R.attr.c_ko
+            bin.isSelected = hovered
+            led.isSelected = hovered
+            label.setTextColor(color(if (hovered) R.attr.c_text else R.attr.c_text_dim))
+            return
+        }
         val c = color(colorRes)
         icon.imageTintList = ColorStateList.valueOf(c)
         label.setTextColor(c)
         frame.setStroke(dp(2), c, dp(10).toFloat(), dp(6).toFloat())
+    }
+
+    /** Capitales en Instrument, comme les autres libellés de touches. */
+    private fun text(res: Int) = context.getString(res).let { if (instrument) it.uppercase(Locale.FRENCH) else it }
+
+    /** Socle fixe, capuchon par-dessus (4 dp plus haut), et la jauge de rouge qui se remplit pendant l'armement. */
+    private fun keyBackground() = LayerDrawable(
+        arrayOf(
+            ContextCompat.getDrawable(context, R.drawable.dock_key_base)?.mutate(),
+            ContextCompat.getDrawable(context, R.drawable.dock_key_cap)?.mutate(),
+            fill,
+        ),
+    ).apply {
+        setLayerInset(0, 0, dp(KEY_LIFT_DP), 0, 0)
+        setLayerInset(1, 0, 0, 0, dp(KEY_LIFT_DP))
+        setLayerInset(2, 0, 0, 0, dp(KEY_LIFT_DP))
     }
 
     private fun rounded(colorRes: Int) = GradientDrawable().apply {
@@ -158,5 +199,6 @@ class TrashZone(context: Context, private val onDrop: (payload: Any?) -> Unit) :
         const val MAX_LEVEL = 10_000
         const val FADE_MS = 150L
         const val DONE_MS = 700L
+        const val KEY_LIFT_DP = 4
     }
 }
