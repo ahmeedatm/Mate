@@ -32,3 +32,49 @@ fun wledStateBody(brightness: Int?, rgb: Int?): JSONObject = JSONObject().apply 
         put("seg", JSONArray().put(JSONObject().put("col", JSONArray().put(color))))
     }
 }
+
+/** Une WLED connue de la tablette : trouvée sur le WiFi (mDNS) ou saisie. `id` : « wled:<adresse MAC> ». */
+data class WledDevice(val id: String, val host: String, val name: String)
+
+/** `GET /json/info` → la WLED telle que la tablette la retient (null : ce n'est pas une WLED). */
+fun parseWledInfo(host: String, json: String): WledDevice? {
+    val o = runCatching { JSONObject(json) }.getOrNull() ?: return null
+    val mac = o.optString("mac").lowercase().filter { it.isLetterOrDigit() }.ifEmpty { return null }
+    return WledDevice("wled:$mac", host, o.optString("name").ifEmpty { host })
+}
+
+/** Une WLED en direct, sans Home Assistant ni ordinateur : son API JSON en HTTP sur le WiFi, sans jeton. */
+class WledApi(private val device: WledDevice) : LightSource {
+    private val http = Http("http://${device.host}", "", CONNECT_TIMEOUT_MS, followRedirects = false)
+
+    /** Éteinte au mur ou hors du WiFi : la lumière reste listée, grisée. */
+    override suspend fun entities(): List<HaEntity> = http.io {
+        val entity = try {
+            parseWledState(device.id, device.name, http.get("/json/state", timeoutMs = READ_TIMEOUT_MS))
+        } catch (e: java.io.IOException) {
+            HaEntity(device.id, device.name, isScene = false, on = false, available = false)
+        }
+        listOf(entity)
+    }
+
+    override suspend fun toggle(id: String) = http.io {
+        http.postJson("/json/state", JSONObject().put("on", "t"), timeoutMs = READ_TIMEOUT_MS)
+        Unit
+    }
+
+    override suspend fun setLight(id: String, brightness: Int?, rgb: Int?) = http.io {
+        http.postJson("/json/state", wledStateBody(brightness, rgb), timeoutMs = READ_TIMEOUT_MS)
+        Unit
+    }
+
+    companion object {
+        private const val CONNECT_TIMEOUT_MS = 2_000
+        private const val READ_TIMEOUT_MS = 4_000
+
+        /** Lit la WLED à cette adresse (trouvée ou saisie) ; null si ce n'en est pas une. */
+        fun info(host: String): WledDevice? {
+            val http = Http("http://$host", "", CONNECT_TIMEOUT_MS, followRedirects = false)
+            return parseWledInfo(host, http.get("/json/info", timeoutMs = READ_TIMEOUT_MS))
+        }
+    }
+}

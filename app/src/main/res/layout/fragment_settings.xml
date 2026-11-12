@@ -871,6 +871,40 @@
                     </LinearLayout>
                 </LinearLayout>
 
+                <!-- Maison : Home Assistant et WLED en direct, sans ordinateur (HomeSettingsDialog). -->
+                <LinearLayout
+                    style="@style/Card"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="16dp"
+                    android:gravity="center_vertical"
+                    android:orientation="horizontal">
+
+                    <LinearLayout
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:orientation="vertical">
+
+                        <app.mate.ui.TitleView
+                            style="@style/CardTitle"
+                            android:drawableStart="@drawable/ic_home"
+                            android:text="@string/home_name" />
+
+                        <TextView
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="10dp"
+                            android:text="@string/home_settings_text"
+                            android:textSize="16sp" />
+                    </LinearLayout>
+
+                    <Button
+                        android:id="@+id/settings_home"
+                        style="@style/ActionButton"
+                        android:text="@string/home_settings_open" />
+                </LinearLayout>
+
                 <!-- WiFi : en kiosque, Paramètres d'Android est inaccessible. -->
                 <LinearLayout
                     style="@style/Card"

@@ -25,14 +25,20 @@ class HttpException(val code: Int, val reason: String) : IOException("HTTP $code
  * inclus dans Android, pour garder l'APK sans dépendance réseau.
  *
  * `trust` : certificat de l'ordinateur épinglé à l'appairage (HTTPS en WiFi) ; null pour un serveur à certificat
- * classique (mises à jour). Le jeton ne part jamais en HTTP en clair hors de la tablette elle-même (USB).
+ * classique (mises à jour). Le jeton ne part jamais en HTTP en clair hors de la tablette elle-même (USB), sauf
+ * `allowPrivateCleartext` : Home Assistant en direct sur une adresse du réseau local, case « Autoriser HTTP » cochée
+ * (le jeton passe alors en clair sur le WiFi, voir CLAUDE.md, Contraintes techniques). `followRedirects` faux : une
+ * redirection est une erreur, la requête et son jeton ne partent pas ailleurs.
  */
 class Http(
     private val baseUrl: String, private val token: String, private val connectTimeoutMs: Int,
     private val headers: Map<String, String> = emptyMap(),
     private val trust: PinnedTrust? = null,
+    allowPrivateCleartext: Boolean = false,
+    private val followRedirects: Boolean = true,
 ) {
-    private val cleartextRefused = token.isNotEmpty() && baseUrl.startsWith("http://") && !isLocalUrl(baseUrl)
+    internal val cleartextRefused = token.isNotEmpty() && baseUrl.startsWith("http://") && !isLocalUrl(baseUrl) &&
+        !(allowPrivateCleartext && isPrivateHttpUrl(baseUrl))
 
     suspend fun <T> io(block: () -> T): T = withContext(Dispatchers.IO) { block() }
 
@@ -99,6 +105,7 @@ class Http(
         val conn = URL(baseUrl + path).openConnection() as HttpURLConnection
         if (conn is HttpsURLConnection) trust?.apply(conn)
         conn.requestMethod = method
+        conn.instanceFollowRedirects = followRedirects
         conn.connectTimeout = connectTimeoutMs
         conn.readTimeout = timeoutMs
         if (token.isNotEmpty()) conn.setRequestProperty("Authorization", "Bearer $token")

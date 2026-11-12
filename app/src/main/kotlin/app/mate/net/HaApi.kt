@@ -47,19 +47,20 @@ fun haLightBody(brightness: Int?, rgb: Int?): JSONObject = JSONObject().apply {
 }
 
 /** Home Assistant de la maison, par l'ordinateur (backend/src/ha.ts) : le jeton n'est jamais sur la tablette. */
-class HaApi(private val http: Http) {
+class HaApi(private val http: Http) : LightSource {
 
-    suspend fun entities(): List<HaEntity> = http.io { parseHaEntities(http.get("/ha/entities", timeoutMs = 15_000)) }
+    override suspend fun entities(): List<HaEntity> = http.io { parseHaEntities(http.get("/ha/entities", timeoutMs = 15_000)) }
 
-    /** Bascule une lumière ou une prise, lance une scène. */
-    suspend fun toggle(id: String) = http.io {
+    override suspend fun toggle(id: String) = http.io {
         http.postJson("/ha/entities/${http.encode(id)}/toggle", JSONObject())
         Unit
     }
 
-    /** Règle la luminosité (%) et/ou la couleur (0xRRGGBB) d'une lumière ; l'allume si elle est éteinte. */
-    suspend fun setLight(id: String, brightness: Int?, rgb: Int?) = http.io {
+    override suspend fun setLight(id: String, brightness: Int?, rgb: Int?) = http.io {
         http.postJson("/ha/entities/${http.encode(id)}/light", haLightBody(brightness, rgb))
         Unit
     }
+
+    /** Adresse et jeton de Home Assistant de l'ordinateur, copiés une fois pour Maison (HTTPS ou USB seulement). */
+    suspend fun settings(): HaSettings = http.io { parseHaSettings(http.get("/ha/settings", timeoutMs = 10_000)) }
 }

@@ -18,11 +18,15 @@ import android.widget.Toast
 import androidx.appcompat.app.AlertDialog
 import androidx.core.view.ViewCompat
 import androidx.core.view.accessibility.AccessibilityNodeInfoCompat
+import app.mate.Computers
+import app.mate.MainActivity
 import app.mate.R
-import app.mate.net.BackendClient
 import app.mate.net.HaEntity
 import app.mate.net.HaLight
+import app.mate.net.WledDiscovery
+import app.mate.net.lightSource
 import app.mate.net.runCatchingCancellable
+import app.mate.ui.HomeSettingsDialog
 import app.mate.ui.Look
 import app.mate.ui.errorText
 import app.mate.ui.showImmersive
@@ -174,8 +178,10 @@ class HaWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidget(co
 
     override suspend fun load() {
         if (preview) return
+        // Maison : les WLED du WiFi sont cherchées en fond (au plus toutes les 10 min), puis relues si une nouvelle répond.
+        if (Computers.homeActive(context)) host.scope.launch { if (WledDiscovery.refreshIfStale(context)) load() }
         val mine = ++reads
-        val result = runCatchingCancellable { BackendClient(context).ha.entities() }
+        val result = runCatchingCancellable { lightSource(context).entities() }
         if (mine != reads) return
         result
             .onSuccess { entities = it; status.visibility = View.GONE }
@@ -187,11 +193,16 @@ class HaWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidget(co
         if (active) onMinute()
     }
 
-    /** Réglage de la Pastille : l'entité à montrer. */
-    override val hasSettings get() = family == ShapeFamily.PILL
+    /** Réglage de la Pastille : l'entité à montrer ; sur Maison, ses sources et ce qui s'affiche. */
+    override val hasSettings get() = family == ShapeFamily.PILL || Computers.homeActive(context)
+
+    private fun emptyText() = if (Computers.homeActive(context)) R.string.home_lights_empty else R.string.ha_empty
 
     override fun showSettings() {
-        if (entities.isEmpty()) return toast(context.getString(R.string.ha_empty))
+        // Maison : sources et liste à cocher ; la Pastille garde son choix de l'entité, comme sur un ordinateur.
+        val home = Computers.homeActive(context)
+        if (home && (family != ShapeFamily.PILL || entities.isEmpty())) return HomeSettingsDialog(context as MainActivity).show()
+        if (entities.isEmpty()) return toast(context.getString(emptyText()))
         val current = haPick(entities, placed.config.optString("entity").ifEmpty { null })
         AlertDialog.Builder(context)
             .setTitle(R.string.ha_pick_title)
@@ -211,7 +222,7 @@ class HaWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidget(co
         drawn = entities to pending
         body.removeAllViews()
         if (entities.isEmpty() && status.visibility != View.VISIBLE) {
-            status.setText(R.string.ha_empty)
+            status.setText(emptyText())
             status.visibility = View.VISIBLE
         }
         when (family) {
@@ -369,7 +380,7 @@ class HaWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidget(co
         render()
         host.scope.launch {
             try {
-                runCatchingCancellable { BackendClient(context).ha.toggle(entity.id) }
+                runCatchingCancellable { lightSource(context).toggle(entity.id) }
                     .onFailure { toast(context.errorText(it)) }
                 load()
             } finally {
@@ -399,7 +410,7 @@ class HaWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidget(co
                 reads++
                 host.scope.launch {
                     lightOrders.withLock {
-                        runCatchingCancellable { BackendClient(context).ha.setLight(entity.id, brightness, rgb) }
+                        runCatchingCancellable { lightSource(context).setLight(entity.id, brightness, rgb) }
                             .onFailure { toast(context.errorText(it)) }
                     }
                     load()
