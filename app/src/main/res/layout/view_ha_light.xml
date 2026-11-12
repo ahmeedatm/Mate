@@ -1,0 +1,62 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Panneau d'une lumière Home Assistant (widget Maison, appui long) : jauge de luminosité à gauche, nom, couleurs et
+     bouton Allumer / Éteindre à droite. Maquette A « Tiroir », posée en bas de l'écran par HaLightPanel. -->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    style="@style/Card"
+    android:layout_width="wrap_content"
+    android:layout_height="wrap_content"
+    android:orientation="horizontal"
+    android:paddingStart="32dp"
+    android:paddingTop="28dp"
+    android:paddingEnd="32dp"
+    android:paddingBottom="28dp">
+
+    <FrameLayout
+        android:id="@+id/ha_light_fader"
+        android:layout_width="128dp"
+        android:layout_height="300dp" />
+
+    <LinearLayout
+        android:layout_width="300dp"
+        android:layout_height="match_parent"
+        android:layout_marginStart="32dp"
+        android:orientation="vertical">
+
+        <TextView
+            android:id="@+id/ha_light_name"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:ellipsize="end"
+            android:fontFamily="?attr/c_font_title"
+            android:maxLines="2"
+            android:textColor="?attr/c_text"
+            android:textSize="28sp" />
+
+        <TextView
+            android:id="@+id/ha_light_hint"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="4dp"
+            android:fontFamily="?attr/c_font_regular"
+            android:textColor="?attr/c_text_dim"
+            android:textSize="15sp" />
+
+        <GridLayout
+            android:id="@+id/ha_light_colors"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="20dp"
+            android:columnCount="4" />
+
+        <Space
+            android:layout_width="0dp"
+            android:layout_height="0dp"
+            android:layout_weight="1" />
+
+        <Button
+            android:id="@+id/ha_light_power"
+            style="@style/ActionButton"
+            android:layout_width="match_parent"
+            android:layout_marginTop="16dp" />
+    </LinearLayout>
+</LinearLayout>

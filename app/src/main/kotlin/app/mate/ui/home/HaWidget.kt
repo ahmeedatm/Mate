@@ -15,9 +15,12 @@ import android.widget.ScrollView
 import android.widget.TextView
 import android.widget.Toast
 import androidx.appcompat.app.AlertDialog
+import androidx.core.view.ViewCompat
+import androidx.core.view.accessibility.AccessibilityNodeInfoCompat
 import app.mate.R
 import app.mate.net.BackendClient
 import app.mate.net.HaEntity
+import app.mate.net.HaLight
 import app.mate.net.runCatchingCancellable
 import app.mate.ui.Look
 import app.mate.ui.errorText
@@ -38,10 +41,10 @@ internal fun haIcon(e: HaEntity) = when {
 /** Exemple de Home Assistant pour le catalogue : des entités au nom traduit ([name]), sans l'ordinateur. */
 class HaSample(val entities: List<Pair<HaEntity, Int>>) : WidgetSample {
     companion object {
-        /** Deux lumières (une allumée), une prise allumée, une chambre éteinte et une scène. */
+        /** Deux lumières (une allumée, à 80 %), une prise allumée, une chambre éteinte et une scène. */
         val DEFAULT = HaSample(
             listOf(
-                HaEntity("light.salon", "", isScene = false, on = true, available = true) to R.string.ha_sample_salon,
+                HaEntity("light.salon", "", isScene = false, on = true, available = true, light = HaLight(color = false, brightness = 80, rgb = null)) to R.string.ha_sample_salon,
                 HaEntity("light.bureau", "", isScene = false, on = false, available = true) to R.string.ha_sample_bureau,
                 HaEntity("switch.cafe", "", isScene = false, on = true, available = true) to R.string.ha_sample_cafe,
                 HaEntity("light.chambre", "", isScene = false, on = false, available = true) to R.string.ha_sample_chambre,
@@ -53,7 +56,9 @@ class HaSample(val entities: List<Pair<HaEntity, Int>>) : WidgetSample {
 
 /**
  * Lumières, prises et scènes de Home Assistant (liste blanche réglée sur l'ordinateur, qui garde le jeton). Une ligne par
- * entité : icône, nom et état ; un toucher la bascule (une scène se lance). Allumée : icône et état prennent l'accent.
+ * entité : icône, nom et état ; un toucher la bascule (une scène se lance). Allumée : icône et état prennent l'accent, l'icône
+ * d'une lumière de couleur prend la sienne, et l'état dit sa luminosité. Un appui long sur une lumière réglable ouvre son
+ * panneau ([HaLightPanel] : luminosité, couleur).
  * L'état se relit à chaque minute et après chaque toucher. Une mise en page par famille de formes :
  * - Pastille : une seule entité (choisie dans les réglages du widget), la case entière s'allume ;
  * - Ligne : les entités côte à côte, le reste au défilement ;
@@ -231,7 +236,7 @@ class HaWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidget(co
     /** Une entité : icône, nom et état, sur un fond en relief ; allumée, l'icône et l'état prennent l'accent. */
     private fun row(e: HaEntity): View {
         val on = e.on && !e.isScene
-        return LinearLayout(context).apply {
+        return EntityBox(context, ownsLongPress = adjustable(e)).apply {
             gravity = Gravity.CENTER_VERTICAL
             background = GradientDrawable().apply {
                 setColor(color(R.attr.c_surface_raised))
@@ -239,7 +244,7 @@ class HaWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidget(co
             }
             minimumHeight = dp(56)
             setPadding(dp(14), dp(6), dp(14), dp(6))
-            addView(icon(e, 24, if (on) R.attr.c_accent else R.attr.c_text_dim))
+            addView(icon(e, 24, if (on) R.attr.c_accent else R.attr.c_text_dim, lampTint = true))
             val texts = LinearLayout(context).apply {
                 orientation = LinearLayout.VERTICAL
                 addView(text(e.name, 15f, R.attr.c_text))
@@ -254,14 +259,14 @@ class HaWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidget(co
     /** Tuile haute (Ligne sur une rangée haute) : grande icône en haut, nom et état en bas, comme la Pastille. */
     private fun tile(e: HaEntity): View {
         val on = e.on && !e.isScene
-        return LinearLayout(context).apply {
+        return EntityBox(context, ownsLongPress = adjustable(e)).apply {
             orientation = LinearLayout.VERTICAL
             background = GradientDrawable().apply {
                 setColor(color(R.attr.c_surface_raised))
                 cornerRadius = dp(16).toFloat()
             }
             setPadding(dp(16), dp(14), dp(16), dp(14))
-            addView(icon(e, 36, if (on) R.attr.c_accent else R.attr.c_text_dim))
+            addView(icon(e, 36, if (on) R.attr.c_accent else R.attr.c_text_dim, lampTint = true))
             addView(View(context), LinearLayout.LayoutParams(0, 0, 1f))
             addView(text(e.name, 18f, R.attr.c_text))
             addView(text(stateText(e), 14f, if (on) R.attr.c_accent else R.attr.c_text_dim))
@@ -279,7 +284,7 @@ class HaWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidget(co
         val ink = if (on) R.attr.c_on_accent else R.attr.c_text
         val name = text(e.name, 16f, ink).apply { setShadowLayer(0f, 0f, 0f, 0) }
         val state = text(stateText(e), 13f, if (on) R.attr.c_on_accent else R.attr.c_text_dim).apply { setShadowLayer(0f, 0f, 0f, 0) }
-        return LinearLayout(context).apply {
+        return EntityBox(context, ownsLongPress = adjustable(e)).apply {
             orientation = LinearLayout.VERTICAL
             background = GradientDrawable().apply {
                 setColor(color(if (on) R.attr.c_accent else R.attr.c_surface_raised))
@@ -308,11 +313,20 @@ class HaWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidget(co
         alpha = if (!e.available) UNAVAILABLE_ALPHA else if (e.id in pending) PENDING_ALPHA else 1f
         contentDescription = context.getString(R.string.ha_entity_state, e.name, stateText(e))
         setOnClickListener { toggle(e) }
+        if (adjustable(e)) {
+            setOnLongClickListener {
+                adjust(e)
+                true
+            }
+            ViewCompat.replaceAccessibilityAction(this, AccessibilityNodeInfoCompat.AccessibilityActionCompat.ACTION_LONG_CLICK, context.getString(R.string.ha_light_adjust), null)
+        }
     }
 
-    private fun icon(e: HaEntity, size: Int, colorId: Int) = ImageView(context).apply {
+    /** [lampTint] : une lumière allumée prend sa propre couleur, si elle reste visible sur la case. */
+    private fun icon(e: HaEntity, size: Int, colorId: Int, lampTint: Boolean = false) = ImageView(context).apply {
         setImageResource(haIcon(e))
-        imageTintList = ColorStateList.valueOf(color(colorId))
+        val base = color(colorId)
+        imageTintList = ColorStateList.valueOf(if (lampTint) haTint(e, base, color(R.attr.c_surface_raised)) else base)
         importantForAccessibility = View.IMPORTANT_FOR_ACCESSIBILITY_NO
         layoutParams = LinearLayout.LayoutParams(dp(size), dp(size))
     }
@@ -323,7 +337,7 @@ class HaWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidget(co
         ellipsize = TextUtils.TruncateAt.END
     }
 
-    private fun stateText(e: HaEntity) = context.getString(
+    private fun stateText(e: HaEntity) = haBrightness(e)?.let { context.getString(R.string.ha_on_level, it) } ?: context.getString(
         when {
             !e.available -> R.string.ha_unavailable
             e.isScene -> R.string.ha_scene
@@ -351,6 +365,27 @@ class HaWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidget(co
         }
     }
 
+    /** Lumière qui se règle : son appui long ouvre le panneau, pas le mode Modifier de l'Accueil. */
+    private fun adjustable(e: HaEntity) = e.light != null && !preview
+
+    /** Panneau de la lumière : chaque réglage part à l'ordinateur, puis l'état est relu. */
+    private fun adjust(entity: HaEntity) {
+        if (!entity.available) return toast(context.getString(R.string.ha_unavailable_hint, entity.name))
+        HaLightPanel(
+            context,
+            entity,
+            onSet = { brightness, rgb ->
+                reads++
+                host.scope.launch {
+                    runCatchingCancellable { BackendClient(context).ha.setLight(entity.id, brightness, rgb) }
+                        .onFailure { toast(context.errorText(it)) }
+                    load()
+                }
+            },
+            onToggle = { toggle(entity) },
+        ).show()
+    }
+
     private fun toast(text: String) = Toast.makeText(context, text, Toast.LENGTH_LONG).show()
 
     private companion object {
@@ -365,4 +400,9 @@ class HaWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidget(co
         const val UNAVAILABLE_ALPHA = 0.6f
         const val PENDING_ALPHA = 0.7f
     }
+}
+
+/** Case d'une entité ; celle d'une lumière réglable garde l'appui long ([GestureOwner]) pour ouvrir son panneau. */
+private class EntityBox(context: Context, override val ownsLongPress: Boolean) : LinearLayout(context), GestureOwner {
+    override val ownsSwipe = false
 }
