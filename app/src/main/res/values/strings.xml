@@ -32,6 +32,7 @@
     <string name="page_unreachable">Page injoignable : %1$s. Le script des maquettes tourne-t-il encore sur l\'ordinateur ?</string>
     <string name="offline">Ordinateur injoignable</string>
     <string name="online">Connecté</string>
+    <string name="link_connecting_spoken">Connexion en cours</string>
     <string name="computer_locked_spoken">Session de l\'ordinateur verrouillée</string>
     <string name="unauthorized">Jeton refusé : refaire l\'appairage dans Réglages</string>
     <string name="no_computer">Aucun ordinateur : Réglages, Ajouter</string>

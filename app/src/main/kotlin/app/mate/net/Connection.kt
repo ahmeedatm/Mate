@@ -7,8 +7,11 @@ import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.coroutineScope
 
-/** État de la liaison avec l'ordinateur actif (pastille de la barre latérale). */
-data class Link(val computer: Computer?, val state: State) {
+/**
+ * État de la liaison avec l'ordinateur actif (pastille de la barre latérale). `connecting` : OFFLINE tant que le premier
+ * essai n'a pas répondu (ouverture de l'appli, ordinateur changé), montré comme « connexion en cours ».
+ */
+data class Link(val computer: Computer?, val state: State, val connecting: Boolean = false) {
     /** HOME : Maison est choisie, aucun ordinateur n'est piloté (Computers.homeActive). */
     enum class State { ONLINE, OFFLINE, UNAUTHORIZED, NONE, HOME }
 }

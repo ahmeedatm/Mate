@@ -404,7 +404,7 @@ class MainActivity : AppCompatActivity() {
         } else {
             splash.visibility = View.GONE
         }
-        showLink(Link(Computers.active(this), if (Computers.homeActive(this)) Link.State.HOME else Link.State.OFFLINE))
+        showLink(startLink(Computers.active(this), Computers.homeActive(this)))
         remote.restart()
     }
 
@@ -419,6 +419,10 @@ class MainActivity : AppCompatActivity() {
         settings()?.onLinkChanged()
         (supportFragmentManager.findFragmentByTag(Mode.HOME.tag) as? HomeFragment)?.onLinkChanged()
     }
+
+    /** Avant la première réponse de l'ordinateur (ouverture, ordinateur changé) : Maison, ou « connexion en cours ». */
+    private fun startLink(computer: Computer?, home: Boolean) =
+        if (home) Link(computer, Link.State.HOME) else Link(computer, Link.State.OFFLINE, connecting = computer != null)
 
     /** L'ordinateur actif ne répond plus (dit par l'Accueil), ou null. */
     fun unreachable(): Down? = linkWatch.down(link.computer?.name, System.currentTimeMillis())
@@ -436,7 +440,7 @@ class MainActivity : AppCompatActivity() {
         topBar.reload()
         nav.applySettings()
         refreshRail()
-        showLink(Link(computer, if (computer == null && Computers.homeActive(this)) Link.State.HOME else Link.State.OFFLINE))
+        showLink(startLink(computer, computer == null && Computers.homeActive(this)))
         remote.restart()
         topBar.restart()
         if (automatic) showBanner(if (computer != null) getString(R.string.computer_switched, computer.name) else getString(R.string.home_switched), 6)

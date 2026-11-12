@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Halo doux autour de la diode allumée du témoin de l'ordinateur : disque, pâli par la vue (alpha). -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp"
+    android:height="24dp"
+    android:viewportWidth="24"
+    android:viewportHeight="24">
+    <path android:fillColor="#FFFFFFFF" android:pathData="M12,0A12,12 0 1,1 12,24A12,12 0 1,1 12,0Z" />
+</vector>
