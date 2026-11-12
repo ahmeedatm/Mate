@@ -337,6 +337,12 @@ class WidgetGrid @JvmOverloads constructor(context: Context, attrs: AttributeSet
     private var onSlider = false
     private var owner: GestureOwner? = null
     private var ignoreUntilUp = false
+    /** Double toucher sur un widget agrandissable, hors de ses boutons : [Listener.onExpand]. */
+    private val doubleTap = DoubleTap(
+        ViewConfiguration.getDoubleTapTimeout().toLong(),
+        ViewConfiguration.get(context).scaledDoubleTapSlop.toFloat(),
+    )
+    private var tapTarget: Placed? = null
 
     /** Widget ou fond maintenu : le mode Modifier commence ([Listener.onEditRequest]). */
     private val editRequest = Runnable {
@@ -348,6 +354,7 @@ class WidgetGrid @JvmOverloads constructor(context: Context, attrs: AttributeSet
 
     override fun dispatchTouchEvent(ev: MotionEvent): Boolean {
         if (editing) {
+            doubleTap.reset()
             if (ev.actionMasked == MotionEvent.ACTION_DOWN) ignoreUntilUp = false
             if (!ignoreUntilUp) handleEdit(ev)
             if (ev.actionMasked == MotionEvent.ACTION_UP || ev.actionMasked == MotionEvent.ACTION_CANCEL) ignoreUntilUp = false
@@ -359,6 +366,15 @@ class WidgetGrid @JvmOverloads constructor(context: Context, attrs: AttributeSet
                 stolen = false; swiping = false; ignoreUntilUp = false
                 onSlider = sliderAt(ev.x, ev.y)
                 owner = ownerAt(ev.x, ev.y)
+                tapTarget = zoomTargetAt(ev.x, ev.y)
+                val target = tapTarget
+                // Second toucher : le widget ne le reçoit pas (le premier lui est déjà allé), il s'agrandit.
+                if (target != null && doubleTap.down(downAt, ev.x, ev.y, target)) {
+                    tapTarget = null
+                    ignoreUntilUp = true
+                    listener?.onExpand(target)
+                    return true
+                }
                 if (GestureRules.allowLongPress(owner, onSlider)) postDelayed(editRequest, longPress)
             }
             MotionEvent.ACTION_MOVE -> {
@@ -376,6 +392,10 @@ class WidgetGrid @JvmOverloads constructor(context: Context, attrs: AttributeSet
             }
             MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> {
                 removeCallbacks(editRequest)
+                val tapped = tapTarget.takeIf { ev.actionMasked == MotionEvent.ACTION_UP && !stolen && !ignoreUntilUp }
+                val moved = abs(ev.x - downX) > slop || abs(ev.y - downY) > slop
+                doubleTap.up(SystemClock.uptimeMillis(), ev.x, ev.y, tapped, downAt, moved)
+                tapTarget = null
                 if (swiping && ev.actionMasked == MotionEvent.ACTION_UP) {
                     val dy = ev.y - downY
                     // Vers le haut : profil suivant, qui arrive par le bas (Look.sharedAxis de HomeFragment.showProfile).
@@ -446,6 +466,17 @@ class WidgetGrid @JvmOverloads constructor(context: Context, attrs: AttributeSet
         }
         for (i in childCount - 1 downTo 0) if (!veiled(getChildAt(i)) && find(getChildAt(i), x, y)) return true
         return false
+    }
+
+    /** Widget agrandissable sous le doigt, touché hors de ses boutons et touches ; null sinon (double toucher). */
+    private fun zoomTargetAt(x: Float, y: Float): Placed? {
+        for (i in childCount - 1 downTo 0) {
+            val child = getChildAt(i)
+            val placed = placedOf(child) ?: continue
+            if (!child.isVisible || x < child.left || x >= child.right || y < child.top || y >= child.bottom) continue
+            return placed.takeIf { it.type.zoomable && !blocked(it) && !interactiveAt(child, x, y) }
+        }
+        return null
     }
 
     /** Widget voilé (ordinateur injoignable) : il ne reçoit aucun toucher, donc ne garde ni appui long ni balayage. */
