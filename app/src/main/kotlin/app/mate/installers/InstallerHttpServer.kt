@@ -24,6 +24,8 @@ class InstallerHttpServer(
     private val available: () -> List<Installer>,
     private val code: () -> String?,
     private val limiter: FailureLimiter = FailureLimiter(),
+    /** Essayés dans l'ordre si `port` est pris (UnoMate écoute aussi 8080) ; 0 = au choix du système. */
+    private val fallbacks: List<Int> = emptyList(),
 ) {
 
     @Volatile private var socket: ServerSocket? = null
@@ -34,13 +36,15 @@ class InstallerHttpServer(
     /** Port réellement écouté (`port` 0 = au choix du système, pour les tests). */
     val boundPort: Int? get() = socket?.localPort
 
-    /** @return false si le port est déjà pris (l'autre appli Mate, ou une autre) : journal seulement. */
+    /** @return false si `port` et tous les `fallbacks` sont pris (l'autre appli Mate, UnoMate…) : journal seulement. */
     fun start(): Boolean {
         if (socket != null) return true
-        val server = try { ServerSocket(port) } catch (e: java.io.IOException) {
-            Log.w(TAG, "Port $port indisponible, installeurs non servis", e)
-            return false
-        }
+        val server = (listOf(port) + fallbacks).firstNotNullOfOrNull { p ->
+            try { ServerSocket(p) } catch (e: java.io.IOException) {
+                Log.w(TAG, "Port $p indisponible", e)
+                null
+            }
+        } ?: return false.also { Log.w(TAG, "Aucun port libre, installeurs non servis") }
         socket = server
         Thread({
             while (!server.isClosed) {

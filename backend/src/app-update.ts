@@ -7,17 +7,17 @@ import { appPath, sh } from "./portable.ts";
 import { tabletAddress, tabletStatus } from "./tablet.ts";
 
 /**
- * Mise à jour de l'appli portable depuis la tablette : elle sert sur le WiFi (port 8080, HTTP en clair) les installeurs
+ * Mise à jour de l'appli portable depuis la tablette : elle sert sur le WiFi (port 8080 ou celui annoncé, HTTP en clair) les installeurs
  * qu'elle a téléchargés de GitHub. Leur version, taille et SHA-256 arrivent par le canal appairé (état du poll, HTTPS et
- * jeton : clé `installers`), jamais par le port 8080 : un réseau hostile peut changer les octets, pas l'empreinte attendue.
+ * jeton : clé `installers`), jamais par ce port : un réseau hostile peut changer les octets, pas l'empreinte attendue.
  * Le panneau télécharge celui de ce système, vérifie taille et empreinte, remplace l'exe ou l'appli sur place et la
  * relance : le nouveau lanceur demande à l'ancien de quitter (POST /local/quit) puis extrait son runtime.
- * Le port 8080 ne sert que sous `/<code>/…` : le code courant arrive lui aussi par l'état du poll (clé `installerCode`).
- * Le jeton d'appairage ne part jamais sur ce port, en clair sur le WiFi.
+ * Le port des installeurs (8080 par défaut, clé `installerPort`) ne sert que sous `/<code>/…` : le code courant arrive
+ * lui aussi par l'état du poll (clé `installerCode`). Le jeton d'appairage ne part jamais sur ce port, en clair sur le WiFi.
  */
 
 export type Installer = { file: string; size: number; sha256: string; version: string };
-const PORT = 8080;
+const DEFAULT_PORT = 8080;
 const MAX_SIZE = 500 * 1024 * 1024;
 const STALE_CODE = "Code d'accès périmé : la tablette en a changé, réessaie dans quelques secondes.";
 const platform = process.platform === "win32" ? "windows" : "mac";
@@ -51,12 +51,20 @@ function fail(message: string, statusCode = 409): never {
   throw Object.assign(new Error(message), { statusCode });
 }
 
-/** Racine des fichiers servis par la tablette : `http://<ip>:8080/<code>`, le code lu dans l'état du poll. */
+/**
+ * Racine des fichiers servis par la tablette : `http://<ip>:<port>/<code>`, code et port lus dans l'état du poll. Port
+ * absent (tablette d'avant) : 8080 ; annoncé quand 8080 est pris par une autre appli (UnoMate à côté de Mate).
+ */
 export function installerBase(ip: string, state: unknown): string {
-  const code = (state as { installerCode?: unknown } | null)?.installerCode;
+  const s = state as { installerCode?: unknown; installerPort?: unknown } | null;
+  const code = s?.installerCode;
   if (typeof code !== "string" || !/^[A-Za-z0-9]{5}$/.test(code))
     fail("La tablette n'annonce pas de code d'accès à ses installeurs : mets à jour son appli, puis réessaie.");
-  return `http://${ip}:${PORT}/${code}`;
+  const port = s?.installerPort === undefined ? DEFAULT_PORT : s.installerPort;
+  if (port === null) fail("La tablette n'a trouvé aucun port libre pour ses installeurs : relance son appli, puis réessaie.");
+  if (!Number.isInteger(port) || (port as number) < 1024 || (port as number) > 65535)
+    fail("La tablette annonce un port illisible pour ses installeurs : mets à jour son appli, puis réessaie.");
+  return `http://${ip}:${port}/${code}`;
 }
 
 async function announced(): Promise<{ ip: string; state: unknown; installer: Installer | undefined }> {

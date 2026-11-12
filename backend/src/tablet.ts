@@ -157,7 +157,7 @@ export function tabletStatus() {
   return { connected: isConnected(), lastSeenMs: lastSeen || null, state: lastState };
 }
 
-/** Adresse WiFi d'où la tablette interroge cet ordinateur (poll) : elle y sert les installeurs (port 8080). */
+/** Adresse WiFi d'où la tablette interroge cet ordinateur (poll) : elle y sert les installeurs (port 8080 ou annoncé, app-update.ts). */
 export function noteTabletAddress(ip: string) {
   lastAddress = { ip: ip.replace(/^::ffff:/, ""), at: Date.now() };
 }

@@ -780,17 +780,26 @@ ${FAVICON}
   // Mise à jour de l'appli de la tablette : état remonté par la tablette (RemoteUpdate). Recherche lancée seule une fois
   // par version de l'appli : à l'ouverture, puis après une installation (l'appli relancée n'a encore rien cherché).
   // updateNote : refus de la dernière demande, gardé jusqu'à la suivante (sinon effacé au rafraîchissement).
+  // Hors kiosque (confirm), Android demande de confirmer sur la tablette ; une tablette d'avant ne l'annonce pas.
   let checkedFor = null, updateBusy = false, updateNote = null;
   function renderUpdate(t) {
     const u = t.update;
     document.getElementById("updaterow").hidden = !u;
     if (!u || updateBusy) return;
+    const allowed = u.kiosk || u.confirm === true;
     let text, action = null;
-    if (u.installing) text = "Installation de la version " + u.available + " en cours : la tablette redémarre l'appli à la fin.";
-    else if (!u.kiosk) text = "Mise à jour d'ici possible seulement en kiosque (pas dans l'appli d'essai).";
+    if (u.installing && u.confirm) text = "Installation de la version " + u.available + " : confirme sur la tablette.";
+    else if (u.installing) text = "Installation de la version " + u.available + " en cours : la tablette redémarre l'appli à la fin.";
+    else if (!allowed && u.confirm === false)
+      text = "Mise à jour depuis cette page impossible dans l'appli d'essai : choisis l'essai dans les Réglages de la tablette.";
+    else if (!allowed) text = "Mise à jour depuis cette page impossible : mets à jour l'appli de la tablette depuis ses Réglages.";
     else if (u.error) [text, action] = [u.error, "check"];
     else if (!u.checked) text = "Recherche d'une mise à jour…";
-    else if (u.available) [text, action] = ["Version " + u.available + " disponible (installée : " + t.app + ").", "install"];
+    else if (u.available)
+      [text, action] = [
+        "Version " + u.available + " disponible (installée : " + t.app + ")." + (u.confirm ? " La tablette demandera de confirmer." : ""),
+        "install",
+      ];
     else [text, action] = ["Appli à jour (" + t.app + ").", "check"];
     if (updateNote) text = updateNote;
     document.getElementById("updatestate").textContent = text;
@@ -798,7 +807,7 @@ ${FAVICON}
     btn.hidden = !action;
     btn.textContent = action === "install" ? "Mettre à jour" : u.error ? "Réessayer" : "Rechercher";
     btn.dataset.action = action || "";
-    if (u.kiosk && !u.checked && checkedFor !== t.app) {
+    if (allowed && !u.checked && checkedFor !== t.app) {
       checkedFor = t.app;
       sendUpdate("check");
     }

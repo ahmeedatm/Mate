@@ -24,6 +24,9 @@ import java.io.File
 object InstallerService {
 
     const val PORT = 8080
+
+    /** Si 8080 est pris (UnoMate installé à côté écoute le même) : le premier libre, annoncé à l'ordinateur ([port]). */
+    private val FALLBACK_PORTS = (8081..8089).toList()
     private const val TAG = "InstallerSync"
 
     /** Marge laissée libre sur le stockage en plus du fichier : la tablette fait aussi tourner l'appli. */
@@ -42,12 +45,15 @@ object InstallerService {
 
     private fun store(context: Context) = InstallerStore(File(context.applicationContext.filesDir, "installers"))
 
-    /** Écoute le port 8080. Appli d'essai : rien, la stable sert déjà (même port) et a les mêmes fichiers. */
+    /** Écoute le port 8080, ou un suivant s'il est pris. Appli d'essai : rien, la stable sert déjà et a les mêmes fichiers. */
     fun start(context: Context) {
         if (server != null || BuildConfig.TRIAL) return
         val store = store(context)
-        server = InstallerHttpServer(PORT, store.dir, store::onDisk, { code }).also { it.start() }
+        server = InstallerHttpServer(PORT, store.dir, store::onDisk, { code }, fallbacks = FALLBACK_PORTS).also { it.start() }
     }
+
+    /** Port réellement écouté, envoyé dans l'état du poll ; null si aucun n'a pu l'être (et dans l'appli d'essai). */
+    fun port(): Int? = server?.boundPort
 
     /**
      * Installeurs servis sur le port 8080, envoyés dans l'état du poll (HTTPS, jeton) : l'ordinateur y lit l'empreinte
@@ -76,14 +82,17 @@ object InstallerService {
         if (!BuildConfig.TRIAL) newCode()
     }
 
-    /** Adresse à ouvrir sur l'ordinateur : `http://<ip>:8080/<code>` ; null sans réseau et dans l'appli d'essai (elle ne sert pas le port). */
+    /** Adresse à ouvrir sur l'ordinateur : `http://<ip>:<port>/<code>` ; null sans réseau, sans port libre et dans l'appli d'essai. */
     fun link(): String? = if (BuildConfig.TRIAL) null else address()?.let { "$it/${code()}" }
 
     /** Au moins un installeur est complet sur la tablette. */
     suspend fun ready(context: Context): Boolean = withContext(Dispatchers.IO) { store(context).onDisk().isNotEmpty() }
 
-    /** `http://<ip de la tablette>:8080`, null sans réseau. */
-    fun address(): String? = Tablet.ipAddress()?.let { "http://$it:$PORT" }
+    /** `http://<ip de la tablette>:<port écouté>`, null sans réseau ou sans port. */
+    fun address(): String? {
+        val port = port() ?: return null
+        return Tablet.ipAddress()?.let { "http://$it:$port" }
+    }
 
     /** Identité de l'ordinateur actif et installeur plus récent que son compagnon (null : à jour) ; null s'il est injoignable. */
     suspend fun check(context: Context): Pair<Identity, Installer?>? {

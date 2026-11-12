@@ -1,5 +1,6 @@
 package app.mate.kiosk
 
+import android.app.ActivityManager
 import android.app.PendingIntent
 import android.content.BroadcastReceiver
 import android.content.Context
@@ -25,11 +26,11 @@ import app.mate.net.UpdatesApi
 import app.mate.net.orNothingPublished
 import app.mate.trial.EssaiPlan
 import kotlinx.coroutines.CancellationException
-import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.async
+import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.withContext
@@ -43,7 +44,8 @@ import java.util.concurrent.atomic.AtomicBoolean
  * Mises à jour installées par le Mate lui-même, sans personne : moteur web (WebView, figé en 81 par le kiosque)
  * et le Mate. Deux sources : l'ordinateur relié et les releases GitHub du projet (`BuildConfig.UPDATE_REPO`, lues
  * par leurs liens de téléchargement publics), qui marchent sans ordinateur. Device owner : Android installe sans demander de
- * confirmation. Sécurité : empreinte SHA-256 du fichier comparée à celle annoncée, puis Android refuse toute
+ * confirmation ; sinon (pas de kiosque), il ouvre son écran de confirmation et la personne valide. Sécurité : empreinte
+ * SHA-256 du fichier comparée à celle annoncée, puis Android refuse toute
  * mise à jour qui n'est pas signée par le même éditeur (Google pour le WebView).
  */
 object Updater {
@@ -126,7 +128,6 @@ object Updater {
      * (coroutine) jusque-là.
      */
     suspend fun install(context: Context, update: AppUpdate, progress: (Int) -> Unit, committed: () -> Unit = {}) {
-        if (!Kiosk.isDeviceOwner(context)) throw UserFacingException(R.string.update_needs_kiosk)
         if (!busy.compareAndSet(false, true)) throw UserFacingException(R.string.update_busy)
         try {
             download(context.applicationContext, update, progress, committed)
@@ -136,23 +137,25 @@ object Updater {
     }
 
     /**
-     * Désinstalle un paquet sans confirmation (device owner) : l'essai d'une PR à la version plus ancienne que l'essai
+     * Désinstalle un paquet, sans confirmation en device owner (sinon Android la demande, voir [awaitFinal]) : l'essai d'une PR à la version plus ancienne que l'essai
      * installé, qu'Android refuserait de remplacer. Ses données partent avec ; il reprend les ordinateurs de la stable.
      * Appelé pendant [install] et par [FreshStart.forgetTrial], installations déjà permises ([Kiosk.lockApps]).
      */
     internal suspend fun uninstall(app: Context, pkg: String) {
         val action = "${app.packageName}.UNINSTALL_RESULT_$pkg"
-        val result = CompletableDeferred<Intent>()
+        val results = Channel<Intent>(Channel.UNLIMITED)
         val receiver = object : BroadcastReceiver() {
-            override fun onReceive(c: Context, intent: Intent) { result.complete(intent) }
+            override fun onReceive(c: Context, intent: Intent) { results.trySend(intent) }
         }
         ContextCompat.registerReceiver(app, receiver, IntentFilter(action), ContextCompat.RECEIVER_NOT_EXPORTED)
         try {
             val flags = PendingIntent.FLAG_UPDATE_CURRENT or (if (Build.VERSION.SDK_INT >= 31) PendingIntent.FLAG_MUTABLE else 0)
             val pending = PendingIntent.getBroadcast(app, 0, Intent(action).setPackage(app.packageName), flags)
             app.packageManager.packageInstaller.uninstall(pkg, pending.intentSender)
-            val intent = withTimeoutOrNull(2 * 60_000L) { result.await() }
+            val intent = awaitFinal(app, results, 2 * 60_000L)
             val status = intent?.getIntExtra(PackageInstaller.EXTRA_STATUS, PackageInstaller.STATUS_FAILURE)
+            // Refusée par la personne (hors kiosque) : rien n'a changé, l'essai est toujours là.
+            if (status == PackageInstaller.STATUS_FAILURE_ABORTED) throw UserFacingException(R.string.update_uninstall_refused)
             if ((intent == null && installed(app, pkg) != null) || (status != null && status != PackageInstaller.STATUS_SUCCESS)) {
                 throw UserFacingException(R.string.update_uninstall_failed, status ?: -1)
             }
@@ -186,11 +189,15 @@ object Updater {
                 val installedCode = installed(app, update.pkg)?.let { versionCode(it) }
                 if (update.source == UpdateSource.TRIALS && EssaiPlan.install(update.versionCode, installedCode) == EssaiPlan.Install.UNINSTALL_FIRST) {
                     // Plus d'annulation une fois l'ancien essai parti : « Annuler » laisserait la tablette sans essai.
-                    committed()
-                    withContext(NonCancellable) {
+                    // Hors kiosque, Android demande d'abord de confirmer : « Annuler » reste possible jusque-là.
+                    if (Kiosk.isDeviceOwner(app)) {
+                        committed()
+                        withContext(NonCancellable) { uninstall(app, update.pkg) }
+                    } else {
                         uninstall(app, update.pkg)
-                        installApk(app, file, update, committed)
+                        committed()
                     }
+                    withContext(NonCancellable) { installApk(app, file, update, committed) }
                 } else {
                     installApk(app, file, update, committed)
                 }
@@ -211,9 +218,9 @@ object Updater {
         }
         val id = installer.createSession(params)
         val action = "${context.packageName}.INSTALL_RESULT_$id"
-        val result = CompletableDeferred<Intent>()
+        val results = Channel<Intent>(Channel.UNLIMITED)
         val receiver = object : BroadcastReceiver() {
-            override fun onReceive(c: Context, intent: Intent) { result.complete(intent) }
+            override fun onReceive(c: Context, intent: Intent) { results.trySend(intent) }
         }
         ContextCompat.registerReceiver(context, receiver, IntentFilter(action), ContextCompat.RECEIVER_NOT_EXPORTED)
         try {
@@ -239,15 +246,24 @@ object Updater {
             committed()
             // Android installe une appli à la fois (le Play Store peut passer avant) et prépare le code : long
             // sur cette tablette. Sans réponse au bout de 15 min, on regarde la version réellement installée.
-            val intent = withTimeoutOrNull(15 * 60_000L) { result.await() }
+            val intent = try {
+                awaitFinal(context, results, 15 * 60_000L)
+            } catch (e: UserFacingException) {
+                // Confirmation impossible à afficher : la session ne doit pas s'installer plus tard, à l'insu de tous.
+                runCatching { installer.abandonSession(id) }
+                throw e
+            }
             if (intent == null) {
                 val info = installed(context, pkg)
                 if (info != null && versionCode(info) >= update.versionCode) return
+                // Écran de confirmation resté sans réponse : retiré, l'installation ne se fera pas après coup.
+                runCatching { installer.abandonSession(id) }
                 throw UserFacingException(R.string.update_unfinished)
             }
             when (val status = intent.getIntExtra(PackageInstaller.EXTRA_STATUS, PackageInstaller.STATUS_FAILURE)) {
                 PackageInstaller.STATUS_SUCCESS -> Unit
                 PackageInstaller.STATUS_PENDING_USER_ACTION -> throw UserFacingException(R.string.update_needs_confirmation)
+                PackageInstaller.STATUS_FAILURE_ABORTED -> throw UserFacingException(R.string.update_refused)
                 else -> {
                     Log.w("Updater", "Installation refusée ($status) : ${intent.getStringExtra(PackageInstaller.EXTRA_STATUS_MESSAGE)}")
                     throw UserFacingException(R.string.update_install_failed, status)
@@ -257,4 +273,37 @@ object Updater {
             context.unregisterReceiver(receiver)
         }
     }
+
+    /**
+     * Réponse finale d'Android, null au bout de `timeoutMs`. Sans device owner, il répond d'abord « confirmation
+     * demandée » avec son écran : on l'ouvre et on attend la réponse suivante (installée, ou annulée par la personne).
+     * Autorisation « Sources inconnues » pas encore donnée à Mate : c'est cet écran qui la propose.
+     */
+    private suspend fun awaitFinal(context: Context, results: Channel<Intent>, timeoutMs: Long): Intent? {
+        var intent = withTimeoutOrNull(timeoutMs) { results.receive() } ?: return null
+        while (true) {
+            @Suppress("DEPRECATION")
+            val confirm = intent.getParcelableExtra<Intent>(Intent.EXTRA_INTENT)
+            val status = intent.getIntExtra(PackageInstaller.EXTRA_STATUS, PackageInstaller.STATUS_FAILURE)
+            when (InstallStep.of(status, confirm != null, foreground(context))) {
+                InstallStep.DONE -> return intent
+                InstallStep.NOT_VISIBLE -> throw UserFacingException(R.string.update_open_mate)
+                InstallStep.SHOW_CONFIRMATION -> {
+                    context.startActivity(confirm!!.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
+                    // Le temps de la personne devant l'écran d'Android ne compte pas dans celui de l'installation.
+                    intent = withTimeoutOrNull(CONFIRM_MS + timeoutMs) { results.receive() } ?: return null
+                }
+            }
+        }
+    }
+
+    /** Mate à l'écran : Android 10 n'ouvre l'écran de confirmation que depuis l'appli affichée. */
+    private fun foreground(context: Context): Boolean {
+        val info = ActivityManager.RunningAppProcessInfo()
+        ActivityManager.getMyMemoryState(info)
+        return info.importance <= ActivityManager.RunningAppProcessInfo.IMPORTANCE_FOREGROUND
+    }
+
+    /** Laissé à la personne pour répondre à l'écran de confirmation d'Android (hors kiosque). */
+    private const val CONFIRM_MS = 10 * 60_000L
 }

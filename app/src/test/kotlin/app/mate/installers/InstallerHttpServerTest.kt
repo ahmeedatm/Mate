@@ -3,11 +3,13 @@ package app.mate.installers
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNotEquals
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
 import java.io.File
 import java.net.HttpURLConnection
+import java.net.ServerSocket
 import java.net.URL
 import java.nio.file.Files
 import java.security.MessageDigest
@@ -128,6 +130,27 @@ class InstallerHttpServerTest {
         assertTrue(zip.contentEquals(get("/Mate-Mac.zip").second))
         val page = String(get("/", "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15)").second)
         assertTrue(page.contains("href=\"/K7M2Q/Mate-Mac.zip\""))
+    }
+
+    @Test
+    fun `port deja pris par UnoMate, le suivant de la liste est ecoute`() {
+        server.stop()
+        ServerSocket(0).use { taken ->
+            server = InstallerHttpServer(taken.localPort, dir, store::onDisk, { code }, fallbacks = listOf(taken.localPort, 0))
+            assertTrue(server.start())
+            assertNotEquals(taken.localPort, server.boundPort)
+            assertEquals(200, get("/").first)
+        }
+    }
+
+    @Test
+    fun `tous les ports pris, rien n'est ecoute`() {
+        server.stop()
+        ServerSocket(0).use { taken ->
+            server = InstallerHttpServer(taken.localPort, dir, store::onDisk, { code }, fallbacks = listOf(taken.localPort))
+            assertFalse(server.start())
+            assertEquals(null, server.boundPort)
+        }
     }
 
     @Test
