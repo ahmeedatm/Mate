@@ -1468,8 +1468,8 @@
     <string name="tour_notifications_title">Notifications</string>
     <string name="tour_notifications_body">La cloche, en haut à droite, montre ce qui est arrivé sur l\'ordi ; un point s\'y allume quand il y a du nouveau.</string>
     <string name="tour_customize_title">À ta façon</string>
-    <string name="tour_customize_body">Pendant un appel, Réunion apparaît tout seul dans la barre. Touche deux fois un widget pour l\'agrandir, deux fois encore pour le remettre. Maintiens ton doigt sur l\'écran pour le modifier (ranger, ajouter) ; + pour renommer, ranger, changer l\'icône ou supprimer tes écrans.</string>
-    <string name="tour_customize_body_dock">Pendant un appel, Réunion apparaît tout seul parmi les touches d\'écran. Touche deux fois un widget pour l\'agrandir, deux fois encore pour le remettre. Maintiens ton doigt sur l\'écran pour le modifier (ranger, ajouter) ; appui long sur une touche d\'écran pour renommer, ranger, changer l\'icône ou supprimer tes écrans.</string>
+    <string name="tour_customize_body">Pendant un appel, Réunion apparaît tout seul dans la barre. Pose deux doigts sur un widget pour l\'agrandir, encore deux doigts pour le remettre. Maintiens ton doigt sur l\'écran pour le modifier (ranger, ajouter) ; + pour renommer, ranger, changer l\'icône ou supprimer tes écrans.</string>
+    <string name="tour_customize_body_dock">Pendant un appel, Réunion apparaît tout seul parmi les touches d\'écran. Pose deux doigts sur un widget pour l\'agrandir, encore deux doigts pour le remettre. Maintiens ton doigt sur l\'écran pour le modifier (ranger, ajouter) ; appui long sur une touche d\'écran pour renommer, ranger, changer l\'icône ou supprimer tes écrans.</string>
     <string name="next_not_linked">Agenda pas encore relié</string>
     <string name="agenda_link_now">Relier mon agenda</string>
     <string name="settings_rail">Barre de navigation</string>

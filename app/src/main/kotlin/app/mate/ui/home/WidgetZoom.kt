@@ -1,11 +1,9 @@
 package app.mate.ui.home
 
 import android.content.Context
-import android.os.SystemClock
 import android.view.Gravity
 import android.view.MotionEvent
 import android.view.View
-import android.view.ViewConfiguration
 import android.widget.Button
 import android.widget.FrameLayout
 import android.widget.LinearLayout
@@ -16,12 +14,11 @@ import app.mate.R
 import app.mate.ui.Look
 import app.mate.ui.dp
 import app.mate.ui.themeColor
-import kotlin.math.abs
 
 /**
  * Un widget maintenu, en grand par-dessus l'écran Profils : un second exemplaire du widget, dans sa plus grande taille
- * ([WidgetType.zoomSize]), sur un voile du fond. Fermé par « Fermer », un toucher sur le voile, un double toucher sur
- * le widget hors de ses boutons ([DoubleTap]) ou Retour ; [onClosed]
+ * ([WidgetType.zoomSize]), sur un voile du fond. Fermé par « Fermer », un toucher sur le voile, deux doigts posés
+ * ([WidgetType.twoFingerZoom]) ou Retour ; [onClosed]
  * arrête l'exemplaire agrandi.
  */
 class WidgetZoom(context: Context) : FrameLayout(context) {
@@ -47,16 +44,7 @@ class WidgetZoom(context: Context) : FrameLayout(context) {
 
     val isShowing get() = visibility == VISIBLE
 
-    private val slop = ViewConfiguration.get(context).scaledTouchSlop
-    private val doubleTap = DoubleTap(
-        ViewConfiguration.getDoubleTapTimeout().toLong(),
-        ViewConfiguration.get(context).scaledDoubleTapSlop.toFloat(),
-    )
-    private var downX = 0f
-    private var downY = 0f
-    private var downAt = 0L
-    private var tapTarget: HomeWidget? = null
-    /** Fermé par un double toucher : la suite du geste ne va plus à rien. */
+    /** Fermé à deux doigts : la suite du geste ne va plus à rien. */
     private var ignoreUntilUp = false
 
     init {
@@ -71,42 +59,23 @@ class WidgetZoom(context: Context) : FrameLayout(context) {
 
     override fun dispatchTouchEvent(ev: MotionEvent): Boolean {
         when (ev.actionMasked) {
-            MotionEvent.ACTION_DOWN -> {
-                downX = ev.x; downY = ev.y; downAt = SystemClock.uptimeMillis()
-                ignoreUntilUp = false
-                tapTarget = widgetAt(ev.x, ev.y)
-                val target = tapTarget
-                if (target != null && doubleTap.down(downAt, ev.x, ev.y, target)) {
-                    tapTarget = null
-                    ignoreUntilUp = true
-                    hide()
-                    return true
-                }
+            MotionEvent.ACTION_DOWN -> ignoreUntilUp = false
+            MotionEvent.ACTION_POINTER_DOWN -> if (!ignoreUntilUp && ev.pointerCount == 2 && widget?.placed?.type?.twoFingerZoom == true) {
+                // Le premier doigt est annulé chez le widget avant son relâché : le bouton qu'il touchait ne part pas.
+                val cancel = MotionEvent.obtain(ev).apply { action = MotionEvent.ACTION_CANCEL }
+                super.dispatchTouchEvent(cancel)
+                cancel.recycle()
+                ignoreUntilUp = true
+                hide()
+                return true
             }
-            MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> {
-                val moved = abs(ev.x - downX) > slop || abs(ev.y - downY) > slop
-                val tapped = tapTarget.takeIf { ev.actionMasked == MotionEvent.ACTION_UP && !ignoreUntilUp }
-                doubleTap.up(SystemClock.uptimeMillis(), ev.x, ev.y, tapped, downAt, moved)
-                tapTarget = null
-                if (ignoreUntilUp) {
-                    ignoreUntilUp = false
-                    return true
-                }
+            MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> if (ignoreUntilUp) {
+                ignoreUntilUp = false
+                return true
             }
         }
         if (ignoreUntilUp) return true
         return super.dispatchTouchEvent(ev)
-    }
-
-    /** Le widget agrandi sous le doigt, touché hors de ses boutons ; null ailleurs (voile, « Fermer », bouton). */
-    private fun widgetAt(x: Float, y: Float): HomeWidget? {
-        val shown = widget ?: return null
-        val view = shown.view
-        // Coordonnées de la boîte, où le widget est placé.
-        val bx = x - box.left
-        val by = y - box.top
-        if (bx < view.left || bx >= view.right || by < view.top || by >= view.bottom) return null
-        return shown.takeIf { !interactiveAt(view, bx, by) }
     }
 
     /** Widget large (4 colonnes) : toute la largeur ; les autres, une boîte resserrée au milieu, sans grand vide à droite. */
@@ -117,7 +86,6 @@ class WidgetZoom(context: Context) : FrameLayout(context) {
 
     fun show(widget: HomeWidget, onClosed: () -> Unit) {
         hide()
-        doubleTap.reset()
         this.widget = widget
         this.onClosed = onClosed
         fitBox(widget.placed.size)

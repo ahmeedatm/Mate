@@ -149,6 +149,12 @@ enum class WidgetType(
     val zoomable get() = !bare && this != WEB && this != SCREEN
 
     /**
+     * Deux doigts posés sur le widget l'agrandissent (et le rendent à sa taille) : tous les agrandissables, sauf le pavé
+     * tactile, à qui deux doigts servent déjà (défiler, pincer). Lui garde la loupe du mode Modifier.
+     */
+    val twoFingerZoom get() = zoomable && this != PAD
+
+    /**
      * Proposé dans le catalogue de l'ordinateur actif : Agents, Jira, Home Assistant, GitLab, Pipelines, GitHub, Actions et Valorant seulement s'il les offre (Agents :
      * Mac avec Claude Code ; Valorant : Windows), Ouvertes, Son et Pavé seulement si leur plugin n'est pas coupé (écran des plugins).
      */
