@@ -224,7 +224,8 @@ abstract class HomeWidget(val context: Context, val host: HomeHost, val placed: 
                 WidgetType.MIXER -> MixerWidget(context, host, placed)
                 WidgetType.OPEN -> OpenWindowsWidget(context, host, placed)
                 WidgetType.APPS -> AppsWidget(context, host, placed)
-                WidgetType.DISCORD -> DiscordWidget(context, host, placed)
+                // Thèmes Instrument (fenêtres LCD) : la console à touches.
+                WidgetType.DISCORD -> if (themeRes(context, R.attr.c_lcd_overlay) != 0) DiscordConsoleWidget(context, host, placed) else DiscordWidget(context, host, placed)
                 WidgetType.MEETING -> MeetingWidget(context, host, placed)
                 WidgetType.CALL -> AnyCallWidget(context, host, placed)
                 WidgetType.PAD -> PadWidget(context, host, placed)

@@ -58,16 +58,21 @@ abstract class CallWidget(
     /** Îlot (Discord) : ronds et halo ; sinon télécommande (Réunion, Appel). */
     protected open val island: Boolean get() = false
 
-    private var page: DeckPage? = null
+    protected var page: DeckPage? = null
+        private set
 
     /** Les pages ont été lues au moins une fois : avant, ou pendant une panne, l'absence de page n'est pas un constat. */
-    private var read = false
-    private var voice: VoiceState? = null
-    private var active = false
+    protected var read = false
+        private set
+    protected var voice: VoiceState? = null
+        private set
+    protected var active = false
+        private set
     private var poll: Job? = null
 
     /** Aperçu du catalogue : l'exemple reste affiché, rien ne part sur le réseau. */
-    private var preview = false
+    protected var preview = false
+        private set
 
     private var plan = planCall(ShapeFamily.PILL, island = false, emptyList())
 
@@ -75,8 +80,10 @@ abstract class CallWidget(
     private var drawn: Any? = null
 
     /** Place utile de la carte, en dp, relevée à chaque mise en page : les touches s'y règlent. */
-    private var innerW = 0
-    private var innerH = 0
+    protected var innerW = 0
+        private set
+    protected var innerH = 0
+        private set
 
     private val title = cardTitle(placed.type.title)
     private val state = label(14f, R.attr.c_text_dim).apply { isSingleLine = true; ellipsize = TextUtils.TruncateAt.END }
@@ -104,9 +111,11 @@ abstract class CallWidget(
     }
 
     /** « Montrer les photos » touché : on attend le clic sur « Autoriser » dans Discord. */
-    private var authorizing = false
+    protected var authorizing = false
+        private set
     private var speakPoll: Job? = null
-    private var speaking: Set<String> = emptySet()
+    protected var speaking: Set<String> = emptySet()
+        private set
 
     /** Relectures de « qui parle » ratées de suite : au-delà de 3, plus personne n'est montré parlant (pas d'anneau figé). */
     private var speakingFailures = 0
@@ -167,7 +176,7 @@ abstract class CallWidget(
             innerW = w
             innerH = h
             // Pas de changement de vues pendant une mise en page : au tour suivant.
-            v.post { renderKeys() }
+            v.post { onCardSize() }
         }
     }
 
@@ -338,9 +347,9 @@ abstract class CallWidget(
         render()
     }
 
-    private fun shownTiles() = page?.tiles.orEmpty().filter { tileShown(it, voice) }
+    protected fun shownTiles() = page?.tiles.orEmpty().filter { tileShown(it, voice) }
 
-    private fun render() {
+    protected open fun render() {
         plan = planCall(family, island, shownTiles())
         renderKeys()
         // Pastille : le titre seulement sans touche (il dit ce qu'est le widget) ; la touche dit à quoi elle sert.
@@ -440,7 +449,7 @@ abstract class CallWidget(
         halo.animate().alpha(if (on) 1f else 0f).setDuration(if (on) HALO_IN_MS else HALO_OUT_MS).start()
     }
 
-    private fun renderState() {
+    protected open fun renderState() {
         val v = voice
         val inCall = v?.connected == true
         val page = page
@@ -481,8 +490,7 @@ abstract class CallWidget(
     private fun renderPhotos(v: VoiceState?, inCall: Boolean) {
         val members = v?.members?.takeIf { inCall && rows.isNotEmpty() && it.isNotEmpty() }
         if (!inCall) {
-            lastSpoke.clear()
-            speaking = emptySet()
+            forgetSpeakers()
             // Le prochain appel repart d'une rangée vide (aucun anneau resté allumé).
             (rows + featured).forEach { it.show(emptyList(), emptyMap()) }
         }
@@ -505,7 +513,7 @@ abstract class CallWidget(
     }
 
     /** Photos et halo, à chaque changement de « qui parle » ; en Plein écran de l'îlot, celui qui parle en grand. */
-    private fun renderMembers(members: List<VoiceMember>) {
+    protected open fun renderMembers(members: List<VoiceMember>) {
         val marked = members.map { it.copy(speaking = it.id in speaking) }
         val spoke = lastSpoke.toMap()
         if (featured.parent != null) {
@@ -520,6 +528,21 @@ abstract class CallWidget(
         renderCaption()
     }
 
+    /** Place utile de la carte relevée ([innerW] × [innerH]) : les touches s'y règlent. */
+    protected open fun onCardSize() = renderKeys()
+
+    /** Une photo de participant vient d'arriver. */
+    protected open fun photosArrived() = (rows + featured).forEach { it.photosChanged() }
+
+    /** Dernier instant où chacun a été vu parler (ordre d'un salon plein). */
+    protected fun spokeAt(): Map<String, Long> = lastSpoke.toMap()
+
+    /** Fin de l'appel : plus personne ne parle, l'ordre d'un salon plein est oublié. */
+    protected fun forgetSpeakers() {
+        lastSpoke.clear()
+        speaking = emptySet()
+    }
+
     private fun noteSpeaking(ids: Set<String>) {
         val now = SystemClock.elapsedRealtime()
         ids.forEach { lastSpoke[it] = now }
@@ -527,7 +550,7 @@ abstract class CallWidget(
     }
 
     /** Qui parle, relu toutes les 500 ms pendant l'appel (photos ou halo à l'écran ; la carte relit l'appel toutes les 4 s). */
-    private fun followSpeaking(on: Boolean) {
+    protected fun followSpeaking(on: Boolean) {
         if (!on || !active) {
             speakPoll?.cancel()
             speakPoll = null
@@ -551,7 +574,7 @@ abstract class CallWidget(
         }
     }
 
-    private fun loadPhotos(members: List<VoiceMember>) {
+    protected fun loadPhotos(members: List<VoiceMember>) {
         if (preview) return
         val missing = members.filter { it.avatar && IconCache.peekDiscord(it.id) == null && it.id !in loadingPhotos }
         if (missing.isEmpty()) return
@@ -561,12 +584,12 @@ abstract class CallWidget(
             host.scope.launch {
                 IconCache.loadDiscord(client, m.id)
                 loadingPhotos.remove(m.id)
-                (rows + featured).forEach { it.photosChanged() }
+                photosArrived()
             }
         }
     }
 
-    private fun authorizePhotos() {
+    protected fun authorizePhotos() {
         if (authorizing || preview) return
         authorizing = true
         renderState()
@@ -580,7 +603,7 @@ abstract class CallWidget(
         }
     }
 
-    private fun run(tile: DeckTile) {
+    protected fun run(tile: DeckTile) {
         if (preview) return
         host.scope.launch {
             val result = runTileSpoken(context, tile.id, tile.label)
@@ -622,9 +645,12 @@ abstract class CallWidget(
     }
 }
 
-/** La page Discord du Deck : l'appli sans la page Réunion. En îlot : ronds et halo de qui parle. */
+/** La page Discord du Deck : l'appli sans la page Réunion. */
+val isDiscordPage: (DeckPage) -> Boolean = { it.app.equals("Discord", ignoreCase = true) && !it.meeting }
+
+/** Le widget Discord : en îlot, ronds et halo de qui parle. Les thèmes Instrument prennent [DiscordConsoleWidget]. */
 class DiscordWidget(context: Context, host: HomeHost, placed: Placed) :
-    CallWidget(context, host, placed, { it.app.equals("Discord", ignoreCase = true) && !it.meeting }) {
+    CallWidget(context, host, placed, isDiscordPage) {
     override val island get() = true
 }
 
