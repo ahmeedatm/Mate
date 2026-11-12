@@ -173,4 +173,10 @@ class ConnectionTest {
         assertEquals(false, Connection.homeCheckDue(offlineForMs = 20_000, sinceCheckMs = 5_000))
         assertTrue(Connection.homeCheckDue(offlineForMs = 40_000, sinceCheckMs = 16_000))
     }
+
+    @Test
+    fun `une autre machine a l'adresse du PC ne compte pas comme un PC qui repond`() = runBlocking {
+        Computers.save(context, computer("a", backend("intrus")), makeActive = true)
+        assertTrue(Connection.homeIfNoneAnswers(context))
+    }
 }

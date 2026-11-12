@@ -75,7 +75,7 @@ class HomeLightSource(
 
     /** Tout ce que la tablette voit, avant le choix de ce qui s'affiche (liste à cocher des Réglages). */
     suspend fun all(): List<HaEntity> = coroutineScope {
-        val reads = (listOfNotNull(ha) + wled.values).map { async { runCatching { it.entities() } } }.awaitAll()
+        val reads = (listOfNotNull(ha) + wled.values).map { async { runCatchingCancellable { it.entities() } } }.awaitAll()
         val ok = reads.mapNotNull { it.getOrNull() }
         if (ok.isEmpty() && reads.isNotEmpty()) {
             val e = reads.first().exceptionOrNull()!!
@@ -92,7 +92,7 @@ class HomeLightSource(
     override suspend fun setLight(id: String, brightness: Int?, rgb: Int?) = owner(id).setLight(id, brightness, rgb)
 
     private fun owner(id: String): LightSource =
-        (if (HomeChoice.isWledDirect(id)) wled[id] else ha) ?: throw java.io.IOException("Lumière inconnue : $id")
+        (if (HomeChoice.isWledDirect(id)) wled[id] else ha) ?: throw UserFacingException(R.string.home_unreachable)
 }
 
 /** Maison : Home Assistant et WLED en direct ; un ordinateur : son Home Assistant à lui, comme avant. */

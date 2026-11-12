@@ -63,10 +63,15 @@ class HaDirectTest {
 
     @Test
     fun `une adresse du reseau local seulement autorise le HTTP`() {
-        for (url in listOf("http://192.168.1.10:8123", "http://10.0.0.2:8123", "http://172.20.1.1:8123", "http://homeassistant.local:8123")) {
+        for (url in listOf("http://192.168.1.10:8123", "http://10.0.0.2:8123", "http://172.20.1.1:8123", "HTTP://192.168.1.10")) {
             assertTrue(url, isPrivateHttpUrl(url))
         }
-        for (url in listOf("http://8.8.8.8:8123", "http://172.32.0.1", "http://ha.exemple.fr", "https://192.168.1.10", "http://192.168.1.10.exemple.fr", "pas une url")) {
+        // Un nom (même .local) passe par le DNS : il peut mener ailleurs. Userinfo et « \ » sont lus autrement par la connexion.
+        for (url in listOf(
+            "http://8.8.8.8:8123", "http://172.32.0.1", "http://ha.exemple.fr", "https://192.168.1.10", "http://192.168.1.10.exemple.fr",
+            "pas une url", "http://homeassistant.local:8123", "http://evil.example\\@192.168.1.10", "http://user:pass@192.168.1.10",
+            "http://10.0.0.999", "http://192.168.1.10@evil.com",
+        )) {
             assertFalse(url, isPrivateHttpUrl(url))
         }
     }
@@ -78,6 +83,7 @@ class HaDirectTest {
         assertTrue(Http("http://8.8.8.8:8123", "jeton", 1_000, allowPrivateCleartext = true).cleartextRefused)
         assertFalse(Http("http://127.0.0.1:3000", "jeton", 1_000).cleartextRefused)
         assertFalse(Http("http://192.168.1.30", "", 1_000).cleartextRefused)
+        assertTrue(Http("HTTP://8.8.8.8", "jeton", 1_000).cleartextRefused)
     }
 
     @Test
@@ -90,6 +96,8 @@ class HaDirectTest {
         assertEquals(app.mate.R.string.home_ha_http_public, haUrlProblem("http://ha.exemple.fr", allowHttp = true))
         assertEquals(app.mate.R.string.home_ha_bad_url, haUrlProblem("ftp://192.168.1.10", allowHttp = true))
         assertEquals(app.mate.R.string.home_ha_bad_url, haUrlProblem("http://", allowHttp = true))
+        assertEquals(app.mate.R.string.home_ha_bad_url, haUrlProblem("http://evil.example\\@192.168.1.10", allowHttp = true))
+        assertEquals(app.mate.R.string.home_ha_bad_url, haUrlProblem("https://user:pass@ha.exemple.fr", allowHttp = false))
     }
 
     @Test
@@ -106,5 +114,12 @@ class HaDirectTest {
         assertEquals(WledDevice("wled:a1b2c3d4e5f6", "192.168.1.42", "WLED bureau"), d)
         assertNull(parseWledInfo("192.168.1.42", """{"name":"pas une WLED"}"""))
         assertNull(parseWledInfo("192.168.1.42", "<html>"))
+    }
+
+    @Test
+    fun `une adresse de WLED saisie doit etre une IP du reseau local, sans chemin`() {
+        assertTrue(isWledHost("192.168.1.42"))
+        assertTrue(isWledHost("10.0.2.2:3971"))
+        for (h in listOf("evil.com", "8.8.8.8", "192.168.1.1/admin?", "a@192.168.1.1", "192.168.1.1\\x", "", "wled.local")) assertFalse(h, isWledHost(h))
     }
 }

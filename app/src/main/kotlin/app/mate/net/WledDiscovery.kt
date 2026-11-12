@@ -4,8 +4,10 @@ import android.content.Context
 import android.net.nsd.NsdManager
 import android.net.nsd.NsdServiceInfo
 import android.os.SystemClock
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.suspendCancellableCoroutine
+import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeoutOrNull
 import kotlin.coroutines.resume
 
@@ -27,15 +29,19 @@ object WledDiscovery {
     suspend fun refreshIfStale(context: Context): Boolean {
         val now = SystemClock.elapsedRealtime()
         if (lastRun != 0L && now - lastRun < EVERY_MS) return false
+        val changed = refresh(context)
+        // Après la recherche : annulée en route (widget détruit), elle est refaite au prochain affichage.
         lastRun = now
-        return refresh(context)
+        return changed
     }
 
     /** Cherche maintenant (bouton des Réglages). @return true si la liste retenue a changé. */
     suspend fun refresh(context: Context): Boolean {
         val before = WledDevices.all(context)
-        for (host in find(context)) {
-            val device = runCatchingCancellable { WledApi.info(host) }.getOrNull() ?: continue
+        // NsdManager capricieux sur certaines tablettes (IllegalArgumentException…) : pas de WLED trouvée, pas de plantage.
+        val hosts = runCatchingCancellable { find(context) }.getOrDefault(emptyList())
+        for (host in hosts) {
+            val device = runCatchingCancellable { withContext(Dispatchers.IO) { WledApi.info(host) } }.getOrNull() ?: continue
             WledDevices.save(context, device)
         }
         return WledDevices.all(context) != before
@@ -68,6 +74,8 @@ object WledDiscovery {
         return services.distinctBy { it.serviceName }.mapNotNull { resolve(nsd, it) }.distinct()
     }
 
+    // shortcut: après un délai dépassé, la résolution en cours reste chez NsdManager et la suivante peut échouer
+    // (FAILURE_ALREADY_ACTIVE avant l'API 34) : cette WLED attend la recherche suivante ; y revenir si des WLED manquent.
     @Suppress("DEPRECATION")
     private suspend fun resolve(nsd: NsdManager, info: NsdServiceInfo): String? = withTimeoutOrNull(RESOLVE_MS) {
         suspendCancellableCoroutine { cont ->

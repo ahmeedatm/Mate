@@ -37,7 +37,7 @@ class Http(
     allowPrivateCleartext: Boolean = false,
     private val followRedirects: Boolean = true,
 ) {
-    internal val cleartextRefused = token.isNotEmpty() && baseUrl.startsWith("http://") && !isLocalUrl(baseUrl) &&
+    internal val cleartextRefused = token.isNotEmpty() && baseUrl.startsWith("http://", ignoreCase = true) && !isLocalUrl(baseUrl) &&
         !(allowPrivateCleartext && isPrivateHttpUrl(baseUrl))
 
     suspend fun <T> io(block: () -> T): T = withContext(Dispatchers.IO) { block() }

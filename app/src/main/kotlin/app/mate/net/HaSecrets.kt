@@ -65,18 +65,26 @@ class HaConfig(val url: String, val token: String, val allowHttp: Boolean) {
         fun load(context: Context, key: () -> SecretKey = HaSecrets::keystoreKey): HaConfig? {
             val p = prefs(context)
             val url = p.getString(KEY_URL, null) ?: return null
+            val allowHttp = p.getBoolean(KEY_HTTP, false)
+            // Revérifiée à chaque lecture : une adresse gardée par une version plus permissive ne sert pas.
+            if (haUrlProblem(url, allowHttp) != null) return null
             val blob = p.getString(KEY_TOKEN, null) ?: return null
             val token = runCatching { HaSecrets.open(blob, key()) }.getOrNull() ?: return null
-            return HaConfig(url, token, p.getBoolean(KEY_HTTP, false))
+            return HaConfig(url, token, allowHttp)
         }
 
-        /** Adresse saisie ou copiée de l'ordinateur ; le jeton n'est écrit que chiffré. */
-        fun save(context: Context, url: String, token: String, allowHttp: Boolean, key: () -> SecretKey = HaSecrets::keystoreKey) {
+        /**
+         * Adresse saisie ou copiée de l'ordinateur ; le jeton n'est écrit que chiffré. Faux : le Keystore de la tablette
+         * refuse de chiffrer (rien n'est écrit, et jamais en clair).
+         */
+        fun save(context: Context, url: String, token: String, allowHttp: Boolean, key: () -> SecretKey = HaSecrets::keystoreKey): Boolean {
+            val sealed = runCatching { HaSecrets.seal(token.trim(), key()) }.getOrNull() ?: return false
             prefs(context).edit()
                 .putString(KEY_URL, url.trim().trimEnd('/'))
-                .putString(KEY_TOKEN, HaSecrets.seal(token.trim(), key()))
+                .putString(KEY_TOKEN, sealed)
                 .putBoolean(KEY_HTTP, allowHttp)
                 .apply()
+            return true
         }
 
         /** Adresse gardée (pour la saisie), sans le jeton. */

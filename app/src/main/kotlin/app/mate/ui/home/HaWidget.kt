@@ -201,7 +201,7 @@ class HaWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidget(co
     override fun showSettings() {
         // Maison : sources et liste à cocher ; la Pastille garde son choix de l'entité, comme sur un ordinateur.
         val home = Computers.homeActive(context)
-        if (home && (family != ShapeFamily.PILL || entities.isEmpty())) return HomeSettingsDialog(context as MainActivity).show()
+        if (home && (family != ShapeFamily.PILL || entities.isEmpty())) return (context as? MainActivity)?.let { HomeSettingsDialog(it).show() } ?: Unit
         if (entities.isEmpty()) return toast(context.getString(emptyText()))
         val current = haPick(entities, placed.config.optString("entity").ifEmpty { null })
         AlertDialog.Builder(context)

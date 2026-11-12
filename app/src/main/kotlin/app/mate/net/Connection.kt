@@ -85,8 +85,9 @@ object Connection {
      * Un seul qui répond suffit à ne rien changer : jamais Maison tant qu'un PC répond, et l'actif reste le même.
      */
     suspend fun homeIfNoneAnswers(context: Context): Boolean = coroutineScope {
-        val answers = Computers.all(context).map { c -> async { runCatching { probe(context, c, connectTimeoutMs = 2_000) }.isSuccess } }.awaitAll()
-        if (answers.any { it }) return@coroutineScope false
+        // Une autre machine à l'ancienne adresse d'un PC (Mismatch) n'est pas ce PC : elle ne compte pas.
+        val answers = Computers.all(context).map { c -> async { runCatchingCancellable { probe(context, c, connectTimeoutMs = 2_000) }.getOrNull() } }.awaitAll()
+        if (answers.any { it is Probe.Ok || it == Probe.Unauthorized }) return@coroutineScope false
         Computers.setHome(context)
         true
     }

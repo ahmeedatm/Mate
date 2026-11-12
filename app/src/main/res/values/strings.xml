@@ -65,6 +65,9 @@
     <string name="home_wled_host_hint">Adresse d\'une WLED, ex. 192.168.1.42</string>
     <string name="home_wled_add">Ajouter</string>
     <string name="home_wled_search">Chercher sur le WiFi</string>
+    <string name="home_ha_keystore_failed">Cette tablette n\'arrive pas à chiffrer le jeton : rien n\'a été gardé.</string>
+    <string name="home_wled_bad_host">Saisis l\'adresse IP de la WLED sur le réseau local, ex. 192.168.1.42.</string>
+    <string name="home_wled_failed">%1$s n\'a pas pu faire cela.</string>
     <string name="home_wled_adding">Lecture de la WLED…</string>
     <string name="home_wled_not_found">Aucune WLED ne répond à cette adresse.</string>
     <string name="home_wled_added">%1$s est ajoutée.</string>

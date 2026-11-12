@@ -20,6 +20,7 @@ import app.mate.net.WledDevices
 import app.mate.net.WledDiscovery
 import app.mate.net.haUrlProblem
 import app.mate.net.homeLightSource
+import app.mate.net.isWledHost
 import app.mate.net.normalizeHaUrl
 import app.mate.net.runCatchingCancellable
 import kotlinx.coroutines.Dispatchers
@@ -46,6 +47,8 @@ class HomeSettingsDialog(private val activity: MainActivity) {
         url.setText(HaConfig.url(activity).orEmpty())
         val token = activity.inputField(body, R.string.home_ha_token_hint, InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_VARIATION_PASSWORD)
         if (HaConfig.url(activity) != null) token.setHint(R.string.home_ha_token_kept)
+        // Le mode mot de passe d'Android pose une police à chasse fixe : on garde celle des autres champs.
+        token.typeface = url.typeface
         val http = CheckBox(activity).apply {
             setText(R.string.home_ha_allow_http)
             textSize = 16f
@@ -62,10 +65,10 @@ class HomeSettingsDialog(private val activity: MainActivity) {
             when {
                 problem != null -> message.setText(problem)
                 secret.isEmpty() -> message.setText(R.string.home_ha_token_missing)
-                else -> save(address, secret, http.isChecked).also { token.text.clear() }
+                else -> if (save(address, secret, http.isChecked)) token.text.clear()
             }
         })
-        if (Computers.all(activity).isNotEmpty()) actions.addView(button(R.string.home_ha_copy) { copyFromComputer() }, margin())
+        if (Computers.all(activity).isNotEmpty()) actions.addView(button(R.string.home_ha_copy) { copyFromComputer(http.isChecked) }, margin())
         body.addView(actions)
 
         body.addView(TitleView(activity).apply { setText(R.string.home_wled_title); setPadding(0, activity.dp(20), 0, 0) })
@@ -86,21 +89,28 @@ class HomeSettingsDialog(private val activity: MainActivity) {
         reload()
     }
 
-    private fun save(url: String, token: String, allowHttp: Boolean) {
-        HaConfig.save(activity, url, token, allowHttp)
+    private fun save(url: String, token: String, allowHttp: Boolean): Boolean {
+        if (!HaConfig.save(activity, url, token, allowHttp)) {
+            message.setText(R.string.home_ha_keystore_failed)
+            return false
+        }
         message.setText(R.string.home_ha_saved)
         reload()
+        return true
     }
 
-    /** Ordinateur le plus récemment piloté : sur Maison, aucun n'est actif. */
-    private fun copyFromComputer() {
+    /**
+     * Ordinateur le plus récemment piloté : sur Maison, aucun n'est actif. Le HTTP n'est jamais accordé par l'ordinateur
+     * (`HA_ALLOW_HTTP`) : seulement par la case cochée ici, sur la tablette (`allowHttp`).
+     */
+    private fun copyFromComputer(allowHttp: Boolean) {
         val computer = Computers.all(activity).maxByOrNull { it.lastUsedMs } ?: return
         message.setText(R.string.home_ha_copying)
         activity.lifecycleScope.launch {
             runCatchingCancellable { BackendClient(computer).ha.settings() }
                 .onSuccess { s ->
-                    val problem = haUrlProblem(s.url, s.allowHttp)
-                    if (problem != null) message.setText(problem) else save(s.url, s.token, s.allowHttp)
+                    val problem = haUrlProblem(s.url, allowHttp)
+                    if (problem != null) message.setText(problem) else save(s.url, s.token, allowHttp)
                 }
                 .onFailure { message.text = activity.errorText(it) }
         }
@@ -108,6 +118,7 @@ class HomeSettingsDialog(private val activity: MainActivity) {
 
     private fun addWled(host: String) {
         if (host.isEmpty()) return
+        if (!isWledHost(host)) return message.setText(R.string.home_wled_bad_host)
         message.setText(R.string.home_wled_adding)
         activity.lifecycleScope.launch {
             val device = runCatchingCancellable { withContext(Dispatchers.IO) { WledApi.info(host) } }.getOrNull()

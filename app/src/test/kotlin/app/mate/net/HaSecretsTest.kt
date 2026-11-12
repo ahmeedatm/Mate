@@ -51,4 +51,21 @@ class HaSecretsTest {
         HaConfig.save(context, "https://ha.exemple.fr", "jeton", allowHttp = false) { key }
         assertNull(HaConfig.load(context) { other })
     }
+
+    @Test
+    fun `une adresse devenue invalide n'est pas utilisee`() {
+        val context = FakeContext()
+        context.getSharedPreferences(Prefs.FILE, 0).edit().putString("ha_direct_url", "http://evil.example\\@192.168.1.10")
+            .putString("ha_direct_token", HaSecrets.seal("jeton", key)).putBoolean("ha_direct_http", true).apply()
+        assertNull(HaConfig.load(context) { key })
+    }
+
+    @Test
+    fun `une cle du Keystore qui casse ne plante pas et n'ecrit rien en clair`() {
+        val context = FakeContext()
+        val saved = HaConfig.save(context, "https://ha.exemple.fr", "jeton-secret", allowHttp = false) { throw java.security.ProviderException("keymaster") }
+        assertFalse(saved)
+        val prefs = context.getSharedPreferences(Prefs.FILE, 0) as FakePrefs
+        assertFalse(prefs.values.values.any { it.toString().contains("jeton-secret") })
+    }
 }

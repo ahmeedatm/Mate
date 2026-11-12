@@ -1,5 +1,7 @@
 package app.mate.net
 
+import app.mate.R
+import app.mate.UserFacingException
 import org.json.JSONArray
 import org.json.JSONObject
 import kotlin.math.roundToInt
@@ -57,13 +59,17 @@ class WledApi(private val device: WledDevice) : LightSource {
         listOf(entity)
     }
 
-    override suspend fun toggle(id: String) = http.io {
-        http.postJson("/json/state", JSONObject().put("on", "t"), timeoutMs = READ_TIMEOUT_MS)
-        Unit
-    }
+    override suspend fun toggle(id: String) = send(JSONObject().put("on", "t"))
 
-    override suspend fun setLight(id: String, brightness: Int?, rgb: Int?) = http.io {
-        http.postJson("/json/state", wledStateBody(brightness, rgb), timeoutMs = READ_TIMEOUT_MS)
+    override suspend fun setLight(id: String, brightness: Int?, rgb: Int?) = send(wledStateBody(brightness, rgb))
+
+    /** Une erreur HTTP de la WLED dit son nom, pas « Reconnecte-toi à l'ordinateur ». */
+    private suspend fun send(body: JSONObject) = http.io {
+        try {
+            http.postJson("/json/state", body, timeoutMs = READ_TIMEOUT_MS)
+        } catch (e: HttpException) {
+            throw UserFacingException(R.string.home_wled_failed, device.name)
+        }
         Unit
     }
 

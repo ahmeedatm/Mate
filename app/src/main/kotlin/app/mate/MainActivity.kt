@@ -404,7 +404,7 @@ class MainActivity : AppCompatActivity() {
         } else {
             splash.visibility = View.GONE
         }
-        showLink(Link(Computers.active(this), Link.State.OFFLINE))
+        showLink(Link(Computers.active(this), if (Computers.homeActive(this)) Link.State.HOME else Link.State.OFFLINE))
         remote.restart()
     }
 

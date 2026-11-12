@@ -18,15 +18,22 @@ private val MEDIA_OFF = setOf("off", "standby")
 
 private const val HA_BYTE_MAX = 255
 
-/** Réseaux privés IPv4 (RFC 1918) et liens locaux : là seulement le jeton peut passer en HTTP, case cochée. */
-private val PRIVATE_IPV4 = Regex("^(10\\.\\d+|192\\.168|172\\.(1[6-9]|2\\d|3[01])|169\\.254)\\.\\d+\\.\\d+$")
+/** Octet d'une IPv4 écrite en chiffres (0 à 255). */
+private const val OCTET = "(25[0-5]|2[0-4]\\d|1\\d\\d|[1-9]?\\d)"
 
-/** URL en `http://` vers une adresse du réseau local (IP privée littérale ou nom en `.local`), sans résolution DNS. */
+/** Réseaux privés IPv4 (RFC 1918) et liens locaux : là seulement le jeton peut passer en HTTP, case cochée. */
+private val PRIVATE_IPV4 = Regex("^(10\\.$OCTET|192\\.168|172\\.(1[6-9]|2\\d|3[01])|169\\.254)\\.$OCTET\\.$OCTET$")
+
+/**
+ * URL en `http://` vers une IPv4 privée écrite en chiffres. Pas de nom, même en `.local` : Android le résout par le DNS
+ * du WiFi, qui peut répondre une adresse publique. Pas de « @ » ni de « \\ » : java.net.URL et la connexion
+ * (OkHttp) ne les lisent pas pareil, le jeton partirait vers un autre hôte que celui vérifié.
+ */
 fun isPrivateHttpUrl(url: String): Boolean {
+    if ('@' in url || '\\' in url) return false
     val parsed = runCatching { URL(url) }.getOrNull() ?: return false
-    if (parsed.protocol != "http") return false
-    val host = parsed.host.lowercase()
-    return PRIVATE_IPV4.matches(host) || (host.endsWith(".local") && host.length > ".local".length)
+    if (!parsed.protocol.equals("http", ignoreCase = true) || parsed.userInfo != null) return false
+    return PRIVATE_IPV4.matches(parsed.host)
 }
 
 /**
@@ -124,6 +131,8 @@ fun normalizeHaUrl(input: String): String {
 
 /** Ce qui empêche d'enregistrer l'adresse (texte de strings.xml), ou null si elle convient. */
 fun haUrlProblem(url: String, allowHttp: Boolean): Int? {
+    // Identifiants dans l'adresse, ou « \\ » que la connexion lit autrement que java.net.URL : refusés partout.
+    if ('@' in url || '\\' in url) return R.string.home_ha_bad_url
     val parsed = runCatching { URL(url) }.getOrNull()
     if (parsed == null || parsed.host.isNullOrEmpty() || parsed.protocol !in setOf("http", "https")) return R.string.home_ha_bad_url
     if (parsed.protocol == "https") return null
@@ -139,3 +148,12 @@ class HaSettings(val url: String, val token: String, val allowHttp: Boolean) {
 fun parseHaSettings(json: String): HaSettings = JSONObject(json).let {
     HaSettings(it.getString("url"), it.getString("token"), it.optBoolean("allowHttp"))
 }
+
+/** Adresse de WLED saisie : une IP du réseau local, port facultatif, rien d'autre (ni chemin, ni nom, ni « @ »). */
+fun isWledHost(host: String): Boolean {
+    if (!WLED_HOST.matches(host)) return false
+    val url = "http://$host"
+    return isPrivateHttpUrl(url) && runCatching { URL(url).path.isEmpty() }.getOrDefault(false)
+}
+
+private val WLED_HOST = Regex("^[0-9.]+(:\\d{1,5})?$")

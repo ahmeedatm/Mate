@@ -257,3 +257,14 @@ describe("home assistant : télé et Apple TV", () => {
     assert.deepEqual(seen, [{ method: "POST", url: "/api/services/media_player/toggle", body: { entity_id: "media_player.tv" } }]);
   });
 });
+
+describe("ha-settings : le jeton Home Assistant ne part jamais en clair", () => {
+  it("HTTPS de partout, HTTP seulement depuis la machine elle-même", async () => {
+    const { mayHandOverHaToken } = await import("../src/routes/ha-settings.ts");
+    assert.equal(mayHandOverHaToken("https", "192.168.1.5"), true);
+    assert.equal(mayHandOverHaToken("http", "127.0.0.1"), true);
+    assert.equal(mayHandOverHaToken("http", "::1"), true);
+    assert.equal(mayHandOverHaToken("http", "192.168.1.5"), false);
+    assert.equal(mayHandOverHaToken("http", "::ffff:192.168.1.5"), false);
+  });
+});
