@@ -1119,6 +1119,22 @@ export async function runSanity(opts: { url: string; token: string; os?: Os; hoo
       },
     },
     {
+      name: "Home Assistant : réglage d'une lumière",
+      run: async () => {
+        // Lecture seule : un réglage hors bornes est refusé avant Home Assistant, aucune lampe ne change.
+        const entities = await call("GET", "/ha/entities");
+        if (entities.status === 501)
+          return expectStatus(await call("POST", "/ha/entities/light.x/light", { brightness: 50 }), 501, "réglage sans Home Assistant");
+        expectStatus(entities, 200, "/ha/entities");
+        for (const e of entities.json.entities ?? []) {
+          if (!e.light) continue;
+          expect(typeof e.light.color === "boolean", `${e.id} : light.color inattendu`);
+          expect(e.light.brightness === null || (e.light.brightness >= 0 && e.light.brightness <= 100), `${e.id} : luminosité hors 0-100`);
+        }
+        expectStatus(await call("POST", "/ha/entities/light.x/light", { brightness: 101 }), 400, "luminosité hors bornes refusée");
+      },
+    },
+    {
       name: "Alerte maison : ordre réservé à l'ordinateur",
       run: async () => {
         // Lecture seule : l'ordre est refusé avant d'atteindre la tablette, rien ne s'affiche.
