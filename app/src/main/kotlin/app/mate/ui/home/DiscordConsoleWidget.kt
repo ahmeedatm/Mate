@@ -10,11 +10,15 @@ import android.view.LayoutInflater
 import android.view.MotionEvent
 import android.view.View
 import android.view.ViewGroup
+import android.widget.Button
 import android.widget.ImageView
 import android.widget.LinearLayout
 import android.widget.TextView
 import androidx.appcompat.content.res.AppCompatResources
 import androidx.appcompat.view.ContextThemeWrapper
+import androidx.core.view.AccessibilityDelegateCompat
+import androidx.core.view.ViewCompat
+import androidx.core.view.accessibility.AccessibilityNodeInfoCompat
 import app.mate.AnimFamily
 import app.mate.R
 import app.mate.net.DeckTile
@@ -36,7 +40,8 @@ import app.mate.ui.themeRes
 class DiscordConsoleWidget(context: Context, host: HomeHost, placed: Placed) : CallWidget(context, host, placed, isDiscordPage) {
     private val lcdContext = ContextThemeWrapper(context, themeRes(context, R.attr.c_lcd_overlay))
 
-    private val dot = View(lcdContext)
+    private val dotShape = GradientDrawable().apply { shape = GradientDrawable.OVAL }
+    private val dot = View(lcdContext).apply { background = dotShape }
     private val channel = lcdLabel(CAPTION_SP, R.attr.c_text_dim)
     private val flag = lcdLabel(CAPTION_SP, R.attr.c_ko)
     private val line1 = LinearLayout(lcdContext).apply {
@@ -58,6 +63,16 @@ class DiscordConsoleWidget(context: Context, host: HomeHost, placed: Placed) : C
             setStroke(dp(1), themeColor(lcdContext, R.attr.c_text_dim))
         }
         setOnClickListener { authorizePhotos() }
+        // TalkBack l'annonce comme un bouton.
+        ViewCompat.setAccessibilityDelegate(
+            this,
+            object : AccessibilityDelegateCompat() {
+                override fun onInitializeAccessibilityNodeInfo(host: View, info: AccessibilityNodeInfoCompat) {
+                    super.onInitializeAccessibilityNodeInfo(host, info)
+                    info.className = Button::class.java.name
+                }
+            },
+        )
     }
     private val screen = LinearLayout(lcdContext).apply {
         orientation = LinearLayout.VERTICAL
@@ -166,10 +181,7 @@ class DiscordConsoleWidget(context: Context, host: HomeHost, placed: Placed) : C
                 screen.layoutParams = lp
             }
         }
-        dot.background = GradientDrawable().apply {
-            shape = GradientDrawable.OVAL
-            setColor(themeColor(lcdContext, if (inCall) R.attr.c_ok else R.attr.c_text_faint))
-        }
+        dotShape.setColor(themeColor(lcdContext, if (inCall) R.attr.c_ok else R.attr.c_text_faint))
         channel.text = when {
             inCall -> v?.channel ?: page?.app.orEmpty()
             else -> context.getString(R.string.widget_discord)
@@ -203,7 +215,8 @@ class DiscordConsoleWidget(context: Context, host: HomeHost, placed: Placed) : C
         photos.visibility = if (asking) View.VISIBLE else View.GONE
         val waiting = authorizing || v?.photos == "waiting"
         photos.text = context.getString(if (waiting) R.string.console_photos_waiting else R.string.call_photos_show)
-        followSpeaking(inCall && !v?.members.isNullOrEmpty())
+        // Rien ne montre qui parle sans la fenêtre (Pastille basse) : pas de relecture à 2 Hz pour rien.
+        followSpeaking(inCall && console.lcd && !v?.members.isNullOrEmpty())
     }
 
     override fun renderMembers(members: List<VoiceMember>) {
@@ -325,7 +338,7 @@ class DiscordConsoleWidget(context: Context, host: HomeHost, placed: Placed) : C
     }
 
     private companion object {
-        const val CAPTION_SP = 11f
+        const val CAPTION_SP = 12f
         const val LINE_SP = 22f
         const val LETTER_SPACING = 0.04f
         const val DOT_DP = 8

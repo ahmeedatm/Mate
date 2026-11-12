@@ -11,8 +11,10 @@ import android.graphics.Shader
 import android.view.View
 import android.view.animation.DecelerateInterpolator
 import androidx.core.graphics.ColorUtils
+import app.mate.AnimFamily
 import app.mate.R
 import app.mate.net.VoiceMember
+import app.mate.ui.Look
 import app.mate.ui.dp
 import app.mate.ui.themeColor
 import app.mate.ui.themeFont
@@ -35,6 +37,12 @@ class ConsoleMetersView(context: Context, private val vertical: Boolean) : View(
     private var labels: Map<String, String> = emptyMap()
     private var names: Map<String, String> = emptyMap()
     private val shaders = HashMap<String, BitmapShader>()
+
+    /** Côté des photos mises en cache : une autre taille de vue les refait (sinon coupées ou étirées). */
+    private var shaderSide = 0
+
+    /** « +N » et noms coupés à la largeur de leur colonne, préparés dans `replan` (pas d'allocation dans `onDraw`). */
+    private var moreLabel = ""
 
     /** Niveau affiché par participant (0 : muet, 1 : parle), valeur visée, animation en cours. */
     private val level = HashMap<String, Float>()
@@ -99,8 +107,14 @@ class ConsoleMetersView(context: Context, private val vertical: Boolean) : View(
         val fits = if (length == 0) 0 else ((length + spacing) / (cell() + spacing)).toInt()
         plan = planMembers(members, lastSpoke, fits, faceFirst = vertical)
         labels = plan.shown.associate { it.id to initials(it.name) }
-        names = plan.shown.associate { it.id to it.name.uppercase() }
+        names = plan.shown.associate { it.id to ellipsize(it.name.uppercase(), cell() + spacing) }
+        moreLabel = if (plan.more > 0) "+${plan.more}" else ""
         initialsPaint.textSize = avatar() * INITIALS_SHARE
+        val side = avatar().toInt()
+        if (side != shaderSide) {
+            shaderSide = side
+            shaders.clear()
+        }
         val speaking = members.filter { it.speaking }.map { it.id }.toSet()
         plan.shown.forEach { animateLevel(it.id, if (it.id in speaking) 1f else 0f) }
         val shownIds = plan.shown.map { it.id }.toSet()
@@ -119,6 +133,11 @@ class ConsoleMetersView(context: Context, private val vertical: Boolean) : View(
         levelTarget[id] = target
         val from = level[id] ?: 0f
         levelAnim.remove(id)?.cancel()
+        if (!Look.on(context, AnimFamily.DETAILS) || Look.reduced(context)) {
+            level[id] = target
+            invalidate()
+            return
+        }
         levelAnim[id] = ValueAnimator.ofFloat(from, target).apply {
             duration = if (target > from) RISE_MS else FALL_MS
             interpolator = DecelerateInterpolator()
@@ -140,9 +159,9 @@ class ConsoleMetersView(context: Context, private val vertical: Boolean) : View(
             if (vertical) drawRow(canvas, member, along, size, value) else drawColumn(canvas, member, along, cell, size, value)
             along += cell + spacing
         }
-        if (plan.more > 0) {
+        if (moreLabel.isNotEmpty()) {
             namePaint.color = dim
-            val text = "+${plan.more}"
+            val text = moreLabel
             if (vertical) {
                 canvas.drawText(text, size / 2, along + size / 2 - (namePaint.descent() + namePaint.ascent()) / 2, namePaint)
             } else {
@@ -157,8 +176,9 @@ class ConsoleMetersView(context: Context, private val vertical: Boolean) : View(
         val cx = left + cell / 2
         val photoTop = height - nameLine - size - dp(NAME_GAP_DP)
         drawFace(canvas, member, cx, photoTop + size / 2, size, value)
-        namePaint.color = if (value > 0.5f) bright else dim
-        canvas.drawText(ellipsize(names[member.id].orEmpty(), cell + spacing), cx, height - namePaint.descent(), namePaint)
+        namePaint.color = bright
+        namePaint.alpha = if (value > 0.5f) 255 else NAME_REST
+        canvas.drawText(names[member.id].orEmpty(), cx, height - namePaint.descent(), namePaint)
         val barsBottom = photoTop - dp(BAR_GAP_DP)
         val count = ((barsBottom + segmentGap) / (segment + segmentGap)).toInt().coerceIn(0, MAX_SEGMENTS)
         val half = dp(BAR_WIDTH_DP) / 2f
@@ -240,7 +260,8 @@ class ConsoleMetersView(context: Context, private val vertical: Boolean) : View(
         const val ROW_BAR_DP = 14
         const val BAR_GAP_DP = 6
         const val NAME_GAP_DP = 4
-        const val NAME_DP = 10
+        const val NAME_DP = 12
+        const val NAME_REST = 190
         const val MIN_AVATAR_DP = 24
         const val MAX_AVATAR_DP = 64
         const val COLUMN_AVATAR_DP = 30
