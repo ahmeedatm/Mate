@@ -33,7 +33,8 @@ class FaderInstrument(private val context: Context) {
     private val rect = RectF()
 
     private val cLcdBg = themeColor(context, R.attr.c_mx_lcd_bg)
-    private val cLedOff = themeColor(context, R.attr.c_mx_led_off)
+    // Segment éteint comme une DEL éteinte du dock (`dock_led`) : plus clair que les allumés en jour, visible en nuit.
+    private val cLedOff = themeColor(context, R.attr.c_stroke)
     private val cLeds = intArrayOf(
         themeColor(context, R.attr.c_mx_led_low),
         themeColor(context, R.attr.c_mx_led_mid),
