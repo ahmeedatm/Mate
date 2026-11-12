@@ -11,7 +11,13 @@ const seen: Seen[] = [];
 let authFails = false;
 let htmlStates = false;
 const STATES = [
-  { entity_id: "light.salon", state: "on", attributes: { friendly_name: "Lampe du salon" } },
+  {
+    entity_id: "light.salon",
+    state: "on",
+    attributes: { friendly_name: "Lampe du salon", supported_color_modes: ["rgb"], brightness: 128, rgb_color: [255, 120, 0] },
+  },
+  { entity_id: "light.ruban", state: "off", attributes: { friendly_name: "Ruban", supported_color_modes: ["brightness"] } },
+  { entity_id: "light.applique", state: "on", attributes: { friendly_name: "Applique", supported_color_modes: ["onoff"] } },
   { entity_id: "switch.cafetiere", state: "off", attributes: { friendly_name: "Cafetière" } },
   { entity_id: "scene.film", state: "2026-11-01T10:00:00+00:00", attributes: { friendly_name: "Soirée film" } },
   { entity_id: "light.bureau", state: "unavailable", attributes: {} },
@@ -59,7 +65,7 @@ before(async () => {
       HA_URL: site,
       HA_TOKEN,
       // `lock.porte` (domaine non géré), `light.absente` (inconnue de Home Assistant) et un identifiant faux restent sans effet ou grisés.
-      HA_ENTITIES: "light.salon, switch.cafetiere,scene.film,light.bureau,lock.porte,light.absente,pas un id",
+      HA_ENTITIES: "light.salon,light.ruban,light.applique, switch.cafetiere,scene.film,light.bureau,lock.porte,light.absente,pas un id",
     },
   });
   bare = await startServer({ env: { HA_URL: "", HA_TOKEN: "", HA_ENTITIES: "" } });
@@ -83,6 +89,7 @@ describe("home assistant : API", () => {
   it("sans configuration : 501", async () => {
     assert.equal((await bare.call("GET", "/ha/entities")).status, 501);
     assert.equal((await bare.call("POST", "/ha/entities/light.salon/toggle")).status, 501);
+    assert.equal((await bare.call("POST", "/ha/entities/light.salon/light", { brightness: 50 })).status, 501);
   });
 
   it("jeton d'appairage exigé", async () => {
@@ -94,7 +101,23 @@ describe("home assistant : API", () => {
     const { status, json } = await server.call("GET", "/ha/entities");
     assert.equal(status, 200);
     assert.deepEqual(json.entities, [
-      { id: "light.salon", name: "Lampe du salon", kind: "toggle", on: true, available: true },
+      {
+        id: "light.salon",
+        name: "Lampe du salon",
+        kind: "toggle",
+        on: true,
+        available: true,
+        light: { color: true, brightness: 50, rgb: [255, 120, 0] },
+      },
+      {
+        id: "light.ruban",
+        name: "Ruban",
+        kind: "toggle",
+        on: false,
+        available: true,
+        light: { color: false, brightness: null, rgb: null },
+      },
+      { id: "light.applique", name: "Applique", kind: "toggle", on: true, available: true },
       { id: "switch.cafetiere", name: "Cafetière", kind: "toggle", on: false, available: true },
       { id: "scene.film", name: "Soirée film", kind: "run", on: false, available: true },
       { id: "light.bureau", name: "light.bureau", kind: "toggle", on: false, available: false },
@@ -119,6 +142,29 @@ describe("home assistant : API", () => {
     assert.equal((await server.call("POST", "/ha/entities/light.cave/toggle")).status, 403);
     assert.equal((await server.call("POST", "/ha/entities/lock.porte/toggle")).status, 400);
     assert.equal((await server.call("POST", "/ha/entities/light.salon%2F..%2Fx/toggle")).status, 400);
+    assert.equal(seen.length, 0);
+  });
+
+  it("POST light : luminosité et couleur d'une lumière par light.turn_on", async () => {
+    seen.length = 0;
+    assert.equal((await server.call("POST", "/ha/entities/light.salon/light", { brightness: 40, rgb: [0, 128, 255] })).status, 200);
+    assert.equal((await server.call("POST", "/ha/entities/light.ruban/light", { brightness: 100 })).status, 200);
+    assert.deepEqual(seen, [
+      {
+        method: "POST",
+        url: "/api/services/light/turn_on",
+        body: { entity_id: "light.salon", brightness_pct: 40, rgb_color: [0, 128, 255] },
+      },
+      { method: "POST", url: "/api/services/light/turn_on", body: { entity_id: "light.ruban", brightness_pct: 100 } },
+    ]);
+  });
+
+  it("POST light : refuse hors liste (403), hors bornes, vide ou sur une prise (400), sans appeler Home Assistant", async () => {
+    seen.length = 0;
+    assert.equal((await server.call("POST", "/ha/entities/light.cave/light", { brightness: 50 })).status, 403);
+    for (const body of [{}, { brightness: 101 }, { brightness: 0 }, { brightness: 2.5 }, { rgb: [0, 0, 256] }, { rgb: [0, 0] }])
+      assert.equal((await server.call("POST", "/ha/entities/light.salon/light", body)).status, 400, JSON.stringify(body));
+    assert.equal((await server.call("POST", "/ha/entities/switch.cafetiere/light", { brightness: 50 })).status, 400);
     assert.equal(seen.length, 0);
   });
 
