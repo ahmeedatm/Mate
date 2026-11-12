@@ -11,6 +11,7 @@ class HaPickTest {
     private val scene = HaEntity("scene.film", "Soirée film", isScene = true, on = false, available = true)
     private val salon = HaEntity("light.salon", "Salon", isScene = false, on = true, available = true)
     private val prise = HaEntity("switch.cafe", "Cafetière", isScene = false, on = false, available = true)
+    private val tele = HaEntity("media_player.tv", "Télé", isScene = false, on = false, available = true)
 
     @Test
     fun `la pastille montre l'entite choisie`() {
@@ -34,5 +35,6 @@ class HaPickTest {
         assertEquals(R.drawable.ic_lightbulb, haIcon(salon))
         assertEquals(R.drawable.ic_bolt, haIcon(prise))
         assertEquals(R.drawable.ic_palette, haIcon(scene))
+        assertEquals(R.drawable.ic_tv, haIcon(tele))
     }
 }

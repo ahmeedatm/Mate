@@ -11,14 +11,18 @@ import { readCapped } from "./net-guard.ts";
 const rawUrl = process.env.HA_URL?.trim().replace(/\/+$/, "");
 const token = process.env.HA_TOKEN?.trim();
 
-/** Ce que la tablette peut piloter : `toggle` bascule (lumière, prise), `run` lance (scène). */
+/** Ce que la tablette peut piloter : `toggle` bascule (lumière, prise, télé ou Apple TV), `run` lance (scène). */
 const SERVICES = {
   light: { kind: "toggle", service: "toggle" },
   switch: { kind: "toggle", service: "toggle" },
+  media_player: { kind: "toggle", service: "toggle" },
   scene: { kind: "run", service: "turn_on" },
 } as const;
 
-export const HA_ENTITY_ID = /^(light|switch|scene)\.[a-z0-9_]+$/;
+export const HA_ENTITY_ID = /^(light|switch|media_player|scene)\.[a-z0-9_]+$/;
+
+/** Une télé est allumée dès qu'elle n'est ni éteinte ni en veille : elle peut jouer, être en pause ou attendre. */
+const MEDIA_OFF = new Set(["off", "standby"]);
 
 /** Réponse lue au plus : `/api/states` d'une grosse maison fait quelques centaines de Ko. */
 const MAX_RESPONSE_BYTES = 4 * 1024 * 1024;
@@ -110,18 +114,19 @@ export async function haEntities(): Promise<HaEntity[]> {
     const s = byId.get(id);
     const available = Boolean(s) && s?.state !== "unavailable" && s?.state !== "unknown";
     const light = s && available && domainOf(id) === "light" ? lightOf(s) : undefined;
+    const on = domainOf(id) === "media_player" ? !MEDIA_OFF.has(s?.state ?? "off") : s?.state === "on";
     return {
       id,
       name: s?.attributes?.friendly_name || id,
       kind: SERVICES[domainOf(id)].kind,
-      on: available && s?.state === "on",
+      on: available && on,
       available,
       ...(light && { light }),
     };
   });
 }
 
-/** Bascule la lumière ou la prise, lance la scène. Faux : l'entité n'est pas dans la liste blanche, rien n'est envoyé. */
+/** Bascule la lumière, la prise ou la télé, lance la scène. Faux : l'entité n'est pas dans la liste blanche, rien n'est envoyé. */
 export async function haActivate(id: string): Promise<boolean> {
   if (!haEntityIds.includes(id)) return false;
   const domain = domainOf(id);

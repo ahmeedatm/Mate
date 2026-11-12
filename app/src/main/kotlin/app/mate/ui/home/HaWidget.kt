@@ -34,10 +34,11 @@ import kotlinx.coroutines.sync.withLock
 internal fun haPick(entities: List<HaEntity>, id: String?): HaEntity? =
     entities.firstOrNull { it.id == id } ?: entities.firstOrNull { !it.isScene } ?: entities.firstOrNull()
 
-/** Icône d'une entité, lue dans son type : scène, prise (`switch.`) ou lumière. */
+/** Icône d'une entité, lue dans son type : scène, prise (`switch.`), télé ou Apple TV (`media_player.`) ou lumière. */
 internal fun haIcon(e: HaEntity) = when {
     e.isScene -> R.drawable.ic_palette
     e.id.startsWith("switch.") -> R.drawable.ic_bolt
+    e.id.startsWith("media_player.") -> R.drawable.ic_tv
     else -> R.drawable.ic_lightbulb
 }
 
@@ -58,7 +59,7 @@ class HaSample(val entities: List<Pair<HaEntity, Int>>) : WidgetSample {
 }
 
 /**
- * Lumières, prises et scènes de Home Assistant (liste blanche réglée sur l'ordinateur, qui garde le jeton). Une ligne par
+ * Lumières, prises, télés et scènes de Home Assistant (liste blanche réglée sur l'ordinateur, qui garde le jeton). Une ligne par
  * entité : icône, nom et état ; un toucher la bascule (une scène se lance). Allumée : icône et état prennent l'accent, l'icône
  * d'une lumière de couleur prend la sienne, et l'état dit sa luminosité. Un appui long sur une lumière réglable ouvre son
  * panneau ([HaLightPanel] : luminosité, couleur).
