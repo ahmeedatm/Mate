@@ -5,6 +5,7 @@ import android.graphics.Color
 import android.graphics.drawable.Drawable
 import android.graphics.drawable.DrawableContainer
 import android.graphics.drawable.GradientDrawable
+import android.graphics.drawable.LayerDrawable
 import android.widget.Button
 import android.widget.LinearLayout
 import androidx.core.content.ContextCompat
@@ -18,7 +19,7 @@ import app.mate.ui.themeRes
 
 /** Réglages > Thème > Widgets de l'Accueil : comment la carte d'un widget se pose sur le fond d'écran (#214). */
 enum class HomeCardStyle(val label: Int) {
-    /** Un léger voile du ton de la carte, sans filet (par défaut). */
+    /** « Cadre » : un léger voile du ton de la carte, sans filet (par défaut) ; le cadre de console du thème s'il en a un (Instrument). */
     VEIL(R.string.home_card_veil),
 
     /** La carte du thème, filet retiré. */
@@ -39,8 +40,24 @@ object HomeCard {
     /** Style appliqué, ou `null` quand la tuile du thème est gardée (carte de la couleur du fond). */
     fun look(style: HomeCardStyle, bg: Int, surface: Int): HomeCardStyle? = style.takeIf { surface != bg }
 
-    /** Le filet du panneau est gardé : thème à filet (Instrument) et style Voile seulement ; « Sans filet » et « À même le fond » le retirent. */
+    /** Le filet du panneau est gardé : thème à filet (Instrument) et style Cadre seulement ; « Sans filet » et « À même le fond » le retirent. */
     fun keepsOutline(themeOutline: Boolean, style: HomeCardStyle): Boolean = themeOutline && style == HomeCardStyle.VEIL
+
+    /** Le cadre de console du thème (`c_home_card_frame`, 0 = aucun) se pose au choix Cadre seulement. */
+    fun framed(style: HomeCardStyle, frame: Int): Boolean = frame != 0 && style == HomeCardStyle.VEIL
+
+    /** Le cadre de console est posé dans le thème courant. */
+    fun framed(context: Context): Boolean = framed(Prefs.homeCardStyle(context), themeRes(context, R.attr.c_home_card_frame))
+
+    /** Marge intérieure d'une carte encadrée : le cadre (9 dp) mord sur la carte, le contenu garde au moins [FRAME_PAD_DP]. */
+    fun padding(px: Int, framed: Boolean, min: Int): Int = if (framed) maxOf(px, min) else px
+
+    /** Marge minimale sous le cadre de console : son épaisseur (9 dp) et 7 dp d'air. */
+    const val FRAME_PAD_DP = 16
+
+    /** Épaisseur du cadre de console (`drawable/instrument_frame` : coque et liseré), sans air : le contenu ne passe pas dessous. */
+    const val FRAME_EDGE_DP = 10
+
     /** Style appliqué dans le thème courant (`look` sur les couleurs du thème). */
     fun look(context: Context): HomeCardStyle? =
         look(Prefs.homeCardStyle(context), themeColor(context, R.attr.c_bg), themeColor(context, R.attr.c_surface))
@@ -52,11 +69,19 @@ object HomeCard {
     fun slot(style: HomeCardStyle?, slot: Int, bg: Int, stroke: Int): Int = if (style == HomeCardStyle.BARE && slot == bg) stroke else slot
 
     /**
-     * La tuile du thème, filet retiré partout ; Voile et À même le fond ne changent que sa forme au repos. L'appui garde
+     * La tuile du thème, filet retiré partout ; Cadre et À même le fond ne changent que sa forme au repos. L'appui garde
      * celle du thème (halo rose de Hush, translucide du Rétro). Un thème au panneau à filet (`c_home_card_outline`,
-     * Instrument) garde son filet au Voile seulement : sur l'alu, le voile seul ne se verrait pas, mais « Sans filet » le retire.
+     * Instrument) garde son filet au Cadre seulement : sur l'alu, le voile seul ne se verrait pas, mais « Sans filet » le retire.
      */
     fun background(context: Context): Drawable {
+        val tile = tile(context)
+        val frame = themeRes(context, R.attr.c_home_card_frame)
+        if (!framed(Prefs.homeCardStyle(context), frame)) return tile
+        // Le cadre par-dessus la tuile, y compris l'afficheur des widgets LCD (tuile gardée telle quelle par look).
+        return LayerDrawable(arrayOf(tile, ContextCompat.getDrawable(context, frame)!!))
+    }
+
+    private fun tile(context: Context): Drawable {
         val tile = ContextCompat.getDrawable(context, themeRes(context, R.attr.c_home_card_bg))!!.mutate()
         val surface = themeColor(context, R.attr.c_surface)
         val style = look(context) ?: return tile

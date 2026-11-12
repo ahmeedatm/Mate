@@ -157,13 +157,25 @@ abstract class HomeWidget(val context: Context, val host: HomeHost, val placed: 
     /** Carte de fond commune : la tuile du thème au style choisi dans Réglages > Thème (HomeCard). */
     protected fun <T : View> T.asCard(padding: Int? = null): T = apply {
         background = HomeCard.background(context)
-        val px = padding?.let { dp(it) } ?: themePx(context, R.attr.c_card_pad)
+        val px = HomeCard.padding(padding?.let { dp(it) } ?: themePx(context, R.attr.c_card_pad), HomeCard.framed(context), dp(HomeCard.FRAME_PAD_DP))
         setPadding(px, px, px, px)
     }
 
     /** Widget posé à nu (Héros, Journée, Ligne du jour) : le thème à cadre partout (`c_bare_frame`, Instrument nuit) lui donne quand même la carte au style choisi. */
     protected fun <T : View> T.barelyFramed(): T = apply {
-        if (themeBool(context, R.attr.c_bare_frame)) background = HomeCard.background(context)
+        if (!themeBool(context, R.attr.c_bare_frame)) return@apply
+        background = HomeCard.background(context)
+        // Sous le cadre de console, le contenu sort du cadre : l'air d'asCard sur les côtés, l'épaisseur seule en haut et en
+        // bas (ces widgets sont pleins jusqu'au bord, une Ligne basse n'a pas la hauteur de deux marges d'asCard).
+        val framed = HomeCard.framed(context)
+        val side = dp(HomeCard.FRAME_PAD_DP)
+        val edge = dp(HomeCard.FRAME_EDGE_DP)
+        setPadding(
+            HomeCard.padding(paddingLeft, framed, side),
+            HomeCard.padding(paddingTop, framed, edge),
+            HomeCard.padding(paddingRight, framed, side),
+            HomeCard.padding(paddingBottom, framed, edge),
+        )
     }
 
     protected fun cardTitle(text: Int) = TitleView(context).apply {

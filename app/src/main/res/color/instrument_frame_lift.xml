@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Éclaircit la coque du cadre de console (c_stroke) : un voile blanc posé dessus. c_paper n'est pas redéfini par Lcd.*. -->
+<selector xmlns:android="http://schemas.android.com/apk/res/android">
+    <item android:alpha="0.22" android:color="?attr/c_paper" />
+</selector>

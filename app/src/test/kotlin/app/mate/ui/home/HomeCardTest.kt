@@ -6,6 +6,7 @@ import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
+import java.io.File
 
 class HomeCardTest {
 
@@ -56,5 +57,32 @@ class HomeCardTest {
     @Test
     fun `le voile laisse voir le fond`() {
         assertTrue(HomeCard.VEIL_ALPHA in 1 until 0xFF)
+    }
+
+    @Test
+    fun `le cadre de console ne se pose qu'au choix Cadre, dans un theme qui en a un`() {
+        assertTrue(HomeCard.framed(HomeCardStyle.VEIL, frame = 42))
+        assertFalse(HomeCard.framed(HomeCardStyle.FLAT, frame = 42))
+        assertFalse(HomeCard.framed(HomeCardStyle.BARE, frame = 42))
+        for (style in HomeCardStyle.entries) assertFalse(HomeCard.framed(style, frame = 0))
+    }
+
+    @Test
+    fun `seuls Instrument et Instrument nuit ont un cadre de console`() {
+        val xml = File("src/main/res/values/palettes.xml").readText()
+        val frames = Regex("""<style name="Palette\.(\w+)"[^>]*>(.*?)</style>""", RegexOption.DOT_MATCHES_ALL).findAll(xml)
+            .associate { it.groupValues[1] to Regex("""<item name="c_home_card_frame">([^<]*)</item>""").find(it.groupValues[2])?.groupValues?.get(1) }
+        assertEquals("@drawable/instrument_frame", frames["Instrument"])
+        assertEquals("@drawable/instrument_frame", frames["InstrumentNuit"])
+        for ((name, frame) in frames - setOf("Instrument", "InstrumentNuit")) assertEquals(name, "@null", frame)
+    }
+
+    @Test
+    fun `sous le cadre, le contenu garde l'air du cadre, meme a marge plus petite`() {
+        val min = 12
+        assertEquals(min, HomeCard.padding(0, framed = true, min = min))
+        assertEquals(min, HomeCard.padding(8, framed = true, min = min))
+        assertEquals(24, HomeCard.padding(24, framed = true, min = min))
+        for (px in listOf(0, 8, 24)) assertEquals(px, HomeCard.padding(px, framed = false, min = min))
     }
 }
