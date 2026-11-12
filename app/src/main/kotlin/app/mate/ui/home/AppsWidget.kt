@@ -2,15 +2,18 @@ package app.mate.ui.home
 
 import android.content.Context
 import android.view.HapticFeedbackConstants
+import android.view.MotionEvent
 import android.view.View
 import android.view.ViewGroup
 import android.widget.FrameLayout
 import android.widget.LinearLayout
+import android.widget.TextView
 import androidx.annotation.StringRes
 import app.mate.R
 import app.mate.net.DeckTile
 import app.mate.ui.Look
 import app.mate.ui.dp
+import app.mate.ui.themeRes
 
 /** Exemple des Applis pour le catalogue : des noms d'applis, chacune dessinée par son initiale (aucune icône à charger). */
 class AppsSample(@StringRes val names: List<Int>) : WidgetSample
@@ -32,6 +35,9 @@ class AppsWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidget(
         addIcon = R.drawable.ic_apps,
     )
 
+    /** Thème à fenêtre LCD (Instrument) : les applis en capuchons numérotés à DEL, comme les Touches ([KeyCaps]). */
+    private val caps = KeyCaps.applies(themeRes(context, R.attr.c_lcd_overlay))
+
     /** Pastille, Ligne, Colonne : les premières applis, sans la grille. */
     private val strip = LinearLayout(context)
 
@@ -45,7 +51,9 @@ class AppsWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidget(
     /** Applis qui tiennent dans le cadre : sans sa marge, ni le titre de la Colonne. */
     private fun fitStrip(): Int {
         val pad = if (framed) dp(TileShapes.PANEL_STRIP_PAD_DP) * 2 else 0
-        return TileStrip.fit(context, family, view.width - pad, view.height - pad - if (titled) dp(TileShapes.PANEL_CAPTION_DP + TileShapes.PANEL_CAPTION_GAP_DP) else 0, panel = framed)
+        val room = view.height - pad - if (titled) dp(TileShapes.PANEL_CAPTION_DP + TileShapes.PANEL_CAPTION_GAP_DP) else 0
+        if (caps) return KeyCaps.stripFit(family, view.width - pad, room, context.resources.displayMetrics.density, TileStrip.gapDp(context))
+        return TileStrip.fit(context, family, view.width - pad, room, panel = framed)
     }
 
     /** Aperçu du catalogue : ses applis remplacent celles de l'ordinateur, même si [applySize] repasse. */
@@ -56,6 +64,7 @@ class AppsWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidget(
 
     // Hors d'un `apply` sur la section : `::run` y désignerait `TileSection.run`, pas celui du widget.
     init {
+        section.grid.keyCaps = caps
         section.grid.onTap = { cell, _ -> section.tileOf(cell)?.let(::run) }
         section.grid.ownsLongPress = true
         section.grid.onHold = { cell, _ -> section.tileOf(cell)?.let { host.overlays.windows(it, removable = true) { section.reload() } } }
@@ -82,6 +91,7 @@ class AppsWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidget(
 
     override fun applySize() {
         section.shown = inGrid
+        section.grid.bigCaps = caps && KeyCaps.labelLines(placed.size) == 2
         strip.visibility = if (inGrid) View.GONE else View.VISIBLE
         if (inGrid) view.asCard(PANEL_PAD_DP) else if (framed) view.asCard(TileShapes.PANEL_STRIP_PAD_DP) else view.apply { background = null; setPadding(0, 0, 0, 0) }
         caption.visibility = if (titled) View.VISIBLE else View.GONE
@@ -108,15 +118,26 @@ class AppsWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidget(
         strip.orientation = TileStrip.orientation(family)
         // Aucune appli épinglée : le « + » de la grille, qui ouvre toutes les applis de l'ordinateur.
         val cells = cells().ifEmpty { listOf(TileGridView.Cell(KeyRef(ADD_ID, context.getString(R.string.apps_all_title)), add = true)) }
-        for ((i, cell) in cells.take(drawnFit).withIndex()) strip.addView(stripTile(cell), TileStrip.params(context, family, i, panel = framed))
+        for ((i, cell) in cells.take(drawnFit).withIndex()) strip.addView(stripTile(cell, i), TileStrip.params(context, family, i, panel = framed))
     }
 
     /** Une appli hors de la grille : toucher la lance, appui long ouvre ses fenêtres ; le « + » ouvre toutes les applis. */
-    private fun stripTile(cell: TileGridView.Cell): FrameLayout {
-        val tile = TileGridView.newCell(context)
+    private fun stripTile(cell: TileGridView.Cell, index: Int): FrameLayout {
+        val tile = TileGridView.newCell(context, caps = caps)
         TileGridView.bind(tile, cell, host.scope)
+        if (!cell.add) tile.findViewById<TextView>(R.id.key_number)?.text = KeyCaps.number(index)
         TileStrip.look(family).apply(tile)
-        Look.pressSpring(tile)
+        if (caps) {
+            tile.setOnTouchListener { v, ev ->
+                when (ev.actionMasked) {
+                    MotionEvent.ACTION_DOWN -> TileGridView.press(v, true)
+                    MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> TileGridView.press(v, false)
+                }
+                false
+            }
+        } else {
+            Look.pressSpring(tile)
+        }
         tile.setOnClickListener {
             it.performHapticFeedback(HapticFeedbackConstants.VIRTUAL_KEY)
             if (cell.add) addApps() else section.tileOf(cell)?.let(::run)

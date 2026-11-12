@@ -1855,6 +1855,14 @@
     <string name="widget_keys_title">Touches</string>
     <string name="widget_keys_desc">Tes touches, à créer et à modifier sur place</string>
     <string name="widget_keys_choose">Choisir les touches</string>
+    <!-- Fenêtre LCD des Touches en thème Instrument (KeyCaps) : la dernière touche envoyée, en capitales. -->
+    <string name="widget_keys_lcd_ready">▸ Prêt</string>
+    <string name="widget_keys_lcd_sent">▸ %1$s · envoyé</string>
+    <string name="widget_keys_lcd_failed">▸ %1$s · échec</string>
+    <plurals name="widget_keys_lcd_count">
+        <item quantity="one">%d touche</item>
+        <item quantity="other">%d touches</item>
+    </plurals>
     <string name="widget_keys_hint">%1$d touche(s) choisie(s) sur %2$d au plus. Une petite forme montre les premières, autant qu\'elle en tient ; à partir de 2 × 2, le widget les montre toutes (il défile).</string>
     <string name="widget_keys_add">Ajouter</string>
     <string name="widget_keys_new">Nouvelle touche</string>

@@ -1,6 +1,8 @@
 package app.mate.ui.home
 
 import android.content.Context
+import android.text.TextUtils
+import android.view.ContextThemeWrapper
 import android.view.Gravity
 import android.view.HapticFeedbackConstants
 import android.view.MotionEvent
@@ -11,8 +13,10 @@ import android.widget.CheckBox
 import android.widget.FrameLayout
 import android.widget.LinearLayout
 import android.widget.ScrollView
+import android.widget.TextView
 import android.widget.Toast
 import androidx.appcompat.app.AlertDialog
+import androidx.appcompat.content.res.AppCompatResources
 import app.mate.Computers
 import app.mate.R
 import app.mate.net.BackendClient
@@ -24,6 +28,9 @@ import app.mate.ui.TitleView
 import app.mate.ui.errorText
 import app.mate.ui.showImmersive
 import app.mate.ui.themeBool
+import app.mate.ui.themeColor
+import app.mate.ui.themeFont
+import app.mate.ui.themeRes
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -60,8 +67,17 @@ class KeysWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidget(
         }
     }
 
+    /** Thème à fenêtre LCD (Instrument) : capuchons numérotés à DEL, et en grille la fenêtre de la dernière touche ([KeyCaps]). */
+    private val caps = KeyCaps.applies(themeRes(context, R.attr.c_lcd_overlay))
+    private val lcdContext by lazy { ContextThemeWrapper(context, themeRes(context, R.attr.c_lcd_overlay)) }
+
+    /** Ligne de la fenêtre LCD : la dernière touche envoyée (ou ratée), gardée quand le widget se redessine. */
+    private var lcdLine: String? = null
+    private var lcdState: TextView? = null
+
     private val grid by lazy {
         TileGridView(context, host.scope).apply {
+            keyCaps = caps
             onTap = { cell, _ -> if (cell.add) showAddChoice() else run(cell.key) }
             onHold = { cell, _ -> holdOrRemove(cell.key) }
             isPush = { pushIdsOf == computerId && it.key.id in pushIds }
@@ -156,7 +172,9 @@ class KeysWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidget(
     /** Touches qui tiennent dans une vue de [width] × [height] px, sans la marge du cadre ni le titre de la Colonne. */
     private fun fitFor(width: Int, height: Int): Int {
         val pad = if (framed) dp(TileShapes.PANEL_STRIP_PAD_DP) * 2 else 0
-        return TileStrip.fit(context, family, width - pad, height - pad - if (titled) dp(TileShapes.PANEL_CAPTION_DP + TileShapes.PANEL_CAPTION_GAP_DP) else 0, panel = framed)
+        val room = height - pad - if (titled) dp(TileShapes.PANEL_CAPTION_DP + TileShapes.PANEL_CAPTION_GAP_DP) else 0
+        if (caps) return KeyCaps.stripFit(family, width - pad, room, context.resources.displayMetrics.density, TileStrip.gapDp(context))
+        return TileStrip.fit(context, family, width - pad, room, panel = framed)
     }
 
     /** Pastille, Ligne, Colonne : les premières touches, autant que la forme en tient ([TileStrip]). */
@@ -164,22 +182,55 @@ class KeysWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidget(
         if (framed) view.asCard(TileShapes.PANEL_STRIP_PAD_DP)
         view.orientation = TileStrip.orientation(family)
         if (titled) view.addView(panelCaption(R.string.widget_keys_title), LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT).apply { bottomMargin = dp(TileShapes.PANEL_CAPTION_GAP_DP) })
-        for ((i, key) in keys.take(drawnFit).withIndex()) view.addView(rowTile(key, TileStrip.look(family)), TileStrip.params(context, family, i, panel = framed))
+        for ((i, key) in keys.take(drawnFit).withIndex()) view.addView(rowTile(key, i, TileStrip.look(family)), TileStrip.params(context, family, i, panel = framed))
     }
 
     /** Bloc, Grand, Plein écran : toutes les touches dans une grille qui défile, la case « + » en dernier. */
     private fun renderGrid(keys: List<KeyRef>) {
         view.orientation = LinearLayout.VERTICAL
         view.asCard(PANEL_PAD_DP)
+        grid.bigCaps = caps && KeyCaps.labelLines(placed.size) == 2
         grid.cells = keys.map { TileGridView.Cell(it) } + TileGridView.Cell(KeyRef(ADD_ID, context.getString(R.string.widget_keys_add)), add = true)
         (grid.parent as? ViewGroup)?.removeView(grid)
+        lcdState = null
+        if (caps && KeyCaps.lcd(placed.size)) {
+            view.addView(lcdWindow(keys.size), LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT).apply { bottomMargin = dp(LCD_GAP_DP) })
+        }
         view.addView(grid, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, 0, 1f))
     }
 
+    /** Fenêtre LCD au-dessus de la grille : la dernière touche envoyée à gauche, le nombre de touches à droite. */
+    private fun lcdWindow(count: Int) = LinearLayout(lcdContext).apply {
+        gravity = Gravity.CENTER_VERTICAL
+        background = AppCompatResources.getDrawable(lcdContext, themeRes(lcdContext, R.attr.c_home_card_bg))
+        setPadding(dp(LCD_PAD_DP), dp(LCD_PAD_V_DP), dp(LCD_PAD_DP), dp(LCD_PAD_V_DP))
+        val state = lcdText(R.attr.c_text).apply { text = lcdLine ?: context.getString(R.string.widget_keys_lcd_ready) }
+        lcdState = state
+        addView(state, LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f))
+        addView(lcdText(R.attr.c_text_dim).apply { text = context.resources.getQuantityString(R.plurals.widget_keys_lcd_count, count, count) })
+    }
+
+    private fun lcdText(colorAttr: Int) = TextView(lcdContext).apply {
+        textSize = LCD_SP
+        setTextColor(themeColor(lcdContext, colorAttr))
+        typeface = themeFont(lcdContext, R.attr.c_font_display)
+        isAllCaps = true
+        maxLines = 1
+        ellipsize = TextUtils.TruncateAt.END
+    }
+
+    /** La touche [label] est partie ([ok]) ou a échoué : la fenêtre LCD le dit, si elle est à l'écran. */
+    private fun showSent(label: String, ok: Boolean) {
+        if (!caps) return
+        lcdLine = context.getString(if (ok) R.string.widget_keys_lcd_sent else R.string.widget_keys_lcd_failed, label)
+        lcdState?.text = lcdLine
+    }
+
     /** Touche des rangées : la même case que la grille, cliquable seule, dans un cadre qui garde son appui long. */
-    private fun rowTile(key: KeyRef, look: TileLook = TileLook.TILE): View {
-        val tile = TileGridView.newCell(context)
+    private fun rowTile(key: KeyRef, index: Int, look: TileLook = TileLook.TILE): View {
+        val tile = TileGridView.newCell(context, caps = caps)
         TileGridView.bind(tile, TileGridView.Cell(key), host.scope)
+        tile.findViewById<TextView>(R.id.key_number)?.text = KeyCaps.number(index)
         look.apply(tile)
         // Allumée ou éteinte côté ordinateur : la touche se redessine si son état a changé, tant qu'elle est à l'écran.
         var stopListening: (() -> Unit)? = null
@@ -204,7 +255,17 @@ class KeysWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidget(
             }
         })
         if (pushIdsOf == computerId && key.id in pushIds) return pushTile(tile, key)
-        Look.pressSpring(tile)
+        if (caps) {
+            tile.setOnTouchListener { v, ev ->
+                when (ev.actionMasked) {
+                    MotionEvent.ACTION_DOWN -> TileGridView.press(v, true)
+                    MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> TileGridView.press(v, false)
+                }
+                false
+            }
+        } else {
+            Look.pressSpring(tile)
+        }
         tile.setOnClickListener {
             it.performHapticFeedback(HapticFeedbackConstants.VIRTUAL_KEY)
             run(key)
@@ -229,12 +290,12 @@ class KeysWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidget(
         tile.setOnTouchListener { v, ev ->
             when (ev.actionMasked) {
                 MotionEvent.ACTION_DOWN -> {
-                    Look.pressTo(v, true)
+                    TileGridView.press(v, true)
                     v.performHapticFeedback(HapticFeedbackConstants.VIRTUAL_KEY)
                     push(key, true)
                 }
                 MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> {
-                    Look.pressTo(v, false)
+                    TileGridView.press(v, false)
                     push(key, false)
                 }
             }
@@ -257,6 +318,7 @@ class KeysWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidget(
                         result = runCatchingCancellable { BackendClient(context).deck.pushTile(key.id, down) }
                     }
                 }
+                if (down) showSent(key.label, result.isSuccess)
                 result.onFailure { Toast.makeText(context, context.errorText(it), Toast.LENGTH_LONG).show() }
             }
         }
@@ -269,6 +331,7 @@ class KeysWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidget(
     private fun run(key: KeyRef) {
         host.scope.launch {
             val result = runTileSpoken(context, key.id, key.label)
+            showSent(key.label, result.isSuccess)
             result.onFailure {
                 Toast.makeText(context, context.errorText(it), Toast.LENGTH_LONG).show()
                 return@launch
@@ -405,6 +468,12 @@ class KeysWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidget(
         const val PUSH_RETRY_MS = 300L
 
         const val PANEL_PAD_DP = 12
+
+        /** Fenêtre LCD des Touches : corps du texte, marges et écart avec la grille. */
+        const val LCD_SP = 13f
+        const val LCD_PAD_DP = 12
+        const val LCD_PAD_V_DP = 7
+        const val LCD_GAP_DP = 10
         const val MAX_KEYS = 30
         const val ADD_ID = "+"
         const val SAMPLE_ID = "exemple-"
