@@ -406,7 +406,7 @@
     <string name="mixer_output_none">Aucune sortie audio trouvée sur l\'ordinateur</string>
     <string name="discord_output_action">Choisir où Discord joue les voix</string>
     <string name="discord_output_title">Sortie du son de Discord</string>
-    <string name="discord_output_none">Discord ne donne aucune sortie</string>
+    <string name="discord_output_none">Discord n\'a trouvé aucune sortie : vérifie qu\'il est ouvert sur l\'ordinateur</string>
     <string name="discord_output_authorize">Clique sur Autoriser dans Discord, sur l\'ordinateur</string>
     <string name="mixer_scene_save">Enregistrer une scène</string>
     <string name="mixer_scene_save_title">Nouvelle scène</string>

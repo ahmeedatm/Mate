@@ -630,9 +630,8 @@ abstract class CallWidget(
      * l'Accueil. Rend la vue à poser (la touche seule, ou son enveloppe).
      */
     protected fun withDiscordOutputHold(key: View, tile: DeckTile): View {
-        if (!discordOutputs || !choosesDiscordOutput(tile)) return key
+        if (preview || !discordOutputs || !choosesDiscordOutput(tile)) return key
         key.setOnLongClickListener {
-            if (preview) return@setOnLongClickListener false
             key.performHapticFeedback(HapticFeedbackConstants.LONG_PRESS)
             outputChooser.show()
             true
@@ -645,12 +644,16 @@ abstract class CallWidget(
     /** Sorties de Discord ; pas encore autorisé : la fenêtre « Autoriser » de Discord d'abord (comme « Montrer les photos »). */
     private suspend fun readDiscordOutputs(): List<AudioOutput> {
         val discord = BackendClient(context).discord
-        if (voice?.photos != "on") {
+        // `photos` n'est relu qu'au prochain relevé de l'appel : l'accord qui vient d'aboutir compte déjà.
+        if (voice?.photos != "on" && !outputsAuthorized) {
             Toast.makeText(context, R.string.discord_output_authorize, Toast.LENGTH_LONG).show()
             discord.authorize()
+            outputsAuthorized = true
         }
         return discord.outputs()
     }
+
+    private var outputsAuthorized = false
 
     protected fun run(tile: DeckTile) {
         if (preview) return

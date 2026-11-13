@@ -10,9 +10,9 @@ import { logFailure } from "./log.ts";
 
 /**
  * Connexion au RPC local de l'appli Discord de l'ordinateur (WebSocket sur 127.0.0.1, ports 6463 à 6472) : participants
- * de l'appel en cours, leur photo et qui parle, et la sortie du son de Discord (seul réglage changé par ici : micro,
- * sourdine et « quitter » restent les boutons lus dans la fenêtre), aucun message n'est lu. La connexion reste ouverte tant qu'un jeton existe et
- * se rétablit seule (délai croissant) quand Discord redémarre ; sans jeton, rien ne se connecte : la fenêtre « Autoriser »
+ * de l'appel en cours, leur photo et qui parle. Seul réglage changé par ici : la sortie du son de Discord ; micro,
+ * sourdine et « quitter » restent les boutons lus dans la fenêtre. Aucun message n'est lu. La connexion reste ouverte
+ * tant qu'un jeton existe et se rétablit seule (délai croissant) quand Discord redémarre ; sans jeton, rien ne se connecte : la fenêtre « Autoriser »
  * de Discord ne s'ouvre que sur le geste de la tablette (authorizeDiscord). Repli : sans RPC, l'état lu dans la fenêtre.
  */
 
