@@ -88,10 +88,32 @@ describe("Discord : photos et qui parle, par l'API", () => {
     assert.equal((await server.call("GET", "/discord/avatar?id=..%2Fx")).status, 400);
   });
 
+  it("sortie du son de Discord : liste, choix, sortie inconnue, corps invalide", async () => {
+    const list = await server.call("GET", "/discord/outputs");
+    assert.equal(list.status, 200);
+    assert.deepEqual(
+      list.json.outputs.map((o: { id: string; current: boolean }) => [o.id, o.current]),
+      [
+        ["default", true],
+        ["BuiltInSpeakerDevice", false],
+        ["casque-bt", false],
+      ],
+    );
+    const set = await server.call("POST", "/discord/output", { id: "casque-bt" });
+    assert.equal(set.status, 200);
+    assert.equal(set.json.outputs.find((o: { current: boolean }) => o.current).id, "casque-bt");
+    const gone = await server.call("POST", "/discord/output", { id: "partie" });
+    assert.equal(gone.status, 404);
+    assert.match(gone.json.error, /n'existe plus/);
+    assert.equal((await server.call("POST", "/discord/output", { id: "" })).status, 400);
+    assert.equal((await server.call("POST", "/discord/output", {})).status, 400);
+  });
+
   it("jeton d'appairage exigé, et le jeton Discord ne sort jamais", async () => {
-    for (const route of ["/discord/speaking", `/discord/avatar?id=${A}`])
+    for (const route of ["/discord/speaking", `/discord/avatar?id=${A}`, "/discord/outputs"])
       assert.equal((await server.call("GET", route, undefined, false)).status, 401);
     assert.equal((await server.call("POST", "/discord/authorize", undefined, false)).status, 401);
+    assert.equal((await server.call("POST", "/discord/output", { id: "default" }, false)).status, 401);
     assert.ok(!server.output().includes(FAKE_TOKEN));
     assert.ok(!JSON.stringify((await server.call("GET", "/deck/voice?app=Discord")).json).includes(FAKE_TOKEN));
   });
@@ -117,6 +139,12 @@ describe("Discord : autorisation depuis la tablette", () => {
     assert.equal(fake.origins.length, 0);
   });
 
+  it("sans jeton : la sortie du son demande l'accès d'abord (409)", async () => {
+    const res = await server.call("GET", "/discord/outputs");
+    assert.equal(res.status, 409);
+    assert.match(res.json.error, /pas encore donné l'accès/);
+  });
+
   it("refus dans Discord : message pour la tablette", async () => {
     fake.authorize = "refuse";
     const res = await server.call("POST", "/discord/authorize");
@@ -140,6 +168,7 @@ describe("Discord : ordinateur sans pilotage", () => {
     try {
       assert.equal((await server.call("GET", "/discord/speaking")).status, 501);
       assert.equal((await server.call("POST", "/discord/authorize")).status, 501);
+      assert.equal((await server.call("GET", "/discord/outputs")).status, 501);
     } finally {
       await server.stop();
     }

@@ -34,6 +34,10 @@ export type FakeDiscord = {
   expires: string;
   /** Appel choisi (`GET_SELECTED_VOICE_CHANNEL`), null hors appel. */
   channel: Record<string, unknown> | null;
+  /** Sortie du son de Discord (`GET_VOICE_SETTINGS`), relevée le 13/11/2026 sur le Mac d'Ahmed. */
+  output: { device_id: string; volume: number; available_devices: unknown[] };
+  /** Réponse à SET_VOICE_SETTINGS : appliqué, ou refusé (réglages verrouillés par une autre appli). */
+  setVoice: "ok" | "refuse";
   /** Demandes reçues, dans l'ordre. */
   received: Frame[];
   /** En-têtes Origin vus à l'ouverture. */
@@ -99,6 +103,14 @@ export async function startFakeDiscord(): Promise<FakeDiscord> {
     });
   });
 
+  const voiceSettings = () => ({
+    input: { device_id: "default", volume: 100, available_devices: [{ id: "default", name: "Default (Micro MacBook Air)" }] },
+    output: fake.output,
+    mode: { type: "VOICE_ACTIVITY" },
+    mute: false,
+    deaf: false,
+  });
+
   const reply = (socket: Socket, frame: Frame) => {
     const answer = (data: unknown, evt: string | null = null) => send(socket, { cmd: frame.cmd, data, evt, nonce: frame.nonce });
     switch (frame.cmd) {
@@ -114,6 +126,14 @@ export async function startFakeDiscord(): Promise<FakeDiscord> {
         return;
       case "GET_SELECTED_VOICE_CHANNEL":
         return answer(fake.channel);
+      case "GET_VOICE_SETTINGS":
+        return answer(voiceSettings());
+      case "SET_VOICE_SETTINGS": {
+        if (fake.setVoice === "refuse") return answer({ code: 5000, message: "Voice settings locked" }, "ERROR");
+        const output = frame.args?.output as { device_id?: string } | undefined;
+        if (output?.device_id) fake.output = { ...fake.output, device_id: output.device_id };
+        return answer(voiceSettings());
+      }
       case "SUBSCRIBE":
       case "UNSUBSCRIBE":
         return answer({ evt: frame.evt });
@@ -169,6 +189,16 @@ export async function startFakeDiscord(): Promise<FakeDiscord> {
     readyData: { v: 1, config: { cdn_host: "cdn.discordapp.com", api_endpoint: "//discord.com/api", environment: "production" } },
     expires: new Date(Date.now() + 7 * 86_400_000).toISOString(),
     channel: null,
+    output: {
+      device_id: "default",
+      volume: 100,
+      available_devices: [
+        { id: "default", name: "Default (Haut-parleurs MacBook Air)" },
+        { id: "BuiltInSpeakerDevice", name: "Haut-parleurs MacBook Air" },
+        { id: "casque-bt", name: "Casque Bluetooth" },
+      ],
+    },
+    setVoice: "ok",
     received: [],
     origins: [],
     exchanged: [],

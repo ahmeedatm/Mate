@@ -831,6 +831,24 @@ export async function runSanity(opts: { url: string; token: string; os?: Os; hoo
       },
     },
     {
+      name: "Discord : sortie du son (lecture seule)",
+      run: async () => {
+        // Jamais de POST /discord/output ici : il changerait le casque ou l'enceinte de Discord.
+        const res = await call("GET", "/discord/outputs");
+        if (!controlled()) return expectStatus(res, 501, "/discord/outputs");
+        // Discord fermé ou pas encore autorisé : réponse claire, pas une panne.
+        if (res.status === 409) return String(res.json.error);
+        expectStatus(res, 200, "/discord/outputs");
+        expect(Array.isArray(res.json.outputs), "forme de /discord/outputs inattendue");
+        const outputs = res.json.outputs as { id: unknown; name: unknown; current: unknown }[];
+        expect(
+          outputs.every((o) => typeof o.id === "string" && typeof o.name === "string" && typeof o.current === "boolean"),
+          "sortie de Discord mal formée",
+        );
+        return `${outputs.length} sortie(s), en cours : ${outputs.find((o) => o.current)?.name ?? "aucune"}`;
+      },
+    },
+    {
       name: "pointeur",
       run: async () => {
         // Déplacement nul seulement : jamais de clic sur un ordinateur qui sert à autre chose.

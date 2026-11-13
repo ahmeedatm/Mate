@@ -2,7 +2,7 @@ import { createReadStream } from "node:fs";
 import fs from "node:fs/promises";
 import type { FastifyInstance } from "fastify";
 import { cachedIcon } from "../deck.ts";
-import { authorizeDiscord, discordAvatarUrl, discordPhotos, discordSpeaking } from "../discord-rpc.ts";
+import { authorizeDiscord, discordAvatarUrl, discordOutputs, discordPhotos, discordSpeaking, setDiscordOutput } from "../discord-rpc.ts";
 import { readCapped } from "../net-guard.ts";
 
 /** Photo de 64 px : quelques Ko ; au-delà, ce n'est pas une photo de profil. */
@@ -23,6 +23,25 @@ export default async function discordRoutes(app: FastifyInstance) {
 
   // Relu toutes les 500 ms par la tablette pendant un appel : lecture en mémoire, pas de trace par requête.
   app.get("/discord/speaking", { logLevel: "warn" }, () => ({ speaking: discordSpeaking() }));
+
+  // Sortie du son de Discord seul (casque, enceinte…), lue à l'ouverture du choix ; pas celle de tout l'ordinateur.
+  app.get("/discord/outputs", async () => ({ outputs: await discordOutputs() }));
+
+  app.post<{ Body: { id: string } }>(
+    "/discord/output",
+    {
+      schema: {
+        body: {
+          type: "object",
+          required: ["id"],
+          additionalProperties: false,
+          properties: { id: { type: "string", minLength: 1, maxLength: 200 } },
+        },
+      },
+    },
+    // Seul un id de la liste de Discord lui est renvoyé (setDiscordOutput relit la liste d'abord).
+    async (req) => ({ outputs: await setDiscordOutput(req.body.id) }),
+  );
 
   app.get<{ Querystring: { id: string } }>(
     "/discord/avatar",

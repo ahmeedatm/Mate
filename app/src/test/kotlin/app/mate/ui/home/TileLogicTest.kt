@@ -26,6 +26,14 @@ class TileLogicTest {
     ) = VoiceState(connected, null, emptyList(), muted, deafened, streaming, lobby, cameraOff)
 
     @Test
+    fun `l'appui long de la touche Casque choisit la sortie de Discord, sauf seconde action du deck`() {
+        assertTrue(choosesDiscordOutput(tile(lit = "deafened")))
+        assertFalse(choosesDiscordOutput(tile(lit = "muted")))
+        assertFalse(choosesDiscordOutput(tile()))
+        assertFalse(choosesDiscordOutput(DeckTile("t", "Casque", "keys", null, null, lit = "deafened", hold = true)))
+    }
+
+    @Test
     fun `une touche call n'apparait qu'en appel`() {
         assertTrue(tileShown(tile("call"), voice()))
         assertFalse(tileShown(tile("call"), null))

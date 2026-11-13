@@ -5,6 +5,7 @@ import android.graphics.drawable.GradientDrawable
 import android.os.SystemClock
 import android.text.TextUtils
 import android.view.Gravity
+import android.view.HapticFeedbackConstants
 import android.view.View
 import android.view.ViewGroup
 import android.widget.Button
@@ -12,7 +13,10 @@ import android.widget.FrameLayout
 import android.widget.LinearLayout
 import android.widget.TextView
 import android.widget.Toast
+import androidx.core.view.ViewCompat
+import androidx.core.view.accessibility.AccessibilityNodeInfoCompat
 import app.mate.R
+import app.mate.net.AudioOutput
 import app.mate.net.BackendClient
 import app.mate.net.DeckPage
 import app.mate.net.DeckTile
@@ -24,6 +28,7 @@ import app.mate.ui.CallSession
 import app.mate.ui.IconCache
 import app.mate.ui.Look
 import app.mate.ui.errorText
+import app.mate.ui.mixer.AudioOutputChooser
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
@@ -437,7 +442,7 @@ abstract class CallWidget(
         cell.contentDescription = if (on) context.getString(R.string.call_key_on, tile.label) else tile.label
         cell.setOnClickListener { run(tile) }
         Look.pressSpring(cell)
-        return cell
+        return withDiscordOutputHold(cell, tile)
     }
 
     /** Halo de l'îlot : quelqu'un parle dans l'appel. Allumé en 120 ms, éteint en 300 ms, sans boucle. */
@@ -603,6 +608,53 @@ abstract class CallWidget(
         }
     }
 
+    /** Widgets Discord : l'appui long sur la touche Casque choisit où Discord joue les voix ([choosesDiscordOutput]). */
+    protected open val discordOutputs get() = false
+
+    private val outputChooser by lazy {
+        AudioOutputChooser(
+            context,
+            host.scope,
+            onError = { Toast.makeText(context, it, Toast.LENGTH_LONG).show() },
+            onSwitched = {},
+            title = R.string.discord_output_title,
+            none = R.string.discord_output_none,
+            list = ::readDiscordOutputs,
+            select = { BackendClient(context).discord.setOutput(it) },
+        )
+    }
+
+    /**
+     * Appui long de la touche Casque, et son nom lu par TalkBack ; rien sur les autres touches ni hors Discord. La touche
+     * est enveloppée dans un [OwnerFrameLayout] : l'appui long qui commence sur elle n'ouvre pas le mode Modifier de
+     * l'Accueil. Rend la vue à poser (la touche seule, ou son enveloppe).
+     */
+    protected fun withDiscordOutputHold(key: View, tile: DeckTile): View {
+        if (preview || !discordOutputs || !choosesDiscordOutput(tile)) return key
+        key.setOnLongClickListener {
+            key.performHapticFeedback(HapticFeedbackConstants.LONG_PRESS)
+            outputChooser.show()
+            true
+        }
+        ViewCompat.replaceAccessibilityAction(key, AccessibilityNodeInfoCompat.AccessibilityActionCompat.ACTION_LONG_CLICK, context.getString(R.string.discord_output_action), null)
+        val wrap = ViewGroup.LayoutParams.WRAP_CONTENT
+        return OwnerFrameLayout(context).apply { addView(key, FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, wrap)) }
+    }
+
+    /** Sorties de Discord ; pas encore autorisé : la fenêtre « Autoriser » de Discord d'abord (comme « Montrer les photos »). */
+    private suspend fun readDiscordOutputs(): List<AudioOutput> {
+        val discord = BackendClient(context).discord
+        // `photos` n'est relu qu'au prochain relevé de l'appel : l'accord qui vient d'aboutir compte déjà.
+        if (voice?.photos != "on" && !outputsAuthorized) {
+            Toast.makeText(context, R.string.discord_output_authorize, Toast.LENGTH_LONG).show()
+            discord.authorize()
+            outputsAuthorized = true
+        }
+        return discord.outputs()
+    }
+
+    private var outputsAuthorized = false
+
     protected fun run(tile: DeckTile) {
         if (preview) return
         host.scope.launch {
@@ -652,6 +704,7 @@ val isDiscordPage: (DeckPage) -> Boolean = { it.app.equals("Discord", ignoreCase
 class DiscordWidget(context: Context, host: HomeHost, placed: Placed) :
     CallWidget(context, host, placed, isDiscordPage) {
     override val island get() = true
+    override val discordOutputs get() = true
 }
 
 /** La page Réunion du Deck (Teams) : micro, caméra, partage, quitter ; « Rejoindre maintenant » dans la salle d'attente. */
