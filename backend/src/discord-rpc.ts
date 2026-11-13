@@ -10,13 +10,15 @@ import { logFailure } from "./log.ts";
 
 /**
  * Connexion au RPC local de l'appli Discord de l'ordinateur (WebSocket sur 127.0.0.1, ports 6463 à 6472) : participants
- * de l'appel en cours, leur photo et qui parle. Lecture seule : rien n'est piloté par ici (micro, sourdine et « quitter »
- * restent les boutons lus dans la fenêtre), aucun message n'est lu. La connexion reste ouverte tant qu'un jeton existe et
+ * de l'appel en cours, leur photo et qui parle, et la sortie du son de Discord (seul réglage changé par ici : micro,
+ * sourdine et « quitter » restent les boutons lus dans la fenêtre), aucun message n'est lu. La connexion reste ouverte tant qu'un jeton existe et
  * se rétablit seule (délai croissant) quand Discord redémarre ; sans jeton, rien ne se connecte : la fenêtre « Autoriser »
  * de Discord ne s'ouvre que sur le geste de la tablette (authorizeDiscord). Repli : sans RPC, l'état lu dans la fenêtre.
  */
 
 export type DiscordMember = { id: string; name: string; avatar: boolean; speaking: boolean };
+/** Sortie du son de Discord (casque, enceinte…), même forme que les sorties de l'ordinateur (`/system/audio/outputs`). */
+export type DiscordOutput = { id: string; name: string; current: boolean };
 /** `off` : pas de photos (pas autorisé, Discord fermé) ; `waiting` : fenêtre « Autoriser » ouverte dans Discord. */
 export type DiscordPhotos = "off" | "waiting" | "on";
 
@@ -30,6 +32,9 @@ const REFUSED = "Accès refusé dans Discord : les photos restent masquées";
 const TIMEOUT = "Pas de réponse dans Discord : recommence et clique sur Autoriser";
 const NO_TOKEN = "Discord n'a pas donné l'accès : recommence";
 const CLOSED = "Discord s'est fermé pendant la demande : recommence";
+const NOT_AUTHORIZED = "Discord n'a pas encore donné l'accès : touche « Montrer les photos » ou recommence";
+const OUTPUT_GONE = "Cette sortie n'existe plus dans Discord";
+const OUTPUT_REFUSED = "Discord n'a pas changé de sortie : recommence";
 
 const OPEN_TIMEOUT_MS = 2_000;
 const MAX_RETRY_MS = 60_000;
@@ -42,6 +47,10 @@ const MAX_MEMBERS = 50;
 /** Caractères invisibles ou de contrôle (sens d'écriture inversé…) retirés des noms. */
 const CONTROL_CHARS = /\p{C}/gu;
 const AVATAR_HASH = /^(a_)?[0-9a-f]{32}$/;
+/** Plafond de sorties gardées (une machine en a une poignée). */
+const MAX_OUTPUTS = 50;
+/** Discord nomme la sortie du système « Default (…) », en anglais quelle que soit sa langue (relevé le 13/11/2026). */
+const DEFAULT_PREFIX = /^Default \(/;
 
 /** DISCORD_RPC_PORTS : « 6463-6472 » ou liste « 6463,6464 » (faux Discord des tests). */
 function ports(): number[] {
@@ -102,6 +111,49 @@ export function withDiscordMembers<T extends { connected: boolean }>(voice: T | 
   if (!voice) return null;
   const list = voice.connected ? discordMembers() : undefined;
   return { ...voice, photos: discordPhotos(), ...(list ? { members: list } : {}) };
+}
+
+// --- Sortie du son de Discord
+
+/**
+ * Sorties où Discord peut jouer les voix, lues dans ses réglages (GET_VOICE_SETTINGS, scope `rpc`, vérifié le
+ * 13/11/2026 sur le Discord d'Ahmed). Seul Discord est concerné, pas le son de tout l'ordinateur.
+ */
+export async function discordOutputs(): Promise<DiscordOutput[]> {
+  const res = await request(authedSocket(), "GET_VOICE_SETTINGS", {});
+  if (res.evt === "ERROR") throw new DiscordError(res.local ? UNREACHABLE : NOT_AUTHORIZED);
+  return outputsOf(res.data?.output);
+}
+
+/**
+ * Passe Discord sur la sortie [id], qui doit être dans sa liste : rien d'autre n'arrive jusqu'à Discord. Limite de
+ * Discord : le réglage tient tant que le compagnon reste connecté ; il revient à l'ancien à la déconnexion et repasse
+ * sur celui-ci à la reconnexion (doc RPC, SET_VOICE_SETTINGS).
+ */
+export async function setDiscordOutput(id: string): Promise<DiscordOutput[]> {
+  if (!(await discordOutputs()).some((o) => o.id === id)) throw Object.assign(new DiscordError(OUTPUT_GONE), { statusCode: 404 });
+  const res = await request(authedSocket(), "SET_VOICE_SETTINGS", { output: { device_id: id } });
+  if (res.evt === "ERROR") throw new DiscordError(res.local ? UNREACHABLE : OUTPUT_REFUSED);
+  return outputsOf(res.data?.output);
+}
+
+/** Connexion autorisée ; sinon le message dit quoi faire (ouvrir Discord, ou l'autoriser). */
+function authedSocket(): WebSocket {
+  if (authed && socket) return socket;
+  throw new DiscordError(hasToken ? UNREACHABLE : NOT_AUTHORIZED);
+}
+
+/** Sorties lues dans la réponse de Discord ; ce qui n'a pas la forme attendue est écarté. */
+function outputsOf(output: any): DiscordOutput[] {
+  const current = output?.device_id;
+  const devices: any[] = Array.isArray(output?.available_devices) ? output.available_devices : [];
+  return devices
+    .filter((d) => typeof d?.id === "string" && d.id && d.id.length <= 200)
+    .slice(0, MAX_OUTPUTS)
+    .map((d) => {
+      const name = typeof d.name === "string" ? d.name.replace(CONTROL_CHARS, "").trim().slice(0, 100) : "";
+      return { id: d.id, name: name.replace(DEFAULT_PREFIX, "Par défaut (") || d.id, current: d.id === current };
+    });
 }
 
 // --- Cycle de vie

@@ -313,3 +313,71 @@ describe("Discord RPC : état vocal de la tablette", () => {
     assert.deepEqual(rpc.withDiscordMembers({ ...voice, connected: false }), { ...voice, connected: false, photos: "on" });
   });
 });
+
+describe("Discord RPC : sortie du son de Discord", () => {
+  it("sans accord : message clair, rien n'est demandé à Discord", async () => {
+    await assert.rejects(rpc.discordOutputs(), /pas encore donné l'accès/);
+    assert.equal(sent("GET_VOICE_SETTINGS").length, 0);
+  });
+
+  it("liste lue dans Discord : celle en cours marquée, « Default » dit en français, rien de changé", async () => {
+    await authorized();
+    assert.deepEqual(await rpc.discordOutputs(), [
+      { id: "default", name: "Par défaut (Haut-parleurs MacBook Air)", current: true },
+      { id: "BuiltInSpeakerDevice", name: "Haut-parleurs MacBook Air", current: false },
+      { id: "casque-bt", name: "Casque Bluetooth", current: false },
+    ]);
+    assert.equal(sent("SET_VOICE_SETTINGS").length, 0);
+  });
+
+  it("données inattendues : sorties sans id écartées, noms nettoyés, liste plafonnée", async () => {
+    fake.output = {
+      device_id: "x",
+      volume: 100,
+      available_devices: [
+        { id: 42, name: "nombre" },
+        { name: "sans id" },
+        { id: "x", name: "‮Casque\u0000" },
+        { id: "y" },
+        ...Array.from({ length: 80 }, (_, i) => ({ id: `d${i}`, name: `Sortie ${i}` })),
+      ],
+    };
+    await authorized();
+    const outputs = await rpc.discordOutputs();
+    assert.deepEqual(outputs.slice(0, 2), [
+      { id: "x", name: "Casque", current: true },
+      { id: "y", name: "y", current: false },
+    ]);
+    assert.equal(outputs.length, 50);
+  });
+
+  it("choix : seule la sortie de Discord change (output.device_id), liste relue", async () => {
+    await authorized();
+    const outputs = await rpc.setDiscordOutput("casque-bt");
+    assert.deepEqual(
+      sent("SET_VOICE_SETTINGS").map((f) => f.args),
+      [{ output: { device_id: "casque-bt" } }],
+    );
+    assert.equal(outputs.find((o) => o.current)?.id, "casque-bt");
+  });
+
+  it("sortie qui n'existe plus : 404, rien n'est envoyé", async () => {
+    await authorized();
+    await assert.rejects(rpc.setDiscordOutput("partie"), (e: any) => e.statusCode === 404 && /n'existe plus/.test(e.message));
+    assert.equal(sent("SET_VOICE_SETTINGS").length, 0);
+  });
+
+  it("Discord refuse le changement : message clair", async () => {
+    fake.setVoice = "refuse";
+    await authorized();
+    await assert.rejects(rpc.setDiscordOutput("casque-bt"), /Discord n'a pas changé/);
+  });
+
+  it("jeton gardé mais Discord fermé : il faut ouvrir Discord", async () => {
+    await authorized();
+    await fake.close();
+    await until(() => rpc.discordPhotos() === "off");
+    await assert.rejects(rpc.discordOutputs(), /Discord ne répond pas/);
+    fake = await startFakeDiscord();
+  });
+});
