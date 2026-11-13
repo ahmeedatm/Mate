@@ -9,6 +9,12 @@ import org.json.JSONObject
 /** La touche [id] a une seconde action (appui long) d'après le deck lu sur l'ordinateur. */
 fun tileHasHold(pages: List<DeckPage>, id: String) = pages.any { page -> page.tiles.any { it.id == id && it.hold } }
 
+/**
+ * Touche Casque (sourdine) du widget Discord : son appui long ouvre le choix de la sortie du son de Discord, sauf si le
+ * deck lui donne déjà une seconde action (`hold`).
+ */
+fun choosesDiscordOutput(tile: DeckTile) = tile.lit == "deafened" && !tile.hold
+
 /** Touches à maintenir (parler en maintenant) d'après le deck lu sur l'ordinateur. */
 fun tilePushIds(pages: List<DeckPage>): Set<String> = pages.flatMap { it.tiles }.filter { it.push }.map { it.id }.toSet()
 

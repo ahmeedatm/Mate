@@ -14,6 +14,12 @@ class DiscordApi(private val http: Http) {
     /** Identifiants des participants qui parlent en ce moment ; relu toutes les 500 ms pendant un appel. */
     suspend fun speaking(): Set<String> = http.io { parseSpeaking(http.getKeepAlive("/discord/speaking", timeoutMs = 3_000)) }
 
+    /** Sorties où Discord peut jouer les voix (casque, enceinte…) ; pas celles de tout l'ordinateur. */
+    suspend fun outputs(): List<AudioOutput> = http.io { parseAudioOutputs(http.get("/discord/outputs", timeoutMs = 5_000)) }
+
+    /** Fait jouer les voix de Discord sur la sortie `id` ; rend la liste à jour. */
+    suspend fun setOutput(id: String): List<AudioOutput> = http.io { parseAudioOutputs(http.postJson("/discord/output", JSONObject().put("id", id))) }
+
     /** Photo de 64 px d'un participant ; null s'il n'en a pas. */
     suspend fun avatar(id: String): ByteArray? = http.io { http.bytesOrNull("/discord/avatar?id=" + http.encode(id), timeoutMs = 15_000) }
 

@@ -38,6 +38,7 @@ import app.mate.ui.themeRes
  * à gauche et les touches à droite ; Colonne, vumètres en colonne ; Bloc, Grand et Plein écran, vumètres en rangée.
  */
 class DiscordConsoleWidget(context: Context, host: HomeHost, placed: Placed) : CallWidget(context, host, placed, isDiscordPage) {
+    override val discordOutputs get() = true
     private val lcdContext = ContextThemeWrapper(context, themeRes(context, R.attr.c_lcd_overlay))
 
     private val dotShape = GradientDrawable().apply { shape = GradientDrawable.OVAL }
@@ -300,6 +301,7 @@ class DiscordConsoleWidget(context: Context, host: HomeHost, placed: Placed) : C
             false
         }
         key.setOnClickListener { run(tile) }
+        holdForDiscordOutput(key, tile)
         return key
     }
 
