@@ -441,9 +441,8 @@ abstract class CallWidget(
         // L'état allumé (micro coupé, caméra coupée) se dit aussi, pas seulement par la couleur de la plaque.
         cell.contentDescription = if (on) context.getString(R.string.call_key_on, tile.label) else tile.label
         cell.setOnClickListener { run(tile) }
-        holdForDiscordOutput(cell, tile)
         Look.pressSpring(cell)
-        return cell
+        return withDiscordOutputHold(cell, tile)
     }
 
     /** Halo de l'îlot : quelqu'un parle dans l'appel. Allumé en 120 ms, éteint en 300 ms, sans boucle. */
@@ -625,9 +624,13 @@ abstract class CallWidget(
         )
     }
 
-    /** Appui long de la touche Casque, et son nom lu par TalkBack ; rien sur les autres touches ni hors Discord. */
-    protected fun holdForDiscordOutput(key: View, tile: DeckTile) {
-        if (!discordOutputs || !choosesDiscordOutput(tile)) return
+    /**
+     * Appui long de la touche Casque, et son nom lu par TalkBack ; rien sur les autres touches ni hors Discord. La touche
+     * est enveloppée dans un [OwnerFrameLayout] : l'appui long qui commence sur elle n'ouvre pas le mode Modifier de
+     * l'Accueil. Rend la vue à poser (la touche seule, ou son enveloppe).
+     */
+    protected fun withDiscordOutputHold(key: View, tile: DeckTile): View {
+        if (!discordOutputs || !choosesDiscordOutput(tile)) return key
         key.setOnLongClickListener {
             if (preview) return@setOnLongClickListener false
             key.performHapticFeedback(HapticFeedbackConstants.LONG_PRESS)
@@ -635,6 +638,8 @@ abstract class CallWidget(
             true
         }
         ViewCompat.replaceAccessibilityAction(key, AccessibilityNodeInfoCompat.AccessibilityActionCompat.ACTION_LONG_CLICK, context.getString(R.string.discord_output_action), null)
+        val wrap = ViewGroup.LayoutParams.WRAP_CONTENT
+        return OwnerFrameLayout(context).apply { addView(key, FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, wrap)) }
     }
 
     /** Sorties de Discord ; pas encore autorisé : la fenêtre « Autoriser » de Discord d'abord (comme « Montrer les photos »). */

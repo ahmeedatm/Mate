@@ -274,7 +274,7 @@ class DiscordConsoleWidget(context: Context, host: HomeHost, placed: Placed) : C
             litKeys.clear()
             console.keys.forEach { tile ->
                 val key = keyView(tile)
-                keyRow.addView(key, LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT).apply { marginStart = dp(4); marginEnd = dp(4) })
+                keyRow.addView(withDiscordOutputHold(key, tile), LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT).apply { marginStart = dp(4); marginEnd = dp(4) })
                 keyViews += tile to key
             }
         }
@@ -301,7 +301,6 @@ class DiscordConsoleWidget(context: Context, host: HomeHost, placed: Placed) : C
             false
         }
         key.setOnClickListener { run(tile) }
-        holdForDiscordOutput(key, tile)
         return key
     }
 
