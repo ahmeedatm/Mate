@@ -21,6 +21,7 @@ import app.mate.net.BackendClient
 import app.mate.net.CalendarEvent
 import app.mate.net.HomeFeatures
 import app.mate.net.runCatchingCancellable
+import app.mate.net.withShownWled
 import app.mate.ui.home.COLS
 import app.mate.ui.home.CatalogueView
 import app.mate.ui.home.DayLineWidget
@@ -318,7 +319,7 @@ class HomeFragment : Fragment(), HomeHost, WidgetGrid.Listener {
     }
 
     private suspend fun fetchFeatures(client: BackendClient) {
-        runCatchingCancellable { features = client.deck.homeFeatures() }
+        runCatchingCancellable { features = client.deck.homeFeatures().withShownWled(requireContext()) }
         if (features.linked) waitingLink = false
     }
 
