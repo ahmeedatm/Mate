@@ -106,9 +106,9 @@ class ComputerLightSource(
 ) : LightSource {
 
     override suspend fun entities(): List<HaEntity> = coroutineScope {
-        val direct = wled.values.map { async { it.entities() } }
+        val direct = wled.values.map { async { runCatchingCancellable { it.entities() } } }
         val fromPc = runCatchingCancellable { pc.entities() }
-        val lights = direct.awaitAll().flatten()
+        val lights = direct.awaitAll().mapNotNull { it.getOrNull() }.flatten()
         if (lights.isEmpty()) return@coroutineScope fromPc.getOrThrow()
         val names = lights.map { it.name.trim().lowercase() }.toSet()
         fromPc.getOrDefault(emptyList()).filterNot { it.id.startsWith("light.") && it.name.trim().lowercase() in names } + lights
@@ -131,3 +131,7 @@ fun shownWled(context: Context): Map<String, LightSource> =
 
 fun homeLightSource(context: Context): HomeLightSource =
     HomeLightSource(context, HaConfig.load(context)?.let(::HaDirectApi), WledDevices.all(context).associate { it.id to WledApi(it) })
+
+/** Une WLED cochée fait proposer le widget Maison, même sur un ordinateur sans Home Assistant. */
+fun HomeFeatures.withShownWled(context: Context): HomeFeatures =
+    if (ha || WledDevices.all(context).none { HomeChoice.isShown(context, it.id) }) this else copy(ha = true)

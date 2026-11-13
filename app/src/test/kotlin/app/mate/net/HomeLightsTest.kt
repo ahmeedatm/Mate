@@ -118,4 +118,29 @@ class HomeLightsTest {
         assertEquals(listOf("toggle light.salon"), pc.calls)
         assertEquals(listOf("toggle wled:bureau"), wled.calls)
     }
+
+    @Test
+    fun `une WLED cochee fait proposer le widget Maison meme si l'ordinateur n'a pas Home Assistant`() {
+        val context = FakeContext()
+        assertFalse(HomeFeatures().withShownWled(context).ha)
+        WledDevices.save(context, WledDevice("wled:tv", "192.168.1.5", "WLED TV"))
+        assertTrue(HomeFeatures().withShownWled(context).ha)
+        HomeChoice.set(context, "wled:tv", false)
+        assertFalse(HomeFeatures().withShownWled(context).ha)
+    }
+
+    @Test
+    fun `une WLED qui repond n'importe quoi ne cache pas le reste`() = runBlocking {
+        val broken = object : LightSource by FakeSource(emptyList()) {
+            override suspend fun entities(): List<HaEntity> = throw org.json.JSONException("pas du JSON")
+        }
+        val source = ComputerLightSource(FakeSource(listOf(e("light.salon"))), mapOf("wled:x" to broken, "wled:bureau" to FakeSource(listOf(e("wled:bureau")))))
+        assertEquals(listOf("light.salon", "wled:bureau"), source.entities().map { it.id })
+    }
+
+    @Test
+    fun `sans WLED cochee, les entites de l'ordinateur sont rendues comme avant`() = runBlocking {
+        val pc = listOf(named("light.wled_bureau", "WLED Bureau"), named("scene.film", "Film"))
+        assertEquals(pc, ComputerLightSource(FakeSource(pc), emptyMap()).entities())
+    }
 }
