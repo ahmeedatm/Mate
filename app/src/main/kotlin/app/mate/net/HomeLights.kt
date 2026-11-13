@@ -95,9 +95,39 @@ class HomeLightSource(
         (if (HomeChoice.isWledDirect(id)) wled[id] else ha) ?: throw UserFacingException(R.string.home_unreachable)
 }
 
-/** Maison : Home Assistant et WLED en direct ; un ordinateur : son Home Assistant à lui, comme avant. */
+/**
+ * Lumières avec un ordinateur : son Home Assistant tel qu'avant (`pc`), plus les WLED cochées en direct (`wled`). Une
+ * lumière de l'ordinateur au nom d'une WLED en direct est cachée (la même, vue deux fois). L'ordinateur injoignable
+ * n'empêche pas les WLED de répondre.
+ */
+class ComputerLightSource(
+    private val pc: LightSource,
+    private val wled: Map<String, LightSource>,
+) : LightSource {
+
+    override suspend fun entities(): List<HaEntity> = coroutineScope {
+        val direct = wled.values.map { async { it.entities() } }
+        val fromPc = runCatchingCancellable { pc.entities() }
+        val lights = direct.awaitAll().flatten()
+        if (lights.isEmpty()) return@coroutineScope fromPc.getOrThrow()
+        val names = lights.map { it.name.trim().lowercase() }.toSet()
+        fromPc.getOrDefault(emptyList()).filterNot { it.id.startsWith("light.") && it.name.trim().lowercase() in names } + lights
+    }
+
+    override suspend fun toggle(id: String) = owner(id).toggle(id)
+
+    override suspend fun setLight(id: String, brightness: Int?, rgb: Int?) = owner(id).setLight(id, brightness, rgb)
+
+    private fun owner(id: String): LightSource = if (HomeChoice.isWledDirect(id)) wled[id] ?: throw UserFacingException(R.string.home_unreachable) else pc
+}
+
+/** Maison : Home Assistant et WLED en direct ; un ordinateur : son Home Assistant à lui, plus les WLED cochées en direct. */
 fun lightSource(context: Context): LightSource =
-    if (Computers.homeActive(context)) homeLightSource(context) else BackendClient(context).ha
+    if (Computers.homeActive(context)) homeLightSource(context) else ComputerLightSource(BackendClient(context).ha, shownWled(context))
+
+/** WLED retenues et cochées dans Maison, pilotées en direct : on n'interroge pas celles qui ne s'affichent pas. */
+fun shownWled(context: Context): Map<String, LightSource> =
+    WledDevices.all(context).filter { HomeChoice.isShown(context, it.id) }.associate { it.id to WledApi(it) }
 
 fun homeLightSource(context: Context): HomeLightSource =
     HomeLightSource(context, HaConfig.load(context)?.let(::HaDirectApi), WledDevices.all(context).associate { it.id to WledApi(it) })
