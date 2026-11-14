@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Téléphone : trait de 2, teinté par le code (rail de la page Cyberpunk). -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="30dp"
+    android:height="30dp"
+    android:viewportWidth="30"
+    android:viewportHeight="30">
+    <path
+        android:pathData="M9,3h12v24H9z M13,23h4"
+        android:strokeColor="#FFFFFFFF"
+        android:strokeWidth="2" />
+</vector>
