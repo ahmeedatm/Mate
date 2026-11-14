@@ -43,6 +43,7 @@ const pinSchema = {
     y: { type: "number", minimum: -8000, maximum: 8000 },
     z: { type: "number", minimum: -2000, maximum: 2000 },
     name: { type: "string", maxLength: 40 },
+    track: { type: "boolean" },
   },
 };
 
@@ -161,8 +162,10 @@ export default async function cyberpunkRoutes(app: FastifyInstance) {
   );
 
   app.get("/cyberpunk/pins", () => listPins());
-  app.post<{ Body: { x: number; y: number; z?: number; name?: string } }>("/cyberpunk/pins", { schema: { body: pinSchema } }, (req) =>
-    addPin(req.body),
+  app.post<{ Body: { x: number; y: number; z?: number; name?: string; track?: boolean } }>(
+    "/cyberpunk/pins",
+    { schema: { body: pinSchema } },
+    (req) => addPin(req.body),
   );
   app.delete<{ Params: { id: number } }>("/cyberpunk/pins/:id", { schema: { params: idParams } }, (req) => removePin(req.params.id));
   app.post<{ Params: { id: number } }>("/cyberpunk/pins/:id/track", { schema: { params: idParams } }, (req) => trackPin(req.params.id));

@@ -67,6 +67,28 @@ describe("/cyberpunk/pins", () => {
     assert.equal((await call("POST", "/cyberpunk/pins/999/track", {})).status, 404);
   });
 
+  it("poser avec track : le repère est envoyé puis suivi, en un seul appel", async () => {
+    mod = fakeMod(modDir);
+    await until(() => mod!.executed.length === 0 && fs.existsSync(path.join(modDir, "state.json")));
+    const r = await call("POST", "/cyberpunk/pins", { x: 3, y: 4, track: true });
+    assert.equal(r.status, 200);
+    assert.equal(r.json.tracked, true);
+    assert.deepEqual(
+      mod.executed.slice(-2).map((o: { t: string }) => o.t),
+      ["pin", "track"],
+    );
+    assert.equal(String(mod.executed.at(-1).ref), String(r.json.id));
+    assert.equal((await call("GET", "/cyberpunk/pins")).json.tracked, r.json.id);
+  });
+
+  it("poser avec track hors partie : le repère est gardé, pas suivi", async () => {
+    const r = await call("POST", "/cyberpunk/pins", { x: 3, y: 4, track: true });
+    assert.equal(r.status, 200);
+    assert.equal(r.json.tracked, false);
+    assert.equal((await call("GET", "/cyberpunk/pins")).json.pins.length, 1);
+    assert.equal((await call("GET", "/cyberpunk/pins")).json.tracked, undefined);
+  });
+
   it("un id supprimé n'est jamais réutilisé", async () => {
     const a = (await call("POST", "/cyberpunk/pins", { x: 1, y: 1 })).json.id;
     const b = (await call("POST", "/cyberpunk/pins", { x: 2, y: 2 })).json.id;

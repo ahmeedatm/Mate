@@ -2475,6 +2475,7 @@
     <string name="cp_poi_icons_prepare">Extraire</string>
     <string name="cp_poi_icons_prepare_description">Extraire les icônes des points d\'intérêt depuis le jeu sur l\'ordinateur</string>
     <string name="cp_pin_added">Repère posé</string>
+    <string name="cp_pin_added_followed">Repère posé et suivi</string>
     <string name="cp_pin_followed">Repère suivi</string>
     <string name="cp_pin_back_to_quest">Retour à la quête</string>
     <string name="cp_pin_deleted">Repère supprimé</string>
