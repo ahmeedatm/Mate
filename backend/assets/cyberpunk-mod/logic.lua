@@ -3,7 +3,7 @@
 -- et exécute les ordres de commands.json (écrit par le backend de Mate).
 -- Tout appel au jeu est sous pcall. Aucun appel inconnu du moteur hors des commandes ci-dessous.
 -- Contrat : docs/specs/2026-11-14-plugin-cyberpunk-design.md, section « Contrat ». Pas de variable globale (CET les refuse).
-local VERSION = "1.2.0"
+local VERSION = "1.3.0"
 local every, acc = 1.0, 0
 local seq, tick = 0, 0
 local errs = {}
@@ -16,7 +16,7 @@ local trackedPin = nil
 local lastCmd = nil
 local hadPlayer = false
 local session = 0
-local blocks = { inv = os.time(), contacts = os.time(), quests = os.time() }
+local blocks = { inv = os.time(), contacts = os.time(), quests = os.time(), cyber = os.time() }
 local lastJson = {}
 
 local function try(key, f)
@@ -194,6 +194,16 @@ local function cyberware(pl)
   return out
 end
 
+-- Écran cyberware (cyberware.lua, lecture seule) ; absent ou illisible : pas de bloc.
+local cw = nil
+do
+  local f, e = loadfile("cyberware.lua")
+  if f then
+    local ok, m = pcall(f)
+    if ok then cw = m({ try = try, itemInfo = itemInfo }) else loadErrs["cyberware.lua"] = tostring(m) end
+  else loadErrs["cyberware.lua"] = tostring(e) end
+end
+
 local function trackedEntry()
   local jm = Game.GetJournalManager()
   local e = jm:GetTrackedEntry()
@@ -345,6 +355,13 @@ local function questsBlock()
     if not found then quests[#quests + 1] = { id = t.id, title = t.quest or "", kind = "quest", objective = t.desc, tracked = true } end
   end
   putBlock("quests", "quests.json", { v = 1, quests = quests })
+end
+
+local function cyberBlock()
+  local pl = Game.GetPlayer()
+  if pl == nil or cw == nil then return end
+  local b = cw.block(pl)
+  if b then putBlock("cyber", "cyberware.json", b) end
 end
 
 -- Ordres ----------------------------------------------------------------------------------------------------------------
@@ -555,7 +572,7 @@ session = tonumber(readAll("session.txt") or "") or 0
 
 pcall(forgetSavedPins)
 
-local SLOW = { inventoryBlock, contactsBlock, questsBlock }
+local SLOW = { inventoryBlock, contactsBlock, questsBlock, cyberBlock }
 
 -- pos.json : en véhicule seulement, toutes les ~0,2 s, pour que la carte de la tablette suive la voiture sans saut.
 local posAcc, posSeq, posErr = 0, 0, nil

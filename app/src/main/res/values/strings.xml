@@ -2491,6 +2491,15 @@
     <string name="cp_zone_immune">Système immunitaire</string>
     <string name="cp_zone_skin">Peau</string>
     <string name="cp_zone_legs">Jambes</string>
+    <string name="cp_cw_capacity">Capacité</string>
+    <string name="cp_cw_capacity_value">%1$d / %2$d</string>
+    <string name="cp_cw_locked">Emplacement verrouillé dans le jeu (perk ou attribut).</string>
+    <string name="cp_cw_owned">Dans ton inventaire</string>
+    <string name="cp_cw_none_owned">Aucun implant de cette zone dans ton inventaire.</string>
+    <string name="cp_cw_cost">Coût %1$d</string>
+    <string name="cp_cw_slot_desc">%1$s, emplacement %2$d : %3$s</string>
+    <string name="cp_cw_slot_locked">verrouillé</string>
+    <string name="cp_cw_close">Fermer le panneau</string>
     <string name="cp_attr_body">Corps</string>
     <string name="cp_attr_ref">Réflexes</string>
     <string name="cp_attr_tech">Capacités techniques</string>

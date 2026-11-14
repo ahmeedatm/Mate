@@ -14,7 +14,7 @@ const GAME_PROCESS = "Cyberpunk2077";
 /** Au-delà, `state.json` est périmé : le jeu est au menu ou fermé. */
 export const STALE_MS = 10_000;
 const ASSETS = path.join(backendRoot, "assets", "cyberpunk-mod");
-const MOD_FILES = ["init.lua", "logic.lua", "VERSION"] as const;
+const MOD_FILES = ["init.lua", "logic.lua", "cyberware.lua", "VERSION"] as const;
 
 type Json = Record<string, any>;
 
@@ -102,7 +102,7 @@ async function write(game: Game, name: string, body: string) {
 /** Copie les fichiers qui changent ; `reload` : écrit `reload.txt` pour que le chargeur relise `logic.lua` jeu ouvert. */
 async function copyMod(game: Game, diff: Differs, reload: boolean) {
   for (const f of MOD_FILES) if (diff[f]) await write(game, f, await fs.readFile(path.join(ASSETS, f), "utf8"));
-  if (reload && diff["logic.lua"]) await write(game, "reload.txt", "1");
+  if (reload && (diff["logic.lua"] || diff["cyberware.lua"])) await write(game, "reload.txt", "1");
 }
 
 /** Installation reportée : faite au premier appel une fois le jeu fermé. */
@@ -158,9 +158,10 @@ const BLOCKS = {
   inventory: { file: "inventory.json", empty: { v: 1, items: [] } },
   contacts: { file: "contacts.json", empty: { v: 1, contacts: [], threads: [] } },
   quests: { file: "quests.json", empty: { v: 1, quests: [] } },
+  cyberware: { file: "cyberware.json", empty: { v: 1, zones: {}, owned: [] } },
 } as const;
 
-/** Blocs lents (inventaire, contacts, quêtes) ; vide tant que le mod ne les a pas écrits. */
+/** Blocs lents (inventaire, contacts, quêtes, cyberware) ; vide tant que le mod ne les a pas écrits. */
 export async function block(name: keyof typeof BLOCKS) {
   const game = findGame();
   const { file, empty } = BLOCKS[name];

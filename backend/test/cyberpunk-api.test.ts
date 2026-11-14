@@ -138,13 +138,13 @@ describe("carte sans jeu", () => {
 });
 
 describe("install et désinstallation du mod", () => {
-  it("installe les trois fichiers, puis le dit à jour", async () => {
+  it("installe les quatre fichiers, puis le dit à jour", async () => {
     const res = await call("POST", "/cyberpunk/install", {});
     assert.deepEqual(res.json, { ok: true, deferred: false });
-    for (const f of ["init.lua", "logic.lua", "VERSION"]) assert.equal(fs.readFileSync(mod(f), "utf8"), asset(f));
+    for (const f of ["init.lua", "logic.lua", "cyberware.lua", "VERSION"]) assert.equal(fs.readFileSync(mod(f), "utf8"), asset(f));
     const install = (await call("GET", "/cyberpunk")).json.install;
     assert.equal(install.current, true);
-    assert.equal(install.modVersion, "1.2.0");
+    assert.equal(install.modVersion, "1.3.0");
     assert.equal(install.modInstalled, true);
     assert.equal((await call("GET", "/cyberpunk/presence")).json.modInstalled, true);
   });
@@ -168,6 +168,17 @@ describe("install et désinstallation du mod", () => {
     const res = await call("POST", "/cyberpunk/install", {});
     assert.deepEqual(res.json, { ok: true, deferred: false });
     assert.equal(fs.readFileSync(mod("logic.lua"), "utf8"), asset("logic.lua"));
+    assert.notEqual(fs.readFileSync(mod("reload.txt"), "utf8"), "");
+  });
+
+  it("jeu ouvert et seul cyberware.lua change : remplacé et rechargé", async () => {
+    await call("POST", "/cyberpunk/install", {});
+    fs.writeFileSync(mod("reload.txt"), "");
+    fs.writeFileSync(mod("cyberware.lua"), "-- ancienne version");
+    server.setOs({ running: ["Cyberpunk2077"] });
+    const res = await call("POST", "/cyberpunk/install", {});
+    assert.deepEqual(res.json, { ok: true, deferred: false });
+    assert.equal(fs.readFileSync(mod("cyberware.lua"), "utf8"), asset("cyberware.lua"));
     assert.notEqual(fs.readFileSync(mod("reload.txt"), "utf8"), "");
   });
 

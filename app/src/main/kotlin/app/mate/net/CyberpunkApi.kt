@@ -63,7 +63,37 @@ enum class CyberpunkCallPhase { INCOMING, ACTIVE }
 data class CyberpunkCall(val phase: CyberpunkCallPhase, val contact: String?, val audio: Boolean)
 
 /** Compteurs des blocs lents : un bloc se relit quand son compteur change. */
-data class CyberpunkBlocks(val inv: Int, val contacts: Int, val quests: Int)
+data class CyberpunkBlocks(val inv: Int, val contacts: Int, val quests: Int, val cyber: Int = 0)
+
+enum class CyberpunkBody { MAN, WOMAN }
+
+/** Implant posé ou possédé ; `key` = id TweakDB + graine (deux exemplaires du même implant peuvent différer). */
+data class CyberwareImplant(
+    val key: String,
+    val tdb: String?,
+    val name: String,
+    val quality: String?,
+    val cost: Int?,
+    val area: String? = null,
+    /** Pièce de l'icône dans les planches d'objets du jeu (extraite par l'ordinateur sous ce nom). */
+    val icon: String? = null,
+) {
+    val iconAsset get() = icon?.let { "$it.png" }
+}
+
+data class CyberwareSlot(val locked: Boolean, val item: CyberwareImplant?)
+
+data class CyberwareCapacity(val free: Double?, val used: Double?, val max: Double?)
+
+/** Écran cyberware (`cyberware.json` du mod) ; pas prêt tant que le mod (1.2.0 au moins) ne l'a pas écrit. */
+data class CyberwareBlock(
+    val body: CyberpunkBody,
+    val capacity: CyberwareCapacity?,
+    val zones: Map<String, List<CyberwareSlot>>,
+    val owned: List<CyberwareImplant>,
+) {
+    val ready get() = zones.isNotEmpty()
+}
 
 data class CyberpunkPin(val pid: String, val x: Double, val y: Double, val z: Double)
 
@@ -177,6 +207,8 @@ class CyberpunkApi(private val http: Http) {
         http.postJson("/cyberpunk/threads/$hash/reply", JSONObject().put("choice", choice).put("version", version), timeoutMs = ACTION_TIMEOUT_MS)
     }
 
+    suspend fun cyberware(): CyberwareBlock = http.io { parseCyberware(http.get("/cyberpunk/cyberware", timeoutMs = STATE_TIMEOUT_MS)) }
+
     suspend fun phoneStatus(): CyberpunkPhoneLook = http.io { parsePhone(http.get("/cyberpunk/phone", timeoutMs = STATE_TIMEOUT_MS)) }
 
     suspend fun preparePhone() = http.io { http.postJson("/cyberpunk/phone/prepare", JSONObject()) }
@@ -282,7 +314,12 @@ class CyberpunkApi(private val http: Http) {
                 cyberware = cyberware(s.optJSONObject("cyberware")),
                 tracked = s.optJSONObject("tracked")?.let { tracked(it) },
                 call = s.optJSONObject("call")?.let(::call),
-                blocks = CyberpunkBlocks(blocks?.optInt("inv") ?: 0, blocks?.optInt("contacts") ?: 0, blocks?.optInt("quests") ?: 0),
+                blocks = CyberpunkBlocks(
+                    blocks?.optInt("inv") ?: 0,
+                    blocks?.optInt("contacts") ?: 0,
+                    blocks?.optInt("quests") ?: 0,
+                    blocks?.optInt("cyber") ?: 0,
+                ),
                 pins = s.optJSONArray("pins").items { CyberpunkPin(it.optString("pid"), it.double("x"), it.double("y"), it.double("z")) },
                 inVehicle = s.optJSONObject("vehicle") != null,
             )
@@ -362,6 +399,23 @@ class CyberpunkApi(private val http: Http) {
             val names = o.optJSONArray("assets")
             return CyberpunkPhoneLook(status, (0 until (names?.length() ?: 0)).map { names!!.optString(it) })
         }
+
+        fun parseCyberware(json: String): CyberwareBlock {
+            val o = JSONObject(json)
+            fun implant(i: JSONObject) = i.text("key")?.let { key ->
+                CyberwareImplant(key, i.text("tdb"), i.optString("name").ifEmpty { key }, i.text("quality"), if (i.has("cost")) i.optInt("cost") else null, i.text("area"), i.text("icon"))
+            }
+            val zones = o.optJSONObject("zones")
+            val cap = o.optJSONObject("capacity")
+            return CyberwareBlock(
+                body = if (o.optString("body") == "woman") CyberpunkBody.WOMAN else CyberpunkBody.MAN,
+                capacity = cap?.let { c -> CyberwareCapacity(c.num("free"), c.num("used"), c.num("max")) },
+                zones = zones?.keys()?.asSequence()?.associateWith { k -> zones.optJSONArray(k).items { CyberwareSlot(it.optBoolean("locked"), it.optJSONObject("item")?.let(::implant)) } }.orEmpty(),
+                owned = o.optJSONArray("owned").items(::implant).filterNotNull(),
+            )
+        }
+
+        private fun JSONObject.num(key: String) = if (has(key) && !isNull(key)) optDouble(key).takeIf { !it.isNaN() } else null
 
         fun parseQuests(json: String): List<CyberpunkQuest> = JSONObject(json).optJSONArray("quests").items {
             CyberpunkQuest(it.text("id"), it.optString("title"), it.text("kind"), it.text("objective"), it.optBoolean("tracked"))

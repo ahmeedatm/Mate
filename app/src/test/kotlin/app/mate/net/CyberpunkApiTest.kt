@@ -256,4 +256,39 @@ class CyberpunkApiTest {
         assertNull(CyberpunkApi.parseLivePos("""{"fresh":true,"vehicle":true,"y":2,"yaw":0}"""))
         assertNull(CyberpunkApi.parseLivePos("""{"fresh":true,"vehicle":true,"x":1,"y":2,"yaw":0,"speed":null}""")!!.speed)
     }
+
+    @Test
+    fun readsCyberwareBlock() {
+        val b = CyberpunkApi.parseCyberware(
+            """{"v":1,"body":"woman","capacity":{"free":30,"used":90,"max":120},
+              "zones":{"EyesCW":[{"locked":false,"item":{"key":"Items.Kiroshi#12","tdb":"Items.Kiroshi","name":"Kiroshi","quality":"Rare","cost":12,"icon":"cw_eyes_kiroshioptics"}}],
+                       "LegsCW":[{"locked":true}]},
+              "owned":[{"key":"Items.Sandy#7","tdb":"Items.Sandy","name":"Sandevistan","quality":"Epic","cost":40,"area":"SystemReplacementCW"}]}""",
+        )
+        assertEquals(CyberpunkBody.WOMAN, b.body)
+        assertEquals(30.0, b.capacity!!.free!!, 0.0)
+        val eyes = b.zones.getValue("EyesCW").single()
+        assertEquals("Items.Kiroshi#12", eyes.item!!.key)
+        assertEquals(12, eyes.item!!.cost)
+        assertEquals("cw_eyes_kiroshioptics.png", eyes.item!!.iconAsset)
+        assertNull(b.owned.single().iconAsset)
+        assertTrue(b.zones.getValue("LegsCW").single().locked)
+        assertNull(b.zones.getValue("LegsCW").single().item)
+        assertEquals("SystemReplacementCW", b.owned.single().area)
+        assertTrue(b.ready)
+    }
+
+    @Test
+    fun emptyCyberwareBlockIsNotReady() {
+        val b = CyberpunkApi.parseCyberware("""{"v":1,"zones":{},"owned":[]}""")
+        assertFalse(b.ready)
+        assertEquals(CyberpunkBody.MAN, b.body)
+        assertNull(b.capacity)
+    }
+
+    @Test
+    fun cyberBlockCounterIsRead() {
+        val s = CyberpunkApi.parseSnapshot("""{"status":"ingame","install":{},"state":{"seq":1,"inGame":true,"blocks":{"inv":1,"contacts":2,"quests":3,"cyber":9}}}""")
+        assertEquals(9, s.state!!.blocks.cyber)
+    }
 }
