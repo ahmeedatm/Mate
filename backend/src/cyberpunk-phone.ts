@@ -206,11 +206,12 @@ async function installZip(root: string, folder: string, spec: ToolZip) {
   }
 }
 
-const UNCOOK_REGEX = [
+const ATLAS_REGEX = [
   "widgets.phone.(atlas_phone|new_phone_assets)(_1080p)?\\.(xbm|inkatlas)$",
   "phone_quest_menu.messenger(_1080p)?\\.(xbm|inkatlas)$",
-  "fonts.(raj.raj-bold|blender.book.blenderpro-book)\\.fnt$",
 ].join("|");
+/** Polices à part : avec `-s`, WolvenKit sort un `.fnt.json` au lieu du `.ttf` (vu sur ATLAS le 2026-11-14). */
+const FONT_REGEX = "fonts.(raj.raj-bold|blender.book.blenderpro-book)\\.fnt$";
 
 async function wolvenKit(): Promise<Tools> {
   if (osName !== "windows") throw new PhoneError("Le look du téléphone du jeu ne s'extrait que sous Windows");
@@ -226,10 +227,9 @@ async function wolvenKit(): Promise<Tools> {
       const out = path.join(work, "out");
       const png = path.join(work, "png");
       await fs.mkdir(png, { recursive: true });
-      await execFileP(cli, ["uncook", path.join(game, "archive", "pc", "content"), "-o", out, "-r", UNCOOK_REGEX, "-s"], {
-        env,
-        timeout: 900_000,
-      });
+      const archives = path.join(game, "archive", "pc", "content");
+      await execFileP(cli, ["uncook", archives, "-o", out, "-r", ATLAS_REGEX, "-s"], { env, timeout: 900_000 });
+      await execFileP(cli, ["uncook", archives, "-o", out, "-r", FONT_REGEX], { env, timeout: 900_000 });
       const xbm = await Promise.all(ATLASES.map((a) => find(out, `${a.name}_1080p.xbm`)));
       if (xbm.some((f) => !f)) throw new PhoneError("Look du téléphone : images introuvables dans les archives du jeu");
       await execFileP(cli, ["export", ...(xbm as string[]), "-o", png, "--uext", "png", "-gp", game], { env, timeout: 600_000 });
