@@ -238,7 +238,7 @@ Blocs lents, réécrits seulement quand ils changent (le compteur `blocks.*` sui
 `commands.json` (écrit seulement par le backend, fichier temporaire puis renommage) :
 `{ v:1, cmds:[ { id, t, … } ] }` ; le mod exécute les `id` supérieurs au dernier traité, ne vide jamais
 le fichier, et rend `acks`. `t` : `call{contact}`, `answer`, `hangup`, `use{tdb}`, `summon`,
-`track{kind,id}`, `pin{pid,x,y,z}`, `unpin{pid}`.
+`track{kind,ref}` (`id` est déjà le numéro de l'ordre), `pin{pid,x,y,z}`, `unpin{pid}`.
 
 Routes (jeton d'appairage ; 403 si plugin coupé, sauf `presence` qui rend `available:false`) :
 - `GET /cyberpunk/presence` → `{ available, gameFound, modInstalled, running, inGame, session }`

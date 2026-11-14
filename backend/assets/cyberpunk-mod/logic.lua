@@ -43,6 +43,9 @@ local function itemInfo(pl, id)
   pcall(function() q = tostring(RPGManager.GetItemDataQuality(data)) end)
   local typ = nil
   pcall(function() typ = tostring(rec:ItemType():Type()) end)
+  -- tostring d'une énumération du jeu : « gamedataQuality : Rare (2) » ; on garde le mot du milieu.
+  q = q and (string.match(q, ":%s*(%S+)") or q) or nil
+  typ = typ and (string.match(typ, ":%s*(%S+)") or typ) or nil
   return { tdb = TDBID.ToStringDEBUG(tdb), name = Game.GetLocalizedTextByKey(rec:DisplayName()), quality = q, type = typ,
            qty = Game.GetTransactionSystem():GetItemQuantity(pl, id) }
 end
@@ -179,8 +182,7 @@ local function inventoryBlock()
     local it = try("inv." .. i, function() return itemInfo(pl, list[i]:GetID()) end)
     if it then
       -- Utilisable : consommable (type « Con_… »), déduction du type de l'objet, sans appel de plus.
-      it.usable = it.type ~= nil and string.find(it.type, "Con_") ~= nil
-      it.type = it.type and (string.match(it.type, ":%s*(%S+)") or it.type) or nil
+      it.usable = it.type ~= nil and string.find(it.type, "^Con_") ~= nil and it.type ~= "Con_Ammo"
       items[#items + 1] = it
     end
   end
@@ -276,13 +278,14 @@ COMMANDS.use = function(c)
   return "used"
 end
 
+-- `id` est celui de l'ordre (acks) : la cible du suivi (quête ou repère) est dans `ref`.
 COMMANDS.track = function(c) -- à prouver en jeu
   local jm = Game.GetJournalManager()
   if c.kind == "pin" then
-    local id = mappinIds[tostring(c.id)]
+    local id = mappinIds[tostring(c.ref)]
     if not id then return "unknown" end
     Game.GetMappinSystem():SetMappinTrackingAlternative(id, true)
-    trackedPin = c.id
+    trackedPin = c.ref
     return "tracked"
   end
   local ctx = JournalRequestContext.new()
@@ -290,7 +293,7 @@ COMMANDS.track = function(c) -- à prouver en jeu
   local a, b = jm:GetQuests(ctx)
   local list = (type(a) == "table" and #a > 0) and a or b
   for i = 1, #(type(list) == "table" and list or {}) do
-    if list[i]:GetId() == c.id then jm:TrackEntry(list[i]); trackedPin = nil; return "tracked" end
+    if list[i]:GetId() == c.ref then jm:TrackEntry(list[i]); trackedPin = nil; return "tracked" end
   end
   return "unknown"
 end
@@ -356,6 +359,8 @@ local function trackSession()
   local present = Game.GetPlayer() ~= nil
   if present and not hadPlayer then
     session = session + 1
+    -- Le jeu a oublié les repères de la partie d'avant : le backend renvoie les siens (pins/acks).
+    pins, mappinIds, trackedPin = {}, {}, nil
     put("session.txt", tostring(session))
   end
   hadPlayer = present

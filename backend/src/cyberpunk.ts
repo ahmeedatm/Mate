@@ -38,7 +38,7 @@ async function readBlock(file: string, valid: (j: Json) => boolean): Promise<Jso
   return lastGood.get(file) ?? null;
 }
 
-async function readState(game: Game): Promise<{ state: Json | null; fresh: boolean }> {
+export async function readState(game: Game): Promise<{ state: Json | null; fresh: boolean }> {
   const file = path.join(game.modDir, "state.json");
   const state = await readBlock(file, (j) => typeof j.seq === "number");
   if (!state) return { state: null, fresh: false };

@@ -898,6 +898,20 @@ export async function runSanity(opts: { url: string; token: string; os?: Os; hoo
       },
     },
     {
+      name: "Cyberpunk 2077 (carte et repères)",
+      run: async () => {
+        // Lecture seule, sans lancer la préparation de la carte (téléchargement de 700 Mo) : les routes répondent sur tous les systèmes.
+        const map = await call("GET", "/cyberpunk/map");
+        expectStatus(map, 200, "/cyberpunk/map");
+        expect(["absent", "loading", "ready", "error"].includes(map.json.status), "état de la carte inconnu");
+        expect(map.json.total === 196 && map.json.tile === 512 && map.json.affine?.length === 6, "calage de la carte absent");
+        const pins = await call("GET", "/cyberpunk/pins");
+        expectStatus(pins, 200, "/cyberpunk/pins");
+        expect(Array.isArray(pins.json.pins), "liste des repères absente");
+        return `carte ${map.json.status} (${map.json.done}/${map.json.total}), ${pins.json.pins.length} repère(s)`;
+      },
+    },
+    {
       name: "Valorant (logo de rang servi par l'ordinateur)",
       run: async () => {
         // Lecture seule : téléchargé une fois depuis valorant-api.com, puis gardé dans .cache.
