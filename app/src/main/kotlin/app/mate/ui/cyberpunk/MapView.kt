@@ -213,9 +213,9 @@ class MapView(
 
     /** Monte ou descend : transition animée ; à la descente, le zoom d'avant la montée revient. */
     private fun switchDrive(on: Boolean) {
-        val cam = camera ?: return
         if (on) {
-            if (driveLevel == 0f) flatScale = cam.scale
+            // Carte pas encore chargée : le zoom à plat est pris à la première image de conduite.
+            if (driveLevel == 0f) flatScale = camera?.scale
             track = PoseTrack()
             liveSpeed = null
             zoomSpeed = 0.0
@@ -261,7 +261,7 @@ class MapView(
         cam.setPose(shortestTurn(0.0, p.yaw) * f, f, MapCamera.FLAT_ANCHOR + (MapCamera.DRIVE_ANCHOR - MapCamera.FLAT_ANCHOR) * f)
         zoomSpeed += ((liveSpeed ?: track.speed) - zoomSpeed) * ZOOM_EASE
         if (!userMoved) {
-            val from = flatScale ?: cam.scale
+            val from = flatScale ?: cam.scale.also { flatScale = it }
             cam.setScale(from + (driveScale(zoomSpeed) - from) * f)
             cam.centerOn(p.x, p.y)
         }
