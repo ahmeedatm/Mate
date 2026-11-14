@@ -118,8 +118,9 @@ Couleurs : attributs `cp_*` existants (`colors.xml`), aucune nouvelle teinte en 
 Contrat ajouté :
 ```
 state.blocks.mappins : compteur
-mappins.json (mod) : { v:1, mappins:[ { id, x, y, z, variant, phase, name, quest } ] }
-GET /cyberpunk/mappins → { v:1, mappins:[ { id, x, y, cat, icon, name, undiscovered } ], icons:[nom…] }
+mappins.json (mod) : { v:1, mappins:[ { id, x, y, v (variante), ph (phase), icon, name?, q (mappin de quête) } ] }
+GET /cyberpunk/mappins → { v:1, points:[ { id, x, y, cat, icon|null, name|null, dim } ] }
+icônes : poi_<icon>.png dans la liste de GET /cyberpunk/phone, servies par GET /cyberpunk/phone/:name
 ```
 
 ## Laissé au constructeur
