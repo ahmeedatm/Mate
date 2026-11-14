@@ -41,12 +41,15 @@ object ValorantTable {
     /** Taille de texte (réglage d'Accessibilité) au-delà de laquelle le tableau de fin perd ses trois dernières colonnes. */
     private const val LARGE_TEXT = 1.15f
 
-    /** [fit] : ce qui tient dans la hauteur réelle ([ValorantFit]) ; sans l'équipe d'en face, ton équipe seule. */
-    fun match(v: Valorant, kit: ValorantKit, shape: ValorantShape, fit: ValorantFit): View {
+    /**
+     * [fit] : ce qui tient dans la hauteur réelle ([ValorantFit]) ; sans l'équipe d'en face, ton équipe seule. [stretch] :
+     * les lignes se partagent la hauteur ([ValorantFit.stretches]), sinon elles gardent la leur et le tableau se centre.
+     */
+    fun match(v: Valorant, kit: ValorantKit, shape: ValorantShape, fit: ValorantFit, stretch: Boolean): View {
         val later = if (v.state == ValorantState.PREGAME) R.string.valorant_enemies_later else null
-        val allies = team(kit, R.string.valorant_allies, true, v.allies, null, shape, fit)
+        val allies = team(kit, R.string.valorant_allies, true, v.allies, null, fit, stretch)
         if (!fit.enemies) return allies
-        val enemies = team(kit, R.string.valorant_enemies, false, v.enemies, later, shape, fit)
+        val enemies = team(kit, R.string.valorant_enemies, false, v.enemies, later, fit, stretch)
         return sides(kit, allies, enemies, shape.side)
     }
 
@@ -73,7 +76,7 @@ object ValorantTable {
         setPadding(kit.dp(4), 0, kit.dp(4), 0)
     }
 
-    private fun team(kit: ValorantKit, title: Int, ally: Boolean, players: List<ValorantPlayer>, empty: Int?, shape: ValorantShape, fit: ValorantFit) = LinearLayout(kit.context).apply {
+    private fun team(kit: ValorantKit, title: Int, ally: Boolean, players: List<ValorantPlayer>, empty: Int?, fit: ValorantFit, stretch: Boolean) = LinearLayout(kit.context).apply {
         orientation = LinearLayout.VERTICAL
         gravity = Gravity.CENTER_VERTICAL
         val captions = if (fit.detail) {
@@ -83,7 +86,7 @@ object ValorantTable {
         }
         addView(head(kit, title, ally, captions), kit.lp(MATCH_PARENT).apply { bottomMargin = kit.dp(4) })
         if (players.isEmpty() && empty != null) addView(kit.text(kit.string(empty), 14f, R.attr.c_text_faint))
-        for (p in players) addView(player(kit, p, fit.detail, fit.level), rowLp(kit, shape.stretch))
+        for (p in players) addView(player(kit, p, fit.detail, fit.level), rowLp(kit, stretch))
     }
 
     /** Nom en capitales (le mien en gras, quelle que soit la police du thème) ; `spacing` faux : plus de place pour le tag. */
@@ -124,16 +127,16 @@ object ValorantTable {
 
     private fun largeText(kit: ValorantKit) = kit.context.resources.configuration.fontScale > LARGE_TEXT
 
-    fun end(end: ValorantEnd, kit: ValorantKit, shape: ValorantShape, fit: ValorantFit): View {
+    fun end(end: ValorantEnd, kit: ValorantKit, shape: ValorantShape, fit: ValorantFit, stretch: Boolean): View {
         // Texte grossi (Accessibilité) ou peu de hauteur : sans % tête, ADR et premiers kills, pour que les noms restent lisibles.
         val full = fit.detail && !largeText(kit)
         // Combat à mort : chacun pour soi, une seule liste classée par kills (ordre du compagnon).
-        if (end.ffa) return board(kit, R.string.valorant_ffa, true, end.players, end.players, full, shape.stretch)
-        if (!fit.enemies) return board(kit, R.string.valorant_allies, true, end.allies, end.players, full, shape.stretch)
+        if (end.ffa) return board(kit, R.string.valorant_ffa, true, end.players, end.players, full, stretch)
+        if (!fit.enemies) return board(kit, R.string.valorant_allies, true, end.allies, end.players, full, stretch)
         return sides(
             kit,
-            board(kit, R.string.valorant_allies, true, end.allies, end.players, full, shape.stretch),
-            board(kit, R.string.valorant_enemies, false, end.enemies, end.players, full, shape.stretch),
+            board(kit, R.string.valorant_allies, true, end.allies, end.players, full, stretch),
+            board(kit, R.string.valorant_enemies, false, end.enemies, end.players, full, stretch),
             shape.side,
         )
     }

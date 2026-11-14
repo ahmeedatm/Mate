@@ -169,12 +169,14 @@ class ValorantWidget(context: Context, host: HomeHost, placed: Placed) : HomeWid
         // Place du tableau : celle du corps, moins le bandeau et la légende posés au-dessus et dessous.
         val legend = big && end != null && size == ValorantBand.Size.FULL
         val tableDp = if (bodyDp <= 0 || v == null || !big) bodyDp else bodyDp - ValorantBand.heightDp(v, size) - BAND_GAP_DP - if (legend) LEGEND_DP else 0
-        val fit = ValorantFit.of(shape, tableDp, context.resources.configuration.fontScale)
+        val fontScale = context.resources.configuration.fontScale
+        val fit = ValorantFit.of(shape, tableDp, fontScale)
+        val stretch = ValorantFit.stretches(shape, fit, tableDp, fontScale)
         val main = when {
             v == null || v.state == ValorantState.OFF -> center(context.getString(R.string.valorant_off_hint))
-            zoomed -> ValorantDuelView.view(v, kit, bodyDp) ?: table(v, end, kit, shape, fit)
+            zoomed -> ValorantDuelView.view(v, kit, bodyDp) ?: table(v, end, kit, shape, fit, stretch)
             shape.summary -> ValorantTable.summary(v, kit, placed.size, band.takeIf { size == ValorantBand.Size.MINI }, bodyDp)
-            else -> table(v, end, kit, shape, fit)
+            else -> table(v, end, kit, shape, fit, stretch)
         }
         if (!big) {
             body.addView(main, fill)
@@ -186,10 +188,10 @@ class ValorantWidget(context: Context, host: HomeHost, placed: Placed) : HomeWid
         if (legend) body.addView(ValorantBand.legend(kit), LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT).apply { topMargin = dp(10) })
     }
 
-    private fun table(v: Valorant, end: ValorantEnd?, kit: ValorantKit, shape: ValorantShape, fit: ValorantFit): View = when {
-        end != null -> ValorantTable.end(end, kit, shape, fit)
+    private fun table(v: Valorant, end: ValorantEnd?, kit: ValorantKit, shape: ValorantShape, fit: ValorantFit, stretch: Boolean): View = when {
+        end != null -> ValorantTable.end(end, kit, shape, fit, stretch)
         v.state == ValorantState.MENU || v.state == ValorantState.QUEUE -> ValorantTable.menu(v, kit, shape)
-        else -> ValorantTable.match(v, kit, shape, fit)
+        else -> ValorantTable.match(v, kit, shape, fit, stretch)
     }
 
     private fun statusLine(v: Valorant?, said: Boolean): String {

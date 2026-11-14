@@ -13,9 +13,9 @@ import kotlin.math.roundToInt
  */
 data class ValorantFit(val enemies: Boolean, val detail: Boolean, val level: Boolean) {
     companion object {
-        /** Hauteur d'une ligne : icône de 32 dp et deux lignes de texte ; icône de 32 dp ; icône de 20 dp. */
-        private const val ROW_LEVEL_DP = 40
-        private const val ROW_DETAIL_DP = 34
+        /** Hauteur d'une ligne : icône de 32 dp (36 avec le logo du rang) et deux lignes de texte ; icône de 32 dp ; icône de 20 dp. */
+        private const val ROW_LEVEL_DP = 42
+        private const val ROW_DETAIL_DP = 38
         private const val ROW_DP = 24
 
         /** Titre d'équipe et légendes, avec sa marge ; écart entre deux équipes empilées. */
@@ -38,12 +38,22 @@ data class ValorantFit(val enemies: Boolean, val detail: Boolean, val level: Boo
             ValorantFit(enemies = false, detail = false, level = false).takeIf { !shape.side },
         ).distinct()
 
-        /** Hauteur que demande [fit] ; le texte grossi agrandit les lignes. */
-        fun neededDp(shape: ValorantShape, fit: ValorantFit, fontScale: Float = 1f): Int {
+        /** Hauteur fixe des lignes des grands widgets ([ValorantShape.stretch] faux), tableau centré. */
+        private const val TALL_ROW_DP = 52
+
+        /**
+         * Lignes qui se partagent la hauteur : la forme le demande, ou les lignes hautes ([TALL_ROW_DP]) ne tiennent pas
+         * dans la place mesurée (thème à cadre, barre du bas).
+         */
+        fun stretches(shape: ValorantShape, fit: ValorantFit, heightDp: Int, fontScale: Float = 1f): Boolean =
+            shape.stretch || (heightDp > 0 && neededDp(shape, fit, fontScale, TALL_ROW_DP) > heightDp)
+
+        /** Hauteur que demande [fit] ; le texte grossi agrandit les lignes. [rowDp] : hauteur imposée des lignes. */
+        fun neededDp(shape: ValorantShape, fit: ValorantFit, fontScale: Float = 1f, rowDp: Int? = null): Int {
             val stacked = fit.enemies && !shape.side
             val rows = if (stacked) 2 * TEAM else TEAM
             val heads = if (stacked) 2 else 1
-            val row = when {
+            val row = rowDp ?: when {
                 fit.level -> ROW_LEVEL_DP
                 fit.detail -> ROW_DETAIL_DP
                 else -> ROW_DP

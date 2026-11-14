@@ -59,6 +59,19 @@ class ValorantFitTest {
         assertEquals(all, ValorantFit.of(shape, ValorantFit.neededDp(shape, all, fontScale = 1.3f), fontScale = 1.3f))
     }
 
+    @Test
+    fun bigShapesKeepTallRowsOnlyWhereTheyFit() {
+        val tall = ValorantShape.of(WidgetSize.T3)
+        val fit = ValorantFit.of(tall, heightDp = 0)
+        // Pas mesuré, ou assez de place : lignes hautes, tableau centré.
+        assertFalse(ValorantFit.stretches(tall, fit, heightDp = 0))
+        assertFalse(ValorantFit.stretches(tall, fit, heightDp = 2000))
+        // Thème à cadre et barre du bas (Instrument) : les lignes se partagent la hauteur au lieu d'être coupées.
+        assertTrue(ValorantFit.stretches(tall, fit, heightDp = 480))
+        // Une forme qui étire déjà ses lignes continue.
+        assertTrue(ValorantFit.stretches(ValorantShape.of(WidgetSize.XL), fit, heightDp = 2000))
+    }
+
     private val me = ValorantMe("Eliot#EUW", 14, "Or 3", 42, 90)
     private val game = Valorant(ValorantState.INGAME, "Compétition", "Ascent", ValorantScore(7, 5), me, emptyList())
     private val menu = game.copy(
