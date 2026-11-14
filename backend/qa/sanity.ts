@@ -905,6 +905,9 @@ export async function runSanity(opts: { url: string; token: string; os?: Os; hoo
         expectStatus(map, 200, "/cyberpunk/map");
         expect(["absent", "loading", "ready", "error"].includes(map.json.status), "état de la carte inconnu");
         expect(map.json.total === 49 && map.json.tile === 512 && map.json.affine?.length === 6, "calage de la carte absent");
+        const map3d = await call("GET", "/cyberpunk/map3d");
+        expectStatus(map3d, 200, "/cyberpunk/map3d");
+        expect(["absent", "loading", "ready", "error"].includes(map3d.json.status), "état de la carte 3D inconnu");
         const pins = await call("GET", "/cyberpunk/pins");
         expectStatus(pins, 200, "/cyberpunk/pins");
         expect(Array.isArray(pins.json.pins), "liste des repères absente");
