@@ -118,6 +118,12 @@ local function trackedEntry()
   local r = { kind = "quest", id = e:GetId() }
   pcall(function() r.desc = loc(e:GetDescription()) end)
   pcall(function() local q = jm:GetParentEntry(jm:GetParentEntry(e)); r.quest = loc(q:GetTitle(jm)) end)
+  -- Position de l'objectif sur la carte : même appel que le mod Knife (Teleport.ToQuestMarker), à prouver en jeu.
+  pcall(function()
+    local ok, positions = Game.GetMappinSystem():GetQuestMappinPositionsByObjective(jm:GetEntryHash(e))
+    local p = ok and positions and positions[1]
+    if p then r.pos = { x = p.x, y = p.y } end
+  end)
   return r
 end
 
