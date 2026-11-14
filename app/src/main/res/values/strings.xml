@@ -2438,6 +2438,7 @@
     <string name="cp_phone_contacts">Contacts</string>
     <string name="cp_phone_tab_messages">Onglet Messages</string>
     <string name="cp_phone_tab_contacts">Onglet Contacts</string>
+    <string name="cp_phone_inbox_empty">Rien à lire ni à répondre</string>
     <string name="cp_phone_to_answer">À répondre</string>
     <string name="cp_phone_said">%1$s : %2$s</string>
     <string name="cp_phone_choose">Ta réponse</string>
@@ -2448,7 +2449,6 @@
     <string name="cp_phone_prepare_description">Préparer sur l\'ordinateur les images et les polices du téléphone du jeu</string>
     <string name="cp_phone_preparing">Préparation du look du jeu…</string>
     <string name="cp_phone_look_failed">Le look du jeu n\'a pas pu être préparé.</string>
-    <string name="cp_call_section">Appeler</string>
     <string name="cp_call_button">Appeler</string>
     <string name="cp_call_contact">Appeler %1$s</string>
     <string name="cp_use">Utiliser</string>

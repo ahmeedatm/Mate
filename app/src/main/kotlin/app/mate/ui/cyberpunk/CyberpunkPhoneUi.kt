@@ -70,6 +70,9 @@ class CyberpunkPhoneUi(private val kit: CyberpunkKit, private val actions: Cyber
 
     private fun bodyFont(state: PhoneState): Typeface = state.look?.body ?: kit.regular
 
+    /** La police du jeu a un œil plus petit que Chakra Petch : +2 sp pour la même lecture à distance. */
+    private fun bodySize(state: PhoneState, sp: Float): Float = if (state.look?.body != null) sp + GAME_FONT_BONUS_SP else sp
+
     private fun note(text: Int) = kit.text(context.getString(text), 17f, R.color.cp_gris)
 
     // --- Onglets
@@ -114,7 +117,7 @@ class CyberpunkPhoneUi(private val kit: CyberpunkKit, private val actions: Cyber
 
     private fun fillMessages(column: LinearLayout, contacts: CyberpunkContacts, state: PhoneState) {
         val threads = PhoneInbox.messages(contacts.threads, state.opened)
-        if (threads.isEmpty()) column.addView(note(R.string.cp_no_threads))
+        if (threads.isEmpty()) column.addView(note(R.string.cp_phone_inbox_empty))
         threads.forEach { t ->
             column.addView(threadRow(t, state), kit.lp(MATCH, WRAP).apply { bottomMargin = kit.dp(6) })
         }
@@ -127,7 +130,7 @@ class CyberpunkPhoneUi(private val kit: CyberpunkKit, private val actions: Cyber
             orientation = LinearLayout.VERTICAL
             if (state.lookStatus == CyberpunkPhoneStatus.ERROR) addView(kit.text(context.getString(R.string.cp_phone_look_failed), 16f, R.color.cp_gris), kit.lp(MATCH, WRAP).apply { bottomMargin = kit.dp(8) })
             addView(
-                kit.button(context.getString(R.string.cp_phone_prepare), context.getString(R.string.cp_phone_prepare_description), R.color.cp_cyan, R.color.cp_sur_cyan).apply { setOnClickListener { actions.prepareLook() } },
+                kit.button(context.getString(R.string.cp_phone_prepare), context.getString(R.string.cp_phone_prepare_description), R.color.cp_panneau, R.color.cp_cyan).apply { setOnClickListener { actions.prepareLook() } },
                 kit.lp(MATCH, WRAP),
             )
         }
@@ -147,7 +150,7 @@ class CyberpunkPhoneUi(private val kit: CyberpunkKit, private val actions: Cyber
         if (t.canReply) head.addView(kit.label(context.getString(R.string.cp_phone_to_answer), R.color.cp_jaune), kit.lp(WRAP, WRAP).apply { marginStart = kit.dp(8) })
         if (t.unread > 0) head.addView(View(context).apply { background = kit.panel(R.color.cp_cyan, cutDp = 0, both = false) }, kit.lp(kit.dp(10), kit.dp(10)).apply { marginStart = kit.dp(8) })
         addView(head, kit.lp(MATCH, WRAP))
-        t.preview?.let { addView(kit.text(it, 16f, R.color.cp_texte, bodyFont(state)).apply { maxLines = 2; ellipsize = TextUtils.TruncateAt.END }, kit.lp(MATCH, WRAP).apply { topMargin = kit.dp(2) }) }
+        t.preview?.let { addView(kit.text(it, bodySize(state, 16f), R.color.cp_texte, bodyFont(state)).apply { maxLines = 2; ellipsize = TextUtils.TruncateAt.END }, kit.lp(MATCH, WRAP).apply { topMargin = kit.dp(2) }) }
         contentDescription = listOfNotNull(
             t.name,
             if (t.canReply) context.getString(R.string.cp_phone_to_answer) else null,
@@ -172,7 +175,7 @@ class CyberpunkPhoneUi(private val kit: CyberpunkKit, private val actions: Cyber
         column.addView(kit.text(thread.summary.name, 26f, R.color.cp_rouge, titleFont(state)), kit.lp(MATCH, WRAP).apply { topMargin = kit.dp(14); bottomMargin = kit.dp(10) })
         val detail = thread.detail
         when {
-            thread.error != null -> column.addView(kit.text(thread.error, 17f, R.color.cp_texte, bodyFont(state)))
+            thread.error != null -> column.addView(kit.text(thread.error, bodySize(state, 17f), R.color.cp_texte, bodyFont(state)))
             detail == null -> column.addView(note(R.string.cp_loading))
             else -> {
                 detail.messages.forEach { column.addView(bubble(it.text, it.player, thread.summary.name, state), bubbleParams(it.player)) }
@@ -188,7 +191,7 @@ class CyberpunkPhoneUi(private val kit: CyberpunkKit, private val actions: Cyber
     }
 
     /** Le contact à gauche (rouge), V à droite (cyan) : la place dit qui parle, la description aussi. */
-    private fun bubble(text: String, player: Boolean, contact: String, state: PhoneState): View = kit.text(text, 17f, R.color.cp_texte, bodyFont(state)).apply {
+    private fun bubble(text: String, player: Boolean, contact: String, state: PhoneState): View = kit.text(text, bodySize(state, 17f), R.color.cp_texte, bodyFont(state)).apply {
         setPadding(kit.dp(14), kit.dp(10), kit.dp(14), kit.dp(10))
         val accent = if (player) R.color.cp_cyan else R.color.cp_rouge
         background = layers(state, if (player) "msgBuble_reply" else "msgBuble", if (player) R.color.cp_sur_cyan else R.color.cp_panneau, accent)
@@ -199,11 +202,13 @@ class CyberpunkPhoneUi(private val kit: CyberpunkKit, private val actions: Cyber
     private fun choices(column: LinearLayout, detail: CyberpunkThreadDetail, sending: Boolean, state: PhoneState) {
         column.addView(kit.label(context.getString(if (sending) R.string.cp_phone_sending else R.string.cp_phone_choose)), kit.lp(WRAP, WRAP).apply { topMargin = kit.dp(10); bottomMargin = kit.dp(6) })
         detail.choices.forEach { c ->
-            val button = kit.text(c.text, 17f, R.color.cp_cyan, bodyFont(state)).apply {
+            val button = kit.text(c.text, bodySize(state, 17f), R.color.cp_cyan, bodyFont(state)).apply {
                 minHeight = kit.dp(52)
                 gravity = Gravity.CENTER_VERTICAL
                 setPadding(kit.dp(14), kit.dp(10), kit.dp(14), kit.dp(10))
-                background = kit.panel(R.color.cp_panneau, R.color.cp_cyan, 3, cutDp = 8, both = false)
+                // L'action du fil : cadre de réponse du jeu, aussi marqué que les bulles.
+                background = layers(state, "msgBuble_reply", R.color.cp_panneau, R.color.cp_cyan)
+                    ?: kit.panel(R.color.cp_panneau, R.color.cp_cyan, 3, cutDp = 8, both = false)
                 contentDescription = context.getString(R.string.cp_phone_reply_with, c.text)
                 isEnabled = !sending
                 alpha = if (sending) DISABLED_ALPHA else 1f
@@ -219,10 +224,9 @@ class CyberpunkPhoneUi(private val kit: CyberpunkKit, private val actions: Cyber
     // --- Contacts
 
     private fun fillContacts(column: LinearLayout, contacts: CyberpunkContacts, state: PhoneState) {
-        column.addView(kit.label(context.getString(R.string.cp_call_section)), kit.lp(WRAP, WRAP).apply { bottomMargin = kit.dp(6) })
         contacts.contacts.filter { it.callable }.forEach { c ->
             val line = kit.row()
-            line.addView(kit.text(c.name, 17f, font = bodyFont(state)), kit.lp(0, WRAP).apply { weight = 1f })
+            line.addView(kit.text(c.name, bodySize(state, 17f), font = bodyFont(state)), kit.lp(0, WRAP).apply { weight = 1f })
             line.addView(
                 kit.button(context.getString(R.string.cp_call_button), context.getString(R.string.cp_call_contact, c.name), R.color.cp_cyan, R.color.cp_sur_cyan).apply { setOnClickListener { actions.call(c) } },
                 kit.lp(WRAP, kit.dp(48)),
@@ -246,6 +250,8 @@ class CyberpunkPhoneUi(private val kit: CyberpunkKit, private val actions: Cyber
 
     private companion object {
         const val BUBBLE_GAP_DP = 40
-        const val DISABLED_ALPHA = 0.4f
+        /** Pendant l'envoi : estompé mais lisible (cyan sur panneau au-dessus de 4,5:1). */
+        const val DISABLED_ALPHA = 0.6f
+        const val GAME_FONT_BONUS_SP = 2f
     }
 }
