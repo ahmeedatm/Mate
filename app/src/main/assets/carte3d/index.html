@@ -1,0 +1,27 @@
+<!doctype html>
+<html lang="fr">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
+    <title>Carte de Night City</title>
+    <!-- Pont avec Mate, avant le moteur : il doit trouver window.Open77 au chargement. -->
+    <script src="./mate.js"></script>
+    <script type="module" crossorigin src="./assets/index-B2X6E52C.js"></script>
+    <link rel="stylesheet" crossorigin href="./assets/index-BEJBihcY.css" />
+    <style>
+      /* La tablette a sa propre croix ; l'aide clavier et souris ne sert à rien au doigt. */
+      .m3-close,
+      .m3-help {
+        display: none !important;
+      }
+      html,
+      body {
+        overscroll-behavior: none;
+        touch-action: none;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="app"></div>
+  </body>
+</html>

@@ -80,6 +80,13 @@ contributeurs de JNA (jna).
 ICÔNES
 Icônes Material Symbols et Material Icons, Copyright Google LLC, licence Apache 2.0 (texte plus bas).
 
+CARTE 3D DE LA PAGE CYBERPUNK (licence MIT, texte plus bas)
+- op77_map3d : Copyright (c) 2026 Open2077 contributors (https://github.com/Open2077/open77-resources), moteur de la
+  carte, embarqué compilé tel quel (assets/carte3d).
+- three.js : Copyright © 2010-2026 three.js authors (https://threejs.org), inclus dans ce moteur.
+Les données de la ville, dérivées de Cyberpunk 2077 (© CD PROJEKT S.A.), ne sont pas dans l'APK : l'ordinateur du jeu
+les télécharge, la tablette les garde.
+
 POLICES (SIL Open Font License 1.1, texte plus bas)
 - Outfit : Copyright 2021 The Outfit Project Authors (https://github.com/Outfitio/Outfit-Fonts)
 - Nunito : Copyright 2014 The Nunito Project Authors (https://github.com/googlefonts/nunito)
@@ -95,6 +102,7 @@ POLICES (SIL Open Font License 1.1, texte plus bas)
 - Departure Mono : Copyright 2022 Helena Zhang (https://departuremono.com)
 - Chakra Petch : Copyright 2018 The Chakra Petch Project Authors (https://github.com/m4rc1e/Chakra-Petch.git)
 - Share Tech Mono : Copyright 2012 Carrois Type Design, Ralph du Carrois (https://github.com/google/fonts/tree/main/ofl/sharetechmono)
+- Zen Dots : Copyright 2020 The Zen Dots Project Authors (https://github.com/googlefonts/zen-dots), dans la carte 3D
 - JetBrains Mono : Copyright 2020 The JetBrains Mono Project Authors (https://github.com/JetBrains/JetBrainsMono)
 - Atkinson Hyperlegible : Copyright 2020 Braille Institute of America, Inc. (https://github.com/googlefonts/atkinson-hyperlegible)
 
@@ -131,6 +139,12 @@ SIL Open Font License 1.1
 ${rule}
 
 ${text("OFL-1.1.txt")}
+
+${rule}
+MIT License
+${rule}
+
+${text("MIT.txt")}
 `;
 fs.mkdirSync(path.dirname(out), { recursive: true });
 fs.writeFileSync(out, content);
