@@ -242,6 +242,22 @@ class CyberpunkApiTest {
     }
 
     @Test
+    fun `en vehicule ou a pied selon le champ vehicle de l'etat`() {
+        assertTrue(CyberpunkApi.parseSnapshot("""{"status":"ingame","state":{"vehicle":{"speed":12.5}}}""").state!!.inVehicle)
+        assertFalse(CyberpunkApi.parseSnapshot("""{"status":"ingame","state":{}}""").state!!.inVehicle)
+    }
+
+    @Test
+    fun `position du vehicule fraiche, perimee, sans vitesse`() {
+        val p = CyberpunkApi.parseLivePos("""{"fresh":true,"vehicle":true,"x":1.5,"y":-2,"yaw":90,"speed":20}""")
+        assertEquals(CyberpunkLivePos(1.5, -2.0, 90.0, 20.0), p)
+        assertNull(CyberpunkApi.parseLivePos("""{"fresh":false}"""))
+        assertNull(CyberpunkApi.parseLivePos("""{"fresh":true,"vehicle":false,"x":1,"y":2,"yaw":0}"""))
+        assertNull(CyberpunkApi.parseLivePos("""{"fresh":true,"vehicle":true,"y":2,"yaw":0}"""))
+        assertNull(CyberpunkApi.parseLivePos("""{"fresh":true,"vehicle":true,"x":1,"y":2,"yaw":0,"speed":null}""")!!.speed)
+    }
+
+    @Test
     fun readsMappins() {
         val points = CyberpunkApi.parseMappins(
             """{"v":1,"points":[

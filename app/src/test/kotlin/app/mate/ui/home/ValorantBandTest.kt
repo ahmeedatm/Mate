@@ -70,9 +70,10 @@ class ValorantBandTest {
     }
 
     @Test
-    fun atTheMenuOnlyTheFullScreenShowsTheDayWhenThereWasAGame() {
+    fun atTheMenuTheBigBandsShowTheDayWhenThereWasAGame() {
         assertTrue(ValorantBand.shows(state(ValorantState.MENU), ValorantBand.Size.FULL))
-        assertFalse(ValorantBand.shows(state(ValorantState.MENU), ValorantBand.Size.MEDIUM))
+        assertTrue(ValorantBand.shows(state(ValorantState.MENU), ValorantBand.Size.MEDIUM))
+        assertFalse(ValorantBand.shows(state(ValorantState.MENU), ValorantBand.Size.THIN))
         assertFalse(ValorantBand.shows(state(ValorantState.MENU, today = ValorantToday(0, 0, 0, emptyList())), ValorantBand.Size.FULL))
         assertFalse(ValorantBand.shows(state(ValorantState.MENU, today = null), ValorantBand.Size.FULL))
         assertFalse(ValorantBand.shows(state(ValorantState.OFF), ValorantBand.Size.FULL))
