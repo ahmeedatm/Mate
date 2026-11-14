@@ -40,6 +40,22 @@
     },
   };
 
+  // Libellés que le moteur écrit en dur (pas dans sa configuration) : traduits à chaque reconstruction de la légende.
+  var LABELS = { "layers:buildings": "Bâtiments", "layers:roadBorders": "Bords de route", "layers:metro": "Métro", "layers:labels": "Quartiers" };
+  function translate(root) {
+    var legend = root.querySelector && root.querySelector(".m3-legend");
+    if (!legend) return;
+    Object.keys(LABELS).forEach(function (key) {
+      var span = legend.querySelector('[data-toggle="' + key + '"] span');
+      if (span && span.textContent !== LABELS[key]) span.textContent = LABELS[key];
+    });
+    var titles = legend.querySelectorAll("h3");
+    if (titles[2] && titles[2].textContent !== "Calques") titles[2].textContent = "Calques";
+  }
+  new MutationObserver(function () {
+    translate(document);
+  }).observe(document.documentElement, { childList: true, subtree: true });
+
   var nativeFetch = window.fetch;
   window.fetch = function (url, opts) {
     if (typeof url === "string" && url.indexOf("open77://") === 0) url = "./data/" + url.split("/").pop();

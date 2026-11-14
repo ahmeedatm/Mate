@@ -9,9 +9,39 @@
     <script type="module" crossorigin src="./assets/index-B2X6E52C.js"></script>
     <link rel="stylesheet" crossorigin href="./assets/index-BEJBihcY.css" />
     <style>
-      /* La tablette a sa propre croix ; l'aide clavier et souris ne sert à rien au doigt. */
+      /* La tablette a sa propre croix et son titre ; l'aide clavier et souris ne sert à rien au doigt. */
       .m3-close,
-      .m3-help {
+      .m3-help,
+      .m3-header {
+        display: none !important;
+      }
+      /*
+       * Place laissée à la page Cyberpunk de Mate (1280 × 800) : rail d'icônes à gauche (jusqu'à x 100, y 430),
+       * croix et boutons Soin / Voiture en haut à droite (jusqu'à y 215), carte de la quête en bas à droite (dès y 640).
+       */
+      .m3-search {
+        left: 112px !important;
+        right: auto !important;
+        top: 16px !important;
+        width: 280px !important;
+      }
+      .m3-card {
+        left: 112px !important;
+        top: 72px !important;
+      }
+      .m3-legend {
+        right: 16px !important;
+        top: 226px !important;
+        max-height: calc(100% - 430px) !important;
+      }
+      .m3-tools {
+        left: 112px !important;
+        right: auto !important;
+        bottom: 16px !important;
+      }
+      /* Calques du HUD du jeu (mini-carte, GPS holo) : sans objet sur la tablette. */
+      .m3-legend [data-toggle^="hud:"],
+      .m3-legend h3:nth-of-type(2) {
         display: none !important;
       }
       html,

@@ -228,7 +228,11 @@ class Map3dView(
                 sent.clear()
                 pushAll()
             }
-            "map3d:waypoint" -> if (interactive) runCatching { JSONObject(json) }.getOrNull()?.let { act(Map3dBridge.action(it, pins)) }
+            "map3d:waypoint" -> {
+                // La page a changé sa destination toute seule : la prochaine destination de Mate (celle du jeu) lui est renvoyée.
+                sent.remove("map3d:waypoint")
+                if (interactive) runCatching { JSONObject(json) }.getOrNull()?.let { act(Map3dBridge.action(it, pins)) }
+            }
         }
     }
 
