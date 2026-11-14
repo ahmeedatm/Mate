@@ -256,9 +256,9 @@ Routes (jeton d'appairage ; 403 si plugin coupé, sauf `presence` qui rend `avai
 - `GET /cyberpunk/map` → `{ status:"absent"|"loading"|"ready"|"error", done, total, tile:512, levels, size:[w,h],
   affine:[a,b,c,d,e,f] }` ; `POST /cyberpunk/map/prepare` `{}` ; `GET /cyberpunk/tiles/:z/:x/:y.webp`
 
-Tuiles : `dwebp`/`cwebp` officiels de libwebp (BSD, zip `libwebp-1.6.0-windows-x64.zip` téléchargé dans
-`.data/` au premier usage, SHA-256 épinglé), images sources épinglées par commit et SHA-1 de blob du
-dépôt de fans ; pyramide de tuiles 512 px dans `.data/cyberpunk-map/`.
+Tuiles : depuis le 14/11, blocs par quartier dessinés par le compagnon à partir des cubes de la carte 3D du jeu
+(Open2077, SHA-256 épinglés), encodés par `cwebp` de libwebp dans `.data/cyberpunk-blocs/` : voir
+`2026-11-14-cyberpunk-carte-blocs-design.md`.
 
 ## Calage de la carte (mesuré le 2026-11-14)
 

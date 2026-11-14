@@ -92,4 +92,25 @@ describe("cubes de la carte 3D du jeu", () => {
     const index = tileIndex(b, AFF, 2);
     assert.deepEqual([...index.keys()].sort(), [0, 1]);
   });
+
+  it("aucun quartier vif n'a la teinte du joueur, des repères ou des charcudocs", () => {
+    // cp_jaune #f3e600, cp_cyan #4ef2f5, cp_poi_charcudoc #ff5f56 (colors.xml de la tablette).
+    const hsv = ([r, g, b]: number[]) => {
+      const max = Math.max(r, g, b);
+      const d = max - Math.min(r, g, b);
+      const h = d === 0 ? 0 : max === r ? ((g - b) / d + 6) % 6 : max === g ? (b - r) / d + 2 : (r - g) / d + 4;
+      return { h: h * 60, s: max === 0 ? 0 : d / max };
+    };
+    const overlays = [
+      [243, 230, 0],
+      [78, 242, 245],
+      [255, 95, 86],
+    ].map((c) => hsv(c).h);
+    for (const c of COLORS) {
+      const { h, s } = hsv(c.rgb);
+      if (s < 0.35) continue; // gris et sable : pas de teinte à confondre
+      for (const o of overlays)
+        assert.ok(Math.min(Math.abs(h - o), 360 - Math.abs(h - o)) >= 25, `${c.name} trop près de la teinte ${o.toFixed(0)}°`);
+    }
+  });
 });

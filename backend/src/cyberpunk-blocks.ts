@@ -12,17 +12,20 @@ export type Affine = number[];
 export const TILE = 512;
 export const BG: Rgb = [7, 8, 12];
 
-/** Une couleur par quartier, dans l'ordre des index de `Boxes.district` ; « other » pour un nom inconnu. */
+/**
+ * Une couleur par quartier, dans l'ordre des index de `Boxes.district` ; « other » pour un nom inconnu. Loin du jaune du
+ * joueur et du trajet, du cyan des repères et du rouge des charcudocs (`cp_*` de la tablette), pour qu'ils ressortent.
+ */
 export const COLORS: { name: string; rgb: Rgb }[] = [
-  { name: "watson", rgb: [42, 160, 170] },
+  { name: "watson", rgb: [44, 168, 112] },
   { name: "westbrook", rgb: [190, 60, 150] },
-  { name: "city_center", rgb: [214, 172, 40] },
-  { name: "heywood", rgb: [70, 165, 90] },
-  { name: "santo_domingo", rgb: [210, 104, 46] },
-  { name: "pacifica", rgb: [126, 86, 214] },
-  { name: "ep1_dogtown", rgb: [196, 52, 62] },
-  { name: "badlands", rgb: [150, 124, 84] },
-  { name: "ep1_spaceport", rgb: [110, 116, 130] },
+  { name: "city_center", rgb: [118, 112, 222] },
+  { name: "heywood", rgb: [96, 170, 70] },
+  { name: "santo_domingo", rgb: [176, 130, 80] },
+  { name: "pacifica", rgb: [160, 80, 210] },
+  { name: "ep1_dogtown", rgb: [205, 85, 140] },
+  { name: "badlands", rgb: [120, 112, 96] },
+  { name: "ep1_spaceport", rgb: [140, 150, 172] },
   { name: "other", rgb: [110, 116, 130] },
 ];
 

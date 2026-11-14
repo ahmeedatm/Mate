@@ -52,9 +52,10 @@ import kotlin.math.sin
 
 /**
  * Carte de Night City de la page Cyberpunk : tuiles du compagnon (pyramide WebP, cache taillé par `MapCamera.tileCacheBytes`), déjà
- * dessinées en blocs colorés par quartier (cubes de la carte holographique du jeu, `cyberpunk-blocks.ts`), joueur en flèche jaune orientée par son yaw, objectif de quête, repères, trajet GPS. Glisser déplace, pincer ou
- * double toucher zoome, toucher le vide pose un repère, toucher un repère le fait suivre (re-toucher le suivi : retour à la
- * quête), appui long sur un repère le supprime. Tant que la carte n'a pas été déplacée à la main, elle suit le joueur.
+ * dessinées en blocs colorés par quartier (cubes de la carte holographique du jeu, `cyberpunk-blocks.ts`), joueur en flèche
+ * jaune orientée par son yaw, objectif de quête, repères, trajet GPS. Glisser déplace, pincer ou double toucher zoome,
+ * toucher le vide pose un repère, toucher un repère le fait suivre (re-toucher le suivi : retour à la quête), appui long
+ * sur un repère le supprime. Tant que la carte n'a pas été déplacée à la main, elle suit le joueur.
  * En véhicule (vue conduite) : la carte zoome sur lui, tourne pour que l'avant du véhicule pointe vers le haut et se penche
  * en perspective ; sa position est relue ~4 fois par seconde (`GET /cyberpunk/pos`) et lissée entre deux lectures.
  * Carte absente ou en préparation : fond de grille, bouton et progression.

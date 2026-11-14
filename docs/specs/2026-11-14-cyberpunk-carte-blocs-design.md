@@ -11,6 +11,11 @@ zoom sans clignotement et position du joueur restent tels quels.
 Trois rendus montrés en maquettes sur la tablette (cubes du jeu en fil lumineux, pâtés de blocs de 24 m, plan à
 plat avec liseré entre quartiers) ; Ahmed a pris le premier, « Hologramme du jeu ».
 
+Couleurs (relecture design, validées par Ahmed) : City Center lavande, Watson vert d'eau, Heywood vert pomme,
+Westbrook magenta, Santo Domingo cuivre, Pacifica violet, Dogtown rose, Badlands gris sable, Morro Rock gris bleu.
+Aucune teinte vive près du jaune du joueur et du trajet, du cyan des repères ou du rouge des charcudocs (test
+`cyberpunk-blocks.test.ts`). Le quartier ne se lit que par la couleur : acceptable pour un fond de carte.
+
 ## Données
 
 Les cubes de la carte 3D du jeu (`base\entities\cameras\3dmap`, nuages de points `3d_map_cubes`) déjà extraits
