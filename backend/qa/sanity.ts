@@ -908,7 +908,10 @@ export async function runSanity(opts: { url: string; token: string; os?: Os; hoo
         const pins = await call("GET", "/cyberpunk/pins");
         expectStatus(pins, 200, "/cyberpunk/pins");
         expect(Array.isArray(pins.json.pins), "liste des repères absente");
-        return `carte ${map.json.status} (${map.json.done}/${map.json.total}), ${pins.json.pins.length} repère(s)`;
+        const pos = await call("GET", "/cyberpunk/pos");
+        expectStatus(pos, 200, "/cyberpunk/pos");
+        expect(typeof pos.json.fresh === "boolean", "fresh absent de /cyberpunk/pos");
+        return `carte ${map.json.status} (${map.json.done}/${map.json.total}), ${pins.json.pins.length} repère(s), ${pos.json.vehicle ? "en véhicule" : "à pied"}`;
       },
     },
     {

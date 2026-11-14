@@ -222,6 +222,7 @@ Mod (dossier `…\cyber_engine_tweaks\mods\mate\`, sources dans `backend/assets/
 { v:1, seq, at, inGame, session, mod:"1.0.0",
   player:{ level, cred, attrs:{ body, ref, tech, int, cool }, health, humanity, money, pts:{ attr, perk } },
   pos:{ x, y, z, yaw },
+  vehicle:{ speed, yaw } | absent,   (mod 1.2.0 ; pos.json à ~0,2 s en véhicule : 2026-11-14-cyberpunk-minimap-vehicule-design.md)
   cyberware:{ <zone>: [ {tdb,name,quality} | false ] },
   tracked:{ kind:"quest"|"pin", id, quest, desc } | null,
   call:{ phase:"none"|"incoming"|"active", contact, audio } | null,

@@ -3,7 +3,7 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { after, afterEach, before, beforeEach, describe, it } from "node:test";
-import { isFresh } from "../src/cyberpunk.ts";
+import { isFresh, isPosFresh } from "../src/cyberpunk.ts";
 import { startServer, type TestServer } from "./server.ts";
 
 const ASSETS = path.resolve(import.meta.dirname, "..", "assets", "cyberpunk-mod");
@@ -52,6 +52,17 @@ describe("isFresh", () => {
     assert.equal(isFresh(now / 1000 - 11, now - 2000, now), false);
     assert.equal(isFresh(now / 1000, now - 11_000, now), false);
     assert.equal(isFresh(undefined, now, now), false);
+  });
+});
+
+describe("isPosFresh", () => {
+  it("frais : at à 3 s près (os.time arrondit) et seq vu il y a moins de 2 s ; mod figé : périmé", () => {
+    const now = 1_000_000_000_000;
+    assert.equal(isPosFresh(now / 1000 - 1, now - 1500, now), true);
+    assert.equal(isPosFresh(now / 1000 - 4, now - 100, now), false);
+    // seq qui ne bouge plus depuis 2,5 s, même avec un at récent : périmé.
+    assert.equal(isPosFresh(now / 1000, now - 2500, now), false);
+    assert.equal(isPosFresh(undefined, now, now), false);
   });
 });
 
@@ -133,7 +144,7 @@ describe("install et désinstallation du mod", () => {
     for (const f of ["init.lua", "logic.lua", "VERSION"]) assert.equal(fs.readFileSync(mod(f), "utf8"), asset(f));
     const install = (await call("GET", "/cyberpunk")).json.install;
     assert.equal(install.current, true);
-    assert.equal(install.modVersion, "1.1.0");
+    assert.equal(install.modVersion, "1.2.0");
     assert.equal(install.modInstalled, true);
     assert.equal((await call("GET", "/cyberpunk/presence")).json.modInstalled, true);
   });
@@ -200,6 +211,7 @@ describe("plugin coupé", () => {
     for (const [m, r] of [
       ["GET", "/cyberpunk"],
       ["GET", "/cyberpunk/inventory"],
+      ["GET", "/cyberpunk/pos"],
       ["POST", "/cyberpunk/install"],
       ["POST", "/cyberpunk/uninstall"],
     ])
@@ -224,5 +236,35 @@ describe("hors Windows", () => {
     } finally {
       await mac.stop();
     }
+  });
+});
+
+describe("/cyberpunk/pos (position en véhicule, ~5 par seconde)", () => {
+  const setPos = (pos: object) => fs.writeFileSync(mod("pos.json"), JSON.stringify(pos));
+  const now = () => Date.now() / 1000;
+
+  it("pos.json frais : position, cap et vitesse du véhicule", async () => {
+    setPos({ v: 1, seq: 7, at: now(), x: 12.5, y: -40, yaw: 91.2, speed: 18.3, vehicle: true });
+    const p = (await call("GET", "/cyberpunk/pos")).json;
+    assert.deepEqual(p, { fresh: true, vehicle: true, x: 12.5, y: -40, yaw: 91.2, speed: 18.3 });
+  });
+
+  it("pos.json vieux (mod arrêté, jeu en pause), absent ou illisible : périmé, sans position", async () => {
+    setPos({ v: 1, seq: 8, at: now() - 4, x: 1, y: 2, yaw: 0, speed: 0, vehicle: true });
+    assert.deepEqual((await call("GET", "/cyberpunk/pos")).json, { fresh: false });
+    fs.rmSync(mod("pos.json"));
+    assert.deepEqual((await call("GET", "/cyberpunk/pos")).json, { fresh: false });
+    fs.writeFileSync(mod("pos.json"), '{"v":1,"seq":9,"at":');
+    assert.deepEqual((await call("GET", "/cyberpunk/pos")).json, { fresh: false });
+  });
+
+  it("champs manquants ou faux : périmé (jamais une position inventée)", async () => {
+    setPos({ v: 1, seq: 10, at: now(), x: "a", y: 2, yaw: 0, vehicle: true });
+    assert.deepEqual((await call("GET", "/cyberpunk/pos")).json, { fresh: false });
+  });
+
+  it("vitesse illisible par le mod : position quand même, vitesse nulle", async () => {
+    setPos({ v: 1, seq: 11, at: now(), x: 1, y: 2, yaw: 3, vehicle: true });
+    assert.deepEqual((await call("GET", "/cyberpunk/pos")).json, { fresh: true, vehicle: true, x: 1, y: 2, yaw: 3, speed: null });
   });
 });

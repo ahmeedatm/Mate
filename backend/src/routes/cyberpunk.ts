@@ -4,7 +4,7 @@ import { phoneRoutes } from "../cyberpunk-phone.ts";
 import { PhoneRefusal, readThread, replyThread, sendCommand, type Command } from "../cyberpunk-commands.ts";
 import { addPin, listPins, removePin, replayPins, trackPin } from "../cyberpunk-pins.ts";
 import { findGame } from "../cyberpunk-steam.ts";
-import { block, installMod, overview, presence, uninstallMod } from "../cyberpunk.ts";
+import { block, installMod, overview, presence, readPos, uninstallMod } from "../cyberpunk.ts";
 import { pluginOn } from "../plugins.ts";
 
 /**
@@ -107,6 +107,8 @@ export default async function cyberpunkRoutes(app: FastifyInstance) {
     if (res.status === "ingame") void replayPins();
     return res;
   });
+  // Sondée ~4 fois par seconde par la tablette, en vue conduite seulement.
+  app.get("/cyberpunk/pos", () => readPos());
   app.get("/cyberpunk/inventory", () => block("inventory"));
   app.get("/cyberpunk/contacts", () => block("contacts"));
   app.get("/cyberpunk/quests", () => block("quests"));
