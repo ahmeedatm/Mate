@@ -50,6 +50,9 @@ data class CyberpunkPlayer(
 
 data class CyberpunkPos(val x: Double, val y: Double, val z: Double, val yaw: Double)
 
+/** Position du véhicule (`GET /cyberpunk/pos`, ~5 par seconde) : yaw en degrés, vitesse en m/s si le mod la lit. */
+data class CyberpunkLivePos(val x: Double, val y: Double, val yaw: Double, val speed: Double?)
+
 data class CyberpunkImplant(val tdb: String?, val name: String, val quality: String?)
 
 /** `kind` : "quest" ou "pin". `x`, `y` : position de l'objectif dans le monde, si le mod la donne. */
@@ -76,6 +79,8 @@ data class CyberpunkState(
     val call: CyberpunkCall?,
     val blocks: CyberpunkBlocks,
     val pins: List<CyberpunkPin>,
+    /** Le joueur est monté dans un véhicule (champ `vehicle` du mod) : la carte passe en vue conduite. */
+    val inVehicle: Boolean = false,
 )
 
 data class CyberpunkSnapshot(val status: CyberpunkStatus, val install: CyberpunkInstall, val state: CyberpunkState?)
@@ -157,6 +162,9 @@ class CyberpunkApi(private val http: Http) {
         }
     }
 
+    /** Null : pas de position fraîche en véhicule (à pied, pause, menu). */
+    suspend fun livePos(): CyberpunkLivePos? = http.io { parseLivePos(http.get("/cyberpunk/pos", timeoutMs = POS_TIMEOUT_MS)) }
+
     suspend fun inventory(): List<CyberpunkItem> = http.io { parseInventory(http.get("/cyberpunk/inventory", timeoutMs = STATE_TIMEOUT_MS)) }
 
     suspend fun contacts(): CyberpunkContacts = http.io { parseContacts(http.get("/cyberpunk/contacts", timeoutMs = STATE_TIMEOUT_MS)) }
@@ -216,6 +224,9 @@ class CyberpunkApi(private val http: Http) {
     companion object {
         private const val PRESENCE_TIMEOUT_MS = 2_000
         private const val STATE_TIMEOUT_MS = 4_000
+
+        /** Sondée toutes les ~250 ms : une réponse plus lente est déjà dépassée. */
+        private const val POS_TIMEOUT_MS = 1_500
         private const val ACTION_TIMEOUT_MS = 8_000
         private const val TILE_TIMEOUT_MS = 10_000
 
@@ -273,6 +284,7 @@ class CyberpunkApi(private val http: Http) {
                 call = s.optJSONObject("call")?.let(::call),
                 blocks = CyberpunkBlocks(blocks?.optInt("inv") ?: 0, blocks?.optInt("contacts") ?: 0, blocks?.optInt("quests") ?: 0),
                 pins = s.optJSONArray("pins").items { CyberpunkPin(it.optString("pid"), it.double("x"), it.double("y"), it.double("z")) },
+                inVehicle = s.optJSONObject("vehicle") != null,
             )
         }
 
@@ -309,6 +321,13 @@ class CyberpunkApi(private val http: Http) {
                 else -> return null
             }
             return CyberpunkCall(phase, c.text("contact"), c.optBoolean("audio", true))
+        }
+
+        fun parseLivePos(json: String): CyberpunkLivePos? {
+            val o = JSONObject(json)
+            if (!o.optBoolean("fresh") || !o.optBoolean("vehicle") || !o.has("x") || !o.has("y") || !o.has("yaw")) return null
+            val speed = o.optDouble("speed").takeIf { !it.isNaN() && !o.isNull("speed") }
+            return CyberpunkLivePos(o.double("x"), o.double("y"), o.double("yaw"), speed)
         }
 
         fun parseInventory(json: String): List<CyberpunkItem> = JSONObject(json).optJSONArray("items").items {

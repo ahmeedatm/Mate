@@ -244,4 +244,27 @@ class MapCameraTest {
         assertEquals(MapCamera.MAX_CACHE_BYTES, MapCamera.tileCacheBytes(1280, 800, 4096))
         assertTrue(MapCamera.tileCacheBytes(1280, 800, 1) in 1..MapCamera.MAX_CACHE_BYTES)
     }
+
+    @Test fun `en conduite un point loin derriere n'est pas dessine en miroir`() {
+        val c = camera()
+        c.centerOn(0.0, 0.0)
+        c.setPose(0.0, 1.0, MapCamera.DRIVE_ANCHOR)
+        assertTrue(c.worldToScreenOrNull(0.0, 50.0) != null)
+        assertNull(c.worldToScreenOrNull(0.0, -100000.0))
+        c.setPose(0.0, 0.0, MapCamera.FLAT_ANCHOR)
+        assertTrue(c.worldToScreenOrNull(0.0, -100000.0) != null)
+    }
+
+    @Test fun `en conduite un trajet vers l'arriere est coupe avant le miroir`() {
+        val c = camera()
+        c.centerOn(0.0, 0.0)
+        c.setPose(0.0, 1.0, MapCamera.DRIVE_ANCHOR)
+        val seg = c.segmentToScreen(0.0, 0.0, 0.0, -100000.0)!!
+        assertEquals(640.0, seg.first.x, 1e-6)
+        assertEquals(800 * MapCamera.DRIVE_ANCHOR, seg.first.y, 1e-6)
+        assertTrue("${seg.second.y}", seg.second.y > 800)
+        assertTrue(seg.second.y.isFinite())
+        val ahead = c.segmentToScreen(0.0, 0.0, 0.0, 100.0)!!
+        assertEquals(c.worldToScreen(0.0, 100.0).y, ahead.second.y, 1e-6)
+    }
 }

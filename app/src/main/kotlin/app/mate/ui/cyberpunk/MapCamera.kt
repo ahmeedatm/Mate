@@ -110,14 +110,22 @@ class MapCamera(private val geo: MapGeometry) {
         sin = kotlin.math.sin(r)
     }
 
-    private fun mapToScreen(px: Double, py: Double): Pt {
+    /** Point de la carte tourné et zoomé autour du centre, avant la perspective (« sol », en pixels d'écran). */
+    private fun ground(px: Double, py: Double): Pt {
         val dx = (px - centerX) * scale
         val dy = (py - centerY) * scale
-        val gx = dx * cos - dy * sin
-        val gy = dx * sin + dy * cos
-        val w = 1 - k * gy
-        return Pt(ax + gx / w, ay + gy / w)
+        return Pt(dx * cos - dy * sin, dx * sin + dy * cos)
     }
+
+    private fun groundToScreen(g: Pt): Pt {
+        val w = 1 - k * g.y
+        return Pt(ax + g.x / w, ay + g.y / w)
+    }
+
+    private fun mapToScreen(px: Double, py: Double): Pt = groundToScreen(ground(px, py))
+
+    /** Sol le plus en arrière encore projeté : au-delà la perspective passe derrière la caméra (point en miroir). */
+    private val groundLimit get() = if (k > 0) (1 - MIN_W) / k else Double.POSITIVE_INFINITY
 
     private fun screenToMap(sx: Double, sy: Double): Pt {
         val u = sx - ax
@@ -129,6 +137,27 @@ class MapCamera(private val geo: MapGeometry) {
     }
 
     fun worldToScreen(x: Double, y: Double): Pt = geo.worldToMap(x, y).let { mapToScreen(it.x, it.y) }
+
+    /** Comme [worldToScreen], ou null pour un point trop loin derrière le véhicule en conduite. */
+    fun worldToScreenOrNull(x: Double, y: Double): Pt? {
+        val m = geo.worldToMap(x, y)
+        val g = ground(m.x, m.y)
+        return if (g.y > groundLimit) null else groundToScreen(g)
+    }
+
+    /** Segment du monde à l'écran, coupé avant de passer derrière la caméra ; null s'il y est en entier. */
+    fun segmentToScreen(x1: Double, y1: Double, x2: Double, y2: Double): Pair<Pt, Pt>? {
+        val a = geo.worldToMap(x1, y1).let { ground(it.x, it.y) }
+        val b = geo.worldToMap(x2, y2).let { ground(it.x, it.y) }
+        val limit = groundLimit
+        if (a.y > limit && b.y > limit) return null
+        fun cut(p: Pt, q: Pt): Pt {
+            if (p.y <= limit) return p
+            val t = (limit - q.y) / (p.y - q.y)
+            return Pt(q.x + (p.x - q.x) * t, limit)
+        }
+        return groundToScreen(cut(a, b)) to groundToScreen(cut(b, a))
+    }
 
     fun screenToWorld(sx: Double, sy: Double) = screenToMap(sx, sy).let { geo.mapToWorld(it.x, it.y) }
 
@@ -225,6 +254,8 @@ class MapCamera(private val geo: MapGeometry) {
         /** Part du haut de l'écran couverte par le fondu opaque à pleine inclinaison. */
         const val TOP_CUT = 0.12
 
+        /** Plus petit diviseur de perspective accepté (un point projeté 5 fois plus bas que sur la carte à plat). */
+        private const val MIN_W = 0.2
         private const val ANCHOR_MIN = 0.1
         private const val ANCHOR_MAX = 0.9
 

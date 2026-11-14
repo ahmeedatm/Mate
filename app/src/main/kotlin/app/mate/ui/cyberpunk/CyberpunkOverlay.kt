@@ -575,7 +575,7 @@ class CyberpunkOverlay(private val activity: FragmentActivity) {
         renderCall(v, st)
         renderQuest(v, st)
         st.tracked?.takeIf { it.kind == "quest" && it.id != null }?.let { lastQuestId = it.id }
-        mapView?.update(st.pos, st.tracked, lastQuestId ?: quests?.firstOrNull { it.tracked }?.id)
+        mapView?.update(st.pos, st.tracked, lastQuestId ?: quests?.firstOrNull { it.tracked }?.id, st.inVehicle)
         val unread = contacts?.unread ?: 0
         v.unread.visibility = if (unread > 0) View.VISIBLE else View.GONE
         v.unread.text = unread.toString()
