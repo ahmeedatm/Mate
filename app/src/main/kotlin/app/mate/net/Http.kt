@@ -17,8 +17,11 @@ object ComputerLocked {
     @Volatile var listener: (() -> Unit)? = null
 }
 
-/** `reason` : message de l'ordinateur, rédigé pour être affiché (voir ui/errorText). */
-class HttpException(val code: Int, val reason: String) : IOException("HTTP $code $reason".trim())
+/** `reason` : message de l'ordinateur, rédigé pour être affiché (voir ui/errorText). `res` : code de refus lisible par l'appelant. */
+class HttpException(val code: Int, val reason: String, val res: String? = null) : IOException("HTTP $code $reason".trim())
+
+/** Code de refus (`res`) du corps d'une erreur 409 de l'ordinateur, s'il y en a un. */
+internal fun errorRes(body: String): String? = runCatching { JSONObject(body).optStringOrNull("res") }.getOrNull()
 
 /**
  * Plomberie HTTP partagée par les clients de domaine (DeckApi, SystemApi…). HttpURLConnection + org.json,
@@ -123,7 +126,7 @@ class Http(
             // Fastify : { error: "Internal Server Error", message: <la vraie raison> } ; nos erreurs : { error }.
             val message = runCatching { JSONObject(error).let { it.optString("message").ifEmpty { it.optString("error") } } }.getOrNull()
             if (code == 423) ComputerLocked.listener?.invoke()
-            throw HttpException(code, message ?: error.take(200))
+            throw HttpException(code, message ?: error.take(200), errorRes(error))
         }
         return conn
     }

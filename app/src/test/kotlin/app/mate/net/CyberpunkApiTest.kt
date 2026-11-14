@@ -181,4 +181,63 @@ class CyberpunkApiTest {
         assertTrue(CyberpunkApi.isUnavailable(HttpException(403, "Plugin coupé")))
         assertFalse(CyberpunkApi.isUnavailable(HttpException(500, "")))
     }
+
+    @Test
+    fun readsThreadHashFlagsAndKeepsOldFilesReadable() {
+        val c = CyberpunkApi.parseContacts(
+            """{"contacts":[],"threads":[
+              {"name":"Takemura","preview":"Salut","unread":2,"hash":"-1234567890123456789","multi":true,"canReply":true},
+              {"name":"Ancien","unread":0}]}""",
+        )
+        assertEquals("-1234567890123456789", c.threads[0].hash)
+        assertTrue(c.threads[0].multi)
+        assertTrue(c.threads[0].canReply)
+        assertEquals("", c.threads[1].hash)
+        assertFalse(c.threads[1].canReply)
+    }
+
+    @Test
+    fun readsAThreadDetail() {
+        val d = CyberpunkApi.parseThread(
+            """{"v":1,"hash":"12","version":"3:-77",
+               "messages":[{"hash":"1","text":"Salut","player":false},{"hash":"2","text":"Yo","player":true}],
+               "choices":[{"hash":"-5","text":"Oui"},{"hash":"6","text":"Non"}]}""",
+        )
+        assertEquals("3:-77", d.version)
+        assertEquals(listOf(false, true), d.messages.map { it.player })
+        assertEquals("Yo", d.messages[1].text)
+        assertEquals(listOf("-5", "6"), d.choices.map { it.hash })
+    }
+
+    @Test
+    fun threadDetailWithoutChoicesIsEmpty() {
+        val d = CyberpunkApi.parseThread("""{"version":"0:0"}""")
+        assertTrue(d.messages.isEmpty())
+        assertTrue(d.choices.isEmpty())
+    }
+
+    @Test
+    fun readsThePhoneLook() {
+        val p = CyberpunkApi.parsePhone("""{"status":"ready","assets":["frame_message.png","raj-bold.ttf"]}""")
+        assertEquals(CyberpunkPhoneStatus.READY, p.status)
+        assertEquals(listOf("frame_message.png", "raj-bold.ttf"), p.assets)
+        assertEquals(CyberpunkPhoneStatus.LOADING, CyberpunkApi.parsePhone("""{"status":"loading"}""").status)
+        val err = CyberpunkApi.parsePhone("""{"status":"error","error":"x"}""")
+        assertEquals(CyberpunkPhoneStatus.ERROR, err.status)
+        assertEquals(CyberpunkPhoneStatus.ABSENT, CyberpunkApi.parsePhone("""{}""").status)
+    }
+
+    @Test
+    fun readsTheRefusalCodeOfAnErrorBody() {
+        assertEquals("choix-perime", errorRes("""{"error":"Ce choix n'est plus ouvert","res":"choix-perime"}"""))
+        assertNull(errorRes("""{"error":"x"}"""))
+        assertNull(errorRes("pas du json"))
+    }
+
+    @Test
+    fun staleChoiceIsRecognisedFromTheException() {
+        assertTrue(CyberpunkApi.isStaleChoice(HttpException(409, "x", "choix-perime")))
+        assertFalse(CyberpunkApi.isStaleChoice(HttpException(409, "x", "fil-introuvable")))
+        assertFalse(CyberpunkApi.isStaleChoice(HttpException(504, "x")))
+    }
 }

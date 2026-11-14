@@ -25,6 +25,7 @@ import app.mate.net.CyberpunkContacts
 import app.mate.net.CyberpunkItem
 import app.mate.net.CyberpunkMap
 import app.mate.net.CyberpunkMapStatus
+import app.mate.net.CyberpunkPhoneStatus
 import app.mate.net.CyberpunkPresence
 import app.mate.net.CyberpunkQuest
 import app.mate.net.CyberpunkServerPin
@@ -32,6 +33,8 @@ import app.mate.net.CyberpunkSnapshot
 import app.mate.net.CyberpunkState
 import app.mate.net.CyberpunkStatus
 import app.mate.net.CyberpunkThread
+import app.mate.net.CyberpunkThreadChoice
+import app.mate.net.CyberpunkThreadDetail
 import app.mate.net.runCatchingCancellable
 import app.mate.ui.cyberpunk.CyberpunkKit.Companion.MATCH
 import app.mate.ui.cyberpunk.CyberpunkKit.Companion.WRAP
@@ -69,7 +72,9 @@ class CyberpunkOverlay(private val activity: FragmentActivity) {
     private var mode = CyberpunkLink.Mode.AWAY
     private val blockErrors = mutableMapOf<Block, String>()
     private val failedVersions = mutableMapOf<Block, Int>()
-    private var openThread: String? = null
+    private var phone = PhoneState()
+    private var threadJob: Job? = null
+    private var lookJob: Job? = null
     private var inventory: List<CyberpunkItem>? = null
     private var contacts: CyberpunkContacts? = null
     private var quests: List<CyberpunkQuest>? = null
@@ -126,7 +131,9 @@ class CyberpunkOverlay(private val activity: FragmentActivity) {
         mode = CyberpunkLink.Mode.AWAY
         blockErrors.clear()
         failedVersions.clear()
-        openThread = null
+        threadJob?.cancel()
+        lookJob?.cancel()
+        phone = PhoneState()
         inventory = null
         contacts = null
         quests = null
@@ -146,7 +153,7 @@ class CyberpunkOverlay(private val activity: FragmentActivity) {
     /** Retour : ferme la conversation ouverte, puis le tiroir, puis la page. */
     fun onBack() {
         when {
-            openThread != null -> closeThread()
+            phone.thread != null -> closeThread()
             page != null -> showDrawer(null)
             else -> close()
         }
@@ -331,17 +338,128 @@ class CyberpunkOverlay(private val activity: FragmentActivity) {
 
         override fun use(item: CyberpunkItem) = this@CyberpunkOverlay.use(item)
 
-        override fun openThread(thread: CyberpunkThread) {
-            openThread = thread.name
+        override fun selectTab(tab: PhoneTab) {
+            phone = phone.copy(tab = tab)
             renderDrawer()
         }
 
+        override fun openThread(thread: CyberpunkThread) = this@CyberpunkOverlay.openThread(thread)
+
         override fun closeThread() = this@CyberpunkOverlay.closeThread()
+
+        override fun reply(choice: CyberpunkThreadChoice) = this@CyberpunkOverlay.reply(choice)
+
+        override fun prepareLook() = this@CyberpunkOverlay.prepareLook()
     }
 
+    // --- Téléphone : fils et look du jeu
+
+    private fun freshPhone() = PhoneState(lookStatus = phone.lookStatus, look = phone.look)
+
     private fun closeThread() {
-        openThread = null
+        threadJob?.cancel()
+        phone = phone.copy(thread = null)
         renderDrawer()
+    }
+
+    private fun openThread(summary: CyberpunkThread) {
+        phone = phone.copy(thread = PhoneThread(summary), opened = phone.opened + summary.hash)
+        renderDrawer()
+        loadThread(summary.hash)
+    }
+
+    /** Relit le fil ; ne touche l'écran que s'il est toujours ouvert sur ce fil. */
+    private fun loadThread(hash: String, then: suspend (CyberpunkThreadDetail) -> Unit = {}) {
+        val client = api ?: return
+        threadJob?.cancel()
+        threadJob = activity.lifecycleScope.launch {
+            runCatchingCancellable { client.thread(hash) }
+                .onSuccess {
+                    if (api !== client || phone.thread?.summary?.hash != hash) return@onSuccess
+                    updateThread { t -> t.copy(detail = it, error = null) }
+                    then(it)
+                }
+                .onFailure {
+                    if (api !== client || phone.thread?.summary?.hash != hash) return@onFailure
+                    updateThread { t -> t.copy(error = activity.errorText(it), sending = false) }
+                }
+        }
+    }
+
+    private fun updateThread(change: (PhoneThread) -> PhoneThread) {
+        val t = phone.thread ?: return
+        phone = phone.copy(thread = change(t))
+        renderDrawer()
+    }
+
+    /** Un appui : les choix s'éteignent jusqu'à ce que le fil ait bougé (jamais deux envois), puis il se relit toutes les 2 s pendant 12 s (ou jusqu'aux nouveaux choix). */
+    private fun reply(choice: CyberpunkThreadChoice) {
+        val client = api ?: return
+        val thread = phone.thread ?: return
+        val sent = thread.detail ?: return
+        if (thread.sending) return
+        val hash = thread.summary.hash
+        updateThread { it.copy(sending = true) }
+        threadJob?.cancel()
+        threadJob = activity.lifecycleScope.launch {
+            val sentAt = android.os.SystemClock.elapsedRealtime()
+            val sentResult = runCatchingCancellable { client.reply(hash, choice.hash, sent.version) }
+            if (api !== client || phone.thread?.summary?.hash != hash) return@launch
+            sentResult.onFailure {
+                // Choix périmé : message clair, fil rechargé, choix de nouveau proposés tels que le jeu les montre.
+                if (CyberpunkApi.isStaleChoice(it)) toast(activity.getString(R.string.cp_phone_stale)) else toast(activity.errorText(it))
+                updateThread { t -> t.copy(sending = false) }
+                loadThread(hash)
+            }
+            if (sentResult.isFailure) return@launch
+            while (true) {
+                val read = runCatchingCancellable { client.thread(hash) }.getOrNull()
+                if (api !== client || phone.thread?.summary?.hash != hash) return@launch
+                if (read != null) updateThread { t -> t.copy(detail = read) }
+                val elapsed = android.os.SystemClock.elapsedRealtime() - sentAt
+                val now = read ?: phone.thread?.detail
+                if (!PhoneInbox.shouldReload(sent.version, now?.version ?: sent.version, now?.choices?.isNotEmpty() == true, elapsed)) break
+                delay(PhoneInbox.RELOAD_MS)
+            }
+            updateThread { t -> t.copy(sending = false) }
+        }
+    }
+
+    /** Statut du look du jeu à l'ouverture du tiroir ; prêt : pièces chargées (une fois) ; en préparation : relu toutes les 2 s. */
+    private fun loadLook() {
+        val client = api ?: return
+        lookJob?.cancel()
+        lookJob = activity.lifecycleScope.launch {
+            while (isActive) {
+                // Compagnon plus ancien ou erreur de lecture : pas de look, ni bouton ni message (repli sur les cadres).
+                val look = runCatchingCancellable { client.phoneStatus() }.getOrNull() ?: return@launch
+                if (api !== client) return@launch
+                if (look.status == CyberpunkPhoneStatus.READY && phone.look == null) {
+                    val pieces = runCatchingCancellable { PhoneLook.load(activity, client, look.assets) }.getOrNull()
+                    if (api !== client) return@launch
+                    phone = phone.copy(look = pieces)
+                }
+                phone = phone.copy(lookStatus = look.status)
+                renderDrawer()
+                if (look.status != CyberpunkPhoneStatus.LOADING) return@launch
+                delay(PHONE_LOOK_POLL_MS)
+            }
+        }
+    }
+
+    private fun prepareLook() {
+        val client = api ?: return
+        activity.lifecycleScope.launch {
+            runCatchingCancellable { client.preparePhone() }
+                .onSuccess {
+                    if (api !== client) return@onSuccess
+                    PhoneLook.clearCache(activity)
+                    phone = phone.copy(lookStatus = CyberpunkPhoneStatus.LOADING, look = null)
+                    renderDrawer()
+                    loadLook()
+                }
+                .onFailure { toast(activity.errorText(it)) }
+        }
     }
 
     private fun toast(text: String) {
@@ -360,14 +478,19 @@ class CyberpunkOverlay(private val activity: FragmentActivity) {
     private fun showDrawer(next: CyberpunkPage?) {
         val v = views ?: return
         page = if (next == page) null else next
-        openThread = null
+        threadJob?.cancel()
+        lookJob?.cancel()
+        phone = freshPhone()
         drawn = null
         v.railButtons.forEach { (p, b) -> b.setSelectedPage(p == page) }
         page?.let {
             blockOf(it)?.let { b -> failedVersions.remove(b) }
             when (it) {
                 CyberpunkPage.JOURNAL -> load(Block.QUESTS, versions[Block.QUESTS] ?: snapshot?.state?.blocks?.quests ?: 0)
-                CyberpunkPage.PHONE -> load(Block.CONTACTS, versions[Block.CONTACTS] ?: snapshot?.state?.blocks?.contacts ?: 0)
+                CyberpunkPage.PHONE -> {
+                    load(Block.CONTACTS, versions[Block.CONTACTS] ?: snapshot?.state?.blocks?.contacts ?: 0)
+                    loadLook()
+                }
                 CyberpunkPage.ITEMS -> load(Block.INVENTORY, versions[Block.INVENTORY] ?: snapshot?.state?.blocks?.inv ?: 0)
                 else -> Unit
             }
@@ -401,23 +524,23 @@ class CyberpunkOverlay(private val activity: FragmentActivity) {
         // Lecture échouée et rien à montrer : la phrase d'erreur à la place de « Chargement ».
         val failure = if (data == null) blockOf(p)?.let { blockErrors[it] } else null
         // Rien n'est refait (ni le défilement perdu) tant que la donnée n'a pas changé.
-        val key = Triple(p, data ?: failure, openThread)
+        val key = Triple(p, data ?: failure, phone)
         if (drawn == key) return
         drawn = key
-        val thread = if (p == CyberpunkPage.PHONE) contacts?.threads?.firstOrNull { it.name == openThread } else null
         val content = when {
             failure != null -> v.drawers.failed(p.labelRes, failure)
-            thread != null -> v.drawers.thread(thread)
             else -> pageContent(v, p, st)
         }
         v.drawerBody.removeAllViews()
         v.drawerBody.addView(content, ViewGroup.LayoutParams(MATCH, WRAP))
+        // Un fil ouvert se lit par le bas : les derniers messages et les choix.
+        if (p == CyberpunkPage.PHONE && phone.thread?.detail != null) (v.drawerBody.parent as? ScrollView)?.let { sv -> sv.post { sv.fullScroll(View.FOCUS_DOWN) } }
     }
 
     private fun pageContent(v: Views, p: CyberpunkPage, st: CyberpunkState?): View =
         when (p) {
             CyberpunkPage.JOURNAL -> v.drawers.journal(quests)
-            CyberpunkPage.PHONE -> v.drawers.phone(contacts)
+            CyberpunkPage.PHONE -> v.drawers.phone(contacts, phone)
             CyberpunkPage.ITEMS -> v.drawers.items(inventory)
             CyberpunkPage.CYBER -> v.drawers.cyber(st)
             CyberpunkPage.PERSO -> v.drawers.perso(st?.player)
@@ -720,6 +843,7 @@ class CyberpunkOverlay(private val activity: FragmentActivity) {
 
     private companion object {
         const val POLL_MS = 1_000L
+        const val PHONE_LOOK_POLL_MS = 2_000L
         const val DRAWER_MS = 280L
         const val TOAST_MS = 1_600L
         const val TOAST_FADE_MS = 250L

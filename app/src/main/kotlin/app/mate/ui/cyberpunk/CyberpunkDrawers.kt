@@ -5,14 +5,12 @@ import android.view.Gravity
 import android.view.View
 import android.widget.LinearLayout
 import app.mate.R
-import app.mate.net.CyberpunkContact
 import app.mate.net.CyberpunkContacts
 import app.mate.net.CyberpunkImplant
 import app.mate.net.CyberpunkItem
 import app.mate.net.CyberpunkPlayer
 import app.mate.net.CyberpunkQuest
 import app.mate.net.CyberpunkState
-import app.mate.net.CyberpunkThread
 import app.mate.ui.cyberpunk.CyberpunkKit.Companion.MATCH
 import app.mate.ui.cyberpunk.CyberpunkKit.Companion.WRAP
 
@@ -26,21 +24,16 @@ enum class CyberpunkPage(val labelRes: Int, val iconRes: Int) {
 }
 
 /** Ce que les tiroirs peuvent demander au jeu. */
-interface CyberpunkDrawerActions {
+interface CyberpunkDrawerActions : CyberpunkPhoneActions {
     fun trackQuest(quest: CyberpunkQuest)
 
-    fun call(contact: CyberpunkContact)
-
     fun use(item: CyberpunkItem)
-
-    fun openThread(thread: CyberpunkThread)
-
-    fun closeThread()
 }
 
 /** Contenu des cinq tiroirs de 420 dp : une colonne de vues par page ; une donnée pas encore lue (null) affiche « Chargement ». */
 class CyberpunkDrawers(private val kit: CyberpunkKit, private val actions: CyberpunkDrawerActions) {
     private val context = kit.context
+    private val phoneUi = CyberpunkPhoneUi(kit, actions)
 
     private fun column(titleRes: Int): LinearLayout = LinearLayout(context).apply {
         orientation = LinearLayout.VERTICAL
@@ -74,56 +67,9 @@ class CyberpunkDrawers(private val kit: CyberpunkKit, private val actions: Cyber
         setOnClickListener { actions.trackQuest(q) }
     }
 
-    fun phone(contacts: CyberpunkContacts?): View = column(R.string.cp_rail_phone).apply {
+    fun phone(contacts: CyberpunkContacts?, state: PhoneState): View = column(R.string.cp_rail_phone).apply {
         if (contacts == null) return@apply note(R.string.cp_loading)
-        addView(kit.label(context.getString(R.string.cp_threads)))
-        if (contacts.threads.isEmpty()) note(R.string.cp_no_threads)
-        contacts.threads.forEach { t ->
-            addView(threadRow(t), kit.lp(MATCH, WRAP))
-            addView(kit.divider(), kit.lp(MATCH, 1))
-        }
-        addView(kit.label(context.getString(R.string.cp_call_section)), kit.lp(WRAP, WRAP).apply { topMargin = kit.dp(18); bottomMargin = kit.dp(6) })
-        contacts.contacts.filter { it.callable }.forEach { c ->
-            val line = kit.row()
-            line.addView(kit.text(c.name, 17f), kit.lp(0, WRAP).apply { weight = 1f })
-            val label = context.getString(R.string.cp_call_button)
-            line.addView(
-                kit.button(label, context.getString(R.string.cp_call_contact, c.name), R.color.cp_cyan, R.color.cp_sur_cyan).apply { setOnClickListener { actions.call(c) } },
-                kit.lp(WRAP, kit.dp(48)),
-            )
-            addView(line, kit.lp(MATCH, WRAP))
-            addView(kit.divider(), kit.lp(MATCH, 1))
-        }
-    }
-
-    /** Une ligne par conversation : nom (avec un repère dessiné si non lu) et début du dernier message sur 2 lignes. */
-    private fun threadRow(t: CyberpunkThread): View = LinearLayout(context).apply {
-        orientation = LinearLayout.VERTICAL
-        minimumHeight = kit.dp(58)
-        gravity = Gravity.CENTER_VERTICAL
-        setPadding(0, kit.dp(10), 0, kit.dp(10))
-        val head = kit.row().apply { minimumHeight = 0 }
-        head.addView(kit.text(t.name, 17f, R.color.cp_rouge, kit.bold).apply { maxLines = 1; ellipsize = TextUtils.TruncateAt.END }, kit.lp(0, WRAP).apply { weight = 1f })
-        if (t.unread > 0) head.addView(View(context).apply { background = kit.panel(R.color.cp_cyan, cutDp = 0, both = false) }, kit.lp(kit.dp(10), kit.dp(10)).apply { marginStart = kit.dp(8) })
-        addView(head, kit.lp(MATCH, WRAP))
-        t.preview?.let { addView(kit.text(it, 16f, R.color.cp_texte).apply { maxLines = 2; ellipsize = TextUtils.TruncateAt.END }, kit.lp(MATCH, WRAP).apply { topMargin = kit.dp(2) }) }
-        contentDescription = listOfNotNull(t.name, if (t.unread > 0) context.getString(R.string.cp_unread_thread) else null, t.preview).joinToString(", ")
-        isClickable = true
-        isFocusable = true
-        with(kit) { pressable() }
-        setOnClickListener { actions.openThread(t) }
-    }
-
-    /** Conversation ouverte en entier dans le tiroir, avec « Retour » (le compagnon ne donne que le dernier message). */
-    fun thread(t: CyberpunkThread): View = LinearLayout(context).apply {
-        orientation = LinearLayout.VERTICAL
-        addView(
-            kit.button(context.getString(R.string.cp_back), context.getString(R.string.cp_back_threads), R.color.cp_panneau, R.color.cp_rouge).apply { setOnClickListener { actions.closeThread() } },
-            kit.lp(WRAP, kit.dp(48)),
-        )
-        addView(kit.text(t.name, 26f, R.color.cp_rouge, kit.bold), kit.lp(MATCH, WRAP).apply { topMargin = kit.dp(16) })
-        t.time?.let { addView(kit.label(it), kit.lp(WRAP, WRAP).apply { topMargin = kit.dp(4) }) }
-        addView(kit.text(t.preview ?: context.getString(R.string.cp_no_threads), 18f, R.color.cp_texte), kit.lp(MATCH, WRAP).apply { topMargin = kit.dp(14) })
+        phoneUi.fill(this, contacts, state)
     }
 
     /** Lecture du tiroir échouée : la phrase d'erreur (errorText) sous le titre de la page. */
