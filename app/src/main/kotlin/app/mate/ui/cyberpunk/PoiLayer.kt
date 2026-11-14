@@ -47,6 +47,15 @@ class ScreenAffine {
     fun y(wx: Double, wy: Double) = oy + xy * wx.toFloat() + yy * wy.toFloat()
 }
 
+enum class TapTarget { PIN, POI, NEW_PIN }
+
+/** Ce que fait un toucher : un repère de Mate d'abord, puis un point d'intérêt (seulement en style icône), sinon un repère est posé. */
+fun tapTarget(pinHit: Boolean, poi: CyberpunkPoi?, style: PoiStyle): TapTarget = when {
+    pinHit -> TapTarget.PIN
+    poi != null && style == PoiStyle.ICON -> TapTarget.POI
+    else -> TapTarget.NEW_PIN
+}
+
 /** Point le plus proche de (x, y) dans le rayon, parmi ceux que `project` place à l'écran. */
 fun pickPoi(points: List<CyberpunkPoi>, project: (CyberpunkPoi) -> Pt, x: Double, y: Double, radius: Double): CyberpunkPoi? {
     val id = nearestPoint(points.map { it.id to project(it) }, x, y, radius)
@@ -67,6 +76,9 @@ class PoiLayer(private val kit: CyberpunkKit) {
 
     /** Côté d'une icône à l'écran, en pixels : à décoder à cette taille ([PoiIcons.load]). */
     val iconPx = kit.dp(ICON_DP)
+    private val fallbackRadius = kit.dp(FALLBACK_R_DP).toFloat()
+    private val dotRadius = kit.dp(DOT_R_DP).toFloat()
+    private val hitRadius = kit.dp(HIT_DP) / 2.0
 
     fun setPoints(points: List<CyberpunkPoi>, hidden: Set<PoiCategory>) {
         visible = PoiFilters.visible(points, hidden)
@@ -105,14 +117,13 @@ class PoiLayer(private val kit: CyberpunkKit) {
         paint.colorFilter = null
         paint.color = colors[cat]
         paint.alpha = alpha
-        canvas.drawCircle(x, y, kit.dp(if (style == PoiStyle.ICON) FALLBACK_R_DP else DOT_R_DP).toFloat(), paint)
+        canvas.drawCircle(x, y, if (style == PoiStyle.ICON) fallbackRadius else dotRadius, paint)
     }
 
-    /** Point sous le doigt (cible de 48 dp), parmi ceux qui sont dessinés à ce zoom. */
+    /** Point sous le doigt (cible de 48 dp) ; null en style rond : de loin, un toucher pose un repère. */
     fun pick(cam: MapCamera, x: Float, y: Float): CyberpunkPoi? {
-        val style = PoiDensity.style(cam.scale)
-        val shown = visible.filter { PoiDensity.shows(it, style) }
-        return pickPoi(shown, { cam.worldToScreen(it.x, it.y) }, x.toDouble(), y.toDouble(), kit.dp(HIT_DP) / 2.0)
+        if (PoiDensity.style(cam.scale) != PoiStyle.ICON) return null
+        return pickPoi(visible, { cam.worldToScreen(it.x, it.y) }, x.toDouble(), y.toDouble(), hitRadius)
     }
 
     private companion object {
@@ -120,7 +131,7 @@ class PoiLayer(private val kit: CyberpunkKit) {
         const val FALLBACK_R_DP = 7
         const val DOT_R_DP = 4
         const val HIT_DP = 48
-        const val DIM_ALPHA = 110
+        const val DIM_ALPHA = 155
         const val OPAQUE = 255
     }
 }

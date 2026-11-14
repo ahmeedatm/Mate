@@ -43,4 +43,17 @@ class PoiLayerTest {
             assertEquals(expected.y, affine.y(x, y).toDouble(), 0.01)
         }
     }
+
+    @Test fun `un repere de Mate passe avant un point d'interet`() {
+        assertEquals(TapTarget.PIN, tapTarget(pinHit = true, poi = poi("a", 0.0, 0.0), style = PoiStyle.ICON))
+    }
+
+    @Test fun `un point d'interet n'est touche qu'en style icone`() {
+        assertEquals(TapTarget.POI, tapTarget(pinHit = false, poi = poi("a", 0.0, 0.0), style = PoiStyle.ICON))
+        assertEquals(TapTarget.NEW_PIN, tapTarget(pinHit = false, poi = poi("a", 0.0, 0.0), style = PoiStyle.DOT))
+    }
+
+    @Test fun `sans repere ni point, on pose un repere`() {
+        assertEquals(TapTarget.NEW_PIN, tapTarget(pinHit = false, poi = null, style = PoiStyle.ICON))
+    }
 }

@@ -25,6 +25,7 @@ class PoiFilterPanel(
 
     private val rows = PoiCategory.entries.associateWith { row(it) }
     private var refreshing = false
+    private val emptyText = kit.text(context.getString(R.string.cp_poi_empty), 15f, R.color.cp_gris, kit.regular)
     private val iconsText = kit.text(context.getString(R.string.cp_poi_icons), 16f, R.color.cp_texte, kit.medium)
     private val iconsButton = kit.button(
         context.getString(R.string.cp_poi_icons_prepare), context.getString(R.string.cp_poi_icons_prepare_description), minWidthDp = 0,
@@ -40,6 +41,7 @@ class PoiFilterPanel(
         setPadding(kit.dp(20), kit.dp(14), kit.dp(20), kit.dp(14))
         visibility = GONE
         addView(kit.label(context.getString(R.string.cp_poi_filters_title)), kit.lp(MATCH, WRAP).apply { bottomMargin = kit.dp(6) })
+        addView(emptyText, kit.lp(MATCH, WRAP).apply { bottomMargin = kit.dp(6) })
         rows.values.forEach { addView(it.view, kit.lp(MATCH, WRAP)) }
         addView(iconsRow, kit.lp(MATCH, WRAP))
     }
@@ -51,13 +53,18 @@ class PoiFilterPanel(
                 setColor(kit.color(cat.color))
             }
         }
-        val label = kit.text(context.getString(cat.label), 16f, R.color.cp_texte, kit.medium)
-        val count = kit.text("0", 15f, R.color.cp_gris, kit.mono).apply { gravity = Gravity.END }
+        // Seul l'interrupteur est annoncé (libellé, nombre et état) : ni la ligne ni ses textes ne sont des éléments de plus pour TalkBack.
+        val label = kit.text(context.getString(cat.label), 16f, R.color.cp_texte, kit.medium).apply { importantForAccessibility = IMPORTANT_NO }
+        val count = kit.text("0", 15f, R.color.cp_gris, kit.mono).apply {
+            gravity = Gravity.END
+            importantForAccessibility = IMPORTANT_NO
+        }
+        dot.importantForAccessibility = IMPORTANT_NO
         val toggle = Switch(context).apply {
             isChecked = true
-            contentDescription = context.getString(R.string.cp_poi_switch_description, context.getString(cat.label))
-            thumbTintList = tint(R.color.cp_jaune, R.color.cp_gris)
-            trackTintList = tint(R.color.cp_rouge_doux, R.color.cp_barre_vide)
+            thumbTintList = tint(R.color.cp_jaune, R.color.cp_texte)
+            // Piste éteinte en cp_gris : environ 4,7:1 sur le panneau (la piste allumée est cp_rouge_doux).
+            trackTintList = tint(R.color.cp_rouge_doux, R.color.cp_gris)
             setOnCheckedChangeListener { _, on -> if (!refreshing) onToggle(cat, on) }
         }
         val line = kit.row().apply {
@@ -65,8 +72,7 @@ class PoiFilterPanel(
             addView(dot, kit.lp(kit.dp(DOT_DP), kit.dp(DOT_DP)).apply { marginEnd = kit.dp(12) })
             addView(label, kit.lp(0, WRAP).apply { weight = 1f })
             addView(count, kit.lp(kit.dp(COUNT_WIDTH_DP), WRAP).apply { marginEnd = kit.dp(12) })
-            addView(toggle, kit.lp(WRAP, WRAP))
-            setOnClickListener { toggle.toggle() }
+            addView(toggle, kit.lp(WRAP, kit.dp(MIN_ROW_DP)))
         }
         return Row(line, count, toggle)
     }
@@ -78,14 +84,20 @@ class PoiFilterPanel(
         rows.forEach { (cat, row) ->
             row.count.text = (counts[cat] ?: 0).toString()
             row.toggle.isChecked = cat !in hidden
+            val n = counts[cat] ?: 0
+            row.toggle.contentDescription = context.getString(
+                R.string.cp_poi_switch_description, context.getString(cat.label), context.resources.getQuantityString(R.plurals.cp_poi_points, n, n),
+            )
         }
         refreshing = false
+        emptyText.visibility = if (counts.values.sum() == 0) VISIBLE else GONE
         iconsRow.visibility = if (icons == PoiIconsState.MISSING || icons == PoiIconsState.LOADING) VISIBLE else GONE
         iconsButton.visibility = if (icons == PoiIconsState.MISSING) VISIBLE else GONE
         iconsText.text = context.getString(if (icons == PoiIconsState.LOADING) R.string.cp_poi_icons_loading else R.string.cp_poi_icons)
     }
 
     private companion object {
+        const val IMPORTANT_NO = View.IMPORTANT_FOR_ACCESSIBILITY_NO
         const val MIN_ROW_DP = 52
         const val DOT_DP = 14
         const val COUNT_WIDTH_DP = 44

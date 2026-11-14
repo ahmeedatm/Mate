@@ -2454,9 +2454,22 @@
     <string name="cp_poi_filters">Filtres</string>
     <string name="cp_poi_filters_description">Choisir les types de points d\'intérêt affichés sur la carte</string>
     <string name="cp_poi_filters_title">Points d\'intérêt</string>
-    <string name="cp_poi_switch_description">Afficher %1$s sur la carte</string>
+    <plurals name="cp_poi_filters_hidden">
+        <item quantity="one">Filtres · %1$d caché</item>
+        <item quantity="other">Filtres · %1$d cachés</item>
+    </plurals>
+    <plurals name="cp_poi_filters_hidden_description">
+        <item quantity="one">Choisir les types de points d\'intérêt affichés sur la carte, %1$d type caché</item>
+        <item quantity="other">Choisir les types de points d\'intérêt affichés sur la carte, %1$d types cachés</item>
+    </plurals>
+    <plurals name="cp_poi_points">
+        <item quantity="one">%1$d point</item>
+        <item quantity="other">%1$d points</item>
+    </plurals>
+    <string name="cp_poi_switch_description">Afficher %1$s sur la carte, %2$s</string>
+    <string name="cp_poi_empty">Aucun point d\'intérêt reçu du jeu</string>
     <string name="cp_poi_icons_loading">Extraction des icônes en cours</string>
-    <string name="cp_poi_icons">Icônes du jeu</string>
+    <string name="cp_poi_icons">Icônes du jeu absentes : la carte montre des ronds.</string>
     <string name="cp_poi_icons_prepare">Extraire</string>
     <string name="cp_poi_icons_prepare_description">Extraire les icônes des points d\'intérêt depuis le jeu sur l\'ordinateur</string>
     <string name="cp_pin_added">Repère posé</string>

@@ -39,6 +39,9 @@ object PoiIcons {
         return points.mapNotNull { it.icon }.filter { fileName(it) in served }.toSet()
     }
 
+    /** Icônes voulues qui ne sont pas déjà décodées en mémoire. */
+    fun missing(wanted: Set<String>, decoded: Set<String>): Set<String> = wanted - decoded
+
     /** Une requête au plus par icône : celles déjà en cache disque ne sont pas redemandées. Clé du résultat : nom d'icône sans préfixe. */
     suspend fun load(context: Context, api: CyberpunkApi, available: List<String>, icons: Set<String>, sizePx: Int): Map<String, Bitmap> = withContext(Dispatchers.IO) {
         val dir = File(context.cacheDir, CACHE_DIR).apply { mkdirs() }

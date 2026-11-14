@@ -326,6 +326,13 @@ class MapView(
     private fun applyPois() {
         poiLayer.setPoints(pois, poiHidden)
         filterPanel.refresh(PoiFilters.counts(pois), poiHidden, poiIcons)
+        val n = poiHidden.size
+        filterButton.text = if (n == 0) context.getString(R.string.cp_poi_filters) else context.resources.getQuantityString(R.plurals.cp_poi_filters_hidden, n, n)
+        filterButton.contentDescription = if (n == 0) {
+            context.getString(R.string.cp_poi_filters_description)
+        } else {
+            context.resources.getQuantityString(R.plurals.cp_poi_filters_hidden_description, n, n)
+        }
         surface.invalidate()
     }
 
@@ -412,14 +419,21 @@ class MapView(
         }
         val hit = hitPin(x, y)
         val poi = if (hit == null) poiLayer.pick(cam, x, y) else null
-        when {
-            poi != null -> say(poi.name ?: context.getString(poi.cat.label))
-            hit == null -> {
+        when (tapTarget(hit != null, poi, PoiDensity.style(cam.scale))) {
+            TapTarget.POI -> poi?.let { say(it.name ?: context.getString(it.cat.label)) }
+            TapTarget.NEW_PIN -> {
                 val w = cam.screenToWorld(x.toDouble(), y.toDouble())
                 launchAction(context.getString(R.string.cp_pin_added)) { addPin(w.x, w.y, player?.z) }
             }
-            hit.tracked -> questId?.let { id -> launchAction(context.getString(R.string.cp_pin_back_to_quest)) { action("track", kind = "quest", id = id) } }
-            else -> launchAction(context.getString(R.string.cp_pin_followed)) { trackPin(hit.id) }
+            TapTarget.PIN -> hit?.let(::pinTapped)
+        }
+    }
+
+    private fun pinTapped(hit: CyberpunkServerPin) {
+        if (hit.tracked) {
+            questId?.let { id -> launchAction(context.getString(R.string.cp_pin_back_to_quest)) { action("track", kind = "quest", id = id) } }
+        } else {
+            launchAction(context.getString(R.string.cp_pin_followed)) { trackPin(hit.id) }
         }
     }
 

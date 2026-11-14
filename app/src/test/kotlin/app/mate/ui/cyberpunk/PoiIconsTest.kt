@@ -29,4 +29,9 @@ class PoiIconsTest {
         assertEquals(PoiIconsState.MISSING, PoiIcons.state(look(CyberpunkPhoneStatus.ABSENT)))
         assertEquals(PoiIconsState.MISSING, PoiIcons.state(look(CyberpunkPhoneStatus.ERROR)))
     }
+
+    @Test fun `seules les icones pas encore decodees sont a charger`() {
+        assertEquals(setOf("bar"), PoiIcons.missing(setOf("shop", "bar"), setOf("shop", "autre")))
+        assertEquals(emptySet<String>(), PoiIcons.missing(setOf("shop"), setOf("shop")))
+    }
 }

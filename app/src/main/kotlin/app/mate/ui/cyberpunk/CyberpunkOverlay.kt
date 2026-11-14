@@ -1,5 +1,6 @@
 package app.mate.ui.cyberpunk
 
+import android.graphics.Bitmap
 import android.graphics.Canvas
 import android.graphics.Paint
 import android.view.ContextThemeWrapper
@@ -91,6 +92,9 @@ class CyberpunkOverlay(private val activity: FragmentActivity) {
     private var pinsKey: Any? = null
     private var pinsLoading = false
     private var pois: List<CyberpunkPoi> = emptyList()
+    private var poiIcons = emptyMap<String, Bitmap>()
+    private var poiAssets: List<String>? = null
+    private var poiIconsState = PoiIconsState.UNKNOWN
     private var lastQuestId: String? = null
 
     val isOpen get() = root != null
@@ -155,6 +159,9 @@ class CyberpunkOverlay(private val activity: FragmentActivity) {
         pinsKey = null
         pinsLoading = false
         pois = emptyList()
+        poiIcons = emptyMap()
+        poiAssets = null
+        poiIconsState = PoiIconsState.UNKNOWN
         lastQuestId = null
     }
 
@@ -463,23 +470,37 @@ class CyberpunkOverlay(private val activity: FragmentActivity) {
         }
     }
 
-    /** Icônes des points d'intérêt : statut du look du jeu relu à chaque liste de points, puis icônes utilisées chargées (relu toutes les 2 s tant qu'il se prépare). */
+    /**
+     * Icônes des points d'intérêt. Le statut du look n'est relu que tant qu'il n'est pas prêt (toutes les 2 s pendant l'extraction) ;
+     * ensuite seules les icônes pas encore décodées sont chargées, les autres restent en mémoire. Statut illisible (coupure brève) :
+     * rien ne change à l'écran.
+     */
     private fun loadPoiIcons() {
         val client = api ?: return
         poiIconsJob?.cancel()
         poiIconsJob = activity.lifecycleScope.launch {
             while (isActive) {
-                val look = runCatchingCancellable { client.phoneStatus() }.getOrNull()
-                val state = PoiIcons.state(look)
-                val icons = if (look != null && state == PoiIconsState.READY) {
-                    val size = mapView?.poiIconPx ?: return@launch
-                    runCatchingCancellable { PoiIcons.load(activity, client, look.assets, PoiIcons.wanted(pois, look.assets), size) }.getOrDefault(emptyMap())
-                } else {
-                    emptyMap()
+                if (poiIconsState != PoiIconsState.READY || poiAssets == null) {
+                    val look = runCatchingCancellable { client.phoneStatus() }.getOrNull()
+                    if (api !== client) return@launch
+                    if (look != null) {
+                        poiIconsState = PoiIcons.state(look)
+                        poiAssets = look.assets
+                    } else if (poiIconsState != PoiIconsState.LOADING) {
+                        return@launch
+                    }
                 }
-                if (api !== client) return@launch
-                mapView?.setPoiIcons(icons, state)
-                if (state != PoiIconsState.LOADING) return@launch
+                val assets = poiAssets.orEmpty()
+                if (poiIconsState == PoiIconsState.READY) {
+                    val size = mapView?.poiIconPx ?: return@launch
+                    val missing = PoiIcons.missing(PoiIcons.wanted(pois, assets), poiIcons.keys)
+                    if (missing.isEmpty() && poiIcons.isNotEmpty()) return@launch
+                    val loaded = runCatchingCancellable { PoiIcons.load(activity, client, assets, missing, size) }.getOrDefault(emptyMap())
+                    if (api !== client) return@launch
+                    poiIcons = poiIcons + loaded
+                }
+                mapView?.setPoiIcons(poiIcons, poiIconsState)
+                if (poiIconsState != PoiIconsState.LOADING) return@launch
                 delay(PHONE_LOOK_POLL_MS)
             }
         }
@@ -487,13 +508,17 @@ class CyberpunkOverlay(private val activity: FragmentActivity) {
 
     private fun preparePoiIcons() {
         val client = api ?: return
-        mapView?.setPoiIcons(emptyMap(), PoiIconsState.LOADING)
+        poiIcons = emptyMap()
+        poiAssets = null
+        poiIconsState = PoiIconsState.LOADING
+        mapView?.setPoiIcons(poiIcons, poiIconsState)
         activity.lifecycleScope.launch {
             runCatchingCancellable { client.preparePhone() }
                 .onSuccess { if (api === client) loadPoiIcons() }
                 .onFailure {
                     if (api !== client) return@onFailure
-                    mapView?.setPoiIcons(emptyMap(), PoiIconsState.MISSING)
+                    poiIconsState = PoiIconsState.MISSING
+                    mapView?.setPoiIcons(poiIcons, poiIconsState)
                     toast(activity.errorText(it))
                 }
         }
