@@ -128,4 +128,26 @@ class MapCameraTest {
         assertEquals("a", nearestPoint(pts, 112.0, 100.0, 24.0))
         assertNull(nearestPoint(pts, 300.0, 300.0, 24.0))
     }
+
+    @Test fun `le cache tient les tuiles visibles et leurs parentes a tous les zooms`() {
+        val budget = MapCamera.tileCacheBytes(1280, 800, 512)
+        assertEquals(42 * 512 * 512 * 2, budget)
+        val c = camera()
+        var s = c.minScale
+        while (s <= MapCamera.MAX_SCALE) {
+            c.setScale(s)
+            for (p in listOf(0.0, 3333.3, 14000.7, 28672.0)) {
+                c.centerOn(geo.mapToWorld(p, p * 0.7).x, geo.mapToWorld(p, p * 0.7).y)
+                val z = c.level()
+                val tiles = c.visibleTiles(z).size + if (z > 0) c.visibleTiles(z - 1).size else 0
+                assertTrue("scale $s", tiles * 512 * 512 * 2 <= budget)
+            }
+            s *= 1.013
+        }
+    }
+
+    @Test fun `cache plafonne pour une tuile demesuree ou minuscule`() {
+        assertEquals(MapCamera.MAX_CACHE_BYTES, MapCamera.tileCacheBytes(1280, 800, 4096))
+        assertTrue(MapCamera.tileCacheBytes(1280, 800, 1) in 1..MapCamera.MAX_CACHE_BYTES)
+    }
 }

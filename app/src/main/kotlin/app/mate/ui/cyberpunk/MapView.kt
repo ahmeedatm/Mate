@@ -45,7 +45,7 @@ import kotlin.math.abs
 import kotlin.math.sin
 
 /**
- * Carte de Night City de la page Cyberpunk : tuiles du compagnon (pyramide WebP, cache de 8 Mo), teintées rouge-ocre au
+ * Carte de Night City de la page Cyberpunk : tuiles du compagnon (pyramide WebP, cache taillé par `MapCamera.tileCacheBytes`), teintées rouge-ocre au
  * dessin, joueur en flèche jaune orientée par son yaw, objectif de quête, repères, trajet GPS. Glisser déplace, pincer ou
  * double toucher zoome, toucher le vide pose un repère, toucher un repère le fait suivre (re-toucher le suivi : retour à la
  * quête), appui long sur un repère le supprime. Tant que la carte n'a pas été déplacée à la main, elle suit le joueur.
