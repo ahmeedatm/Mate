@@ -1,9 +1,9 @@
 -- Mate pour Cyberpunk 2077 : écrit l'état de la partie dans state.json (~1 s), les blocs lents dans
--- inventory.json, contacts.json et quests.json, la position du véhicule dans pos.json (~0,2 s, en véhicule seulement),
--- et exécute les ordres de commands.json (écrit par le backend de Mate).
+-- inventory.json, contacts.json, quests.json et mappins.json, la position du véhicule dans pos.json (~0,2 s, en
+-- véhicule seulement), et exécute les ordres de commands.json (écrit par le backend de Mate).
 -- Tout appel au jeu est sous pcall. Aucun appel inconnu du moteur hors des commandes ci-dessous.
 -- Contrat : docs/specs/2026-11-14-plugin-cyberpunk-design.md, section « Contrat ». Pas de variable globale (CET les refuse).
-local VERSION = "1.3.0"
+local VERSION = "1.4.0"
 local every, acc = 1.0, 0
 local seq, tick = 0, 0
 local errs = {}
@@ -16,7 +16,7 @@ local trackedPin = nil
 local lastCmd = nil
 local hadPlayer = false
 local session = 0
-local blocks = { inv = os.time(), contacts = os.time(), quests = os.time(), cyber = os.time() }
+local blocks = { inv = os.time(), contacts = os.time(), quests = os.time(), cyber = os.time(), mappins = os.time() }
 local lastJson = {}
 
 local function try(key, f)
@@ -364,6 +364,51 @@ local function cyberBlock()
   if b then putBlock("cyber", "cyberware.json", b) end
 end
 
+-- Points de la carte du jeu (mappins.json) : la liste en une fois (3 ms au spike), les getters par paquets d'une image à
+-- l'autre (26 ms pour 475 points d'un coup = saccade). Bloc réécrit une fois la liste entière lue, s'il a changé.
+-- Exclus : ce que la carte du jeu cache, l'objectif suivi (dessiné à part), les repères posés (Mate, joueur).
+-- Design : docs/specs/2026-11-14-cyberpunk-points-interet-design.md.
+local POI_EVERY, POI_CHUNK = 10, 50
+local poi = { list = nil, i = 0, out = {}, nextAt = 0 }
+
+local function word(v) local t = tostring(v); return string.match(t, ":%s*(%S+)") or t end
+
+local function poiEntry(m)
+  if not m:IsVisible() or m:IsPlayerTracked() then return nil end
+  local variant = m:GetVariant()
+  local v = word(variant)
+  if v == "CustomPositionVariant" then return nil end
+  local w = m:GetWorldPosition()
+  local phase = m:GetPhase()
+  local e = { id = idKey(m:GetNewMappinID()), x = math.floor(w.x + 0.5), y = math.floor(w.y + 0.5), v = v, ph = word(phase) }
+  pcall(function() e.icon = MappinUIUtils.MappinToTexturePart(variant, phase).value end)
+  pcall(function() e.q = m:IsQuestMappin() end)
+  pcall(function()
+    local n = m:GetDisplayName()
+    if n and n ~= "" then e.name = loc(n) end
+  end)
+  return e
+end
+
+local function poiStep()
+  if not hadPlayer then poi.list = nil; return end
+  if poi.list == nil then
+    if os.clock() < poi.nextAt then return end
+    poi.list = Game.GetMappinSystem():GetMappins(gamemappinsMappinTargetType.Map) or {}
+    poi.i, poi.out = 0, {}
+  end
+  local last = math.min(poi.i + POI_CHUNK, #poi.list)
+  for k = poi.i + 1, last do
+    local ok, e = pcall(poiEntry, poi.list[k])
+    if ok and e then poi.out[#poi.out + 1] = e end
+  end
+  poi.i = last
+  if poi.i >= #poi.list then
+    putBlock("mappins", "mappins.json", { v = 1, mappins = poi.out })
+    poi.list, poi.out, poi.nextAt = nil, {}, os.clock() + POI_EVERY
+  end
+end
+
 -- Ordres ----------------------------------------------------------------------------------------------------------------
 
 local function phoneRequest(phase, caller, addressee, mode)
@@ -560,6 +605,7 @@ local function trackSession()
     session = session + 1
     -- Le jeu a oublié les repères de la partie d'avant : le backend renvoie les siens (pins/acks).
     pins, mappinIds, pinKeys, trackedPin = {}, {}, {}, nil
+    poi.list, poi.nextAt = nil, 0
     pcall(savePins)
     put("session.txt", tostring(session))
   end
@@ -586,6 +632,9 @@ local function writePos()
 end
 
 return { update = function(dt)
+  -- Un paquet de points par image, hors de la cadence d'une seconde.
+  local okPoi, ePoi = pcall(poiStep)
+  if not okPoi then loadErrs["poi"] = tostring(ePoi); poi.list = nil; poi.nextAt = os.clock() + POI_EVERY end
   posAcc = posAcc + dt
   if posAcc >= 0.2 then
     posAcc = 0

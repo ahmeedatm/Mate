@@ -69,7 +69,7 @@ Aucun mod existant n'exporte l'état vers une appli : le mod est à écrire, en 
 - Mac (CET n'y tourne pas) et versions Epic/GOG du jeu (Steam seulement en v1, à élargir si demandé).
 - Répondre aux SMS (choix de dialogue) : lecture des messages seulement.
 - Équiper ou changer le cyberware, vendre, fabriquer, dépenser des points.
-- Points d'intérêt de la carte du jeu (vendeurs, ripperdocs, crimes) : seulement position, quête, repères.
+- Points d'intérêt de la carte du jeu (vendeurs, ripperdocs, crimes) : seulement position, quête, repères. Levé le 14/11 par `2026-11-14-cyberpunk-points-interet-design.md`.
 - Cadre générique pour d'autres jeux.
 
 ## Anti-objectifs (échec même si ça marche)

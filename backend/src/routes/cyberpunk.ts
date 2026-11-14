@@ -2,6 +2,7 @@ import type { FastifyInstance, FastifyReply } from "fastify";
 import { cyberpunkMap } from "../cyberpunk-map.ts";
 import { phoneRoutes } from "../cyberpunk-phone.ts";
 import { PhoneRefusal, readThread, replyThread, sendCommand, type Command } from "../cyberpunk-commands.ts";
+import { mappins } from "../cyberpunk-poi.ts";
 import { addPin, listPins, removePin, replayPins, trackPin } from "../cyberpunk-pins.ts";
 import { findGame } from "../cyberpunk-steam.ts";
 import { block, installMod, overview, presence, readPos, uninstallMod } from "../cyberpunk.ts";
@@ -113,6 +114,7 @@ export default async function cyberpunkRoutes(app: FastifyInstance) {
   app.get("/cyberpunk/contacts", () => block("contacts"));
   app.get("/cyberpunk/quests", () => block("quests"));
   app.get("/cyberpunk/cyberware", () => block("cyberware"));
+  app.get("/cyberpunk/mappins", () => mappins());
   app.post("/cyberpunk/install", () => installMod());
   app.post("/cyberpunk/uninstall", () => uninstallMod());
 

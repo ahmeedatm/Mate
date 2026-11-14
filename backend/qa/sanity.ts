@@ -898,7 +898,7 @@ export async function runSanity(opts: { url: string; token: string; os?: Os; hoo
       },
     },
     {
-      name: "Cyberpunk 2077 (carte et repères)",
+      name: "Cyberpunk 2077 (carte, repères et points d'intérêt)",
       run: async () => {
         // Lecture seule, sans lancer la préparation de la carte (téléchargement de 700 Mo) : les routes répondent sur tous les systèmes.
         const map = await call("GET", "/cyberpunk/map");
@@ -911,7 +911,10 @@ export async function runSanity(opts: { url: string; token: string; os?: Os; hoo
         const pos = await call("GET", "/cyberpunk/pos");
         expectStatus(pos, 200, "/cyberpunk/pos");
         expect(typeof pos.json.fresh === "boolean", "fresh absent de /cyberpunk/pos");
-        return `carte ${map.json.status} (${map.json.done}/${map.json.total}), ${pins.json.pins.length} repère(s), ${pos.json.vehicle ? "en véhicule" : "à pied"}`;
+        const poi = await call("GET", "/cyberpunk/mappins");
+        expectStatus(poi, 200, "/cyberpunk/mappins");
+        expect(Array.isArray(poi.json.points), "liste des points d'intérêt absente");
+        return `carte ${map.json.status} (${map.json.done}/${map.json.total}), ${pins.json.pins.length} repère(s), ${pos.json.vehicle ? "en véhicule" : "à pied"}, ${poi.json.points.length} point(s) d'intérêt`;
       },
     },
     {

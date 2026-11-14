@@ -1,5 +1,8 @@
 package app.mate.net
 
+import androidx.annotation.ColorRes
+import androidx.annotation.StringRes
+import app.mate.R
 import org.json.JSONArray
 import org.json.JSONObject
 
@@ -63,7 +66,7 @@ enum class CyberpunkCallPhase { INCOMING, ACTIVE }
 data class CyberpunkCall(val phase: CyberpunkCallPhase, val contact: String?, val audio: Boolean)
 
 /** Compteurs des blocs lents : un bloc se relit quand son compteur change. */
-data class CyberpunkBlocks(val inv: Int, val contacts: Int, val quests: Int, val cyber: Int = 0)
+data class CyberpunkBlocks(val inv: Int, val contacts: Int, val quests: Int, val cyber: Int = 0, val mappins: Int = 0)
 
 enum class CyberpunkBody { MAN, WOMAN }
 
@@ -94,6 +97,26 @@ data class CyberwareBlock(
 ) {
     val ready get() = zones.isNotEmpty()
 }
+
+/** Catégories des points d'intérêt, dans l'ordre d'affichage du panneau Filtres ; `key` : celle du contrat de `GET /cyberpunk/mappins`. */
+enum class PoiCategory(val key: String, @StringRes val label: Int, @ColorRes val color: Int) {
+    QUEST("quest", R.string.cp_poi_quest, R.color.cp_poi_quete),
+    GIG("gig", R.string.cp_poi_gig, R.color.cp_poi_contrat),
+    NCPD("ncpd", R.string.cp_poi_ncpd, R.color.cp_poi_ncpd),
+    TRAVEL("travel", R.string.cp_poi_travel, R.color.cp_poi_transport),
+    SHOP("shop", R.string.cp_poi_shop, R.color.cp_poi_boutique),
+    RIPPERDOC("ripperdoc", R.string.cp_poi_ripperdoc, R.color.cp_poi_charcudoc),
+    OTHER("other", R.string.cp_poi_other, R.color.cp_poi_autre),
+    ;
+
+    companion object {
+        /** Clé absente ou inconnue (compagnon plus récent) : « Autres ». */
+        fun fromKey(key: String?) = entries.firstOrNull { it.key == key } ?: OTHER
+    }
+}
+
+/** Point d'intérêt du jeu. `icon` : nom d'icône sans préfixe (fichier `poi_<icon>.png`) ; `dim` : non découvert ou terminé. */
+data class CyberpunkPoi(val id: String, val x: Double, val y: Double, val cat: PoiCategory, val icon: String?, val name: String?, val dim: Boolean)
 
 data class CyberpunkPin(val pid: String, val x: Double, val y: Double, val z: Double)
 
@@ -216,6 +239,15 @@ class CyberpunkApi(private val http: Http) {
     /** Une pièce du téléphone (PNG ou TTF) de la liste de [phoneStatus]. */
     suspend fun phoneAsset(name: String): ByteArray = http.io { http.bytesOrNull("/cyberpunk/phone/" + http.encode(name), timeoutMs = TILE_TIMEOUT_MS) ?: throw HttpException(404, "") }
 
+    /** Points d'intérêt du jeu (403 ou 404 : aucun point, pas une erreur). */
+    suspend fun mappins(): List<CyberpunkPoi> = http.io {
+        try {
+            parseMappins(http.get("/cyberpunk/mappins", timeoutMs = STATE_TIMEOUT_MS))
+        } catch (e: HttpException) {
+            if (isUnavailable(e)) emptyList() else throw e
+        }
+    }
+
     suspend fun quests(): List<CyberpunkQuest> = http.io { parseQuests(http.get("/cyberpunk/quests", timeoutMs = STATE_TIMEOUT_MS)) }
 
     suspend fun install(): CyberpunkInstallResult = http.io { parseInstall(http.postJson("/cyberpunk/install", JSONObject())) }
@@ -319,6 +351,7 @@ class CyberpunkApi(private val http: Http) {
                     blocks?.optInt("contacts") ?: 0,
                     blocks?.optInt("quests") ?: 0,
                     blocks?.optInt("cyber") ?: 0,
+                    blocks?.optInt("mappins") ?: 0,
                 ),
                 pins = s.optJSONArray("pins").items { CyberpunkPin(it.optString("pid"), it.double("x"), it.double("y"), it.double("z")) },
                 inVehicle = s.optJSONObject("vehicle") != null,
@@ -416,6 +449,14 @@ class CyberpunkApi(private val http: Http) {
         }
 
         private fun JSONObject.num(key: String) = if (has(key) && !isNull(key)) optDouble(key).takeIf { !it.isNaN() } else null
+
+        /** Un point sans identifiant ou sans coordonnées valides est ignoré. */
+        fun parseMappins(json: String): List<CyberpunkPoi> = JSONObject(json).optJSONArray("points").items { p ->
+            val x = (p.opt("x") as? Number)?.toDouble()?.takeIf { it.isFinite() }
+            val y = (p.opt("y") as? Number)?.toDouble()?.takeIf { it.isFinite() }
+            val id = p.text("id")
+            if (x == null || y == null || id == null) null else CyberpunkPoi(id, x, y, PoiCategory.fromKey(p.text("cat")), p.text("icon"), p.text("name"), p.optBoolean("dim"))
+        }.filterNotNull()
 
         fun parseQuests(json: String): List<CyberpunkQuest> = JSONObject(json).optJSONArray("quests").items {
             CyberpunkQuest(it.text("id"), it.optString("title"), it.text("kind"), it.text("objective"), it.optBoolean("tracked"))

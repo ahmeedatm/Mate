@@ -25,4 +25,12 @@
     <color name="cp_rare_rare">#4aa8ff</color>
     <color name="cp_rare_epique">#c66cff</color>
     <color name="cp_rare_legende">#ffb23e</color>
+    <!-- Points d'intérêt de la carte Cyberpunk, une teinte par catégorie. -->
+    <color name="cp_poi_quete">#f3e600</color>
+    <color name="cp_poi_contrat">#ffb23e</color>
+    <color name="cp_poi_ncpd">#4aa8ff</color>
+    <color name="cp_poi_transport">#4ef2f5</color>
+    <color name="cp_poi_boutique">#f1d9d4</color>
+    <color name="cp_poi_charcudoc">#ff5f56</color>
+    <color name="cp_poi_autre">#8b7774</color>
 </resources>

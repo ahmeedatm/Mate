@@ -1,5 +1,6 @@
 package app.mate.ui.cyberpunk
 
+import android.graphics.Bitmap
 import android.graphics.Canvas
 import android.graphics.Paint
 import android.view.ContextThemeWrapper
@@ -26,6 +27,7 @@ import app.mate.net.CyberpunkItem
 import app.mate.net.CyberpunkMap
 import app.mate.net.CyberpunkMapStatus
 import app.mate.net.CyberpunkPhoneStatus
+import app.mate.net.CyberpunkPoi
 import app.mate.net.CyberpunkPresence
 import app.mate.net.CyberpunkQuest
 import app.mate.net.CyberpunkServerPin
@@ -55,7 +57,7 @@ import java.util.Locale
  * lents (objets, contacts, quêtes) seulement quand leur compteur change ou à l'ouverture de leur tiroir.
  */
 class CyberpunkOverlay(private val activity: FragmentActivity) {
-    private enum class Block { INVENTORY, CONTACTS, QUESTS }
+    private enum class Block { INVENTORY, CONTACTS, QUESTS, MAPPINS }
 
     private var root: FrameLayout? = null
     private var views: Views? = null
@@ -75,6 +77,7 @@ class CyberpunkOverlay(private val activity: FragmentActivity) {
     private var phone = PhoneState()
     private var threadJob: Job? = null
     private var lookJob: Job? = null
+    private var poiIconsJob: Job? = null
     private var inventory: List<CyberpunkItem>? = null
     private var contacts: CyberpunkContacts? = null
     private var quests: List<CyberpunkQuest>? = null
@@ -88,6 +91,10 @@ class CyberpunkOverlay(private val activity: FragmentActivity) {
     private var pins: List<CyberpunkServerPin>? = null
     private var pinsKey: Any? = null
     private var pinsLoading = false
+    private var pois: List<CyberpunkPoi> = emptyList()
+    private var poiIcons = emptyMap<String, Bitmap>()
+    private var poiAssets: List<String>? = null
+    private var poiIconsState = PoiIconsState.UNKNOWN
     private var lastQuestId: String? = null
     private val cyber = CyberwareController(activity) { renderDrawer() }
 
@@ -115,7 +122,10 @@ class CyberpunkOverlay(private val activity: FragmentActivity) {
         views = v
         root = v.root
         mapView = MapView(kit, client, activity.lifecycleScope, onPinsChanged = { pinsKey = null; loadPins() }, onMapChanged = { map = null; loadMap() }, say = ::toast)
-            .also { setMapView(it) }
+            .also {
+                it.onPoiIconsPrepare = ::preparePoiIcons
+                setMapView(it)
+            }
         activity.findViewById<ViewGroup>(android.R.id.content).addView(v.root)
         render()
         resume()
@@ -139,6 +149,7 @@ class CyberpunkOverlay(private val activity: FragmentActivity) {
         failedVersions.clear()
         threadJob?.cancel()
         lookJob?.cancel()
+        poiIconsJob?.cancel()
         phone = PhoneState()
         inventory = null
         contacts = null
@@ -153,6 +164,10 @@ class CyberpunkOverlay(private val activity: FragmentActivity) {
         pins = null
         pinsKey = null
         pinsLoading = false
+        pois = emptyList()
+        poiIcons = emptyMap()
+        poiAssets = null
+        poiIconsState = PoiIconsState.UNKNOWN
         lastQuestId = null
     }
 
@@ -219,6 +234,7 @@ class CyberpunkOverlay(private val activity: FragmentActivity) {
                     sync(Block.CONTACTS, b.contacts)
                     sync(Block.QUESTS, b.quests)
                     cyber.sync(b.cyber)
+                    sync(Block.MAPPINS, b.mappins)
                 }
             }
             .onFailure {
@@ -294,6 +310,13 @@ class CyberpunkOverlay(private val activity: FragmentActivity) {
                         Block.INVENTORY -> client.inventory().also { if (api === client) inventory = it }
                         Block.CONTACTS -> client.contacts().also { if (api === client) contacts = it }
                         Block.QUESTS -> client.quests().also { if (api === client) quests = it }
+                        Block.MAPPINS -> client.mappins().also {
+                            if (api === client) {
+                                pois = it
+                                mapView?.setPois(it)
+                                loadPoiIcons()
+                            }
+                        }
                     }
                 }.onSuccess {
                     if (api !== client) return@onSuccess
@@ -457,6 +480,60 @@ class CyberpunkOverlay(private val activity: FragmentActivity) {
                 if (look.status != CyberpunkPhoneStatus.LOADING) return@launch
                 delay(PHONE_LOOK_POLL_MS)
             }
+        }
+    }
+
+    /**
+     * Icônes des points d'intérêt. Le statut du look n'est relu que tant qu'il n'est pas prêt (toutes les 2 s pendant l'extraction) ;
+     * ensuite seules les icônes pas encore décodées sont chargées, les autres restent en mémoire. Statut illisible (coupure brève) :
+     * rien ne change à l'écran.
+     */
+    private fun loadPoiIcons() {
+        val client = api ?: return
+        poiIconsJob?.cancel()
+        poiIconsJob = activity.lifecycleScope.launch {
+            while (isActive) {
+                if (poiIconsState != PoiIconsState.READY || poiAssets == null) {
+                    val look = runCatchingCancellable { client.phoneStatus() }.getOrNull()
+                    if (api !== client) return@launch
+                    if (look != null) {
+                        poiIconsState = PoiIcons.state(look)
+                        poiAssets = look.assets
+                    } else if (poiIconsState != PoiIconsState.LOADING) {
+                        return@launch
+                    }
+                }
+                val assets = poiAssets.orEmpty()
+                if (poiIconsState == PoiIconsState.READY) {
+                    val size = mapView?.poiIconPx ?: return@launch
+                    val missing = PoiIcons.missing(PoiIcons.wanted(pois, assets), poiIcons.keys)
+                    if (missing.isEmpty() && poiIcons.isNotEmpty()) return@launch
+                    val loaded = runCatchingCancellable { PoiIcons.load(activity, client, assets, missing, size) }.getOrDefault(emptyMap())
+                    if (api !== client) return@launch
+                    poiIcons = poiIcons + loaded
+                }
+                mapView?.setPoiIcons(poiIcons, poiIconsState)
+                if (poiIconsState != PoiIconsState.LOADING) return@launch
+                delay(PHONE_LOOK_POLL_MS)
+            }
+        }
+    }
+
+    private fun preparePoiIcons() {
+        val client = api ?: return
+        poiIcons = emptyMap()
+        poiAssets = null
+        poiIconsState = PoiIconsState.LOADING
+        mapView?.setPoiIcons(poiIcons, poiIconsState)
+        activity.lifecycleScope.launch {
+            runCatchingCancellable { client.preparePhone() }
+                .onSuccess { if (api === client) loadPoiIcons() }
+                .onFailure {
+                    if (api !== client) return@onFailure
+                    poiIconsState = PoiIconsState.MISSING
+                    mapView?.setPoiIcons(poiIcons, poiIconsState)
+                    toast(activity.errorText(it))
+                }
         }
     }
 
