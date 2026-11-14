@@ -130,6 +130,21 @@ seulement regarder : poser ou changer un implant dans un slot depuis la tablette
    l'inventaire `fullscreen\stats\player_cyberware_screen.inkwidget` + `atlas_cyberware`. Le corps
    suit celui de V (homme ou femme), lu par le mod.
 
+Ce que la lecture des scripts du jeu a appris (2026-11-14, dumps `CDPR-Modding-Documentation/Cyberpunk-Scripts`,
+`psiberx/cp2077-cyberware-ex`, `axefrog/xf-studio` ; rien d'essayé en jeu) :
+
+- Le charcudoc (`ripperdoc.script`, `EquipCyberware`) fait `CheckIfCanEquip`, puis `UnequipRequest` sur
+  le slot occupé, puis `EquipRequest{ owner, itemID, slotIndex }` sur `EquipmentSystem`. L'implant retiré
+  reste dans l'inventaire (`UnequipItem` ne le donne ni ne le retire).
+- La pose par index ne vérifie ni le verrou du slot ni les bornes : le mod doit tester lui-même
+  `GetNumberOfSlots`, `IsSlotLocked`, le tag `UnequipBlocked` de l'implant en place, et la capacité
+  (coût `HumanityAvailable` du nouveau moins celui de l'ancien ≤ `HumanityAvailable` du joueur), comme
+  `CheckIfCanEquip`.
+- Bras : refuser si une arme de bras est sortie (maillage cassé rapporté par d'autres mods).
+- Lire : zone par `GetItemRecord(...):EquipArea():Type()`, icône par `Icon()` (atlas + pièce), corps de V
+  par `GetResolvedGenderName()`, combat par `IsInCombat()`, scène par le blackboard
+  `PlayerStateMachine.HighLevel`, véhicule par le tag `VehicleScene`.
+
 Spike sur la vraie partie d'Ahmed, avec son accord pour chaque pose : un implant qu'il possède
 déjà, dans un slot vide si possible, puis remis comme avant. Avant tout essai, une sauvegarde
 manuelle faite par Ahmed dans le jeu (pas par Mate). Questions 1 ou 2 en échec, ou risque pour la
