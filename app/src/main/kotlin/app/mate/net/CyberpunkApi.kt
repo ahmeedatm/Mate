@@ -175,10 +175,10 @@ data class CyberpunkInstallResult(val ok: Boolean, val deferred: Boolean)
 
 data class CyberpunkActionResult(val ok: Boolean, val id: Int?, val res: String?)
 
-/** Repère posé depuis la tablette, gardé par l'ordinateur. */
 /** Réponse à un repère posé : `tracked` si le jeu le suit déjà (pose avec suivi, en partie). */
 data class CyberpunkNewPin(val id: String, val tracked: Boolean)
 
+/** Repère posé depuis la tablette, gardé par l'ordinateur. */
 data class CyberpunkServerPin(val id: String, val x: Double, val y: Double, val z: Double, val name: String?, val tracked: Boolean)
 
 enum class CyberpunkMapStatus { ABSENT, LOADING, READY, ERROR }
@@ -272,7 +272,6 @@ class CyberpunkApi(private val http: Http) {
 
     suspend fun pins(): List<CyberpunkServerPin> = http.io { parsePins(http.get("/cyberpunk/pins", timeoutMs = STATE_TIMEOUT_MS)) }
 
-    /** Pose un repère ; rend son identifiant. */
     /** Pose un repère ; `track` le fait aussi suivre par le GPS du jeu, dans le même appel. */
     suspend fun addPin(x: Double, y: Double, z: Double? = null, name: String? = null, track: Boolean = false): CyberpunkNewPin = http.io {
         val body = JSONObject().put("x", x).put("y", y)
