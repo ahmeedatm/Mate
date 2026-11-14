@@ -137,6 +137,19 @@ class MapCamera(private val geo: MapGeometry) {
 
         /** À l'ouverture : environ 900 m de large sur la tablette. */
         const val INITIAL_SCALE = 0.5
+
+        /**
+         * Octets du cache de tuiles (RGB_565) pour une vue de `viewW` × `viewH` pixels : toutes les tuiles visibles au pire
+         * (d'après [level], une tuile s'affiche sur plus de `tile / 2` pixels), plus celles du niveau au-dessus qui servent
+         * de repli. Plus petit, chaque tuile chargée chasse une tuile encore visible et la carte clignote.
+         */
+        fun tileCacheBytes(viewW: Int, viewH: Int, tile: Int): Int {
+            fun across(view: Int, px: Int) = ceil(view.toDouble() / px).toInt() + 1
+            val tiles = across(viewW, tile / 2) * across(viewH, tile / 2) + across(viewW, tile) * across(viewH, tile)
+            return tiles * tile * tile * RGB_565_BYTES
+        }
+
+        private const val RGB_565_BYTES = 2
         private const val EPS = 1e-9
     }
 }

@@ -138,12 +138,15 @@ class MapView(
         if (key == mapKey) return
         mapKey = key
         camera = MapCamera(geo).also { it.setViewport(surface.width, surface.height) }
-        cache = TileCache(scope, CACHE_BYTES, { it.byteCount }, { surface.postInvalidateOnAnimation() }) { k -> fetch(k) }
+        cache = TileCache(scope, cacheBytes(geo.tile), { it.byteCount }, { surface.postInvalidateOnAnimation() }) { k -> fetch(k) }
         userMoved = false
         centerButton.visibility = VISIBLE
         recenter()
         updateAnimation()
     }
+
+    /** La vue ne dépasse jamais l'écran : le cache est taillé pour l'écran entier, avant même la mesure de la vue. */
+    private fun cacheBytes(tile: Int) = resources.displayMetrics.let { MapCamera.tileCacheBytes(it.widthPixels, it.heightPixels, tile) }
 
     /** La page se ferme : requêtes de tuiles annulées, cache vidé. */
     fun release() {
@@ -489,7 +492,6 @@ class MapView(
 
     private companion object {
         const val GRID_DP = 64
-        const val CACHE_BYTES = 8 * 1024 * 1024
         const val WAVE_MS = 2400L
         const val WAVE_STEP = 0.016f
         const val WAVE_DP = 40
