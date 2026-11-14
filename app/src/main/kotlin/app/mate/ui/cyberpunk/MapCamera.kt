@@ -258,7 +258,7 @@ class MapCamera(private val geo: MapGeometry) {
         const val TOP_CUT = 0.12
 
         /** Plus petit diviseur de perspective accepté (un point projeté 5 fois plus bas que sur la carte à plat). */
-        private const val MIN_W = 0.2
+        const val MIN_W = 0.2
         private const val MATRIX_SIZE = 9
         private const val ANCHOR_MIN = 0.1
         private const val ANCHOR_MAX = 0.9

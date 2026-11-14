@@ -58,7 +58,8 @@ import kotlin.math.sin
  * double toucher zoome, toucher le vide pose un repère, toucher un repère le fait suivre (re-toucher le suivi : retour à la
  * quête), appui long sur un repère le supprime. Tant que la carte n'a pas été déplacée à la main, elle suit le joueur.
  * En véhicule (vue conduite) : la carte zoome sur lui, tourne pour que l'avant du véhicule pointe vers le haut et se penche
- * en perspective ; sa position est relue ~4 fois par seconde (`GET /cyberpunk/pos`) et lissée entre deux lectures.
+ * en perspective ; sa position est relue ~4 fois par seconde (`GET /cyberpunk/pos`) et lissée entre deux lectures. Le chemin
+ * du GPS du jeu (`GET /cyberpunk/route`, chaque seconde) remplace alors la ligne droite vers la destination ([RouteLayer]).
  * Carte absente ou en préparation : fond de grille, bouton et progression.
  */
 class MapView(
@@ -79,6 +80,7 @@ class MapView(
 
     private var mapKey: List<Any?>? = null
     private var camera: MapCamera? = null
+    private var geometry: MapGeometry? = null
     private var cache: TileCache<Bitmap>? = null
     private var player: CyberpunkPos? = null
     private var tracked: CyberpunkTracked? = null
@@ -92,6 +94,7 @@ class MapView(
     private var poiHidden = PoiFilters.hidden(context)
     private var poiIcons = PoiIconsState.UNKNOWN
     private val poiLayer = PoiLayer(kit)
+    private val routeLayer = RouteLayer(kit)
 
     /** Taille à laquelle décoder les icônes des points d'intérêt ([PoiIcons.load]). */
     val poiIconPx get() = poiLayer.iconPx
@@ -195,6 +198,8 @@ class MapView(
         if (key == mapKey) return
         mapKey = key
         camera = MapCamera(geo).also { it.setViewport(surface.width, surface.height) }
+        geometry = geo
+        routeLayer.clear()
         cache = TileCache(scope, cacheBytes(geo.tile), { it.byteCount }, { surface.postInvalidateOnAnimation() }) { k -> fetch(k) }
         userMoved = false
         centerButton.visibility = VISIBLE
@@ -266,18 +271,29 @@ class MapView(
         if (!wanted) {
             posJob?.cancel()
             posJob = null
+            routeLayer.clear()
             return
         }
         if (posJob?.isActive == true) return
         posJob = scope.launch {
+            var polls = 0
             while (true) {
                 runCatchingCancellable { api.livePos() }.getOrNull()?.let {
                     lastLiveAt = SystemClock.uptimeMillis()
                     track.push(lastLiveAt, it.x, it.y, it.yaw)
                     liveSpeed = it.speed
                 }
+                if (polls++ % ROUTE_EVERY_POLLS == 0) pollRoute()
                 delay(POS_POLL_MS)
             }
+        }
+    }
+
+    /** Chemin du GPS : périmé ou vide, la ligne droite revient ; une requête ratée garde le chemin d'avant (pas de clignotement). */
+    private suspend fun pollRoute() {
+        runCatchingCancellable { api.route() }.onSuccess { world ->
+            val geo = geometry
+            if (world == null || geo == null) routeLayer.clear() else routeLayer.setRoute(world, geo)
         }
     }
 
@@ -602,7 +618,7 @@ class MapView(
                 canvas.drawRect(0f, 0f, width.toFloat(), height * MapCamera.TOP_CUT.toFloat() * FADE_SPAN, fade)
             }
             val me = pose ?: player?.let { Pose(it.x, it.y, it.yaw) }
-            drawRoute(canvas, cam, me)
+            if (!routeLayer.draw(canvas, cam)) drawRoute(canvas, cam, me)
             pins.filter { !it.tracked }.forEach { drawPin(canvas, cam, it, R.color.cp_cyan, 0f) }
             pins.firstOrNull { it.tracked }?.let { drawPin(canvas, cam, it, R.color.cp_jaune, -kit.dp(PULSE_DP) * abs(sin(phase * PI.toFloat()))) }
             objective()?.takeIf { pins.none { it.tracked } }?.let { p ->
@@ -746,6 +762,9 @@ class MapView(
         // Vue conduite
         const val DRIVE_SWITCH_MS = 400L
         const val POS_POLL_MS = 250L
+
+        /** Le chemin du GPS est relu une fois sur 4 positions : chaque seconde. */
+        const val ROUTE_EVERY_POLLS = 4
 
         /** Plus de position rapide depuis 1,5 s : la position de l'état (1 par seconde) reprend. */
         const val LIVE_STALE_MS = 1_500L
