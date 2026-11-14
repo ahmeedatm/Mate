@@ -564,7 +564,8 @@ class CyberpunkOverlay(private val activity: FragmentActivity) {
         v.link.visibility = if (mode == CyberpunkLink.Mode.DEGRADED) View.VISIBLE else View.GONE
         mapView?.interactive = live
         if (!live) {
-            mapView?.leaveDrive()
+            // Partie vraiment finie seulement : une coupure réseau brève ne fait pas quitter la vue conduite.
+            if (error == null) mapView?.leaveDrive()
             // Le tiroir se ferme quand la partie est vraiment finie, jamais pour une erreur réseau (il revient avec la liaison).
             if (page != null && error == null) showDrawer(null)
             renderMessage(v, snap)

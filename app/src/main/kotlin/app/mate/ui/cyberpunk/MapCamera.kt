@@ -97,8 +97,14 @@ class MapCamera(private val geo: MapGeometry) {
         panBy(0f, 0f)
     }
 
+    /**
+     * Penchée, la carte ne recule pas plus que le zoom de pleine vitesse : plus loin, le trapèze vu demanderait plus de tuiles
+     * que le cache n'en tient. La borne suit l'inclinaison, pour que la transition depuis la carte à plat ne saute pas.
+     */
+    private val lowestScale get() = minScale + (max(DRIVE_SCALE_FAR, minScale) - minScale) * tilt
+
     fun setScale(value: Double) {
-        scale = value.coerceIn(minScale, MAX_SCALE)
+        scale = value.coerceIn(lowestScale, MAX_SCALE)
     }
 
     fun setPose(bearing: Double, tilt: Double, anchor: Double) {

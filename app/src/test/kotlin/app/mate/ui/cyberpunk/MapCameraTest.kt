@@ -277,4 +277,18 @@ class MapCameraTest {
         val ahead = c.segmentToScreen(0.0, 0.0, 0.0, 100.0)!!
         assertEquals(c.worldToScreen(0.0, 100.0).y, ahead.second.y, 1e-6)
     }
+
+    @Test fun `penchee, on ne dezoome pas plus loin que le zoom de pleine vitesse`() {
+        val c = camera()
+        c.setPose(10.0, 1.0, MapCamera.DRIVE_ANCHOR)
+        c.zoomAt(1e-6, 640f, 400f)
+        assertEquals(MapCamera.DRIVE_SCALE_FAR, c.scale, 1e-9)
+        // À mi-transition, la borne est à mi-chemin : la transition depuis un zoom de ville ne saute pas.
+        c.setPose(10.0, 0.5, MapCamera.DRIVE_ANCHOR)
+        c.setScale(0.0)
+        assertEquals(c.minScale + (MapCamera.DRIVE_SCALE_FAR - c.minScale) * 0.5, c.scale, 1e-9)
+        c.setPose(0.0, 0.0, MapCamera.FLAT_ANCHOR)
+        c.setScale(0.0)
+        assertEquals(c.minScale, c.scale, 1e-9)
+    }
 }

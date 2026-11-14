@@ -96,7 +96,7 @@ class MapView(
     private var zoomSpeed = 0.0
     private var zoomedAt = 0L
 
-    /** Pincement en conduite : multiplie le zoom de conduite (remis à 1 par « Me centrer » et à chaque montée). */
+    /** Pincement en conduite : multiplie le zoom de la vitesse (remis à 1 par « Me centrer » et à chaque montée). */
     private var driveZoom = 1.0
     private var lastLiveAt = 0L
     private var posJob: Job? = null
@@ -223,6 +223,7 @@ class MapView(
             track = PoseTrack()
             liveSpeed = null
             zoomSpeed = 0.0
+            zoomedAt = 0L
             driveZoom = 1.0
         }
         userMoved = false
@@ -487,7 +488,9 @@ class MapView(
         private fun zoom(factor: Double, x: Float, y: Float) {
             // En conduite, le zoom suit la vitesse : le pincement le multiplie, sans arrêter le suivi.
             if (drive.driving && !userMoved) {
-                driveZoom = (driveZoom * factor).coerceIn(DRIVE_ZOOM_MIN, DRIVE_ZOOM_MAX)
+                // Borné pour que le zoom obtenu reste entre la pleine vitesse et le zoom max : pas de pincement « mort ».
+                val s = driveScale(zoomSpeed)
+                driveZoom = (driveZoom * factor).coerceIn(MapCamera.DRIVE_SCALE_FAR / s, MapCamera.MAX_SCALE / s)
                 invalidate()
                 return
             }
@@ -664,9 +667,6 @@ class MapView(
         /** Plus de position rapide depuis 1,5 s : la position de l'état (1 par seconde) reprend. */
         const val LIVE_STALE_MS = 1_500L
 
-        /** Pincement en conduite : de deux fois plus loin à deux fois plus près que le zoom de la vitesse. */
-        const val DRIVE_ZOOM_MIN = 0.5
-        const val DRIVE_ZOOM_MAX = 2.0
         const val DRIVE_ARROW = 1.6f
 
         /** Hauteur du fondu du haut, en multiples de la partie opaque. */
