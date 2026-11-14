@@ -13,7 +13,7 @@ import { until } from "./cyberpunk-fakemod.ts";
 // Les routes lisent dataDir au chargement du module : un dossier à part, jamais le vrai `.data`.
 const tmp = fs.mkdtempSync(path.join(os.tmpdir(), "mate-phone-"));
 process.env.DATA_DIR = path.join(tmp, "data");
-const { ATLASES, FONTS, createPhone, fetchZip, phoneRoutes } = await import("../src/cyberpunk-phone.ts");
+const { ASSETS, ATLASES, FONTS, createPhone, fetchZip, phoneRoutes } = await import("../src/cyberpunk-phone.ts");
 
 /** Image générée : une bande verticale par pièce, de couleur propre (i + 1, 2·(i + 1), 3·(i + 1)), à moitié transparente. */
 function fakeAtlas(parts: string[]) {
@@ -92,6 +92,31 @@ describe("extraction du téléphone du jeu", () => {
     assert.equal((await p.asset("raj-bold.ttf"))!.toString(), "ttf-raj-bold");
     // Rien d'autre que les pièces dans le dossier.
     assert.deepEqual(fs.readdirSync(path.join(tmp, "ok")).sort(), [...names, "assets.json"].sort());
+  });
+
+  it("cyberware : corps homme et femme par système, câbles, icônes des zones", async () => {
+    const p = newPhone("cyber");
+    await p.prepare();
+    await settle(p, "ready");
+    const s = await p.status();
+    for (const n of [
+      "ma_full_skeleton.png",
+      "wo_skeleton.png",
+      "ma_nervous.png",
+      "wo_operating_system.png",
+      "man_cables.png",
+      "slot_brain.png",
+    ])
+      assert.ok(s.assets.includes(n), n);
+  });
+
+  it("extraction d'avant (liste sans les nouvelles pièces) : absent, à refaire", async () => {
+    const p = newPhone("ancienne");
+    await p.prepare();
+    await settle(p, "ready");
+    fs.writeFileSync(path.join(tmp, "ancienne", "assets.json"), JSON.stringify(["frame_main.png"]));
+    assert.equal((await p.status()).status, "absent");
+    assert.equal(await p.asset("frame_main.png"), null);
   });
 
   it("liste blanche : seul un nom de la liste est servi", async () => {
@@ -194,14 +219,16 @@ describe("routes du téléphone", () => {
     fs.writeFileSync(path.join(dir, "frame_main.png"), "PNGDATA");
     fs.writeFileSync(path.join(dir, "raj-bold.ttf"), "TTFDATA");
     fs.writeFileSync(path.join(dir, "intrus.png"), "x");
-    fs.writeFileSync(path.join(dir, "assets.json"), JSON.stringify(["frame_main.png", "raj-bold.ttf"]));
+    // Toutes les pièces attendues listées (sinon « absent ») ; seules deux existent vraiment ici.
+    for (const n of ASSETS) if (!fs.existsSync(path.join(dir, n))) fs.writeFileSync(path.join(dir, n), "x");
+    fs.writeFileSync(path.join(dir, "assets.json"), JSON.stringify(ASSETS));
   });
   after(() => app.close());
 
   it("GET /cyberpunk/phone : état et liste", async () => {
     const r = await app.inject({ method: "GET", url: "/cyberpunk/phone" });
     assert.equal(r.statusCode, 200);
-    assert.deepEqual(r.json(), { status: "ready", assets: ["frame_main.png", "raj-bold.ttf"] });
+    assert.deepEqual(r.json(), { status: "ready", assets: ASSETS });
   });
 
   it("GET /cyberpunk/phone/:name : type, cache long, 404 hors liste, nom invalide refusé", async () => {

@@ -18,13 +18,37 @@ import { readPng, writePng } from "./png-shrink.ts";
  * Windows seulement.
  */
 
+/** Systèmes du corps dans `man_body` / `woman_body` (noms du jeu, `ma_`/`wo_` devant ; deux noms diffèrent chez l'homme). */
+const BODY = [
+  "arms",
+  "circular",
+  "frontal_cortex",
+  "hands",
+  "immune",
+  "intergumentary",
+  "legs",
+  "nervous",
+  "ocular",
+  "operating_system",
+  "skeleton",
+];
+/** Icônes des zones dans `atlas_cyberware` (noms du jeu). */
+const CW_SLOTS = ["brain", "eyes", "immune", "nervous", "cardiovascular", "hands", "arms", "legs", "muscoskeletal", "skin"];
+
 /** Atlas à extraire et pièces à en découper. */
 export const ATLASES = [
   { name: "atlas_phone", parts: ["frame_main", "frame_message", "frame_top", "icon_message", "icon_signal", "icon_battery", "icon_nc"] },
   { name: "new_phone_assets", parts: ["msgBuble_bg", "msgBuble_fg", "msgBuble_reply_bg", "msgBuble_reply_fg", "phone_icon", "circle"] },
   { name: "messenger", parts: ["avatar", "avatar_big", "nc"] },
+  // Écran cyberware du charcudoc : le corps de V par système (homme, femme), câbles et fond pointillé, icônes des zones.
+  { name: "man_body", parts: BODY.map((p) => `ma_${p === "skeleton" ? "full_skeleton" : p === "frontal_cortex" ? "pfrontal_cortex" : p}`) },
+  { name: "woman_body", parts: BODY.map((p) => `wo_${p}`) },
+  { name: "cw_paperdoll_assets", parts: ["man_cables", "woman_cables", "dots_bg", "circle_1", "dashed_line", "dotted_line"] },
+  { name: "atlas_cyberware", parts: CW_SLOTS.map((z) => `slot_${z}`) },
 ];
 export const FONTS = ["raj-bold", "blenderpro-book"];
+/** Tous les fichiers d'une extraction complète : une liste plus courte (extraction d'une version d'avant) est à refaire. */
+export const ASSETS = [...ATLASES.flatMap((a) => a.parts.map((p) => `${p}.png`)), ...FONTS.map((f) => `${f}.ttf`)];
 
 /** Erreur dont le message peut s'afficher tel quel. */
 class PhoneError extends Error {}
@@ -94,7 +118,7 @@ export function createPhone(opts: PhoneOptions) {
           ),
         ),
       );
-      return present.every(Boolean) ? names : [];
+      return present.every(Boolean) && ASSETS.every((n) => names.includes(n)) ? names : [];
     } catch {
       return [];
     }
@@ -209,6 +233,8 @@ async function installZip(root: string, folder: string, spec: ToolZip) {
 const ATLAS_REGEX = [
   "widgets.phone.(atlas_phone|new_phone_assets)(_1080p)?\\.(xbm|inkatlas)$",
   "phone_quest_menu.messenger(_1080p)?\\.(xbm|inkatlas)$",
+  "fullscreen.ripperdoc.(man_body|woman_body|assets.cw_paperdoll_assets)(_1080p)?\\.(xbm|inkatlas)$",
+  "fullscreen.stats.atlas_cyberware(_1080p)?\\.(xbm|inkatlas)$",
 ].join("|");
 /** Polices à part : avec `-s`, WolvenKit sort un `.fnt.json` au lieu du `.ttf` (vu sur ATLAS le 2026-11-14). */
 const FONT_REGEX = "fonts.(raj.raj-bold|blender.book.blenderpro-book)\\.fnt$";
