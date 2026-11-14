@@ -1,0 +1,9 @@
+{
+  "repo": "Open2077/open77-resources",
+  "commit": "51e226ed630c5cd0fcfea1bd3b354148ec299ef0",
+  "dir": "standalone/op77_map3d/web/data",
+  "files": [
+    { "file": "manifest.json", "sha256": "86dda769b8c9abbfa9e4c28e1f5f85ed7b7add220bcadc4b92ebfa869871762a", "size": 5611 },
+    { "file": "buildings.bin", "sha256": "1c32470a97409f8b44a27c1a092602402f582934af6de683d8fe705b1c0c50a0", "size": 4088512 }
+  ]
+}

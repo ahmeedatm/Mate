@@ -50,7 +50,8 @@ Aucun mod existant n'exporte l'état vers une appli : le mod est à écrire, en 
   le thème de Mate (comme Valorant garde ses couleurs d'équipe).
 - Carte : tuiles de fans (dépôt `More-TALK/Cyberpunk-2077-__Map`, 197 tuiles WebP 256 px, grille
   14 × 14) téléchargées par le backend d'ATLAS au premier usage, jamais dans le dépôt public de Mate
-  (captures du jeu : droits CD Projekt). Calage par 2 ou 3 points relevés en jeu.
+  (captures du jeu : droits CD Projekt). Calage par 2 ou 3 points relevés en jeu. Remplacées le 14/11 par
+  des blocs par quartier : `2026-11-14-cyberpunk-carte-blocs-design.md`.
 - Repères : plusieurs, posés depuis la tablette ; toucher un repère le fait suivre par le GPS du jeu.
   Mate les garde (sur ATLAS, hors sauvegarde) et les repose à chaque chargement de partie.
 - Journal : lire les quêtes actives et leurs objectifs ; toucher une quête la fait suivre dans le jeu ;
@@ -255,9 +256,9 @@ Routes (jeton d'appairage ; 403 si plugin coupé, sauf `presence` qui rend `avai
 - `GET /cyberpunk/map` → `{ status:"absent"|"loading"|"ready"|"error", done, total, tile:512, levels, size:[w,h],
   affine:[a,b,c,d,e,f] }` ; `POST /cyberpunk/map/prepare` `{}` ; `GET /cyberpunk/tiles/:z/:x/:y.webp`
 
-Tuiles : `dwebp`/`cwebp` officiels de libwebp (BSD, zip `libwebp-1.6.0-windows-x64.zip` téléchargé dans
-`.data/` au premier usage, SHA-256 épinglé), images sources épinglées par commit et SHA-1 de blob du
-dépôt de fans ; pyramide de tuiles 512 px dans `.data/cyberpunk-map/`.
+Tuiles : depuis le 14/11, blocs par quartier dessinés par le compagnon à partir des cubes de la carte 3D du jeu
+(Open2077, SHA-256 épinglés), encodés par `cwebp` de libwebp dans `.data/cyberpunk-blocs/` : voir
+`2026-11-14-cyberpunk-carte-blocs-design.md`.
 
 ## Calage de la carte (mesuré le 2026-11-14)
 
