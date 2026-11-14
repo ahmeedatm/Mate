@@ -13,7 +13,7 @@ import { until } from "./cyberpunk-fakemod.ts";
 // Les routes lisent dataDir au chargement du module : un dossier à part, jamais le vrai `.data`.
 const tmp = fs.mkdtempSync(path.join(os.tmpdir(), "mate-phone-"));
 process.env.DATA_DIR = path.join(tmp, "data");
-const { ATLASES, FONTS, createPhone, fetchZip, phoneRoutes } = await import("../src/cyberpunk-phone.ts");
+const { ASSETS, ATLASES, FONTS, createPhone, fetchZip, phoneRoutes } = await import("../src/cyberpunk-phone.ts");
 
 /** Image générée : une bande verticale par pièce, de couleur propre (i + 1, 2·(i + 1), 3·(i + 1)), à moitié transparente. */
 function fakeAtlas(parts: string[]) {
@@ -79,8 +79,11 @@ describe("extraction du téléphone du jeu", () => {
     await p.prepare();
     await settle(p, "ready");
     const s = await p.status();
-    const names = [...ATLASES.flatMap((a) => a.parts.map((x) => `${x}.png`)), ...FONTS.map((f) => `${f}.ttf`)];
+    const names = ASSETS;
     assert.deepEqual([...s.assets].sort(), [...names].sort());
+    // Icônes des points d'intérêt de la carte : préfixe poi_, découpées comme les autres pièces.
+    assert.ok(s.assets.includes("poi_ripperdoc.png") && s.assets.includes("poi_fast_travel_metro.png"));
+    assert.ok(readPng((await p.asset("poi_ripperdoc.png"))!));
     assert.ok(s.assets.includes("frame_main.png") && s.assets.includes("msgBuble_bg.png") && s.assets.includes("raj-bold.ttf"));
     // frame_main : première bande de atlas_phone (couleur 1, 2, 3, alpha 128), 4 × 8 px.
     const png = readPng((await p.asset("frame_main.png"))!)!;
@@ -92,6 +95,19 @@ describe("extraction du téléphone du jeu", () => {
     assert.equal((await p.asset("raj-bold.ttf"))!.toString(), "ttf-raj-bold");
     // Rien d'autre que les pièces dans le dossier.
     assert.deepEqual(fs.readdirSync(path.join(tmp, "ok")).sort(), [...names, "assets.json"].sort());
+  });
+
+  it("extraction d'avant (liste plus courte, sans les icônes de la carte) : absent, à refaire", async () => {
+    const dir = path.join(tmp, "avant");
+    fs.mkdirSync(dir, { recursive: true });
+    const old = ["frame_main.png", "raj-bold.ttf"];
+    for (const n of old) fs.writeFileSync(path.join(dir, n), "x");
+    fs.writeFileSync(path.join(dir, "assets.json"), JSON.stringify(old));
+    const p = newPhone("avant");
+    assert.equal((await p.status()).status, "absent");
+    await p.prepare();
+    await settle(p, "ready");
+    assert.ok((await p.status()).assets.includes("poi_gigs.png"));
   });
 
   it("liste blanche : seul un nom de la liste est servi", async () => {
@@ -191,17 +207,18 @@ describe("routes du téléphone", () => {
     await phoneRoutes(app);
     await app.ready();
     fs.mkdirSync(dir, { recursive: true });
+    for (const n of ASSETS) fs.writeFileSync(path.join(dir, n), "x");
     fs.writeFileSync(path.join(dir, "frame_main.png"), "PNGDATA");
     fs.writeFileSync(path.join(dir, "raj-bold.ttf"), "TTFDATA");
     fs.writeFileSync(path.join(dir, "intrus.png"), "x");
-    fs.writeFileSync(path.join(dir, "assets.json"), JSON.stringify(["frame_main.png", "raj-bold.ttf"]));
+    fs.writeFileSync(path.join(dir, "assets.json"), JSON.stringify(ASSETS));
   });
   after(() => app.close());
 
   it("GET /cyberpunk/phone : état et liste", async () => {
     const r = await app.inject({ method: "GET", url: "/cyberpunk/phone" });
     assert.equal(r.statusCode, 200);
-    assert.deepEqual(r.json(), { status: "ready", assets: ["frame_main.png", "raj-bold.ttf"] });
+    assert.deepEqual(r.json(), { status: "ready", assets: ASSETS });
   });
 
   it("GET /cyberpunk/phone/:name : type, cache long, 404 hors liste, nom invalide refusé", async () => {

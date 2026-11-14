@@ -3,6 +3,7 @@ import { createHash } from "node:crypto";
 import fs from "node:fs/promises";
 import path from "node:path";
 import type { FastifyInstance } from "fastify";
+import { POI_ICONS } from "./cyberpunk-poi.ts";
 import { findGame } from "./cyberpunk-steam.ts";
 import { logFailure } from "./log.ts";
 import { osName } from "./os.ts";
@@ -18,13 +19,17 @@ import { readPng, writePng } from "./png-shrink.ts";
  * Windows seulement.
  */
 
-/** Atlas à extraire et pièces à en découper. */
-export const ATLASES = [
+/** Atlas à extraire et pièces à en découper ; `prefix` devant le nom du fichier rendu. */
+export const ATLASES: { name: string; parts: string[]; prefix?: string }[] = [
   { name: "atlas_phone", parts: ["frame_main", "frame_message", "frame_top", "icon_message", "icon_signal", "icon_battery", "icon_nc"] },
   { name: "new_phone_assets", parts: ["msgBuble_bg", "msgBuble_fg", "msgBuble_reply_bg", "msgBuble_reply_fg", "phone_icon", "circle"] },
   { name: "messenger", parts: ["avatar", "avatar_big", "nc"] },
+  // Icônes des points d'intérêt de la carte (`base\gameplay\gui\common\icons\mappin_icons.inkatlas`).
+  { name: "mappin_icons", parts: POI_ICONS, prefix: "poi_" },
 ];
 export const FONTS = ["raj-bold", "blenderpro-book"];
+/** Tous les fichiers d'une extraction complète : une liste plus courte (extraction d'une version d'avant) est à refaire. */
+export const ASSETS = [...ATLASES.flatMap((a) => a.parts.map((p) => `${a.prefix ?? ""}${p}.png`)), ...FONTS.map((f) => `${f}.ttf`)];
 
 /** Erreur dont le message peut s'afficher tel quel. */
 class PhoneError extends Error {}
@@ -73,7 +78,7 @@ async function cutAtlas(work: string, atlas: (typeof ATLASES)[number]): Promise<
     const x1 = Math.min(png.width, Math.round(r.Right * png.width));
     const y1 = Math.min(png.height, Math.round(r.Bottom * png.height));
     if (x1 <= x0 || y1 <= y0) throw new PhoneError(`Look du téléphone : la pièce ${name} est vide`);
-    out.set(`${name}.png`, cutPng(png, x0, y0, x1, y1));
+    out.set(`${atlas.prefix ?? ""}${name}.png`, cutPng(png, x0, y0, x1, y1));
   }
   return out;
 }
@@ -94,7 +99,7 @@ export function createPhone(opts: PhoneOptions) {
           ),
         ),
       );
-      return present.every(Boolean) ? names : [];
+      return present.every(Boolean) && ASSETS.every((n) => names.includes(n)) ? names : [];
     } catch {
       return [];
     }
@@ -209,6 +214,7 @@ async function installZip(root: string, folder: string, spec: ToolZip) {
 const ATLAS_REGEX = [
   "widgets.phone.(atlas_phone|new_phone_assets)(_1080p)?\\.(xbm|inkatlas)$",
   "phone_quest_menu.messenger(_1080p)?\\.(xbm|inkatlas)$",
+  "common.icons.mappin_icons(_1080p)?\\.(xbm|inkatlas)$",
 ].join("|");
 /** Polices à part : avec `-s`, WolvenKit sort un `.fnt.json` au lieu du `.ttf` (vu sur ATLAS le 2026-11-14). */
 const FONT_REGEX = "fonts.(raj.raj-bold|blender.book.blenderpro-book)\\.fnt$";
