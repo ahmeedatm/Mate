@@ -148,3 +148,77 @@ ouvert le téléphone du jeu. Le tiroir ressemble au téléphone du jeu.
 Spike sur ATLAS : un mod CET jetable `mods\mate_spike_sms` (à côté de `mods\mate`, sans le modifier)
 qui écrit dans son dossier le fil et les choix d'un contact, puis active un choix sur ordre ; retiré
 après le spike.
+
+## Ce que le spike a prouvé (2026-11-14, sur la vraie partie d'Ahmed)
+
+Enveloppe temporaire autour de `mods\mate\logic.lua` (rechargée par `reload.txt`, le jeu ouvert ne
+charge pas un nouveau mod), ordres par `cmd.txt` via `ssh pc` ; `logic.lua` d'origine remis ensuite,
+identique octet pour octet. Méthode reprise de `dariulone/cyberpunk-vr-port` (MIT), `modules/data.lua`,
+elle-même lue dans `MessengerDialogViewController` du jeu.
+
+- Lire (questions 1 et 4) : `MessengerUtils.GetSimpleContactDataArray(j, true, true, true)` rend les 28
+  fils (`hash`, `conversationHash`, `type`, `unreadMessages`, `playerCanReply`) ; puis
+  `j:GetMessagesAndChoices(j:GetEntry(u32(conversationHash)))` pour un fil multiple, sinon
+  `j:GetFlattenedMessagesAndChoices(j:GetEntry(u32(hash)))`, rendent deux tables (messages, choix),
+  téléphone du jeu fermé. Chaque message : texte localisé, `GetSender()` (joueur ou contact),
+  `IsEntryVisited`. Chaque choix : `GetEntryHash` stable et texte (« Takemura… ? », « Tu te fous de ma
+  gueule ? » ; Ariadne : 3 choix). Lire ne marque rien lu. `u32` : hash Int32 relu non signé.
+- Envoyer (question 2) : les autres choix `SetEntryVisited` + `ChangeEntryStateByHash(…, Inactive,
+  Notify)`, le choix retenu `SetEntryVisited` + `ChangeEntryStateByHash(…, Succeeded, Notify)`. Essai sur
+  Takemura avec l'accord d'Ahmed : la réponse apparaît dans le fil (`GetMessagesAndChoices` la rend comme
+  un `JournalPhoneChoiceEntry` côté joueur), Takemura répond tout seul (5 messages en ~10 s),
+  `playerCanReply` repasse à faux.
+- À répondre (question 5) : `playerCanReply` reste vrai tant qu'un choix est ouvert, que le fil soit lu
+  ou non (Regina : lu à moitié, pas de choix ; Ariadne : 3 non lus, 3 choix). Filtre de la liste :
+  `unread > 0 or playerCanReply`, comme l'onglet « Non lus » du jeu.
+- Marquer lu (question 3) : `SetEntryVisited` sur chaque message non visité, comme `SetVisited` du jeu ;
+  pas essayé pour ne pas toucher aux non lus d'Ahmed, vérifié au premier essai réel.
+- Images (question 6) : WolvenKit CLI 9.1.1 (`WolvenKit.Console-9.1.1.zip`, GPL-3.0, outil lancé à
+  part, jamais lié ni redistribué), qui exige .NET 10 : runtime portable 10.0.15 dézippé à côté, sans
+  rien installer (`DOTNET_ROOT`). `uncook -r <regex>` extrait des archives du jeu, `export --uext png -gp
+  <jeu>` rend les PNG. Trouvé : `base\gameplay\gui\widgets\phone\atlas_phone_1080p.xbm` (cadres
+  `frame_main`, `frame_message`, `frame_top`, icônes `icon_message`, `icon_signal`, `icon_battery`,
+  `icon_nc`), `new_phone_assets_1080p.xbm` (bulles `msgBuble_bg`, `msgBuble_fg`, `msgBuble_reply_bg`,
+  `msgBuble_reply_fg`, `phone_icon`, `circle`), `fullscreen\phone_quest_menu\messenger_1080p.xbm`
+  (`avatar`, `avatar_big`, `nc`), et les polices `fonts\raj\raj-bold.fnt` et
+  `fonts\blender\book\blenderpro-book.fnt`, que `uncook` rend directement en `.ttf`. Les images sont des
+  masques blancs sur fond transparent que le jeu teinte : la tablette les teinte avec ses `cp_*`. Les
+  zones de chaque pièce sont dans le `.inkatlas` (JSON par `-s`), en coordonnées UV.
+- Portraits des contacts : un atlas par personnage (`avatarID` → `UIIcon`) ; hors v1, `avatar` générique.
+
+## Contrat (fixé après le spike)
+
+Mod, `contacts.json` : chaque entrée de `threads` gagne `hash` (chaîne de chiffres, hash Int32 signé
+du fil tel que le jeu le rend), `multi` (booléen), `canReply` (booléen, `playerCanReply`) ; `unread`
+reste le nombre de non lus. Toujours les 28 fils (la tablette filtre).
+
+Ordres (`commands.json`, mêmes règles que les autres) :
+- `thread{hash}` : écrit `thread.json` `{ v:1, cmd:<id de l'ordre>, hash, version, messages:[ {hash,
+  text, player} ], choices:[ {hash, text} ] }` (`version` = nombre de messages + « : » + hash du
+  dernier), puis marque lus les messages non visités ; ack `ok`, `res` `"ok"` ou `"fil-introuvable"`.
+- `reply{hash, choice, version}` : relit le fil ; `res` `"fil-introuvable"`, `"choix-perime"` (choix
+  absent des choix ouverts ou `version` différente) ou `"ok"` après l'envoi du spike.
+
+Backend :
+- `GET /cyberpunk/threads/:hash` → le contenu de `thread.json` (sans `cmd`), après avoir vérifié
+  `cmd == id` de l'ordre ; 409 `{ error, res }` si `ack.ok` est faux, 504 sans réponse en 5 s, 409 hors
+  partie comme les autres.
+- `POST /cyberpunk/threads/:hash/reply` `{ choice, version }` → `{ ok:true }` ; mêmes codes.
+- `:hash` et `choice` : `^-?[0-9]{1,10}$` ; `version` : `^[0-9]{1,4}:-?[0-9]{1,10}$`.
+- `GET /cyberpunk/phone` → `{ status:"absent"|"loading"|"ready"|"error", error?, assets:[noms] }` ;
+  `POST /cyberpunk/phone/prepare` `{}` (409 sans jeu) ; `GET /cyberpunk/phone/:name` sert un nom de la
+  liste `assets` (PNG ou TTF), 404 sinon. Fichiers dans `<dataDir>/cyberpunk-phone/`, outils dans
+  `<dataDir>/cyberpunk-phone-tools/` (zips épinglés par SHA-256 :
+  `https://github.com/WolvenKit/WolvenKit/releases/download/9.1.1/WolvenKit.Console-9.1.1.zip`
+  `a14eae46931251635256e7b209cd4aa998ae5039a5fbd506fefaab671bf7f451`, 45 266 480 octets ;
+  `https://builds.dotnet.microsoft.com/dotnet/Runtime/10.0.15/dotnet-runtime-10.0.15-win-x64.zip`
+  `c9f219ad2ec570478f4b1950ae56f88a48e76cabba75e7f54764a1d8a9009e87`, 36 980 907 octets). Pièces
+  découpées une par PNG d'après l'`.inkatlas` (`frame_main.png`, `msgBuble_bg.png`…), polices
+  `raj-bold.ttf`, `blenderpro-book.ttf`. Windows seulement.
+
+Tablette : onglets Messages / Contacts dans le tiroir ; Messages = fils `unread > 0 or canReply`, plus
+ceux ouverts depuis l'ouverture du tiroir ; fil = bulles (contact à gauche, V à droite) puis choix en
+boutons ; après un envoi, `GET /cyberpunk/threads/:hash` toutes les 2 s pendant 10 s tant que le fil
+n'a pas bougé. Images et polices chargées de `GET /cyberpunk/phone/:name` si `status = ready`, mises en
+cache sur la tablette, teintées en `cp_*` ; sinon repli `cp_*` + Chakra Petch. Bouton « Préparer le
+look du jeu » dans le tiroir Téléphone quand `status = absent` ou `error`.
