@@ -2397,6 +2397,8 @@
     <string name="trash_idle_key">Garder ici pour fermer</string>
 
     <!-- Page Cyberpunk 2077 (ui/cyberpunk) -->
+    <string name="cp_resume_label">Cyberpunk</string>
+    <string name="cp_resume">Rouvrir la page Cyberpunk</string>
     <string name="cp_rail_journal">Journal</string>
     <string name="cp_rail_phone">Téléphone</string>
     <string name="cp_rail_items">Objets</string>
