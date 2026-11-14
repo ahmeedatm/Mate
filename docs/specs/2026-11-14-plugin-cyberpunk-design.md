@@ -50,7 +50,8 @@ Aucun mod existant n'exporte l'état vers une appli : le mod est à écrire, en 
   le thème de Mate (comme Valorant garde ses couleurs d'équipe).
 - Carte : tuiles de fans (dépôt `More-TALK/Cyberpunk-2077-__Map`, 197 tuiles WebP 256 px, grille
   14 × 14) téléchargées par le backend d'ATLAS au premier usage, jamais dans le dépôt public de Mate
-  (captures du jeu : droits CD Projekt). Calage par 2 ou 3 points relevés en jeu.
+  (captures du jeu : droits CD Projekt). Calage par 2 ou 3 points relevés en jeu. Remplacées le 14/11 par
+  des blocs par quartier : `2026-11-14-cyberpunk-carte-blocs-design.md`.
 - Repères : plusieurs, posés depuis la tablette ; toucher un repère le fait suivre par le GPS du jeu.
   Mate les garde (sur ATLAS, hors sauvegarde) et les repose à chaque chargement de partie.
 - Journal : lire les quêtes actives et leurs objectifs ; toucher une quête la fait suivre dans le jeu ;

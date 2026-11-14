@@ -5,8 +5,6 @@ import android.content.Context
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.graphics.Canvas
-import android.graphics.ColorMatrix
-import android.graphics.ColorMatrixColorFilter
 import android.graphics.DashPathEffect
 import android.graphics.LinearGradient
 import android.graphics.Matrix
@@ -53,8 +51,8 @@ import kotlin.math.abs
 import kotlin.math.sin
 
 /**
- * Carte de Night City de la page Cyberpunk : tuiles du compagnon (pyramide WebP, cache taillé par `MapCamera.tileCacheBytes`), teintées rouge-ocre au
- * dessin, joueur en flèche jaune orientée par son yaw, objectif de quête, repères, trajet GPS. Glisser déplace, pincer ou
+ * Carte de Night City de la page Cyberpunk : tuiles du compagnon (pyramide WebP, cache taillé par `MapCamera.tileCacheBytes`), déjà
+ * dessinées en blocs colorés par quartier (cubes de la carte holographique du jeu, `cyberpunk-blocks.ts`), joueur en flèche jaune orientée par son yaw, objectif de quête, repères, trajet GPS. Glisser déplace, pincer ou
  * double toucher zoome, toucher le vide pose un repère, toucher un repère le fait suivre (re-toucher le suivi : retour à la
  * quête), appui long sur un repère le supprime. Tant que la carte n'a pas été déplacée à la main, elle suit le joueur.
  * En véhicule (vue conduite) : la carte zoome sur lui, tourne pour que l'avant du véhicule pointe vers le haut et se penche
@@ -485,7 +483,7 @@ class MapView(
     // --- Dessin et gestes
 
     private inner class Surface(context: Context) : View(context) {
-        private val tilePaint = Paint(Paint.FILTER_BITMAP_FLAG).apply { colorFilter = tintFilter() }
+        private val tilePaint = Paint(Paint.FILTER_BITMAP_FLAG)
         private val fill = Paint(Paint.ANTI_ALIAS_FLAG)
         private val line = Paint(Paint.ANTI_ALIAS_FLAG).apply {
             style = Paint.Style.STROKE
@@ -698,15 +696,6 @@ class MapView(
         }
     }
 
-    private fun tintFilter(): ColorMatrixColorFilter {
-        val tint = kit.color(R.color.cp_carte_teinte)
-        fun row(channel: Int) = (channel / 255f).let { c ->
-            floatArrayOf(LUMA_R * CONTRAST * c, LUMA_G * CONTRAST * c, LUMA_B * CONTRAST * c, 0f, BRIGHTNESS * c)
-        }
-        val m = row(android.graphics.Color.red(tint)) + row(android.graphics.Color.green(tint)) + row(android.graphics.Color.blue(tint)) + floatArrayOf(0f, 0f, 0f, 1f, 0f)
-        return ColorMatrixColorFilter(ColorMatrix(m))
-    }
-
     private fun pinPath(r: Float) = Path().apply {
         addCircle(0f, -r * PIN_BODY, r, Path.Direction.CW)
         moveTo(-r * PIN_NECK, -r * PIN_BODY * PIN_NECK)
@@ -756,12 +745,5 @@ class MapView(
         const val FADE_SPAN = 2.5f
         const val OPAQUE = 255
         const val TRANSPARENT_MASK = 0x00FFFFFF
-
-        // Gris (luminance), contraste puis luminosité : la teinte `cp_carte_teinte` est le blanc de la carte.
-        const val LUMA_R = 0.299f
-        const val LUMA_G = 0.587f
-        const val LUMA_B = 0.114f
-        const val CONTRAST = 1.25f
-        const val BRIGHTNESS = -25f
     }
 }
