@@ -21,7 +21,7 @@ pause.
 - Spike d'abord sur sa vraie partie : lire les mappins du jeu depuis le mod CET. Si c'est impossible,
   retour vers Ahmed avant de construire.
 
-## Ce qu'on sait déjà (lu, pas encore essayé en jeu)
+## Ce qu'on savait avant le spike (lu dans les scripts du jeu)
 
 - Scripts décompilés du jeu (`In-Question/MOD_Development_Reference`, `orphans.swift`) :
   `MappinSystem.GetMappins(targetType, out mappins: array<ref<IMappin>>)` avec
@@ -159,6 +159,51 @@ GET /cyberpunk/mappins → { v:1, mappins:[ { id, x, y, cat, icon, name, undisco
 5. Les icônes découpées s'affichent-elles nettes à 24-32 dp sur la tablette ?
 
 Si 1 et le repli échouent : retour vers Ahmed avec ce qui a été vu, avant toute construction.
+
+## Ce que le spike a prouvé (2026-11-14, partie d'Ahmed, ATLAS)
+
+Mod jetable `mods\mate_spike_poi` (à côté de `mods\mate`, sans le toucher), sonde relue toutes les 5 s.
+
+- `Game.GetMappinSystem():GetMappins(gamemappinsMappinTargetType.Map)` rend la liste en valeur de retour
+  (pas de paramètre `out`). Juste après le chargement de la partie elle est vide (0) : elle se remplit
+  ensuite (475 points sur la partie d'Ahmed). `World` en rend 114, `Minimap` 411.
+- Toute la ville, pas seulement le secteur chargé : points jusqu'à 6,8 km de V (médiane 1,5 km).
+- Temps : la liste en 3 ms, les getters des 475 points en 26 ms (29 ms en tout, sur une seule image).
+  Une lecture d'un bloc ferait une saccade : le mod lit par paquets répartis sur plusieurs images.
+- Chaque point : `GetWorldPosition`, `GetVariant`, `GetPhase`, `IsVisible`, `IsActive`,
+  `IsPlayerTracked`, `GetDisplayName` (souvent vide, sinon `LocKey#…` à passer par `loc`) répondent.
+  Classes : `PointOfInterestMappin` (boutiques, crimes, contrats), `QuestMappin`, `FastTravelMappin`,
+  `RuntimeMappin` (points de dépôt, repères posés), `VehicleMappin`, `StubMappin`.
+- Icône : `MappinUIUtils.MappinToTexturePart(variant, phase)` rend le nom de la pièce de
+  `mappin_icons.inkatlas` que le jeu utilise (`ripperdoc`, `gun`, `clothes`, `food_vendor`, `bar`,
+  `medicine`, `junk_shop`, `glamdoc`, `fixer`, `gigs`, `map_bounty`, `hunt_for_psycho`, `fast_travel`,
+  `fast_travel_metro`, `minor_quest`, `quest`, `dropbox`, `car_to_buy`, `apartment_to_buy`, `tarot_card`,
+  `melee`, `netservice`, `prostitute`, `dogtown_gate`, `car`, `dynamic_event`…). Le mod envoie ce nom :
+  pas de table d'icônes à la main.
+- Phases vues : boutiques et services `Invalid`, crimes et contrats `Discovered` / `Undiscovered` /
+  `Completed`, quêtes et bornes `Default`. Les quêtes cachées par la carte sont `IsVisible` faux (14 sur
+  22 `QuestMappin`).
+- La quête suivie est dans la liste (`IsPlayerTracked` vrai) ; les 2 repères posés par Mate y sont aussi
+  (`CustomPositionVariant`, `RuntimeMappin`).
+- Voyage rapide : `FastTravelSystem:GetFastTravelPoints()` (51 points, noms en français), position par
+  `GetMappin(p.mappinID):GetWorldPosition()`. Inutile en v1 : la liste de la carte contient déjà les 45
+  bornes et les 3 stations de métro découvertes.
+
+Décisions qui en découlent :
+- Exclus : `IsVisible` faux, `IsPlayerTracked` vrai (déjà dessiné), `CustomPositionVariant` (repères de
+  Mate et repère du joueur, dessinés à part).
+- Phase « non découvert » : même icône que le jeu (il ne la change pas), atténuée ; « terminé » : atténuée
+  aussi. Rien n'est caché par la phase seule, comme sur la carte du jeu.
+- Lecture : liste relue toutes les 10 s, getters par paquets de 50 points par image ; le bloc
+  `mappins.json` n'est réécrit qu'une fois la liste entière lue, et seulement si elle a changé.
+- Catégories (une variante = une catégorie, table du backend) : Quêtes (`QuestMappin`, `DefaultQuest`,
+  `ExclamationMark`, `QuestGiver`, `QuestionMark`), Contrats (`Fixer`, `Retrieving`, `Thievery`,
+  `Sabotage`, `BountyHunt`, `ClientInDistress`, icône `gigs`), Crimes NCPD (`GangWatch`, `HiddenStash`,
+  `Outpost`, `HuntForPsycho`, `Zzz06_NCPDGig`, `SmugglersDen`, `Resource`, `FailedCrossing`), Transports
+  (`FastTravel`, `Zzz17_NCART`), Boutiques (`ServicePoint*` hors charcudoc, `Zzz21_ServicePointGlamdoc`,
+  `Zzz14_ServicePointBlackMarket`, `OpenVendor`), Charcudocs (`ServicePointRipperdoc`,
+  `ServicePointCyberware`), Autres (tout le reste : dépôts, véhicules et appartements à acheter, tarots,
+  porte de Dogtown, véhicule du joueur).
 
 ## Critère de réussite
 
