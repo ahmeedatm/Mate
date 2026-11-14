@@ -218,6 +218,9 @@ class CyberpunkApi(private val http: Http) {
     /** Null : pas de position fraîche en véhicule (à pied, pause, menu). */
     suspend fun livePos(): CyberpunkLivePos? = http.io { parseLivePos(http.get("/cyberpunk/pos", timeoutMs = POS_TIMEOUT_MS)) }
 
+    /** Chemin du GPS du jeu en véhicule, `[x0, y0, x1, y1…]` du monde ; vide sans destination ou sans In-World Navigation ; null si périmé. */
+    suspend fun route(): DoubleArray? = http.io { parseRoute(http.get("/cyberpunk/route", timeoutMs = POS_TIMEOUT_MS)) }
+
     suspend fun inventory(): List<CyberpunkItem> = http.io { parseInventory(http.get("/cyberpunk/inventory", timeoutMs = STATE_TIMEOUT_MS)) }
 
     suspend fun contacts(): CyberpunkContacts = http.io { parseContacts(http.get("/cyberpunk/contacts", timeoutMs = STATE_TIMEOUT_MS)) }
@@ -398,6 +401,19 @@ class CyberpunkApi(private val http: Http) {
             if (!o.optBoolean("fresh") || !o.optBoolean("vehicle") || !o.has("x") || !o.has("y") || !o.has("yaw")) return null
             val speed = o.optDouble("speed").takeIf { !it.isNaN() && !o.isNull("speed") }
             return CyberpunkLivePos(o.double("x"), o.double("y"), o.double("yaw"), speed)
+        }
+
+        fun parseRoute(json: String): DoubleArray? {
+            val o = JSONObject(json)
+            if (!o.optBoolean("fresh")) return null
+            val a = o.optJSONArray("points") ?: return DoubleArray(0)
+            if (a.length() % 2 != 0) return DoubleArray(0)
+            val out = DoubleArray(a.length())
+            for (i in out.indices) {
+                val v = a.opt(i) as? Number ?: return DoubleArray(0)
+                out[i] = v.toDouble().takeIf { it.isFinite() } ?: return DoubleArray(0)
+            }
+            return out
         }
 
         fun parseInventory(json: String): List<CyberpunkItem> = JSONObject(json).optJSONArray("items").items {
