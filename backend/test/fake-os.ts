@@ -479,3 +479,7 @@ export async function notify(title: string, text: string) {
 export function riotLockfile(): string | null {
   return isWindows ? (read().riotLockfile ?? null) : null;
 }
+
+export function steamPath(): string | null {
+  return null;
+}

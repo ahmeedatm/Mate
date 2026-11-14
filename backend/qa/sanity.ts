@@ -886,6 +886,18 @@ export async function runSanity(opts: { url: string; token: string; os?: Os; hoo
       },
     },
     {
+      name: "Cyberpunk 2077 (présence)",
+      run: async () => {
+        // Lecture seule : jeu absent (Mac, pas de Steam) ou mod non installé, `available` le dit sans erreur.
+        const res = await call("GET", "/cyberpunk/presence");
+        expectStatus(res, 200, "/cyberpunk/presence");
+        for (const key of ["available", "gameFound", "modInstalled", "running", "inGame"])
+          expect(typeof res.json[key] === "boolean", `${key} absent de /cyberpunk/presence`);
+        if (os !== "windows") expect(!res.json.available, "Cyberpunk annoncé hors Windows");
+        return res.json.available ? `jeu trouvé, mod ${res.json.modInstalled ? "installé" : "absent"}` : "jeu non trouvé";
+      },
+    },
+    {
       name: "Valorant (logo de rang servi par l'ordinateur)",
       run: async () => {
         // Lecture seule : téléchargé une fois depuis valorant-api.com, puis gardé dans .cache.

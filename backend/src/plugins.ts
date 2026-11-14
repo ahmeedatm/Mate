@@ -1,6 +1,7 @@
 import path from "node:path";
 import { agentsAvailable } from "./agents-sources.ts";
 import { config } from "./config.ts";
+import { findGame } from "./cyberpunk-steam.ts";
 import { jiraConfigured } from "./jira.ts";
 import { canMedia, isInstalled, osName } from "./os.ts";
 import { readJson, updateJson } from "./store.ts";
@@ -55,6 +56,13 @@ const CATALOG: PluginDef[] = [
     name: "Jira",
     description: "Voir ses tickets en colonnes et changer leur statut",
     present: jiraConfigured,
+  },
+  {
+    id: "cyberpunk",
+    kind: "app",
+    name: "Cyberpunk 2077",
+    description: "Perso, inventaire, téléphone, quêtes et carte du jeu sur la tablette",
+    present: () => findGame() !== null,
   },
   {
     id: "open",

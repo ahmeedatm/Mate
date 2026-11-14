@@ -1,0 +1,389 @@
+-- Mate pour Cyberpunk 2077 : écrit l'état de la partie dans state.json (~1 s), les blocs lents dans
+-- inventory.json, contacts.json et quests.json, et exécute les ordres de commands.json (écrit par le backend de Mate).
+-- Tout appel au jeu est sous pcall. Aucun appel inconnu du moteur hors des commandes ci-dessous.
+-- Contrat : docs/specs/2026-11-14-plugin-cyberpunk-design.md, section « Contrat ». Pas de variable globale (CET les refuse).
+local VERSION = "1.0.0"
+local every, acc = 1.0, 0
+local seq, tick = 0, 0
+local errs = {}
+local acks = {}
+local pins = {}
+local mappinIds = {}
+local trackedPin = nil
+local lastCmd = nil
+local hadPlayer = false
+local session = 0
+local blocks = { inv = os.time(), contacts = os.time(), quests = os.time() }
+local lastJson = {}
+
+local function try(key, f)
+  local ok, v = pcall(f)
+  if ok then return v end
+  errs[key] = tostring(v)
+  return nil
+end
+
+local function loc(s)
+  if s == nil then return "" end
+  s = tostring(s)
+  if string.find(s, "^LocKey#") then
+    local ok, t = pcall(function() return Game.GetLocalizedText(s) end)
+    if ok and t and t ~= "" then return t end
+  end
+  local ok, t = pcall(function() return Game.GetLocalizedTextByKey(s) end)
+  if ok and t and t ~= "" then return t end
+  return s
+end
+
+local function itemInfo(pl, id)
+  local tdb = ItemID.GetTDBID(id)
+  local rec = TweakDBInterface.GetItemRecord(tdb)
+  local data = Game.GetTransactionSystem():GetItemData(pl, id)
+  local q = nil
+  pcall(function() q = tostring(RPGManager.GetItemDataQuality(data)) end)
+  local typ = nil
+  pcall(function() typ = tostring(rec:ItemType():Type()) end)
+  return { tdb = TDBID.ToStringDEBUG(tdb), name = Game.GetLocalizedTextByKey(rec:DisplayName()), quality = q, type = typ,
+           qty = Game.GetTransactionSystem():GetItemQuantity(pl, id) }
+end
+
+-- Écriture d'un fichier du mod (dossier courant de CET).
+local function put(name, body)
+  local f = io.open(name, "w")
+  if f then f:write(body); f:close() end
+end
+
+-- state.json : fichier temporaire puis renommage (jamais de JSON coupé) ; si le renommage échoue (Windows refuse
+-- d'écraser), écriture directe.
+local function putAtomic(name, body)
+  local tmp = name .. ".tmp"
+  put(tmp, body)
+  local ok, renamed = pcall(os.rename, tmp, name)
+  if not (ok and renamed) then
+    put(name, body)
+    pcall(os.remove, tmp)
+  end
+end
+
+local function readAll(name)
+  local f = io.open(name, "r")
+  if not f then return nil end
+  local b = f:read("*a"); f:close()
+  return b
+end
+
+-- Bloc lent : réécrit seulement si son JSON change ; le compteur blocks[key] le dit au backend.
+local function putBlock(key, name, value)
+  local body = json.encode(value)
+  if lastJson[key] == body then return end
+  lastJson[key] = body
+  blocks[key] = blocks[key] + 1
+  putAtomic(name, body)
+end
+
+local CW = { "SystemReplacementCW", "FrontalCortexCW", "EyesCW", "ArmsCW", "HandsCW", "MusculoskeletalSystemCW",
+  "NervousSystemCW", "CardiovascularSystemCW", "ImmuneSystemCW", "IntegumentarySystemCW", "LegsCW" }
+local ATTRS = { body = "Strength", ref = "Reflexes", tech = "TechnicalAbility", int = "Intelligence", cool = "Cool" }
+
+local function stat(eid, name)
+  return try("stat." .. name, function() return Game.GetStatsSystem():GetStatValue(eid, gamedataStatType[name]) end)
+end
+
+local function cyberware(pl)
+  local out = {}
+  local eq = try("equipData", function() return Game.GetScriptableSystemsContainer():Get(CName.new("EquipmentSystem")):GetPlayerData(pl) end)
+  if not eq then return out end
+  for _, a in ipairs(CW) do
+    local area = gamedataEquipmentArea[a]
+    local n = try("cw.n." .. a, function() return eq:GetNumberOfSlots(area) end) or 0
+    local slots = {}
+    for i = 0, n - 1 do
+      local id = try("cw." .. a .. i, function() return eq:GetItemInEquipSlot(area, i) end)
+      local info = nil
+      if id and ItemID.IsValid(id) then info = try("cw.info." .. a .. i, function() return itemInfo(pl, id) end) end
+      slots[#slots + 1] = info and { tdb = info.tdb, name = info.name, quality = info.quality } or false
+    end
+    out[a] = slots
+  end
+  return out
+end
+
+local function trackedEntry()
+  local jm = Game.GetJournalManager()
+  local e = jm:GetTrackedEntry()
+  if e == nil then return nil end
+  local r = { kind = "quest", id = e:GetId() }
+  pcall(function() r.desc = loc(e:GetDescription()) end)
+  pcall(function() local q = jm:GetParentEntry(jm:GetParentEntry(e)); r.quest = loc(q:GetTitle(jm)) end)
+  return r
+end
+
+-- Appel en cours : « questPhoneCallPhase : StartCall (2) », contact = CName dont le nom est en commentaire.
+local function callInfo()
+  local bb = Game.GetBlackboardSystem():Get(GetAllBlackboardDefs().UI_ComDevice)
+  local v = FromVariant(bb:GetVariant(GetAllBlackboardDefs().UI_ComDevice.PhoneCallInformation))
+  local p = tostring(v.callPhase)
+  local phase = "none"
+  if string.find(p, "Incoming") then phase = "incoming" elseif string.find(p, "StartCall") then phase = "active" end
+  local who = tostring(v.contactName)
+  who = string.match(who, "%-%-%[%[ (.-) %-%-%]%]") or who
+  return { phase = phase, contact = who, audio = v.isAudioCall }
+end
+
+local function snapshot()
+  seq = seq + 1
+  local out = { v = 1, seq = seq, at = os.time(), inGame = false, session = session, mod = VERSION }
+  local pl = Game.GetPlayer()
+  if pl ~= nil then
+    local eid = pl:GetEntityID()
+    out.inGame = true
+    local attrs = {}
+    for k, s in pairs(ATTRS) do attrs[k] = stat(eid, s) end
+    local pts = {}
+    local dev = try("devData", function() return PlayerDevelopmentSystem.GetData(pl) end)
+    if dev then
+      pts.attr = try("pts.attr", function() return dev:GetDevPoints(gamedataDevelopmentPointType.Attribute) end)
+      pts.perk = try("pts.perk", function() return dev:GetDevPoints(gamedataDevelopmentPointType.Primary) end)
+    end
+    out.player = {
+      level = stat(eid, "Level"), cred = stat(eid, "StreetCred"), attrs = attrs, pts = pts,
+      health = try("health", function() return Game.GetStatPoolsSystem():GetStatPoolValue(eid, gamedataStatPoolType.Health, true) end),
+      humanity = try("humanityPool", function() return Game.GetStatPoolsSystem():GetStatPoolValue(eid, gamedataStatPoolType.Humanity, false) end),
+      money = try("money", function() return Game.GetTransactionSystem():GetItemQuantity(pl, MarketSystem.Money()) end),
+    }
+    out.pos = try("pos", function()
+      local p = pl:GetWorldPosition()
+      return { x = p.x, y = p.y, z = p.z, yaw = pl:GetWorldYaw() }
+    end)
+    out.cyberware = cyberware(pl)
+    local t = try("tracked", trackedEntry)
+    if t == nil and trackedPin then t = { kind = "pin", id = trackedPin } end
+    out.tracked = t
+    out.call = try("callInfo", callInfo)
+  end
+  out.blocks = blocks
+  out.pins = pins
+  out.acks = acks
+  out.errors = errs
+  return out
+end
+
+-- Blocs lents ---------------------------------------------------------------------------------------------------------
+
+local function inventoryBlock()
+  local pl = Game.GetPlayer()
+  if pl == nil then return end
+  local _, list = Game.GetTransactionSystem():GetItemList(pl)
+  local items = {}
+  for i = 1, #(list or {}) do
+    local it = try("inv." .. i, function() return itemInfo(pl, list[i]:GetID()) end)
+    if it then
+      -- Utilisable : consommable (type « Con_… »), déduction du type de l'objet, sans appel de plus.
+      it.usable = it.type ~= nil and string.find(it.type, "Con_") ~= nil
+      it.type = it.type and (string.match(it.type, ":%s*(%S+)") or it.type) or nil
+      items[#items + 1] = it
+    end
+  end
+  putBlock("inv", "inventory.json", { v = 1, items = items })
+end
+
+local function contactsBlock()
+  local jm = Game.GetJournalManager()
+  local contacts, threads = {}, {}
+  local list = try("contacts", function() return MessengerUtils.GetCallableAndNonEmptyContacts(jm) end)
+  for i = 1, #(list or {}) do
+    local c = list[i]
+    contacts[#contacts + 1] = { id = c.contactId, name = loc(c.localizedName), callable = c.isCallable, unread = c.unreadMessegeCount or 0 }
+  end
+  local th = try("threads", function() return MessengerUtils.GetSimpleContactDataArray(jm, true, true, true) end)
+  for i = 1, math.min(#(th or {}), 15) do
+    local c = th[i]
+    threads[#threads + 1] = { name = loc(c.localizedName), preview = loc(c.lastMesssagePreview), unread = #(c.unreadMessages or {}) }
+  end
+  putBlock("contacts", "contacts.json", { v = 1, contacts = contacts, threads = threads })
+end
+
+local function questsBlock()
+  local jm = Game.GetJournalManager()
+  local quests = {}
+  local t = try("tracked", trackedEntry)
+  -- Liste complète : GetQuests rendait une table vide pendant le spike (forme du paramètre à trouver, à prouver en jeu).
+  local list = try("quests", function()
+    local ctx = JournalRequestContext.new()
+    ctx.stateFilter.active = true
+    local a, b = jm:GetQuests(ctx)
+    if type(a) == "table" and #a > 0 then return a end
+    return b
+  end)
+  for i = 1, math.min(#(type(list) == "table" and list or {}), 30) do
+    local q = list[i]
+    local e = try("q." .. i, function() return { id = q:GetId(), title = loc(q:GetTitle(jm)), kind = "quest", tracked = false } end)
+    if e then quests[#quests + 1] = e end
+  end
+  if t then
+    local found = false
+    for _, q in ipairs(quests) do
+      if t.quest and q.title == t.quest then q.objective = t.desc; q.tracked = true; found = true end
+    end
+    if not found then quests[#quests + 1] = { id = t.id, title = t.quest or "", kind = "quest", objective = t.desc, tracked = true } end
+  end
+  putBlock("quests", "quests.json", { v = 1, quests = quests })
+end
+
+-- Ordres ----------------------------------------------------------------------------------------------------------------
+
+local function phoneRequest(phase, caller, addressee, mode)
+  local ps = Game.GetScriptableSystemsContainer():Get(CName.new("PhoneSystem"))
+  local r = questTriggerCallRequest.new()
+  r.addressee = CName.new(addressee); r.caller = CName.new(caller)
+  r.callPhase = phase; r.callMode = mode or questPhoneCallMode.Audio
+  ps:QueueRequest(r)
+end
+
+local COMMANDS = {}
+
+COMMANDS.call = function(c)
+  local ps = Game.GetScriptableSystemsContainer():Get(CName.new("PhoneSystem"))
+  if not ps:IsCallingEnabled() then return "blocked" end
+  phoneRequest(questPhoneCallPhase.IncomingCall, "Player", tostring(c.contact), questPhoneCallMode.Video)
+  return "calling"
+end
+
+COMMANDS.answer = function() -- à prouver en jeu
+  local c = callInfo()
+  if c.phase ~= "incoming" then return "none" end
+  phoneRequest(questPhoneCallPhase.StartCall, c.contact, "Player")
+  return "answered"
+end
+
+COMMANDS.hangup = function() -- à prouver en jeu
+  local c = callInfo()
+  if c.phase == "none" then return "none" end
+  phoneRequest(questPhoneCallPhase.EndCall, c.contact, "Player")
+  return "hungup"
+end
+
+COMMANDS.summon = function() -- à prouver en jeu (IsSummoningVehiclesRestricted a répondu « requires 0 parameter(s) » au spike)
+  Game.GetPlayer():GetQuickSlotsManager():SummonActiveVehicle(true)
+  return "summoned"
+end
+
+COMMANDS.use = function(c)
+  local pl = Game.GetPlayer()
+  local id = ItemID.FromTDBID(TweakDBID.new(tostring(c.tdb)))
+  if Game.GetTransactionSystem():GetItemQuantity(pl, id) < 1 then return "none" end
+  ItemActionsHelper.ConsumeItem(pl, id, true)
+  return "used"
+end
+
+COMMANDS.track = function(c) -- à prouver en jeu
+  local jm = Game.GetJournalManager()
+  if c.kind == "pin" then
+    local id = mappinIds[tostring(c.id)]
+    if not id then return "unknown" end
+    Game.GetMappinSystem():SetMappinTrackingAlternative(id, true)
+    trackedPin = c.id
+    return "tracked"
+  end
+  local ctx = JournalRequestContext.new()
+  ctx.stateFilter.active = true
+  local a, b = jm:GetQuests(ctx)
+  local list = (type(a) == "table" and #a > 0) and a or b
+  for i = 1, #(type(list) == "table" and list or {}) do
+    if list[i]:GetId() == c.id then jm:TrackEntry(list[i]); trackedPin = nil; return "tracked" end
+  end
+  return "unknown"
+end
+
+COMMANDS.pin = function(c)
+  local pid = tostring(c.pid)
+  if mappinIds[pid] then return "exists" end
+  local data = MappinData.new()
+  data.mappinType = TweakDBID.new("Mappins.DefaultStaticMappin")
+  data.variant = gamedataMappinVariant.CustomPositionVariant
+  data.visibleThroughWalls = true
+  local id = Game.GetMappinSystem():RegisterMappin(data, Vector4.new(tonumber(c.x), tonumber(c.y), tonumber(c.z), 1))
+  mappinIds[pid] = id
+  pins[#pins + 1] = { pid = c.pid, x = c.x, y = c.y, z = c.z }
+  return "pinned"
+end
+
+COMMANDS.unpin = function(c)
+  local pid = tostring(c.pid)
+  local id = mappinIds[pid]
+  if not id then return "unknown" end
+  Game.GetMappinSystem():UnregisterMappin(id)
+  mappinIds[pid] = nil
+  for i = #pins, 1, -1 do if tostring(pins[i].pid) == pid then table.remove(pins, i) end end
+  if trackedPin and tostring(trackedPin) == pid then trackedPin = nil end
+  return "unpinned"
+end
+
+local function readCommands()
+  local body = readAll("commands.json")
+  if not body or body == "" then return nil end
+  local ok, doc = pcall(json.decode, body)
+  if ok and type(doc) == "table" and type(doc.cmds) == "table" then return doc.cmds end
+  return nil
+end
+
+local function runCommands()
+  local cmds = readCommands()
+  if not cmds then return end
+  if lastCmd == nil then
+    -- Premier passage : ce qui est déjà dans le fichier a été traité (ou périmé), seuls les nouveaux ordres s'exécutent.
+    lastCmd = 0
+    for _, c in ipairs(cmds) do if type(c.id) == "number" and c.id > lastCmd then lastCmd = c.id end end
+    return
+  end
+  table.sort(cmds, function(a, b) return (a.id or 0) < (b.id or 0) end)
+  for _, c in ipairs(cmds) do
+    if type(c.id) == "number" and c.id > lastCmd then
+      lastCmd = c.id
+      local run = COMMANDS[tostring(c.t)]
+      local ok, res
+      if Game.GetPlayer() == nil then ok, res = false, "hors partie"
+      elseif run then ok, res = pcall(run, c)
+      else ok, res = false, "inconnu" end
+      acks[#acks + 1] = { id = c.id, ok = ok and true or false, res = tostring(res) }
+      while #acks > 20 do table.remove(acks, 1) end
+    end
+  end
+end
+
+-- Session : +1 quand le joueur apparaît après avoir été absent (chargement de partie), gardé dans session.txt.
+local function trackSession()
+  local present = Game.GetPlayer() ~= nil
+  if present and not hadPlayer then
+    session = session + 1
+    put("session.txt", tostring(session))
+  end
+  hadPlayer = present
+end
+
+local ok0, p0 = pcall(function() return Game.GetPlayer() end)
+hadPlayer = ok0 and p0 ~= nil
+session = tonumber(readAll("session.txt") or "") or 0
+
+local SLOW = { inventoryBlock, contactsBlock, questsBlock }
+
+return { update = function(dt)
+  acc = acc + dt
+  if acc < every then return end
+  acc = 0
+  tick = tick + 1
+  errs = {}
+  pcall(trackSession)
+  pcall(runCommands)
+  -- Un bloc lent par seconde, à tour de rôle (chacun toutes les 5 s), jamais pendant l'écran de chargement.
+  local slot = tick % 5
+  if SLOW[slot] and hadPlayer then
+    local ok, e = pcall(SLOW[slot])
+    if not ok then errs["slow" .. slot] = tostring(e) end
+  end
+  local ok, state = pcall(snapshot)
+  if not ok then state = { v = 1, seq = seq, at = os.time(), inGame = false, session = session, mod = VERSION, blocks = blocks,
+                           pins = pins, acks = acks, errors = { fatal = tostring(state) } } end
+  local enc, body = pcall(json.encode, state)
+  if enc then putAtomic("state.json", body) end
+end }

@@ -173,6 +173,9 @@ async function stage(platform: "windows" | "mac", sums: string, essai = false): 
   for (const f of WEB_FILES) copy(path.join(backend, "assets", "web", f), path.join(dest, "assets", "web", f));
 
   if (platform === "windows") {
+    for (const f of ["init.lua", "logic.lua", "VERSION"]) {
+      copy(path.join(backend, "assets", "cyberpunk-mod", f), path.join(dest, "assets", "cyberpunk-mod", f));
+    }
     // Le lanceur n'est pas dans le runtime : c'est l'exe lui-même. Essai : pas de node, déjà sur l'ordinateur.
     copy(path.join(backend, "src", "win", "MateHelper.exe"), path.join(dest, "src", "win", "MateHelper.exe"));
     copy(path.join(backend, "scripts", "firewall-windows.ps1"), path.join(dest, "scripts", "firewall-windows.ps1"));
