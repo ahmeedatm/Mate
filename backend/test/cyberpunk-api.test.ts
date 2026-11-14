@@ -226,3 +226,33 @@ describe("hors Windows", () => {
     }
   });
 });
+
+describe("/cyberpunk/pos (position en véhicule, ~5 par seconde)", () => {
+  const setPos = (pos: object) => fs.writeFileSync(mod("pos.json"), JSON.stringify(pos));
+  const now = () => Date.now() / 1000;
+
+  it("pos.json frais : position, cap et vitesse du véhicule", async () => {
+    setPos({ v: 1, seq: 7, at: now(), x: 12.5, y: -40, yaw: 91.2, speed: 18.3, vehicle: true });
+    const p = (await call("GET", "/cyberpunk/pos")).json;
+    assert.deepEqual(p, { fresh: true, vehicle: true, x: 12.5, y: -40, yaw: 91.2, speed: 18.3 });
+  });
+
+  it("pos.json vieux (mod arrêté, jeu en pause), absent ou illisible : périmé, sans position", async () => {
+    setPos({ v: 1, seq: 8, at: now() - 4, x: 1, y: 2, yaw: 0, speed: 0, vehicle: true });
+    assert.deepEqual((await call("GET", "/cyberpunk/pos")).json, { fresh: false });
+    fs.rmSync(mod("pos.json"));
+    assert.deepEqual((await call("GET", "/cyberpunk/pos")).json, { fresh: false });
+    fs.writeFileSync(mod("pos.json"), '{"v":1,"seq":9,"at":');
+    assert.deepEqual((await call("GET", "/cyberpunk/pos")).json, { fresh: false });
+  });
+
+  it("champs manquants ou faux : périmé (jamais une position inventée)", async () => {
+    setPos({ v: 1, seq: 10, at: now(), x: "a", y: 2, yaw: 0, vehicle: true });
+    assert.deepEqual((await call("GET", "/cyberpunk/pos")).json, { fresh: false });
+  });
+
+  it("vitesse illisible par le mod : position quand même, vitesse nulle", async () => {
+    setPos({ v: 1, seq: 11, at: now(), x: 1, y: 2, yaw: 3, vehicle: true });
+    assert.deepEqual((await call("GET", "/cyberpunk/pos")).json, { fresh: true, vehicle: true, x: 1, y: 2, yaw: 3, speed: null });
+  });
+});

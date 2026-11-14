@@ -48,6 +48,26 @@ export async function readState(game: Game): Promise<{ state: Json | null; fresh
   return { state, fresh: isFresh(state.at, seqSeen.get(file)!.at, now) };
 }
 
+/** `pos.json` : le mod ne l'écrit qu'en véhicule, toutes les ~0,2 s ; `at` est en secondes entières (os.time). */
+const POS_STALE_MS = 2_000;
+const isNum = (v: unknown): v is number => typeof v === "number" && Number.isFinite(v);
+
+/** Position du véhicule pour la vue conduite de la tablette, ou `{ fresh: false }` (à pied, pause, menu, jeu fermé). */
+export async function readPos() {
+  const game = findGame();
+  if (!game) return { fresh: false };
+  const file = path.join(game.modDir, "pos.json");
+  const pos = await readBlock(file, (j) => typeof j.seq === "number" && isNum(j.x) && isNum(j.y) && isNum(j.yaw));
+  if (!pos) return { fresh: false };
+  const now = Date.now();
+  const seen = seqSeen.get(file);
+  if (seen?.seq !== pos.seq) seqSeen.set(file, { seq: pos.seq, at: now });
+  // Une seconde de plus sur `at` : os.time arrondit à la seconde.
+  const fresh = isNum(pos.at) && now - pos.at * 1000 <= POS_STALE_MS + 1000 && now - seqSeen.get(file)!.at <= POS_STALE_MS;
+  if (!fresh) return { fresh: false };
+  return { fresh: true, vehicle: pos.vehicle === true, x: pos.x, y: pos.y, yaw: pos.yaw, speed: isNum(pos.speed) ? pos.speed : null };
+}
+
 async function running(fresh: boolean) {
   return fresh || (await isAppRunning(GAME_PROCESS).catch(() => false));
 }
