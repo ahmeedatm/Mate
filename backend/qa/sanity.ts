@@ -911,10 +911,13 @@ export async function runSanity(opts: { url: string; token: string; os?: Os; hoo
         const pos = await call("GET", "/cyberpunk/pos");
         expectStatus(pos, 200, "/cyberpunk/pos");
         expect(typeof pos.json.fresh === "boolean", "fresh absent de /cyberpunk/pos");
+        const route = await call("GET", "/cyberpunk/route");
+        expectStatus(route, 200, "/cyberpunk/route");
+        expect(typeof route.json.fresh === "boolean", "fresh absent de /cyberpunk/route");
         const poi = await call("GET", "/cyberpunk/mappins");
         expectStatus(poi, 200, "/cyberpunk/mappins");
         expect(Array.isArray(poi.json.points), "liste des points d'intérêt absente");
-        return `carte ${map.json.status} (${map.json.done}/${map.json.total}), ${pins.json.pins.length} repère(s), ${pos.json.vehicle ? "en véhicule" : "à pied"}, ${poi.json.points.length} point(s) d'intérêt`;
+        return `carte ${map.json.status} (${map.json.done}/${map.json.total}), ${pins.json.pins.length} repère(s), ${pos.json.vehicle ? "en véhicule" : "à pied"}, chemin GPS ${route.json.source ?? "périmé"}, ${poi.json.points.length} point(s) d'intérêt`;
       },
     },
     {

@@ -1,5 +1,6 @@
 import fs from "node:fs/promises";
 import path from "node:path";
+import { simplifyRoute } from "./cyberpunk-route.ts";
 import { findGame, type Game } from "./cyberpunk-steam.ts";
 import { isAppRunning } from "./os.ts";
 import { backendRoot } from "./paths.ts";
@@ -71,6 +72,27 @@ export async function readPos() {
   if (seen?.seq !== pos.seq) seqSeen.set(file, { seq: pos.seq, at: now });
   if (!isPosFresh(pos.at, seqSeen.get(file)!.at, now)) return { fresh: false };
   return { fresh: true, vehicle: pos.vehicle === true, x: pos.x, y: pos.y, yaw: pos.yaw, speed: isNum(pos.speed) ? pos.speed : null };
+}
+
+type RouteKind = "quest" | "poi";
+
+/**
+ * Chemin du GPS du jeu (`route.json`, réécrit toutes les ~0,5 s en véhicule) : `source` dit si In-World Navigation est là
+ * pour le lire ; sans lui, ou sans destination suivie, `points` est vide. Périmé comme `pos.json` (à pied, pause, menu).
+ */
+export async function readRoute() {
+  const game = findGame();
+  if (!game) return { fresh: false };
+  const file = path.join(game.modDir, "route.json");
+  const route = await readBlock(file, (j) => typeof j.seq === "number");
+  if (!route) return { fresh: false };
+  const now = Date.now();
+  const seen = seqSeen.get(file);
+  if (seen?.seq !== route.seq) seqSeen.set(file, { seq: route.seq, at: now });
+  if (!isPosFresh(route.at, seqSeen.get(file)!.at, now)) return { fresh: false };
+  if (route.iwn !== true) return { fresh: true, source: "absent", kind: null, points: [] };
+  const kind: RouteKind | null = route.kind === "quest" || route.kind === "poi" ? route.kind : null;
+  return { fresh: true, source: "iwn", kind, points: kind && Array.isArray(route.pts) ? simplifyRoute(route.pts) : [] };
 }
 
 async function running(fresh: boolean) {
