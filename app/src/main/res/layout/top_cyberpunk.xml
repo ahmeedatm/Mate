@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Retour à la page Cyberpunk, à côté de la pastille de l'ordinateur (thèmes à rangée de touches) : même forme qu'elle ;
+     visible tant qu'une partie continue et que sa page est fermée. Gonflée avec le style LCD du thème. -->
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:id="@+id/chip_cyberpunk"
+    android:layout_width="wrap_content"
+    android:layout_height="wrap_content"
+    android:background="@drawable/instrument_lcd_bg"
+    android:clickable="true"
+    android:contentDescription="@string/cp_resume"
+    android:focusable="true"
+    android:minWidth="48dp"
+    android:minHeight="48dp"
+    android:paddingStart="12dp"
+    android:paddingEnd="12dp"
+    android:stateListAnimator="@animator/press"
+    android:visibility="gone">
+
+    <ImageView
+        android:layout_width="22dp"
+        android:layout_height="22dp"
+        android:layout_gravity="center"
+        android:importantForAccessibility="no"
+        android:src="@drawable/ic_cp_cyber"
+        app:tint="?attr/c_text" />
+</FrameLayout>

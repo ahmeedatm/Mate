@@ -65,6 +65,45 @@
                 android:orientation="vertical" />
         </FrameLayout>
 
+        <!-- Partie Cyberpunk en cours dont la page a été fermée : même forme que le bloc de l'ordinateur ; toucher : rouvrir la page. -->
+        <LinearLayout
+            android:id="@+id/rail_cyberpunk"
+            android:layout_width="88dp"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="4dp"
+            android:background="@drawable/rail_item_bg"
+            android:clickable="true"
+            android:contentDescription="@string/cp_resume"
+            android:focusable="true"
+            android:gravity="center"
+            android:minHeight="48dp"
+            android:orientation="vertical"
+            android:visibility="gone">
+
+            <ImageView
+                android:layout_width="24dp"
+                android:layout_height="24dp"
+                android:importantForAccessibility="no"
+                android:src="@drawable/ic_cp_cyber"
+                app:tint="?attr/c_text_dim" />
+
+            <TextView
+                android:id="@+id/rail_cyberpunk_name"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="2dp"
+                android:ellipsize="end"
+                android:fontFamily="?attr/c_font_regular"
+                android:gravity="center"
+                android:importantForAccessibility="no"
+                android:paddingStart="4dp"
+                android:paddingEnd="4dp"
+                android:singleLine="true"
+                android:text="@string/cp_resume_label"
+                android:textColor="?attr/c_text_dim"
+                android:textSize="11sp" />
+        </LinearLayout>
+
         <!-- Ordinateur piloté et pastille de connexion ; toucher : changer d'ordinateur. -->
         <LinearLayout
             android:id="@+id/status"

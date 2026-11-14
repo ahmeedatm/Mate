@@ -94,10 +94,12 @@ class TopBar @JvmOverloads constructor(context: Context, attrs: AttributeSet? = 
      * Pastille LCD de l'ordinateur actif, à droite du bandeau, pour les thèmes à rangée de touches (leur barre de gauche, qui
      * portait l'ordinateur, n'y est pas) ; cachée tant que [showComputerChip] n'est pas appelé. Gonflée avec le style LCD du thème.
      */
-    val computerChip: View = LayoutInflater.from(
-        themeRes(context, R.attr.c_lcd_overlay).let { if (it == 0) context else ContextThemeWrapper(context, it) },
-    ).inflate(R.layout.top_computer, this, false)
+    val computerChip: View = lcdInflater().inflate(R.layout.top_computer, this, false)
     private var chipShown = false
+
+    /** Retour à la page Cyberpunk, à gauche de [computerChip] : partie en cours, page fermée ([showCyberpunk]). */
+    val cyberpunkChip: View = lcdInflater().inflate(R.layout.top_cyberpunk, this, false)
+    private var cyberpunkShown = false
     private val row = TopItemsLayout(context)
     /** Mode Modifier : consigne, « Ajouter », les pastilles (qui défilent si elles débordent), « OK ». */
     private val editRow = LinearLayout(context).apply {
@@ -132,6 +134,7 @@ class TopBar @JvmOverloads constructor(context: Context, attrs: AttributeSet? = 
         addView(header, LayoutParams(0, LayoutParams.MATCH_PARENT, 1f))
         addView(presenceEye, LayoutParams(dp(20), dp(20)).apply { marginEnd = dp(12) })
         addView(wakeMic, LayoutParams(dp(20), dp(20)).apply { marginEnd = dp(12) })
+        addView(cyberpunkChip, LayoutParams(LayoutParams.WRAP_CONTENT, LayoutParams.WRAP_CONTENT).apply { marginEnd = dp(8) })
         addView(computerChip, LayoutParams(LayoutParams.WRAP_CONTENT, LayoutParams.WRAP_CONTENT).apply { marginEnd = dp(16) })
         addView(row, LayoutParams(LayoutParams.WRAP_CONTENT, LayoutParams.MATCH_PARENT))
         addView(editRow, LayoutParams(0, LayoutParams.MATCH_PARENT, 1f))
@@ -178,6 +181,14 @@ class TopBar @JvmOverloads constructor(context: Context, attrs: AttributeSet? = 
         chipShown = true
         computerChip.visibility = if (editing) GONE else VISIBLE
     }
+
+    fun showCyberpunk(shown: Boolean) {
+        cyberpunkShown = shown
+        cyberpunkChip.visibility = if (shown && !editing) VISIBLE else GONE
+    }
+
+    private fun lcdInflater(): LayoutInflater =
+        LayoutInflater.from(themeRes(context, R.attr.c_lcd_overlay).let { if (it == 0) context else ContextThemeWrapper(context, it) })
 
     fun attach(host: TopBarHost) {
         this.host = host
@@ -266,6 +277,7 @@ class TopBar @JvmOverloads constructor(context: Context, attrs: AttributeSet? = 
         wakeMic.alpha = if (on) 0f else 1f
         row.visibility = if (on) GONE else VISIBLE
         computerChip.visibility = if (chipShown && !on) VISIBLE else GONE
+        cyberpunkChip.visibility = if (cyberpunkShown && !on) VISIBLE else GONE
         editRow.visibility = if (on) VISIBLE else GONE
         if (on) fillEditRow() else chips.removeAllViews()
     }

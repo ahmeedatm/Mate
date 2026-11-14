@@ -47,10 +47,12 @@ class KeyDock(
     private val scroll: HorizontalScrollView = activity.findViewById(R.id.dock_scroll)
     private val row: LinearLayout = activity.findViewById(R.id.dock_keys)
     private val end: LinearLayout = activity.findViewById(R.id.dock_end)
-    private val chip: View = activity.findViewById<TopBar>(R.id.top_bar).computerChip
+    private val topBar: TopBar = activity.findViewById(R.id.top_bar)
+    private val chip: View = topBar.computerChip
     private val lamp = ComputerLampView(chip, (activity as LifecycleOwner).lifecycle)
     override val root: View = dock
     override val status: View = chip
+    override val cyberpunk: View = topBar.cyberpunkChip
     override val talk: View = round(R.drawable.dock_talk_cap, R.drawable.ic_key_mic, R.color.dock_talk_icon, R.string.voice_button, atEnd = false)
     override val talkIcon: View = talk.findViewById(R.id.dock_round_icon)
     override val lock: View = round(null, R.drawable.ic_key_lock, R.color.dock_lock_icon, R.string.rail_lock, atEnd = true)
@@ -76,7 +78,7 @@ class KeyDock(
     init {
         activity.findViewById<View>(R.id.rail).visibility = View.GONE
         dock.visibility = View.VISIBLE
-        activity.findViewById<TopBar>(R.id.top_bar).showComputerChip()
+        topBar.showComputerChip()
         ViewCompat.replaceAccessibilityAction(chip, AccessibilityNodeInfoCompat.AccessibilityActionCompat.ACTION_CLICK, activity.getString(R.string.dock_switch_computer), null)
         // La largeur des touches d'écran dépend de la place de la zone : elle se refait quand cette place change.
         scroll.addOnLayoutChangeListener { _, left, _, right, _, oldLeft, _, oldRight, _ -> if (right - left != oldRight - oldLeft) fitScreens() }
@@ -150,6 +152,8 @@ class KeyDock(
         val name = link.computer?.name ?: activity.getString(if (link.state == Link.State.HOME) R.string.home_name else R.string.no_computer_short)
         lamp.show(link, Prefs.computerLocked(activity), Computers.all(activity), name)
     }
+
+    override fun showCyberpunk(shown: Boolean) = topBar.showCyberpunk(shown)
 
     override fun applySettings() {
         render()

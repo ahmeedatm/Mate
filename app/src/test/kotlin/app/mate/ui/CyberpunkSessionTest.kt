@@ -143,4 +143,48 @@ class CyberpunkSessionTest {
         val d = session.decide(mapOf("a" to game(true), "b" to game(true)), ctx(active = "b"))
         assertEquals("b", d.computerId)
     }
+    @Test
+    fun noReturnIconWhileThePageIsOpenOrWithoutGame() {
+        assertNull(session.resumeOn)
+        session.decide(mapOf("atlas" to game(true)), ctx(active = "mac"))
+        session.decide(mapOf("atlas" to game(true)), ctx(active = "atlas", open = true))
+        assertNull(session.resumeOn)
+    }
+
+    @Test
+    fun manualCloseShowsTheReturnIconAtOnceUntilTheGameEnds() {
+        val p = mapOf("atlas" to game(true))
+        session.decide(p, ctx(active = "mac"))
+        session.closedByHand("atlas")
+        assertEquals("atlas", session.resumeOn)
+        session.decide(p, ctx(active = "mac", open = false))
+        assertEquals("atlas", session.resumeOn)
+        // Un trou de sondage ne la cache pas ; la fin de la partie, si.
+        now = 5_000
+        session.decide(mapOf("atlas" to game(false)), ctx(active = "mac", open = false))
+        assertEquals("atlas", session.resumeOn)
+        now = 15_000
+        session.decide(mapOf("atlas" to game(false)), ctx(active = "mac", open = false))
+        assertNull(session.resumeOn)
+    }
+
+    @Test
+    fun reopeningFromTheIconHidesItAndClosingAgainShowsIt() {
+        val p = mapOf("atlas" to game(true))
+        session.decide(p, ctx(active = "mac"))
+        session.decide(p, ctx(active = "atlas", open = false))
+        assertEquals("atlas", session.resumeOn)
+        assertEquals(CyberpunkSession.Step.NONE, session.decide(p, ctx(active = "atlas", open = true)).step)
+        assertNull(session.resumeOn)
+        assertEquals(CyberpunkSession.Step.NONE, session.decide(p, ctx(active = "atlas", open = false)).step)
+        assertEquals("atlas", session.resumeOn)
+    }
+
+    @Test
+    fun aNewSessionThatReopensHidesTheIcon() {
+        session.decide(mapOf("atlas" to game(true, "s1")), ctx(active = "mac"))
+        session.decide(mapOf("atlas" to game(true, "s1")), ctx(active = "atlas", open = false))
+        session.decide(mapOf("atlas" to game(true, "s2")), ctx(active = "atlas", open = false))
+        assertNull(session.resumeOn)
+    }
 }

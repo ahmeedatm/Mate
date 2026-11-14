@@ -90,6 +90,9 @@ class CyberpunkOverlay(private val activity: FragmentActivity) {
     private var pinsLoading = false
     private var lastQuestId: String? = null
 
+    /** Fermée par la croix ou Retour (pas par la fin de partie) : ordinateur du jeu, pour l'icône de retour (MainActivity). */
+    var onClosedByHand: (String) -> Unit = {}
+
     val isOpen get() = root != null
 
     /** Ordinateur dont la page montre la partie (pas forcément l'actif : un autre peut avoir été choisi depuis). */
@@ -155,8 +158,14 @@ class CyberpunkOverlay(private val activity: FragmentActivity) {
         when {
             phone.thread != null -> closeThread()
             page != null -> showDrawer(null)
-            else -> close()
+            else -> closeByHand()
         }
+    }
+
+    private fun closeByHand() {
+        val id = computerId
+        close()
+        id?.let(onClosedByHand)
     }
 
     /** Écran éteint ou appli en arrière-plan : plus de sondage. */
@@ -772,7 +781,7 @@ class CyberpunkOverlay(private val activity: FragmentActivity) {
             setColorFilter(kit.color(R.color.cp_texte))
             scaleType = ImageView.ScaleType.CENTER
             contentDescription = ctx.getString(R.string.close)
-            setOnClickListener { close() }
+            setOnClickListener { closeByHand() }
             with(kit) { pressable() }
         }
         val toast = kit.text("", 16f, R.color.cp_sur_jaune, kit.bold, spacing = 0.1f, upper = true).apply {
