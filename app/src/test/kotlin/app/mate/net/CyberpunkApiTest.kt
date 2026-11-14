@@ -42,7 +42,7 @@ class CyberpunkApiTest {
                  "cyberware":{"Eyes":[{"tdb":"Items.X","name":"Optiques","quality":"Common"}],"Legs":[false]},
                  "tracked":{"kind":"quest","id":"q1","quest":"Disasterpiece","desc":"Rejoindre Judy."},
                  "call":{"phase":"active","contact":"Judy","audio":true},
-                 "blocks":{"inv":3,"contacts":2,"quests":1},
+                 "blocks":{"inv":3,"contacts":2,"quests":1,"mappins":7},
                  "pins":[{"pid":"p1","x":1,"y":2,"z":3}],"acks":[],"errors":{}}}""",
         )
         assertEquals(CyberpunkStatus.INGAME, s.status)
@@ -58,7 +58,7 @@ class CyberpunkApiTest {
         assertEquals("Disasterpiece", st.tracked?.quest)
         assertEquals(CyberpunkCallPhase.ACTIVE, st.call?.phase)
         assertEquals("Judy", st.call?.contact)
-        assertEquals(CyberpunkBlocks(3, 2, 1), st.blocks)
+        assertEquals(CyberpunkBlocks(3, 2, 1, 7), st.blocks)
         assertEquals("p1", st.pins.single().pid)
     }
 
@@ -77,7 +77,7 @@ class CyberpunkApiTest {
         assertNull(s.player)
         assertNull(s.tracked)
         assertNull(s.call)
-        assertEquals(CyberpunkBlocks(0, 0, 0), s.blocks)
+        assertEquals(CyberpunkBlocks(0, 0, 0, 0), s.blocks)
         assertTrue(s.cyberware.isEmpty())
     }
 
@@ -239,5 +239,36 @@ class CyberpunkApiTest {
         assertTrue(CyberpunkApi.isStaleChoice(HttpException(409, "x", "choix-perime")))
         assertFalse(CyberpunkApi.isStaleChoice(HttpException(409, "x", "fil-introuvable")))
         assertFalse(CyberpunkApi.isStaleChoice(HttpException(504, "x")))
+    }
+
+    @Test
+    fun readsMappins() {
+        val points = CyberpunkApi.parseMappins(
+            """{"v":1,"points":[
+                 {"id":"a","x":-1397.3,"y":1278.1,"cat":"shop","icon":"ripperdoc","name":"Afterlife","dim":false},
+                 {"id":"b","x":1,"y":2,"cat":"inconnue","icon":null,"name":null,"dim":true},
+                 {"id":"c","x":"zz","y":2,"cat":"quest"},
+                 {"id":"d","y":2,"cat":"quest"},
+                 {"id":"e","x":1,"y":2,"cat":"gig","icon":"","name":""}
+               ]}""",
+        )
+        assertEquals(3, points.size)
+        assertEquals(CyberpunkPoi("a", -1397.3, 1278.1, PoiCategory.SHOP, "ripperdoc", "Afterlife", false), points[0])
+        assertEquals(CyberpunkPoi("b", 1.0, 2.0, PoiCategory.OTHER, null, null, true), points[1])
+        assertEquals(CyberpunkPoi("e", 1.0, 2.0, PoiCategory.GIG, null, null, false), points[2])
+    }
+
+    @Test
+    fun mappinsCategoriesFollowTheDisplayOrder() {
+        assertEquals(
+            listOf("quest", "gig", "ncpd", "travel", "shop", "ripperdoc", "other"),
+            PoiCategory.entries.map { it.key },
+        )
+        assertEquals(PoiCategory.OTHER, PoiCategory.fromKey(null))
+    }
+
+    @Test
+    fun mappinsToleratesAnEmptyAnswer() {
+        assertTrue(CyberpunkApi.parseMappins("""{"v":1}""").isEmpty())
     }
 }

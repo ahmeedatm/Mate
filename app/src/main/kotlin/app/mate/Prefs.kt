@@ -64,6 +64,7 @@ object Prefs {
     private const val KEY_LOCK_CODE = "lock_code"
     private const val KEY_LOCK_SALT = "lock_salt"
     private const val KEY_MEETING_ALERT_SEEN = "meeting_alert_seen"
+    private const val KEY_CYBERPUNK_POI_HIDDEN = "cyberpunk_poi_hidden"
     private const val KEY_AGENTS_HIDDEN_PROJECTS = "agents_hidden_projects"
     private const val KEY_WEATHER_LOCATION = "weather_location"
     private const val KEY_TEXT_SCALE = "text_scale"
@@ -329,6 +330,13 @@ object Prefs {
 
     fun setMeetingAlert(context: Context, value: Boolean) {
         prefs(context).edit().putBoolean(KEY_MEETING_ALERT, value).apply()
+    }
+
+    /** Clés (`PoiCategory.key`) des points d'intérêt cachés sur la carte Cyberpunk ; vide : tout est visible. */
+    fun cyberpunkPoiHidden(context: Context): Set<String> = prefs(context).getStringSet(KEY_CYBERPUNK_POI_HIDDEN, emptySet()).orEmpty()
+
+    fun setCyberpunkPoiHidden(context: Context, value: Set<String>) {
+        prefs(context).edit().putStringSet(KEY_CYBERPUNK_POI_HIDDEN, value).apply()
     }
 
     /** Projets dont les sessions Claude sont cachées sur cette tablette (menu ⋯ du tableau Agents). */

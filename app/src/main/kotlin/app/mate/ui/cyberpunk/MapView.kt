@@ -26,9 +26,11 @@ import app.mate.R
 import app.mate.net.CyberpunkApi
 import app.mate.net.CyberpunkMap
 import app.mate.net.CyberpunkMapStatus
+import app.mate.net.CyberpunkPoi
 import app.mate.net.CyberpunkPos
 import app.mate.net.CyberpunkServerPin
 import app.mate.net.CyberpunkTracked
+import app.mate.net.PoiCategory
 import app.mate.net.runCatchingCancellable
 import app.mate.ui.cyberpunk.CyberpunkKit.Companion.MATCH
 import app.mate.ui.cyberpunk.CyberpunkKit.Companion.WRAP
@@ -78,6 +80,16 @@ class MapView(
     private var phase = 0f
     private var drawnPhase = 0f
     private var dialog: AlertDialog? = null
+    private var pois = emptyList<CyberpunkPoi>()
+    private var poiHidden = PoiFilters.hidden(context)
+    private var poiIcons = PoiIconsState.UNKNOWN
+    private val poiLayer = PoiLayer(kit)
+
+    /** Taille à laquelle décoder les icônes des points d'intérêt ([PoiIcons.load]). */
+    val poiIconPx get() = poiLayer.iconPx
+
+    /** Le bouton « Extraire » du panneau Filtres : l'ordinateur doit extraire les icônes du jeu. */
+    var onPoiIconsPrepare: () -> Unit = {}
 
     private val surface = Surface(kit.context)
     private val statusText = kit.text("", 20f, R.color.cp_texte, kit.medium).apply { gravity = Gravity.CENTER }
@@ -96,6 +108,19 @@ class MapView(
             visibility = GONE
             setOnClickListener { recenter() }
         }
+
+    private val filterPanel = PoiFilterPanel(kit, ::onPoiToggled) { onPoiIconsPrepare() }
+    private val filterButton = kit.button(context.getString(R.string.cp_poi_filters), context.getString(R.string.cp_poi_filters_description), R.color.cp_panneau, R.color.cp_texte)
+        .apply {
+            visibility = GONE
+            setOnClickListener { toggleFilters() }
+        }
+
+    /** « Filtres » et « Me centrer » côte à côte, au coin bas droit. */
+    private val actions = LinearLayout(kit.context).apply {
+        addView(filterButton, kit.lp(WRAP, WRAP).apply { marginEnd = kit.dp(FILTER_GAP_DP) })
+        addView(centerButton, kit.lp(WRAP, WRAP))
+    }
 
     private val animator = ValueAnimator.ofFloat(0f, 1f).apply {
         duration = WAVE_MS
@@ -117,7 +142,8 @@ class MapView(
         addView(CyberpunkGridView(context, kit.color(R.color.cp_grille), kit.dp(GRID_DP)), LayoutParams(MATCH, MATCH))
         addView(surface, LayoutParams(MATCH, MATCH))
         addView(statusPanel, LayoutParams(WRAP, WRAP, Gravity.BOTTOM or Gravity.CENTER_HORIZONTAL).apply { bottomMargin = kit.dp(STATUS_BOTTOM_DP) })
-        addView(centerButton, LayoutParams(WRAP, WRAP, Gravity.BOTTOM or Gravity.END).apply { bottomMargin = kit.dp(MARGIN_DP); marginEnd = kit.dp(CENTER_END_DP) })
+        addView(actions, LayoutParams(WRAP, WRAP, Gravity.BOTTOM or Gravity.END).apply { bottomMargin = kit.dp(MARGIN_DP); marginEnd = kit.dp(CENTER_END_DP) })
+        addView(filterPanel, LayoutParams(kit.dp(FILTER_PANEL_DP), WRAP, Gravity.BOTTOM or Gravity.END).apply { bottomMargin = kit.dp(FILTER_PANEL_BOTTOM_DP); marginEnd = kit.dp(CENTER_END_DP) })
         statusPanel.visibility = GONE
     }
 
@@ -141,6 +167,7 @@ class MapView(
         cache = TileCache(scope, cacheBytes(geo.tile), { it.byteCount }, { surface.postInvalidateOnAnimation() }) { k -> fetch(k) }
         userMoved = false
         centerButton.visibility = VISIBLE
+        filterButton.visibility = VISIBLE
         recenter()
         updateAnimation()
     }
@@ -181,6 +208,34 @@ class MapView(
         surface.invalidate()
     }
 
+    fun setPois(points: List<CyberpunkPoi>) {
+        pois = points
+        applyPois()
+    }
+
+    /** Icônes décodées à [poiIconPx] (clé : nom d'icône) et où en est leur extraction (ligne « Icônes du jeu » du panneau). */
+    fun setPoiIcons(icons: Map<String, Bitmap>, state: PoiIconsState) {
+        poiLayer.setIcons(icons)
+        poiIcons = state
+        applyPois()
+    }
+
+    private fun applyPois() {
+        poiLayer.setPoints(pois, poiHidden)
+        filterPanel.refresh(PoiFilters.counts(pois), poiHidden, poiIcons)
+        surface.invalidate()
+    }
+
+    private fun onPoiToggled(cat: PoiCategory, visible: Boolean) {
+        poiHidden = PoiFilters.toggled(poiHidden, cat, visible)
+        PoiFilters.setHidden(context, poiHidden)
+        applyPois()
+    }
+
+    private fun toggleFilters() {
+        filterPanel.visibility = if (filterPanel.visibility == VISIBLE) GONE else VISIBLE
+    }
+
     private suspend fun fetch(k: TileKey): Bitmap? {
         val bytes = api.tile(k.z, k.x, k.y) ?: return null
         return withContext(Dispatchers.Default) {
@@ -203,6 +258,8 @@ class MapView(
         prepareButton.visibility = if (retry) VISIBLE else GONE
         statusPanel.visibility = VISIBLE
         centerButton.visibility = GONE
+        filterButton.visibility = GONE
+        filterPanel.visibility = GONE
     }
 
     private fun prepare() {
@@ -237,8 +294,14 @@ class MapView(
     private fun tapAt(x: Float, y: Float) {
         if (!interactive) return
         val cam = camera ?: return
+        if (filterPanel.visibility == VISIBLE) {
+            filterPanel.visibility = GONE
+            return
+        }
         val hit = hitPin(x, y)
+        val poi = if (hit == null) poiLayer.pick(cam, x, y) else null
         when {
+            poi != null -> say(poi.name ?: context.getString(poi.cat.label))
             hit == null -> {
                 val w = cam.screenToWorld(x.toDouble(), y.toDouble())
                 launchAction(context.getString(R.string.cp_pin_added)) { addPin(w.x, w.y, player?.z) }
@@ -387,6 +450,7 @@ class MapView(
         override fun onDraw(canvas: Canvas) {
             val cam = camera ?: return
             drawTiles(canvas, cam)
+            poiLayer.draw(canvas, cam, width, height)
             drawRoute(canvas, cam)
             pins.filter { !it.tracked }.forEach { drawPin(canvas, cam, it, R.color.cp_cyan, 0f) }
             pins.firstOrNull { it.tracked }?.let { drawPin(canvas, cam, it, R.color.cp_jaune, -kit.dp(PULSE_DP) * abs(sin(phase * PI.toFloat()))) }
@@ -511,6 +575,11 @@ class MapView(
         /** À gauche de la carte de quête (360 dp + 2 marges de 16), loin du tiroir qui couvre la gauche. */
         const val CENTER_END_DP = 392
         const val STATUS_BOTTOM_DP = 110
+        const val FILTER_GAP_DP = 12
+        const val FILTER_PANEL_DP = 340
+
+        /** Au-dessus des boutons (52 dp de haut) et de leur marge. */
+        const val FILTER_PANEL_BOTTOM_DP = MARGIN_DP + 52 + 8
         const val ALMOST = 0.99
 
         // Gris (luminance), contraste puis luminosité : la teinte `cp_carte_teinte` est le blanc de la carte.
