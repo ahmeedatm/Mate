@@ -54,8 +54,8 @@ import kotlin.math.sin
  * Carte de Night City de la page Cyberpunk : tuiles du compagnon (pyramide WebP, cache taillé par `MapCamera.tileCacheBytes`), déjà
  * dessinées en blocs colorés par quartier (cubes de la carte holographique du jeu, `cyberpunk-blocks.ts`), joueur en flèche
  * jaune orientée par son yaw, objectif de quête, repères, trajet GPS. Glisser déplace, pincer ou double toucher zoome,
- * toucher le vide pose un repère, toucher un repère le fait suivre (re-toucher le suivi : retour à la quête), appui long
- * sur un repère le supprime. Tant que la carte n'a pas été déplacée à la main, elle suit le joueur.
+ * toucher le vide pose un repère suivi aussitôt, toucher un repère le fait suivre (re-toucher le suivi : retour à la quête),
+ * appui long sur un repère le supprime. Tant que la carte n'a pas été déplacée à la main, elle suit le joueur.
  * En véhicule (vue conduite) : la carte zoome sur lui, tourne pour que l'avant du véhicule pointe vers le haut et se penche
  * en perspective ; sa position est relue ~4 fois par seconde (`GET /cyberpunk/pos`) et lissée entre deux lectures. Le chemin
  * du GPS du jeu (`GET /cyberpunk/route`, chaque seconde) remplace alors la ligne droite vers la destination ([RouteLayer]).
@@ -453,9 +453,21 @@ class MapView(
             TapTarget.POI -> poi?.let { say(it.name ?: context.getString(it.cat.label)) }
             TapTarget.NEW_PIN -> {
                 val w = cam.screenToWorld(x.toDouble(), y.toDouble())
-                launchAction(context.getString(R.string.cp_pin_added)) { addPin(w.x, w.y, player?.z) }
+                addAndFollow(w.x, w.y)
             }
             TapTarget.PIN -> hit?.let(::pinTapped)
+        }
+    }
+
+    /** Toucher le vide : le repère est posé et suivi tout de suite par le GPS du jeu. */
+    private fun addAndFollow(x: Double, y: Double) {
+        scope.launch {
+            runCatchingCancellable { api.addPin(x, y, player?.z, track = true) }
+                .onSuccess {
+                    say(context.getString(if (it.tracked) R.string.cp_pin_added_followed else R.string.cp_pin_added))
+                    onPinsChanged()
+                }
+                .onFailure { say(context.errorText(it)) }
         }
     }
 
