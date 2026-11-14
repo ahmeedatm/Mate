@@ -218,7 +218,7 @@ Backend :
 
 Tablette : onglets Messages / Contacts dans le tiroir ; Messages = fils `unread > 0 or canReply`, plus
 ceux ouverts depuis l'ouverture du tiroir ; fil = bulles (contact à gauche, V à droite) puis choix en
-boutons ; après un envoi, `GET /cyberpunk/threads/:hash` toutes les 2 s pendant 10 s tant que le fil
-n'a pas bougé. Images et polices chargées de `GET /cyberpunk/phone/:name` si `status = ready`, mises en
+boutons ; après un envoi, `GET /cyberpunk/threads/:hash` toutes les 2 s pendant 12 s, arrêt plus tôt si le
+fil a bougé et propose de nouveaux choix (le contact répond en plusieurs messages, ~10 s au spike). Images et polices chargées de `GET /cyberpunk/phone/:name` si `status = ready`, mises en
 cache sur la tablette, teintées en `cp_*` ; sinon repli `cp_*` + Chakra Petch. Bouton « Préparer le
 look du jeu » dans le tiroir Téléphone quand `status = absent` ou `error`.

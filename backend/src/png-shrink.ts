@@ -46,7 +46,7 @@ export function shrinkPng(data: Buffer, maxSide: number): Buffer | null {
 
 const SIGNATURE = Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]);
 
-function readPng(data: Buffer): { width: number; height: number; rgba: Buffer } | null {
+export function readPng(data: Buffer): { width: number; height: number; rgba: Buffer } | null {
   if (data.length < 33 || !data.subarray(0, 8).equals(SIGNATURE)) return null;
   const width = data.readUInt32BE(16);
   const height = data.readUInt32BE(20);
@@ -110,7 +110,7 @@ function paeth(a: number, b: number, c: number) {
 }
 
 /** PNG RGBA 8 bits ; `rows` : chaque ligne précédée de son octet de filtre (0). */
-function writePng(width: number, height: number, rows: Buffer): Buffer {
+export function writePng(width: number, height: number, rows: Buffer): Buffer {
   const chunk = (type: string, body: Buffer) => {
     const head = Buffer.alloc(4);
     head.writeUInt32BE(body.length);

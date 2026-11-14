@@ -133,7 +133,7 @@ describe("install et désinstallation du mod", () => {
     for (const f of ["init.lua", "logic.lua", "VERSION"]) assert.equal(fs.readFileSync(mod(f), "utf8"), asset(f));
     const install = (await call("GET", "/cyberpunk")).json.install;
     assert.equal(install.current, true);
-    assert.equal(install.modVersion, "1.0.0");
+    assert.equal(install.modVersion, "1.1.0");
     assert.equal(install.modInstalled, true);
     assert.equal((await call("GET", "/cyberpunk/presence")).json.modInstalled, true);
   });

@@ -1,6 +1,7 @@
-import type { FastifyInstance } from "fastify";
+import type { FastifyInstance, FastifyReply } from "fastify";
 import { cyberpunkMap } from "../cyberpunk-map.ts";
-import { sendCommand, type Command } from "../cyberpunk-commands.ts";
+import { phoneRoutes } from "../cyberpunk-phone.ts";
+import { PhoneRefusal, readThread, replyThread, sendCommand, type Command } from "../cyberpunk-commands.ts";
 import { addPin, listPins, removePin, replayPins, trackPin } from "../cyberpunk-pins.ts";
 import { findGame } from "../cyberpunk-steam.ts";
 import { block, installMod, overview, presence, uninstallMod } from "../cyberpunk.ts";
@@ -64,6 +65,31 @@ function toCommand(a: Action): Command {
   }
 }
 
+const threadParams = {
+  type: "object",
+  required: ["hash"],
+  properties: { hash: { type: "string", pattern: "^-?[0-9]{1,10}$" } },
+};
+const replyBody = {
+  type: "object",
+  required: ["choice", "version"],
+  additionalProperties: false,
+  properties: {
+    choice: { type: "string", pattern: "^-?[0-9]{1,10}$" },
+    version: { type: "string", pattern: "^[0-9]{1,4}:-?[0-9]{1,10}$" },
+  },
+};
+
+/** Un refus du mod devient 409 `{ error, res }` ; les autres erreurs suivent le chemin commun. */
+async function withRes<T>(reply: FastifyReply, run: () => Promise<T>) {
+  try {
+    return await run();
+  } catch (e) {
+    if (e instanceof PhoneRefusal) return reply.code(409).send({ error: e.message, res: e.res });
+    throw e;
+  }
+}
+
 export default async function cyberpunkRoutes(app: FastifyInstance) {
   app.addHook("preHandler", async (req, reply) => {
     if (req.url.split("?")[0] === "/cyberpunk/presence" || (await pluginOn("cyberpunk"))) return;
@@ -88,6 +114,18 @@ export default async function cyberpunkRoutes(app: FastifyInstance) {
   app.post("/cyberpunk/uninstall", () => uninstallMod());
 
   app.post<{ Body: Action }>("/cyberpunk/action", { schema: { body: actionSchema } }, (req) => sendCommand(toCommand(req.body)));
+
+  app.get<{ Params: { hash: string } }>("/cyberpunk/threads/:hash", { schema: { params: threadParams } }, (req, reply) =>
+    withRes(reply, () => readThread(req.params.hash)),
+  );
+  app.post<{ Params: { hash: string }; Body: { choice: string; version: string } }>(
+    "/cyberpunk/threads/:hash/reply",
+    { schema: { params: threadParams, body: replyBody } },
+    (req, reply) => withRes(reply, () => replyThread(req.params.hash, req.body.choice, req.body.version)),
+  );
+
+  // Appel direct (pas app.register) : le hook « plugin coupé » ci-dessus s'applique aussi au look du téléphone.
+  await phoneRoutes(app);
 
   app.get("/cyberpunk/map", async () => (await cyberpunkMap()).status());
   app.post("/cyberpunk/map/prepare", async () => {
