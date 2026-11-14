@@ -123,13 +123,28 @@ export function createMap(opts: MapOptions) {
 
   let tmpCount = 0;
 
+  // Windows garde parfois un fichier tout juste écrit ou lu par un exe (antivirus, poignée pas encore rendue) :
+  // EBUSY/EPERM pendant quelques millisecondes. fs.rm réessaie seul avec maxRetries ; le renommage, à la main.
+  const removeTmp = (file: string) => fs.rm(file, { force: true, maxRetries: 10, retryDelay: 100 });
+  async function renameRetry(from: string, to: string) {
+    for (let i = 0; ; i++) {
+      try {
+        return await fs.rename(from, to);
+      } catch (e) {
+        const code = (e as NodeJS.ErrnoException).code;
+        if (i >= 9 || (code !== "EBUSY" && code !== "EPERM")) throw e;
+        await new Promise((r) => setTimeout(r, 100));
+      }
+    }
+  }
+
   async function encodeTile(conv: Converter, data: Buffer, file: string) {
     const ppm = path.join(opts.dir, "tmp", `tile-${tmpCount++}.ppm`);
     await writePpm(ppm, TILE, TILE, data);
     await fs.mkdir(path.dirname(file), { recursive: true });
     await conv.encode(ppm, `${file}.part`);
-    await fs.rename(`${file}.part`, file);
-    await fs.rm(ppm);
+    await renameRetry(`${file}.part`, file);
+    await removeTmp(ppm);
   }
 
   async function download(e: Entry, dest: string) {
@@ -150,11 +165,11 @@ export function createMap(opts: MapOptions) {
     try {
       await conv.decode(src, IMAGE_PX[3], big);
     } finally {
-      await fs.rm(src, { force: true });
+      await removeTmp(src);
     }
     const levels: Img[] = [];
     levels[3] = parsePpm(await fs.readFile(big));
-    await fs.rm(big);
+    await removeTmp(big);
     for (const z of [2, 1, 0]) levels[z] = halve(levels[z + 1]);
     const jobs = [1, 2, 3].flatMap((z) => {
       const n = 2 ** (z - 1);
