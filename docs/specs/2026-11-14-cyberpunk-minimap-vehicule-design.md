@@ -149,3 +149,18 @@ la tablette 4.2, pas de saccade visible pendant une minute de conduite en ville.
 
 Spike sur ATLAS, jeu ouvert sur la partie d'Ahmed : un `logic.lua` d'essai qui écrit `vehicle`, la
 vitesse, le cap et une tentative de chemin GPS, lu à pied puis en voiture.
+
+## Ce que le spike a prouvé (2026-11-14, sur la vraie partie d'Ahmed)
+
+Mod 1.2.0 avec des mesures en plus toutes les 0,2 s, une voiture (`vehicleArmedCarBaseObject`) conduite ~1 min.
+
+- En véhicule : `Game.GetMountedVehicle(player)` rend le véhicule (nil à pied). `VehicleComponent.IsMountedToVehicle`
+  et `IsDriver` échouent (« expected userdata »), inutiles. Le blackboard `PlayerStateMachine.Vehicle` vaut 4 en voiture.
+- Cap : `vehicle:GetWorldYaw()` en degrés, 0 = nord (+y), positif vers l'ouest. Vérifié contre `GetWorldForward()` sur
+  46 mesures, écart nul. C'est le sens que la carte suppose déjà (flèche et rotation).
+- Vitesse : `vehicle:GetCurrentSpeed()` en m/s, signée (négative en marche arrière) : le mod garde la valeur absolue.
+  Jusqu'à 31 m/s pendant l'essai.
+- Position : le déplacement entre deux mesures vaut vitesse × 0,2 s, donc `pos.json` suit bien la voiture.
+  Coût des lectures : moins d'une milliseconde (résolution de `os.clock`).
+- Trajet GPS du jeu : `Game.GetNavigationSystem():CalculatePath` n'existe pas sous CET (méthode nil), et aucun
+  système `GPSSystem` scriptable. On garde la ligne droite en pointillés vers l'objectif, comme prévu.
