@@ -8,6 +8,14 @@ import org.junit.Test
 
 class CyberpunkApiTest {
     @Test
+    fun `repere pose et suivi, ou seulement pose`() {
+        assertEquals(CyberpunkNewPin("7", true), CyberpunkApi.parseNewPin("""{"id":7,"tracked":true}"""))
+        assertEquals(CyberpunkNewPin("8", false), CyberpunkApi.parseNewPin("""{"id":8,"tracked":false}"""))
+        // Compagnon d'avant le suivi direct : pas de champ tracked.
+        assertEquals(CyberpunkNewPin("9", false), CyberpunkApi.parseNewPin("""{"id":9}"""))
+    }
+
+    @Test
     fun readsPresence() {
         val p = CyberpunkApi.parsePresence(
             """{"available":true,"gameFound":true,"modInstalled":true,"running":true,"inGame":true,"session":"s-42"}""",

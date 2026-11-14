@@ -30,18 +30,28 @@ export const listPins = () => readJson(file(), empty);
 const sent = new Set<number>();
 let epoch: { session: unknown; seq: number } | null = null;
 
-export async function addPin(input: { x: number; y: number; z?: number; name?: string }) {
+/** Pose un repère ; avec `track`, le fait aussi suivre par le GPS du jeu (en partie seulement, sinon `tracked: false`). */
+export async function addPin(input: { x: number; y: number; z?: number; name?: string; track?: boolean }) {
   const pin: Pin = { id: 0, x: input.x, y: input.y, z: input.z ?? 0, ...(input.name ? { name: input.name } : {}), at: Date.now() };
   await updateJson(file(), empty, (d) => {
     pin.id = Math.max(d.next ?? 1, ...d.pins.map((p) => p.id + 1));
     d.next = pin.id + 1;
     d.pins.push(pin);
   });
-  if (await inGame()) {
+  const live = await inGame();
+  if (live) {
     sent.add(pin.id);
     await sendCommand(pinCmd(pin)).catch((e) => logFailure("repère Cyberpunk non confirmé par le mod", e));
   }
-  return { id: pin.id };
+  if (!input.track) return { id: pin.id };
+  // Le repère est déjà posé : un suivi refusé ou sans réponse du mod le laisse posé, non suivi.
+  const tracked =
+    live &&
+    (await trackPin(pin.id).then(
+      (r) => r.ok === true,
+      (e) => (logFailure("repère Cyberpunk non suivi", e), false),
+    ));
+  return { id: pin.id, tracked };
 }
 
 export async function removePin(id: number) {

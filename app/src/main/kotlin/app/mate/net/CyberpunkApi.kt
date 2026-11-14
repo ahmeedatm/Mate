@@ -176,6 +176,9 @@ data class CyberpunkInstallResult(val ok: Boolean, val deferred: Boolean)
 data class CyberpunkActionResult(val ok: Boolean, val id: Int?, val res: String?)
 
 /** Repère posé depuis la tablette, gardé par l'ordinateur. */
+/** Réponse à un repère posé : `tracked` si le jeu le suit déjà (pose avec suivi, en partie). */
+data class CyberpunkNewPin(val id: String, val tracked: Boolean)
+
 data class CyberpunkServerPin(val id: String, val x: Double, val y: Double, val z: Double, val name: String?, val tracked: Boolean)
 
 enum class CyberpunkMapStatus { ABSENT, LOADING, READY, ERROR }
@@ -270,11 +273,13 @@ class CyberpunkApi(private val http: Http) {
     suspend fun pins(): List<CyberpunkServerPin> = http.io { parsePins(http.get("/cyberpunk/pins", timeoutMs = STATE_TIMEOUT_MS)) }
 
     /** Pose un repère ; rend son identifiant. */
-    suspend fun addPin(x: Double, y: Double, z: Double? = null, name: String? = null): String = http.io {
+    /** Pose un repère ; `track` le fait aussi suivre par le GPS du jeu, dans le même appel. */
+    suspend fun addPin(x: Double, y: Double, z: Double? = null, name: String? = null, track: Boolean = false): CyberpunkNewPin = http.io {
         val body = JSONObject().put("x", x).put("y", y)
         z?.let { body.put("z", it) }
         name?.let { body.put("name", it) }
-        JSONObject(http.postJson("/cyberpunk/pins", body)).optString("id")
+        if (track) body.put("track", true)
+        parseNewPin(http.postJson("/cyberpunk/pins", body))
     }
 
     suspend fun deletePin(id: String) = http.io { http.delete("/cyberpunk/pins/" + http.encode(id)) }
@@ -316,6 +321,8 @@ class CyberpunkApi(private val http: Http) {
         }
 
         private fun <T> JSONArray?.items(read: (JSONObject) -> T) = (0 until (this?.length() ?: 0)).mapNotNull { this!!.optJSONObject(it)?.let(read) }
+
+        fun parseNewPin(json: String): CyberpunkNewPin = JSONObject(json).let { CyberpunkNewPin(it.optString("id"), it.optBoolean("tracked")) }
 
         fun parsePresence(json: String): CyberpunkPresence {
             val o = JSONObject(json)
