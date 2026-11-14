@@ -1,0 +1,11 @@
+{
+  "repo": "Open2077/open77-resources",
+  "commit": "f3328271597b556aee89f0052ccc454f444e3e51",
+  "dir": "standalone/op77_map3d/web/data",
+  "files": [
+    { "file": "manifest.json", "sha256": "86dda769b8c9abbfa9e4c28e1f5f85ed7b7add220bcadc4b92ebfa869871762a", "size": 5611 },
+    { "file": "world.glb", "sha256": "05959e99bc036758a3efe25f02a419b3952cc30db70ce20295f5ed4544a7f12c", "size": 4829684 },
+    { "file": "roads.bin", "sha256": "7b36dd4de0fa75c7a49b1c6f4a507d3c1942b640d1ecff75ec511cc5da7cf080", "size": 1813448 },
+    { "file": "buildings.bin", "sha256": "1c32470a97409f8b44a27c1a092602402f582934af6de683d8fe705b1c0c50a0", "size": 4088512 }
+  ]
+}

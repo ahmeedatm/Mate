@@ -183,17 +183,8 @@ data class CyberpunkServerPin(val id: String, val x: Double, val y: Double, val 
 
 enum class CyberpunkMapStatus { ABSENT, LOADING, READY, ERROR }
 
-/** `affine` : [a, b, c, d, e, f], monde → pixels de la carte ; null tant que la carte n'est pas prête. */
-data class CyberpunkMap(
-    val status: CyberpunkMapStatus,
-    val done: Int,
-    val total: Int,
-    val tile: Int,
-    val levels: Int,
-    val width: Int,
-    val height: Int,
-    val affine: List<Double>?,
-)
+/** Données de la carte 3D sur l'ordinateur : `files` = nom → SHA-256 (vide tant qu'elles ne sont pas prêtes). */
+data class CyberpunkMap3d(val status: CyberpunkMapStatus, val files: Map<String, String>, val error: String?)
 
 /**
  * Cyberpunk 2077 sur l'ordinateur Windows, par le mod CET de Mate (backend/src/routes/cyberpunk.ts). Un compagnon sans
@@ -220,9 +211,6 @@ class CyberpunkApi(private val http: Http) {
 
     /** Null : pas de position fraîche en véhicule (à pied, pause, menu). */
     suspend fun livePos(): CyberpunkLivePos? = http.io { parseLivePos(http.get("/cyberpunk/pos", timeoutMs = POS_TIMEOUT_MS)) }
-
-    /** Chemin du GPS du jeu en véhicule, `[x0, y0, x1, y1…]` du monde ; vide sans destination ou sans In-World Navigation ; null si périmé. */
-    suspend fun route(): DoubleArray? = http.io { parseRoute(http.get("/cyberpunk/route", timeoutMs = POS_TIMEOUT_MS)) }
 
     suspend fun inventory(): List<CyberpunkItem> = http.io { parseInventory(http.get("/cyberpunk/inventory", timeoutMs = STATE_TIMEOUT_MS)) }
 
@@ -285,12 +273,12 @@ class CyberpunkApi(private val http: Http) {
 
     suspend fun trackPin(id: String) = http.io { http.postJson("/cyberpunk/pins/" + http.encode(id) + "/track", JSONObject()) }
 
-    suspend fun map(): CyberpunkMap = http.io { parseMap(http.get("/cyberpunk/map", timeoutMs = STATE_TIMEOUT_MS)) }
+    suspend fun map3d(): CyberpunkMap3d = http.io { parseMap3d(http.get("/cyberpunk/map3d", timeoutMs = STATE_TIMEOUT_MS)) }
 
-    suspend fun prepareMap() = http.io { http.postJson("/cyberpunk/map/prepare", JSONObject()) }
+    suspend fun prepareMap3d() = http.io { http.postJson("/cyberpunk/map3d/prepare", JSONObject()) }
 
-    /** Tuile WebP (512 px au plus) ; null si l'ordinateur ne l'a pas. */
-    suspend fun tile(z: Int, x: Int, y: Int): ByteArray? = http.io { http.bytesOrNull(tilePath(z, x, y), timeoutMs = TILE_TIMEOUT_MS) }
+    /** Un fichier de données de la carte 3D (5 Mo au plus) ; null si l'ordinateur ne l'a pas. */
+    suspend fun map3dFile(name: String): ByteArray? = http.io { http.bytesOrNull("/cyberpunk/map3d/" + http.encode(name), timeoutMs = MAP3D_TIMEOUT_MS) }
 
     companion object {
         private const val PRESENCE_TIMEOUT_MS = 2_000
@@ -300,8 +288,7 @@ class CyberpunkApi(private val http: Http) {
         private const val POS_TIMEOUT_MS = 1_500
         private const val ACTION_TIMEOUT_MS = 8_000
         private const val TILE_TIMEOUT_MS = 10_000
-
-        fun tilePath(z: Int, x: Int, y: Int) = "/cyberpunk/tiles/$z/$x/$y.webp"
+        private const val MAP3D_TIMEOUT_MS = 60_000
 
         /** Route inconnue (compagnon plus ancien) ou plugin coupé : ni jeu, ni erreur. */
         fun isUnavailable(e: HttpException) = e.code == 404 || e.code == 403
@@ -409,19 +396,6 @@ class CyberpunkApi(private val http: Http) {
             return CyberpunkLivePos(o.double("x"), o.double("y"), o.double("yaw"), speed)
         }
 
-        fun parseRoute(json: String): DoubleArray? {
-            val o = JSONObject(json)
-            if (!o.optBoolean("fresh")) return null
-            val a = o.optJSONArray("points") ?: return DoubleArray(0)
-            if (a.length() % 2 != 0) return DoubleArray(0)
-            val out = DoubleArray(a.length())
-            for (i in out.indices) {
-                val v = a.opt(i) as? Number ?: return DoubleArray(0)
-                out[i] = v.toDouble().takeIf { it.isFinite() } ?: return DoubleArray(0)
-            }
-            return out
-        }
-
         fun parseInventory(json: String): List<CyberpunkItem> = JSONObject(json).optJSONArray("items").items {
             CyberpunkItem(it.text("tdb"), it.optString("name"), it.text("type"), it.text("quality"), it.optInt("qty", 1), it.optBoolean("usable"))
         }
@@ -500,7 +474,7 @@ class CyberpunkApi(private val http: Http) {
             }
         }
 
-        fun parseMap(json: String): CyberpunkMap {
+        fun parseMap3d(json: String): CyberpunkMap3d {
             val o = JSONObject(json)
             val status = when (o.optString("status")) {
                 "ready" -> CyberpunkMapStatus.READY
@@ -508,9 +482,9 @@ class CyberpunkApi(private val http: Http) {
                 "error" -> CyberpunkMapStatus.ERROR
                 else -> CyberpunkMapStatus.ABSENT
             }
-            val size = o.optJSONArray("size")
-            val affine = o.optJSONArray("affine")?.takeIf { it.length() == 6 }?.let { a -> (0 until 6).map { a.optDouble(it) } }
-            return CyberpunkMap(status, o.optInt("done"), o.optInt("total"), o.optInt("tile", 512), o.optInt("levels"), size?.optInt(0) ?: 0, size?.optInt(1) ?: 0, affine)
+            val files = o.optJSONObject("files")
+            val shas = files?.keys()?.asSequence()?.mapNotNull { k -> files.optJSONObject(k)?.optString("sha256")?.takeIf { it.isNotEmpty() }?.let { k to it } }?.toMap().orEmpty()
+            return CyberpunkMap3d(status, shas, o.optString("error").takeIf { it.isNotEmpty() })
         }
     }
 }

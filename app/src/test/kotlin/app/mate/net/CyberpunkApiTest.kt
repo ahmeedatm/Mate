@@ -16,6 +16,18 @@ class CyberpunkApiTest {
     }
 
     @Test
+    fun `etat des donnees de la carte 3D, empreintes par fichier`() {
+        val m = CyberpunkApi.parseMap3d("""{"status":"ready","files":{"world.glb":{"size":4,"sha256":"ab"},"roads.bin":{"size":2,"sha256":"cd"}}}""")
+        assertEquals(CyberpunkMapStatus.READY, m.status)
+        assertEquals(mapOf("world.glb" to "ab", "roads.bin" to "cd"), m.files)
+        assertNull(m.error)
+        val e = CyberpunkApi.parseMap3d("""{"status":"error","files":{},"error":"Données de carte refusées"}""")
+        assertEquals(CyberpunkMapStatus.ERROR, e.status)
+        assertEquals("Données de carte refusées", e.error)
+        assertEquals(CyberpunkMapStatus.ABSENT, CyberpunkApi.parseMap3d("{}").status)
+    }
+
+    @Test
     fun readsPresence() {
         val p = CyberpunkApi.parsePresence(
             """{"available":true,"gameFound":true,"modInstalled":true,"running":true,"inGame":true,"session":"s-42"}""",
@@ -166,24 +178,6 @@ class CyberpunkApiTest {
     }
 
     @Test
-    fun readsTheMapDescription() {
-        val m = CyberpunkApi.parseMap(
-            """{"status":"ready","done":197,"total":197,"tile":512,"levels":3,"size":[7000,7000],"affine":[1,0,2,0,-1,3]}""",
-        )
-        assertEquals(CyberpunkMapStatus.READY, m.status)
-        assertEquals(3, m.levels)
-        assertEquals(7000, m.width)
-        assertEquals(listOf(1.0, 0.0, 2.0, 0.0, -1.0, 3.0), m.affine)
-        assertEquals(CyberpunkMapStatus.ABSENT, CyberpunkApi.parseMap("""{"status":"absent"}""").status)
-        assertNull(CyberpunkApi.parseMap("""{"status":"loading","done":2,"total":9}""").affine)
-    }
-
-    @Test
-    fun tilePathFollowsTheContract() {
-        assertEquals("/cyberpunk/tiles/1/2/3.webp", CyberpunkApi.tilePath(1, 2, 3))
-    }
-
-    @Test
     fun oldBackendIsUnavailable() {
         assertTrue(CyberpunkApi.isUnavailable(HttpException(404, "Route GET:/cyberpunk not found")))
         assertTrue(CyberpunkApi.isUnavailable(HttpException(403, "Plugin coupé")))
@@ -263,16 +257,6 @@ class CyberpunkApiTest {
         assertNull(CyberpunkApi.parseLivePos("""{"fresh":true,"vehicle":false,"x":1,"y":2,"yaw":0}"""))
         assertNull(CyberpunkApi.parseLivePos("""{"fresh":true,"vehicle":true,"y":2,"yaw":0}"""))
         assertNull(CyberpunkApi.parseLivePos("""{"fresh":true,"vehicle":true,"x":1,"y":2,"yaw":0,"speed":null}""")!!.speed)
-    }
-
-    @Test
-    fun `chemin du GPS frais, vide, absent ou perime`() {
-        assertEquals(listOf(0.0, 0.0, 100.0, 0.0, 100.0, 80.5), CyberpunkApi.parseRoute("""{"fresh":true,"source":"iwn","kind":"poi","points":[0,0,100,0,100,80.5]}""")!!.toList())
-        assertEquals(0, CyberpunkApi.parseRoute("""{"fresh":true,"source":"absent","kind":null,"points":[]}""")!!.size)
-        assertNull(CyberpunkApi.parseRoute("""{"fresh":false}"""))
-        // Nombre de valeurs impair ou valeur illisible : pas de tracé plutôt qu'un chemin faux.
-        assertEquals(0, CyberpunkApi.parseRoute("""{"fresh":true,"points":[0,0,100]}""")!!.size)
-        assertEquals(0, CyberpunkApi.parseRoute("""{"fresh":true,"points":[0,"a",100,0]}""")!!.size)
     }
 
     @Test

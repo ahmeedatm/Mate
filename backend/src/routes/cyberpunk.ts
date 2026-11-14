@@ -1,5 +1,6 @@
 import type { FastifyInstance, FastifyReply } from "fastify";
 import { cyberpunkMap } from "../cyberpunk-map.ts";
+import { cyberpunkMap3d } from "../cyberpunk-map3d.ts";
 import { phoneRoutes } from "../cyberpunk-phone.ts";
 import { PhoneRefusal, readThread, replyThread, sendCommand, type Command } from "../cyberpunk-commands.ts";
 import { mappins } from "../cyberpunk-poi.ts";
@@ -158,6 +159,24 @@ export default async function cyberpunkRoutes(app: FastifyInstance) {
       const tile = await (await cyberpunkMap()).tile(Number(req.params.z), Number(req.params.x), Number(req.params.y));
       if (!tile) return reply.code(404).send({ error: "Tuile absente" });
       return reply.header("cache-control", "public, max-age=31536000, immutable").type("image/webp").send(tile);
+    },
+  );
+
+  // Carte 3D (moteur embarqué dans l'appli de la tablette) : ses données, préparées une fois, servies telles quelles.
+  app.get("/cyberpunk/map3d", async () => (await cyberpunkMap3d()).status());
+  app.post("/cyberpunk/map3d/prepare", async () => {
+    if (!findGame()) throw Object.assign(new Error("Cyberpunk 2077 (Steam) est introuvable sur cet ordinateur"), { statusCode: 409 });
+    const map = await cyberpunkMap3d();
+    await map.prepare();
+    return map.status();
+  });
+  app.get<{ Params: { file: string } }>(
+    "/cyberpunk/map3d/:file",
+    { schema: { params: { type: "object", properties: { file: { type: "string", pattern: "^[a-z]+\\.(json|glb|bin)$" } } } } },
+    async (req, reply) => {
+      const body = await (await cyberpunkMap3d()).file(req.params.file);
+      if (!body) return reply.code(404).send({ error: "Fichier de carte absent" });
+      return reply.type(req.params.file.endsWith(".json") ? "application/json" : "application/octet-stream").send(body);
     },
   );
 
