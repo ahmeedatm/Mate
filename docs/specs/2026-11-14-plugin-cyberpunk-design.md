@@ -197,3 +197,63 @@ touche, et le GPS du jeu l'y mène. Il recharge sa partie : le repère est toujo
 
 2e spike sur ATLAS (mod `mate_spike` déjà posé) pour fermer les questions ouvertes ci-dessus, puis
 retirer `mods\mate_spike`.
+
+## Contrat (fixé avant le code, 2026-11-14)
+
+Écarts assumés au texte d'origine, tranchés par Claude (mode autonome accordé par Ahmed) :
+- Pas de veilleur backend ni d'ordre « jeu lancé » : la tablette ne parle qu'à son ordinateur actif
+  (`RemoteChannel`), elle ne recevrait rien d'ATLAS quand elle est sur le Mac. C'est donc la tablette
+  qui interroge `GET /cyberpunk/presence` sur chaque ordinateur Windows appairé (toutes les 4 s, délai
+  2 s, appli au premier plan seulement), bascule d'ordinateur actif (`Computers.setActive` +
+  `onComputerChanged(…, automatic = true)`) et ouvre la page quand `inGame` devient vrai ; fin quand
+  `inGame` est faux depuis 10 s : fermer la page et rendre l'ordinateur d'avant, sauf si Ahmed en a
+  choisi un autre entre-temps. Pas de bascule pendant une saisie, un appel ou un écran plein.
+- La page est un calque plein écran (modèle `ui/PageOverlay.kt`, bouton Fermer en haut à droite), pas
+  une page de profil de l'Accueil.
+- Palette propre dans `app/src/main/res/values/colors.xml` (`cp_*`, lue par `R.color`), aucun hex dans
+  le Kotlin.
+
+Mod (dossier `…\cyber_engine_tweaks\mods\mate\`, sources dans `backend/assets/cyberpunk-mod/`) :
+`init.lua` fixe (charge `logic.lua` par `loadfile`, le recharge quand `reload.txt` est non vide, écrit
+`loader-error.txt`), `logic.lua` (toute la logique, remplaçable jeu ouvert), `VERSION`.
+
+`state.json` (écrit ~1 s par le mod) :
+```
+{ v:1, seq, at, inGame, session, mod:"1.0.0",
+  player:{ level, cred, attrs:{ body, ref, tech, int, cool }, health, humanity, money, pts:{ attr, perk } },
+  pos:{ x, y, z, yaw },
+  cyberware:{ <zone>: [ {tdb,name,quality} | false ] },
+  tracked:{ kind:"quest"|"pin", id, quest, desc } | null,
+  call:{ phase:"none"|"incoming"|"active", contact, audio } | null,
+  blocks:{ inv, contacts, quests },
+  pins:[ { pid, x, y, z } ],
+  acks:[ { id, ok, res } ],
+  errors:{} }
+```
+Blocs lents, réécrits seulement quand ils changent (le compteur `blocks.*` suit) :
+`inventory.json` `{ v, items:[ {tdb,name,type,quality,qty,usable} ] }`, `contacts.json`
+`{ v, contacts:[ {id,name,callable,unread} ], threads:[ {name,preview,unread,time} ] }`,
+`quests.json` `{ v, quests:[ {id,title,kind,objective,tracked} ] }`.
+
+`commands.json` (écrit seulement par le backend, fichier temporaire puis renommage) :
+`{ v:1, cmds:[ { id, t, … } ] }` ; le mod exécute les `id` supérieurs au dernier traité, ne vide jamais
+le fichier, et rend `acks`. `t` : `call{contact}`, `answer`, `hangup`, `use{tdb}`, `summon`,
+`track{kind,id}`, `pin{pid,x,y,z}`, `unpin{pid}`.
+
+Routes (jeton d'appairage ; 403 si plugin coupé, sauf `presence` qui rend `available:false`) :
+- `GET /cyberpunk/presence` → `{ available, gameFound, modInstalled, running, inGame, session }`
+- `GET /cyberpunk` → `{ status:"off"|"menu"|"ingame", install:{ gameFound, cet, modInstalled, modVersion,
+  current, pending }, state }` (`ingame` = `state.json` de moins de 10 s et `inGame`)
+- `GET /cyberpunk/inventory`, `/cyberpunk/contacts`, `/cyberpunk/quests` → blocs lents
+- `POST /cyberpunk/install`, `/cyberpunk/uninstall` `{}` → `{ ok, deferred }` (`init.lua` changé jeu ouvert :
+  différé à la fermeture ; `logic.lua` seul : remplacé et rechargé par `reload.txt`)
+- `POST /cyberpunk/action` `{ type:"call"|"answer"|"hangup"|"summon"|"use"|"track", contact?, tdb?, kind?, id? }`
+  → `{ ok, id, res }` (409 hors partie, 504 sans réponse du mod en 5 s)
+- `GET /cyberpunk/pins`, `POST /cyberpunk/pins` `{ x, y, z?, name? }` → `{ id }`, `DELETE /cyberpunk/pins/:id`,
+  `POST /cyberpunk/pins/:id/track`
+- `GET /cyberpunk/map` → `{ status:"absent"|"loading"|"ready"|"error", done, total, tile:512, levels, size:[w,h],
+  affine:[a,b,c,d,e,f] }` ; `POST /cyberpunk/map/prepare` `{}` ; `GET /cyberpunk/tiles/:z/:x/:y.webp`
+
+Tuiles : `dwebp`/`cwebp` officiels de libwebp (BSD, zip `libwebp-1.6.0-windows-x64.zip` téléchargé dans
+`.data/` au premier usage, SHA-256 épinglé), images sources épinglées par commit et SHA-1 de blob du
+dépôt de fans ; pyramide de tuiles 512 px dans `.data/cyberpunk-map/`.
