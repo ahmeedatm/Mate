@@ -1,8 +1,8 @@
 -- Mate pour Cyberpunk 2077 : écrit l'état de la partie dans state.json (~1 s), les blocs lents dans
--- inventory.json, contacts.json et quests.json, et exécute les ordres de commands.json (écrit par le backend de Mate).
+-- inventory.json, contacts.json, quests.json et cyberware.json, et exécute les ordres de commands.json (écrit par le backend de Mate).
 -- Tout appel au jeu est sous pcall. Aucun appel inconnu du moteur hors des commandes ci-dessous.
 -- Contrat : docs/specs/2026-11-14-plugin-cyberpunk-design.md, section « Contrat ». Pas de variable globale (CET les refuse).
-local VERSION = "1.1.0"
+local VERSION = "1.2.0"
 local every, acc = 1.0, 0
 local seq, tick = 0, 0
 local errs = {}
@@ -15,7 +15,8 @@ local trackedPin = nil
 local lastCmd = nil
 local hadPlayer = false
 local session = 0
-local blocks = { inv = os.time(), contacts = os.time(), quests = os.time() }
+local blocks = { inv = os.time(), contacts = os.time(), quests = os.time(), cyber = os.time() }
+local pending = {} -- ordres dont l'ack attend une vérification (pose d'implant)
 local lastJson = {}
 
 local function try(key, f)
@@ -193,6 +194,16 @@ local function cyberware(pl)
   return out
 end
 
+-- Écran cyberware (cyberware.lua) ; absent ou illisible : pas de bloc, l'ordre equip répond une erreur.
+local cw = nil
+do
+  local f, e = loadfile("cyberware.lua")
+  if f then
+    local ok, m = pcall(f)
+    if ok then cw = m({ try = try, itemInfo = itemInfo }) else loadErrs["cyberware.lua"] = tostring(m) end
+  else loadErrs["cyberware.lua"] = tostring(e) end
+end
+
 local function trackedEntry()
   local jm = Game.GetJournalManager()
   local e = jm:GetTrackedEntry()
@@ -320,6 +331,13 @@ local function questsBlock()
     if not found then quests[#quests + 1] = { id = t.id, title = t.quest or "", kind = "quest", objective = t.desc, tracked = true } end
   end
   putBlock("quests", "quests.json", { v = 1, quests = quests })
+end
+
+local function cyberBlock()
+  local pl = Game.GetPlayer()
+  if pl == nil or cw == nil then return end
+  local b = cw.block(pl)
+  if b then putBlock("cyber", "cyberware.json", b) end
 end
 
 -- Ordres ----------------------------------------------------------------------------------------------------------------
@@ -477,6 +495,31 @@ COMMANDS.reply = function(c)
   return "ok"
 end
 
+-- Pose d'un implant : l'ack attend que le jeu ait traité la requête (cyberware.lua rend une vérification).
+COMMANDS.equip = function(c)
+  if cw == nil then error("cyberware.lua indisponible", 0) end
+  return cw.equip(c)
+end
+
+local function ack(id, ok, res)
+  acks[#acks + 1] = { id = id, ok = ok and true or false, res = tostring(res) }
+  while #acks > 20 do table.remove(acks, 1) end
+end
+
+-- Vérifications en attente : nil = pas encore ; un résultat ou une erreur = ack, après réécriture de cyberware.json
+-- (la tablette relit un bloc déjà à jour).
+local function runPending()
+  for i = #pending, 1, -1 do
+    local p = pending[i]
+    local ok, res = pcall(p.check)
+    if not ok or res ~= nil then
+      table.remove(pending, i)
+      pcall(cyberBlock)
+      ack(p.id, ok, res)
+    end
+  end
+end
+
 local function readCommands()
   local body = readAll("commands.json")
   if not body or body == "" then return nil end
@@ -505,8 +548,11 @@ local function runCommands()
       elseif player == nil then ok, res = false, "hors partie"
       elseif run then ok, res = pcall(run, c)
       else ok, res = false, "inconnu" end
-      acks[#acks + 1] = { id = c.id, ok = ok and true or false, res = tostring(res) }
-      while #acks > 20 do table.remove(acks, 1) end
+      if ok and type(res) == "function" then pending[#pending + 1] = { id = c.id, check = res }
+      else
+        if c.t == "equip" then pcall(cyberBlock) end
+        ack(c.id, ok, res)
+      end
     end
   end
 end
@@ -530,7 +576,7 @@ session = tonumber(readAll("session.txt") or "") or 0
 
 pcall(forgetSavedPins)
 
-local SLOW = { inventoryBlock, contactsBlock, questsBlock }
+local SLOW = { inventoryBlock, contactsBlock, questsBlock, cyberBlock }
 
 return { update = function(dt)
   acc = acc + dt
@@ -540,6 +586,7 @@ return { update = function(dt)
   errs = loadErrs
   loadErrs = {}
   pcall(trackSession)
+  pcall(runPending)
   pcall(runCommands)
   -- Un bloc lent par seconde, à tour de rôle (chacun toutes les 5 s), jamais pendant l'écran de chargement.
   local slot = tick % 5
