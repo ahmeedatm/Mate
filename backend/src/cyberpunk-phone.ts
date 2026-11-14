@@ -40,10 +40,10 @@ export const ATLASES = [
   { name: "atlas_phone", parts: ["frame_main", "frame_message", "frame_top", "icon_message", "icon_signal", "icon_battery", "icon_nc"] },
   { name: "new_phone_assets", parts: ["msgBuble_bg", "msgBuble_fg", "msgBuble_reply_bg", "msgBuble_reply_fg", "phone_icon", "circle"] },
   { name: "messenger", parts: ["avatar", "avatar_big", "nc"] },
-  // Écran cyberware du charcudoc : le corps de V par système (homme, femme), câbles et fond pointillé, icônes des zones.
+  // Écran cyberware du charcudoc : le corps de V par système (homme, femme), fond pointillé, icônes des zones.
   { name: "man_body", parts: BODY.map((p) => `ma_${p === "skeleton" ? "full_skeleton" : p === "frontal_cortex" ? "pfrontal_cortex" : p}`) },
   { name: "woman_body", parts: BODY.map((p) => `wo_${p}`) },
-  { name: "cw_paperdoll_assets", parts: ["man_cables", "woman_cables", "dots_bg", "circle_1", "dashed_line", "dotted_line"] },
+  { name: "cw_paperdoll_assets", parts: ["dots_bg"] },
   { name: "atlas_cyberware", parts: CW_SLOTS.map((z) => `slot_${z}`) },
 ];
 export const FONTS = ["raj-bold", "blenderpro-book"];
@@ -102,10 +102,11 @@ async function cutAtlas(work: string, atlas: { name: string; parts: string[] | n
   for (const name of names) {
     const r = parts.find((p) => p.partName?.$value === name)?.clippingRectInUVCoords;
     if (!r) throw new PhoneError(`Look du téléphone : la pièce ${name} est introuvable dans ${atlas.name}`);
-    const x0 = Math.max(0, Math.round(r.Left * png.width));
-    const y0 = Math.max(0, Math.round(r.Top * png.height));
-    const x1 = Math.min(png.width, Math.round(r.Right * png.width));
-    const y1 = Math.min(png.height, Math.round(r.Bottom * png.height));
+    // Une pièce d'un pixel (trait du jeu) peut tomber à zéro à l'arrondi : au moins un pixel de chaque côté.
+    const x0 = Math.min(png.width - 1, Math.max(0, Math.round(r.Left * png.width)));
+    const y0 = Math.min(png.height - 1, Math.max(0, Math.round(r.Top * png.height)));
+    const x1 = Math.min(png.width, Math.max(x0 + 1, Math.round(r.Right * png.width)));
+    const y1 = Math.min(png.height, Math.max(y0 + 1, Math.round(r.Bottom * png.height)));
     if (x1 <= x0 || y1 <= y0) throw new PhoneError(`Look du téléphone : la pièce ${name} est vide`);
     out.set(`${name}.png`, cutPng(png, x0, y0, x1, y1));
   }

@@ -104,7 +104,7 @@ describe("extraction du téléphone du jeu", () => {
     assert.deepEqual(fs.readdirSync(path.join(tmp, "ok")).sort(), [...names, "assets.json"].sort());
   });
 
-  it("cyberware : corps homme et femme par système, câbles, icônes des zones", async () => {
+  it("cyberware : corps homme et femme par système, fond pointillé, icônes des zones", async () => {
     const p = newPhone("cyber");
     await p.prepare();
     await settle(p, "ready");
@@ -114,7 +114,7 @@ describe("extraction du téléphone du jeu", () => {
       "wo_skeleton.png",
       "ma_nervous.png",
       "wo_operating_system.png",
-      "man_cables.png",
+      "dots_bg.png",
       "slot_brain.png",
     ])
       assert.ok(s.assets.includes(n), n);
@@ -129,6 +129,26 @@ describe("extraction du téléphone du jeu", () => {
     assert.ok(!s.assets.includes("weapon_lexington.png"));
     const png = readPng((await p.asset("icon_tattoo_tyger.png"))!)!;
     assert.deepEqual([...png.rgba.subarray(0, 4)], [3, 6, 9, 128]);
+  });
+
+  it("pièce d'un pixel (trait pointillé du jeu) : gardée, jamais vide après l'arrondi", async () => {
+    const base = fakeTools();
+    const thin = {
+      async extract(game: string, work: string) {
+        await base.extract(game, work);
+        const img = fakeAtlas(["cw_trait_fin"]);
+        const json = JSON.parse(img.json);
+        // 0,4 px de haut sur 8 : l'arrondi donnait 0.
+        json.Data.RootChunk.slots.Elements[0].parts[0].clippingRectInUVCoords = { Left: 0, Top: 0.5, Right: 1, Bottom: 0.55 };
+        written(work, "png/item_icons3_1080p.png", img.png);
+        written(work, "out/base/gameplay/gui/common/icons/items/item_icons3.inkatlas.json", JSON.stringify(json));
+      },
+    };
+    const p = newPhone("fin", thin);
+    await p.prepare();
+    await settle(p, "ready");
+    const png = readPng((await p.asset("cw_trait_fin.png"))!)!;
+    assert.deepEqual([png.width, png.height], [4, 1]);
   });
 
   it("sans planche d'icônes (jeu changé) : prêt quand même, sans icônes", async () => {
