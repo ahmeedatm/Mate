@@ -240,4 +240,38 @@ class CyberpunkApiTest {
         assertFalse(CyberpunkApi.isStaleChoice(HttpException(409, "x", "fil-introuvable")))
         assertFalse(CyberpunkApi.isStaleChoice(HttpException(504, "x")))
     }
+
+    @Test
+    fun readsCyberwareBlock() {
+        val b = CyberpunkApi.parseCyberware(
+            """{"v":1,"body":"woman","capacity":{"free":30,"used":90,"max":120},"closed":["ArmsCW"],
+              "zones":{"EyesCW":[{"locked":false,"item":{"key":"Items.Kiroshi#12","tdb":"Items.Kiroshi","name":"Kiroshi","quality":"Rare","cost":12,"blocked":false}}],
+                       "LegsCW":[{"locked":true}]},
+              "owned":[{"key":"Items.Sandy#7","tdb":"Items.Sandy","name":"Sandevistan","quality":"Epic","cost":40,"blocked":false,"area":"SystemReplacementCW"}]}""",
+        )
+        assertEquals(CyberpunkBody.WOMAN, b.body)
+        assertEquals(30.0, b.capacity!!.free!!, 0.0)
+        assertEquals(setOf("ArmsCW"), b.closed)
+        val eyes = b.zones.getValue("EyesCW").single()
+        assertEquals("Items.Kiroshi#12", eyes.item!!.key)
+        assertEquals(12, eyes.item!!.cost)
+        assertTrue(b.zones.getValue("LegsCW").single().locked)
+        assertNull(b.zones.getValue("LegsCW").single().item)
+        assertEquals("SystemReplacementCW", b.owned.single().area)
+        assertTrue(b.ready)
+    }
+
+    @Test
+    fun emptyCyberwareBlockIsNotReady() {
+        val b = CyberpunkApi.parseCyberware("""{"v":1,"zones":{},"owned":[]}""")
+        assertFalse(b.ready)
+        assertEquals(CyberpunkBody.MAN, b.body)
+        assertNull(b.capacity)
+    }
+
+    @Test
+    fun cyberBlockCounterIsRead() {
+        val s = CyberpunkApi.parseSnapshot("""{"status":"ingame","install":{},"state":{"seq":1,"inGame":true,"blocks":{"inv":1,"contacts":2,"quests":3,"cyber":9}}}""")
+        assertEquals(9, s.state!!.blocks.cyber)
+    }
 }
