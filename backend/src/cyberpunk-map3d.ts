@@ -16,9 +16,11 @@ export type Map3dFile = (typeof MAP3D_FILES)[number];
 /** Part des bâtiments gardée, les plus volumineux de chaque quartier : 40 images/s mesurées sur la Lenovo M10 (8 avec tous). */
 export const KEEP = 0.1;
 const RECORD = 16;
+const VERSION_FILE = "version.txt";
 
 export type SourceFile = { file: string; sha256: string; size: number };
-export type Map3dOptions = { dir: string; baseUrl: string; files: SourceFile[] };
+/** `version` : change quand la source ou l'allègement changent ; des données d'une autre version sont refaites. */
+export type Map3dOptions = { dir: string; baseUrl: string; files: SourceFile[]; version: string };
 
 /** Erreur dont le message peut s'afficher tel quel. */
 class MapError extends Error {}
@@ -78,6 +80,7 @@ export function createMap3d(opts: Map3dOptions) {
   }
 
   async function present() {
+    if ((await fs.readFile(path.join(opts.dir, VERSION_FILE), "utf8").catch(() => null)) !== opts.version) return null;
     const out: Record<string, { size: number; sha256: string }> = {};
     for (const name of MAP3D_FILES) {
       const body = await fs.readFile(file(name)).catch(() => null);
@@ -103,11 +106,13 @@ export function createMap3d(opts: Map3dOptions) {
       await fs.writeFile(`${file(name)}.part`, body);
       await fs.rename(`${file(name)}.part`, file(name));
     };
+    await fs.rm(path.join(opts.dir, VERSION_FILE), { force: true });
     await fs.rm(file("manifest.json"), { force: true });
     await write("world.glb", bodies.get("world.glb")!);
     await write("roads.bin", bodies.get("roads.bin")!);
     await write("buildings.bin", light.bin);
     await write("manifest.json", Buffer.from(JSON.stringify(light.manifest)));
+    await fs.writeFile(path.join(opts.dir, VERSION_FILE), opts.version);
   }
 
   let running: Promise<void> | null = null;
@@ -151,6 +156,7 @@ export async function cyberpunkMap3d() {
       dir: path.join(dataDir, "cyberpunk-map3d"),
       baseUrl: `https://raw.githubusercontent.com/${m.repo}/${m.commit}/${m.dir}`,
       files: m.files,
+      version: `${m.commit}:${KEEP}`,
     });
   }
   return shared;

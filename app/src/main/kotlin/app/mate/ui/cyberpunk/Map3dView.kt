@@ -73,8 +73,10 @@ class Map3dView(
     private var pois = emptyList<CyberpunkPoi>()
     private var posJob: Job? = null
 
-    /** Dernier envoi de chaque sorte : rien n'est renvoyé à la page tant que ça ne change pas. */
-    private val sent = mutableMapOf<String, String>()
+    private val sent = Map3dBridge.Sent()
+    private val colors: Map<PoiCategory?, String> by lazy {
+        PoiCategory.entries.associate<PoiCategory, PoiCategory?, String> { it to hex(it.color) } + mapOf(null to hex(R.color.cp_cyan))
+    }
 
     private val statusText = kit.text("", 20f, R.color.cp_texte, kit.medium).apply { gravity = Gravity.CENTER }
     private val prepareButton = kit.button(context.getString(R.string.cp_map_prepare), context.getString(R.string.cp_map_prepare_description))
@@ -190,7 +192,7 @@ class Map3dView(
             if ("${url.scheme}://${url.host}" != ORIGIN) return refused()
             val name = path.substringAfterLast('/')
             return when {
-                path == "/index.html" || path == "/mate.js" || (path.startsWith("/assets/") && name.matches(ASSET_NAME)) ->
+                path == "/index.html" || path == "/mate.js" || (path.startsWith("/assets/") && path.removePrefix("/assets/").matches(ASSET_NAME)) ->
                     runCatching { ok(mime(name), context.assets.open("$ASSETS$path")) }.getOrElse { refused() }
                 path.startsWith("/data/") && name in Map3dBridge.FILES ->
                     File(dataDir, name).takeIf { it.isFile }?.let { ok(mime(name), FileInputStream(it)) } ?: refused()
@@ -224,14 +226,25 @@ class Map3dView(
     private fun onPageEvent(name: String, json: String) {
         when (name) {
             "map3d:hello", "map3d:ready" -> {
-                pageReady = true
-                sent.clear()
-                pushAll()
+                // Première des deux : mise en place. `ready` arrive une fois la ville chargée : points et destination
+                // renvoyés, sinon l'itinéraire, calculé sur les routes de la ville, n'est jamais tracé.
+                if (!pageReady) {
+                    pageReady = true
+                    sent.clear()
+                    pushAll()
+                }
+                if (name == "map3d:ready") {
+                    sent.forget("map3d:blips")
+                    sent.forget("map3d:waypoint")
+                    pushBlips()
+                }
             }
             "map3d:waypoint" -> {
-                // La page a changé sa destination toute seule : la prochaine destination de Mate (celle du jeu) lui est renvoyée.
-                sent.remove("map3d:waypoint")
-                if (interactive) runCatching { JSONObject(json) }.getOrNull()?.let { act(Map3dBridge.action(it, pins)) }
+                // La page a changé sa destination toute seule : celle du jeu lui sera renvoyée. Sans action vers le jeu (hors
+                // partie, événement illisible), tout de suite ; sinon quand les repères auront été relus.
+                sent.forget("map3d:waypoint")
+                val action = if (interactive) runCatching { JSONObject(json) }.getOrNull()?.let { Map3dBridge.action(it, pins) } else null
+                if (action == null || action == Map3dBridge.Action.None) pushBlips() else act(action)
             }
         }
     }
@@ -268,8 +281,7 @@ class Map3dView(
 
     private fun fire(name: String, data: Any) {
         val json = data.toString()
-        if (sent[name] == json) return
-        sent[name] = json
+        if (!sent.changed(name, json)) return
         web?.evaluateJavascript("window.MateMap3d&&MateMap3d.fire(${JSONObject.quote(name)},${JSONObject.quote(json)})", null)
     }
 
@@ -277,12 +289,14 @@ class Map3dView(
         fire("map3d:role", JSONObject().put("role", "full"))
         fire("map3d:config", config())
         fire("map3d:open", JSONObject())
+        // Libellés que le moteur écrit en dur (calques de la légende) : traduits par mate.js.
+        val labels = context.resources.getStringArray(R.array.cp_map3d_legend).associate { it.substringBefore('|') to it.substringAfter('|') }
+        web?.evaluateJavascript("window.MateMap3d&&MateMap3d.labels(${JSONObject(labels)})", null)
         pushPlayer()
         pushBlips()
     }
 
     private fun config(): JSONObject {
-        val colors = PoiCategory.entries.associate<PoiCategory, PoiCategory?, String> { it to hex(it.color) } + mapOf(null to hex(R.color.cp_cyan))
         val labels = PoiCategory.entries.associate<PoiCategory, PoiCategory?, String> { it to context.getString(it.label) } + mapOf(null to context.getString(R.string.cp_map3d_pins))
         val locale = context.resources.getStringArray(R.array.cp_map3d_locale).associate { it.substringBefore('|') to it.substringAfter('|') }
         return Map3dBridge.config(colors, labels, locale)
@@ -294,7 +308,6 @@ class Map3dView(
 
     private fun pushBlips() {
         if (!pageReady) return
-        val colors = PoiCategory.entries.associate<PoiCategory, PoiCategory?, String> { it to hex(it.color) } + mapOf(null to hex(R.color.cp_cyan))
         val label = tracked?.desc ?: tracked?.quest
         fire("map3d:blips", JSONObject().put("set", Map3dBridge.blips(pins, pois, objective(), label, colors, context.getString(R.string.cp_map3d_pin))))
         val wp = Map3dBridge.waypoint(pins, objective())
@@ -356,8 +369,10 @@ class Map3dView(
         }
     }
 
+    /** Cachée (tiroir plein écran, appli en arrière-plan) : la boucle 3D s'arrête. */
     override fun onVisibilityAggregated(isVisible: Boolean) {
         super.onVisibilityAggregated(isVisible)
+        web?.let { if (isVisible) it.onResume() else it.onPause() }
         updatePosPolling()
     }
 

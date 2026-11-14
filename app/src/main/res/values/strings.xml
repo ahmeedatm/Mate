@@ -2486,6 +2486,24 @@
         <item>m.uturn|DEMI-TOUR</item>
         <item>m.arrive|ARRIVÉE</item>
     </string-array>
+    <!-- Textes que le moteur de la carte 3D écrit en dur (clé | texte), appliqués par assets/carte3d/mate.js ; « title » = titre des calques. -->
+    <string-array name="cp_map3d_legend">
+        <item>title|Calques</item>
+        <item>layers:buildings|Bâtiments</item>
+        <item>layers:roadBorders|Bords de route</item>
+        <item>layers:metro|Métro</item>
+        <item>layers:labels|Quartiers</item>
+        <item>on|OUI</item>
+        <item>off|NON</item>
+        <item>district|QUARTIER</item>
+        <item>waypoint|DESTINATION</item>
+        <item>place|LIEU</item>
+        <item>tool:zoomin|Zoomer</item>
+        <item>tool:zoomout|Dézoomer</item>
+        <item>tool:north|Nord en haut</item>
+        <item>tool:pitch|Vue 2D ou 3D</item>
+        <item>tool:recenter|Me centrer</item>
+    </string-array>
     <string name="cp_pin_added">Repère posé</string>
     <string name="cp_pin_added_followed">Repère posé et suivi</string>
     <string name="cp_pin_followed">Repère suivi</string>

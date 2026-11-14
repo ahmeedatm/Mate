@@ -32,12 +32,23 @@
       .m3-legend {
         right: 16px !important;
         top: 226px !important;
-        max-height: calc(100% - 430px) !important;
+        max-height: 392px !important;
       }
       .m3-tools {
         left: 112px !important;
         right: auto !important;
         bottom: 16px !important;
+        gap: 8px !important;
+      }
+      /* Cibles d'au moins 48 px au doigt. */
+      .m3-tools button {
+        width: 48px !important;
+        height: 48px !important;
+      }
+      /* Raccourcis clavier (/, DEL, G) : sans objet au doigt. */
+      .m3 kbd,
+      .m3-full kbd {
+        display: none !important;
       }
       /* Calques du HUD du jeu (mini-carte, GPS holo) : sans objet sur la tablette. */
       .m3-legend [data-toggle^="hud:"],

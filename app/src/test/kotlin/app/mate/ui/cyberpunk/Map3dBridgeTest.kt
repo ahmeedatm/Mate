@@ -83,4 +83,18 @@ class Map3dBridgeTest {
         val remote = mapOf("a.bin" to "1", "b.bin" to "2", "c.json" to "3")
         assertEquals(setOf("b.bin", "c.json"), Map3dBridge.missing(remote, mapOf("a.bin" to "1", "b.bin" to "x")))
     }
+
+    @Test
+    fun `un envoi identique n'est pas refait, sauf apres oubli ou remise a zero`() {
+        val sent = Map3dBridge.Sent()
+        assertTrue(sent.changed("map3d:player", "a"))
+        assertFalse(sent.changed("map3d:player", "a"))
+        assertTrue(sent.changed("map3d:player", "b"))
+        assertTrue(sent.changed("map3d:waypoint", "w"))
+        sent.forget("map3d:waypoint")
+        assertTrue(sent.changed("map3d:waypoint", "w"))
+        assertFalse(sent.changed("map3d:player", "b"))
+        sent.clear()
+        assertTrue(sent.changed("map3d:player", "b"))
+    }
 }

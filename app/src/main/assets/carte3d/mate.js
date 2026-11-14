@@ -40,21 +40,64 @@
     },
   };
 
-  // Libellés que le moteur écrit en dur (pas dans sa configuration) : traduits à chaque reconstruction de la légende.
-  var LABELS = { "layers:buildings": "Bâtiments", "layers:roadBorders": "Bords de route", "layers:metro": "Métro", "layers:labels": "Quartiers" };
-  function translate(root) {
-    var legend = root.querySelector && root.querySelector(".m3-legend");
-    if (!legend) return;
-    Object.keys(LABELS).forEach(function (key) {
-      var span = legend.querySelector('[data-toggle="' + key + '"] span');
-      if (span && span.textContent !== LABELS[key]) span.textContent = LABELS[key];
-    });
-    var titles = legend.querySelectorAll("h3");
-    if (titles[2] && titles[2].textContent !== "Calques") titles[2].textContent = "Calques";
+  // Libellés que le moteur écrit en dur (légende, fiche d'un lieu, boutons), donnés par Mate (strings.xml), et noms des
+  // catégories repris de sa configuration. Réappliqués quand la légende ou la fiche sont reconstruites.
+  var labels = {};
+  var categories = {};
+  var watched = [];
+  function setText(el, text) {
+    if (el && text && el.textContent !== text) el.textContent = text;
   }
-  new MutationObserver(function () {
-    translate(document);
-  }).observe(document.documentElement, { childList: true, subtree: true });
+  function translate() {
+    var legend = document.querySelector(".m3-legend");
+    if (legend) {
+      setText(legend.querySelectorAll("h3")[2], labels.title);
+      Object.keys(labels).forEach(function (key) {
+        if (key.indexOf("layers:") === 0) setText(legend.querySelector('[data-toggle="' + key + '"] span'), labels[key]);
+      });
+      Array.prototype.forEach.call(legend.querySelectorAll(".m3-toggle i"), function (i) {
+        setText(i, i.textContent === "ON" ? labels.on : i.textContent === "OFF" ? labels.off : null);
+      });
+    }
+    var card = document.querySelector(".m3-card");
+    if (card) {
+      var kind = card.querySelector("header small");
+      if (kind) {
+        var id = kind.textContent.toLowerCase();
+        setText(kind, id === "__waypoint" ? labels.waypoint : id === "place" ? labels.place : categories[id]);
+      }
+      Array.prototype.forEach.call(card.querySelectorAll("dt"), function (dt) {
+        if (dt.textContent === "DISTRICT") setText(dt, labels.district);
+      });
+    }
+    Array.prototype.forEach.call(document.querySelectorAll(".m3-tools button"), function (b) {
+      var name = labels["tool:" + b.getAttribute("data-act")];
+      if (name && b.getAttribute("aria-label") !== name) {
+        b.setAttribute("aria-label", name);
+        b.removeAttribute("title");
+      }
+    });
+    [legend, card].forEach(function (el) {
+      if (el && watched.indexOf(el) < 0) {
+        watched.push(el);
+        new MutationObserver(translate).observe(el, { childList: true, subtree: true });
+      }
+    });
+  }
+  window.MateMap3d.labels = function (map) {
+    labels = map || {};
+    translate();
+  };
+  var fire = window.MateMap3d.fire;
+  window.MateMap3d.fire = function (name, json) {
+    fire(name, json);
+    if (name !== "map3d:config") return;
+    var cfg = typeof json === "string" ? JSON.parse(json) : json;
+    (cfg.categories || []).forEach(function (c) {
+      categories[String(c.id).toLowerCase()] = String(c.label).toUpperCase();
+    });
+    translate();
+  };
 
   var nativeFetch = window.fetch;
   window.fetch = function (url, opts) {

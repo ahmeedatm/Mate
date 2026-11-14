@@ -125,6 +125,24 @@ object Map3dBridge {
 
     private const val RESOLUTION = 0.67
 
+    /** Dernier envoi de chaque sorte d'événement : rien n'est renvoyé à la page tant que ça ne change pas. */
+    class Sent {
+        private val last = mutableMapOf<String, String>()
+
+        /** Vrai (et retenu) si `json` diffère du dernier envoi de `name`. */
+        fun changed(name: String, json: String): Boolean {
+            if (last[name] == json) return false
+            last[name] = json
+            return true
+        }
+
+        fun forget(name: String) {
+            last.remove(name)
+        }
+
+        fun clear() = last.clear()
+    }
+
     /** Les quatre fichiers de données que la page lit sous `/data/` (même liste que `MAP3D_FILES` du compagnon). */
     val FILES = setOf("manifest.json", "world.glb", "roads.bin", "buildings.bin")
 }

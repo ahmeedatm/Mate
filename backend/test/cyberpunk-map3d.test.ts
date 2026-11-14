@@ -51,7 +51,7 @@ after(async () => {
   fs.rmSync(tmp, { recursive: true, force: true });
 });
 
-const newMap = (name: string, files = FILES) => createMap3d({ dir: path.join(tmp, name), baseUrl: base, files });
+const newMap = (name: string, files = FILES, version = "v1") => createMap3d({ dir: path.join(tmp, name), baseUrl: base, files, version });
 const settled = (map: ReturnType<typeof newMap>) => until(async () => (await map.status()).status !== "loading", 20_000);
 
 describe("allègement des bâtiments", () => {
@@ -108,6 +108,19 @@ describe("données de la carte 3D", () => {
     assert.equal(downloads, before);
   });
 
+  it("une autre version (source ou allègement changés) refait les données", async () => {
+    const first = newMap("version");
+    await first.prepare();
+    await settled(first);
+    const map = newMap("version", FILES, "v2");
+    assert.equal((await map.status()).status, "absent");
+    const before = downloads;
+    await map.prepare();
+    await settled(map);
+    assert.equal((await map.status()).status, "ready");
+    assert.equal(downloads - before, FILES.length);
+  });
+
   it("une empreinte fausse est refusée, rien n'est gardé", async () => {
     const map = newMap(
       "sha",
@@ -154,5 +167,20 @@ describe("routes de la carte 3D", () => {
 
   it("sans jeton : refusé", async () => {
     assert.equal((await server.call("GET", "/cyberpunk/map3d", undefined, false)).status, 401);
+  });
+});
+
+describe("préparation sans le jeu", () => {
+  let server: TestServer;
+  before(async () => {
+    // Pas de dossier Steam : ni jeu ni téléchargement.
+    server = await startServer({ os: "windows", env: { MATE_STEAM_PATH: path.join(os.tmpdir(), "mate-pas-de-steam") } });
+  });
+  after(() => server.stop());
+
+  it("POST /cyberpunk/map3d/prepare : 409, rien n'est lancé", async () => {
+    const r = await server.call("POST", "/cyberpunk/map3d/prepare", {});
+    assert.equal(r.status, 409);
+    assert.equal((await server.call("GET", "/cyberpunk/map3d")).json.status, "absent");
   });
 });
