@@ -57,6 +57,10 @@ class MapGeometry(val width: Int, val height: Int, val levels: Int, val tile: In
 /**
  * Vue sur la carte : centre en pixels du niveau max et zoom (pixels d'écran par pixel du niveau max). Pur calcul, sans
  * Android. Le zoom va de la ville entière dans la vue jusqu'au niveau max × 1,5.
+ *
+ * Pose : à plat, le centre est au milieu de l'écran, nord en haut. En conduite ([setPose]), la carte tourne de `bearing`
+ * degrés (sens horaire), le centre descend à `anchor` × la hauteur, et `tilt` (0 à 1) la penche : un point au-dessus du
+ * centre de `gy` pixels est divisé par `w = 1 − k·gy` (homographie, comme une caméra derrière la voiture).
  */
 class MapCamera(private val geo: MapGeometry) {
     var scale = INITIAL_SCALE
@@ -65,10 +69,26 @@ class MapCamera(private val geo: MapGeometry) {
         private set
     var centerY = geo.height / 2.0
         private set
+    var bearing = 0.0
+        private set
+    var tilt = 0.0
+        private set
+    private var anchor = FLAT_ANCHOR
     private var viewW = 1
     private var viewH = 1
+    private var cos = 1.0
+    private var sin = 0.0
 
     val minScale get() = min(viewW.toDouble() / geo.width, viewH.toDouble() / geo.height)
+
+    private val ax get() = viewW / 2.0
+    private val ay get() = viewH * anchor
+
+    /** Force de la perspective : en haut de l'écran, `w` vaut `1 − PERSPECTIVE` à pleine inclinaison. */
+    private val k get() = tilt * PERSPECTIVE / ay
+
+    /** Haut de la carte dessinée : au-dessus, le fondu est opaque et rien n'est chargé. */
+    val visibleTop get() = viewH * TOP_CUT * tilt
 
     fun setViewport(w: Int, h: Int) {
         viewW = max(w, 1)
@@ -81,12 +101,55 @@ class MapCamera(private val geo: MapGeometry) {
         scale = value.coerceIn(minScale, MAX_SCALE)
     }
 
-    fun worldToScreen(x: Double, y: Double): Pt {
-        val p = geo.worldToMap(x, y)
-        return Pt((p.x - centerX) * scale + viewW / 2.0, (p.y - centerY) * scale + viewH / 2.0)
+    fun setPose(bearing: Double, tilt: Double, anchor: Double) {
+        this.bearing = bearing
+        this.tilt = tilt.coerceIn(0.0, 1.0)
+        this.anchor = anchor.coerceIn(ANCHOR_MIN, ANCHOR_MAX)
+        val r = Math.toRadians(bearing)
+        cos = kotlin.math.cos(r)
+        sin = kotlin.math.sin(r)
     }
 
-    fun screenToWorld(sx: Double, sy: Double) = geo.mapToWorld((sx - viewW / 2.0) / scale + centerX, (sy - viewH / 2.0) / scale + centerY)
+    private fun mapToScreen(px: Double, py: Double): Pt {
+        val dx = (px - centerX) * scale
+        val dy = (py - centerY) * scale
+        val gx = dx * cos - dy * sin
+        val gy = dx * sin + dy * cos
+        val w = 1 - k * gy
+        return Pt(ax + gx / w, ay + gy / w)
+    }
+
+    private fun screenToMap(sx: Double, sy: Double): Pt {
+        val u = sx - ax
+        val v = sy - ay
+        val d = 1 + k * v
+        val gx = u / d
+        val gy = v / d
+        return Pt(centerX + (gx * cos + gy * sin) / scale, centerY + (-gx * sin + gy * cos) / scale)
+    }
+
+    fun worldToScreen(x: Double, y: Double): Pt = geo.worldToMap(x, y).let { mapToScreen(it.x, it.y) }
+
+    fun screenToWorld(sx: Double, sy: Double) = screenToMap(sx, sy).let { geo.mapToWorld(it.x, it.y) }
+
+    /**
+     * Matrice 3 × 3 (ligne par ligne, comme `android.graphics.Matrix.setValues`) qui envoie un pixel du niveau max à l'écran :
+     * rotation et zoom autour du centre, puis perspective autour du point d'ancrage.
+     */
+    fun matrix(): DoubleArray {
+        val a = scale * cos
+        val b = -scale * sin
+        val c = -(a * centerX + b * centerY)
+        val d = scale * sin
+        val e = scale * cos
+        val f = -(d * centerX + e * centerY)
+        // Perspective [1 0 ax ; 0 1 ay ; 0 −k 1] appliquée après : la 3e ligne vaut −k × la 2e, plus 1.
+        return doubleArrayOf(
+            a - k * ax * d, b - k * ax * e, c + ax - k * ax * f,
+            d - k * ay * d, e - k * ay * e, f + ay - k * ay * f,
+            -k * d, -k * e, 1 - k * f,
+        )
+    }
 
     fun centerOn(x: Double, y: Double) {
         val p = geo.worldToMap(x, y)
@@ -95,41 +158,49 @@ class MapCamera(private val geo: MapGeometry) {
         panBy(0f, 0f)
     }
 
-    /** Glisse la carte de (dx, dy) pixels d'écran. */
+    /** Glisse la carte de (dx, dy) pixels d'écran : le point sous le centre suit le doigt. */
     fun panBy(dx: Float, dy: Float) {
-        centerX = (centerX - dx / scale).coerceIn(0.0, geo.width.toDouble())
-        centerY = (centerY - dy / scale).coerceIn(0.0, geo.height.toDouble())
+        val m = screenToMap(ax - dx, ay - dy)
+        centerX = m.x.coerceIn(0.0, geo.width.toDouble())
+        centerY = m.y.coerceIn(0.0, geo.height.toDouble())
     }
 
     /** Multiplie le zoom en gardant fixe le point d'écran (sx, sy). */
     fun zoomAt(factor: Double, sx: Float, sy: Float) {
-        val mx = (sx - viewW / 2.0) / scale + centerX
-        val my = (sy - viewH / 2.0) / scale + centerY
+        val before = screenToMap(sx.toDouble(), sy.toDouble())
         setScale(scale * factor)
-        centerX = mx - (sx - viewW / 2.0) / scale
-        centerY = my - (sy - viewH / 2.0) / scale
+        val after = screenToMap(sx.toDouble(), sy.toDouble())
+        centerX += before.x - after.x
+        centerY += before.y - after.y
         panBy(0f, 0f)
     }
 
-    /** Premier niveau dont les pixels sont au moins aussi gros que ceux de l'écran (net sans gaspiller de mémoire). */
+    /** Premier niveau dont les pixels sont au moins aussi gros que ceux de l'écran au centre (net sans gaspiller de mémoire). */
     fun level(): Int = (geo.maxLevel + ceil(ln(scale) / ln(2.0) - EPS).toInt()).coerceIn(0, geo.maxLevel)
+
+    /** Sol vu à l'écran, en pixels du niveau max : les 4 coins sous le fondu (un trapèze tourné en conduite). */
+    private fun groundQuad(): List<Pt> {
+        val top = visibleTop
+        return listOf(screenToMap(0.0, top), screenToMap(viewW.toDouble(), top), screenToMap(viewW.toDouble(), viewH.toDouble()), screenToMap(0.0, viewH.toDouble()))
+    }
 
     fun visibleTiles(z: Int = level()): List<TileKey> {
         val span = geo.span(z) * geo.tile
-        val x0 = floor((centerX - viewW / 2.0 / scale) / span).toInt().coerceAtLeast(0)
-        val x1 = floor((centerX + viewW / 2.0 / scale) / span).toInt().coerceAtMost(geo.columns(z) - 1)
-        val y0 = floor((centerY - viewH / 2.0 / scale) / span).toInt().coerceAtLeast(0)
-        val y1 = floor((centerY + viewH / 2.0 / scale) / span).toInt().coerceAtMost(geo.rows(z) - 1)
+        val quad = groundQuad()
+        val x0 = floor(quad.minOf { it.x } / span).toInt().coerceAtLeast(0)
+        val x1 = floor(quad.maxOf { it.x } / span).toInt().coerceAtMost(geo.columns(z) - 1)
+        val y0 = floor(quad.minOf { it.y } / span).toInt().coerceAtLeast(0)
+        val y1 = floor(quad.maxOf { it.y } / span).toInt().coerceAtMost(geo.rows(z) - 1)
         return (y0..y1).flatMap { y -> (x0..x1).map { x -> TileKey(z, x, y) } }
+            .filter { k -> intersects(quad, tileMapRect(k)) }
     }
 
-    fun tileRect(k: TileKey): MapRect {
+    /** Rectangle d'une tuile en pixels du niveau max (coupé au bord de la carte). */
+    fun tileMapRect(k: TileKey): MapRect {
         val span = geo.span(k.z) * geo.tile
-        val left = (k.x * span - centerX) * scale + viewW / 2.0
-        val top = (k.y * span - centerY) * scale + viewH / 2.0
-        val w = min(span, geo.width - k.x * span) * scale
-        val h = min(span, geo.height - k.y * span) * scale
-        return MapRect(left, top, left + w, top + h)
+        val left = k.x * span
+        val top = k.y * span
+        return MapRect(left, top, min(left + span, geo.width.toDouble()), min(top + span, geo.height.toDouble()))
     }
 
     companion object {
@@ -137,6 +208,25 @@ class MapCamera(private val geo: MapGeometry) {
 
         /** À l'ouverture : environ 900 m de large sur la tablette. */
         const val INITIAL_SCALE = 0.5
+
+        /** Pose à plat : centre au milieu de l'écran. */
+        const val FLAT_ANCHOR = 0.5
+
+        /** Pose de conduite : le véhicule au tiers bas, de quoi voir la route devant. */
+        const val DRIVE_ANCHOR = 0.7
+
+        /** Zoom de conduite, de l'arrêt (près) à pleine vitesse (loin). */
+        const val DRIVE_SCALE_NEAR = 1.0
+        const val DRIVE_SCALE_FAR = 0.7
+
+        /** Perspective à pleine inclinaison : en haut de l'écran on voit 1 / (1 − 0,5) = 2 fois plus loin qu'à plat. */
+        const val PERSPECTIVE = 0.5
+
+        /** Part du haut de l'écran couverte par le fondu opaque à pleine inclinaison. */
+        const val TOP_CUT = 0.12
+
+        private const val ANCHOR_MIN = 0.1
+        private const val ANCHOR_MAX = 0.9
 
         /**
          * Octets du cache de tuiles (RGB_565) pour une vue de `viewW` × `viewH` pixels : toutes les tuiles visibles au pire
@@ -154,6 +244,22 @@ class MapCamera(private val geo: MapGeometry) {
         const val MAX_CACHE_BYTES = 32 * 1024 * 1024
         private const val EPS = 1e-9
     }
+}
+
+/** Vrai si le polygone convexe `quad` et le rectangle se touchent (axes séparateurs). */
+internal fun intersects(quad: List<Pt>, r: MapRect): Boolean {
+    if (quad.maxOf { it.x } < r.left || quad.minOf { it.x } > r.right || quad.maxOf { it.y } < r.top || quad.minOf { it.y } > r.bottom) return false
+    val corners = listOf(Pt(r.left, r.top), Pt(r.right, r.top), Pt(r.right, r.bottom), Pt(r.left, r.bottom))
+    for (i in quad.indices) {
+        val a = quad[i]
+        val b = quad[(i + 1) % quad.size]
+        val nx = b.y - a.y
+        val ny = a.x - b.x
+        val q = quad.map { (it.x - a.x) * nx + (it.y - a.y) * ny }
+        val c = corners.map { (it.x - a.x) * nx + (it.y - a.y) * ny }
+        if (q.max() < c.min() || q.min() > c.max()) return false
+    }
+    return true
 }
 
 /** Identifiant du point le plus proche de (x, y) dans le rayon donné, ou null. */

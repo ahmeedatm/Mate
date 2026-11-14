@@ -8,6 +8,7 @@ import android.graphics.Canvas
 import android.graphics.ColorMatrix
 import android.graphics.ColorMatrixColorFilter
 import android.graphics.DashPathEffect
+import android.graphics.Matrix
 import android.graphics.Paint
 import android.graphics.Path
 import android.graphics.Rect
@@ -327,6 +328,8 @@ class MapView(
         }
         private val src = Rect()
         private val dst = RectF()
+        private val matrix = Matrix()
+        private val matrixValues = FloatArray(9)
 
         private val scale = ScaleGestureDetector(
             context,
@@ -400,12 +403,17 @@ class MapView(
 
         private fun objective(): Pt? = tracked?.takeIf { it.x != null && it.y != null }?.let { Pt(it.x!!, it.y!!) }
 
+        /** Tuiles dessinées en pixels du niveau max, à travers la matrice de la caméra (rotation et perspective comprises). */
         private fun drawTiles(canvas: Canvas, cam: MapCamera) {
             val tiles = cache ?: return
+            cam.matrix().forEachIndexed { i, v -> matrixValues[i] = v.toFloat() }
+            matrix.setValues(matrixValues)
+            canvas.save()
+            canvas.concat(matrix)
             for (key in cam.visibleTiles()) {
                 val bmp = tiles.get(key)
                 if (bmp != null) {
-                    drawTile(canvas, bmp, cam.tileRect(key), null)
+                    drawTile(canvas, bmp, cam.tileMapRect(key), null)
                     continue
                 }
                 // En attendant la tuile nette : la tuile du niveau au-dessus déjà en mémoire, coupée à la place de celle-ci.
@@ -413,10 +421,11 @@ class MapView(
                 while (parent.z > 0) {
                     parent = TileKey(parent.z - 1, parent.x shr 1, parent.y shr 1)
                     val coarse = tiles.peek(parent) ?: continue
-                    drawTile(canvas, coarse, cam.tileRect(parent), cam.tileRect(key))
+                    drawTile(canvas, coarse, cam.tileMapRect(parent), cam.tileMapRect(key))
                     break
                 }
             }
+            canvas.restore()
         }
 
         private fun drawTile(canvas: Canvas, bmp: Bitmap, r: MapRect, clip: MapRect?) {
