@@ -73,4 +73,13 @@ describe("gameIn : Cyberpunk 2077 dans une installation de Steam", () => {
     manifest(root, "../..");
     assert.equal(gameIn(root), null);
   });
+
+  it("un installdir « . » ou « .. » est refusé", () => {
+    for (const dir of [".", ".."]) {
+      const root = tmp();
+      manifest(root, dir);
+      fs.mkdirSync(path.join(root, "steamapps", "common"), { recursive: true });
+      assert.equal(gameIn(root), null, dir);
+    }
+  });
 });

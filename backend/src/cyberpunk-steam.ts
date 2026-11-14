@@ -46,7 +46,7 @@ export function gameIn(root: string): Game | null {
   for (const lib of libraries) {
     const installdir = vdfValues(read(path.join(lib, "steamapps", `appmanifest_${APP_ID}.acf`)), "installdir")[0];
     // Un nom de dossier seulement : le manifeste ne doit pas faire sortir du dossier common.
-    if (!installdir || installdir !== path.basename(installdir)) continue;
+    if (!installdir || installdir === "." || installdir === ".." || installdir !== path.basename(installdir)) continue;
     const dir = path.join(lib, "steamapps", "common", installdir);
     if (!fs.existsSync(dir)) continue;
     const plugins = path.join(dir, PLUGINS);

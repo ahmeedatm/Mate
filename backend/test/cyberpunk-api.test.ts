@@ -112,6 +112,20 @@ describe("/cyberpunk/presence et /cyberpunk", () => {
   });
 });
 
+describe("carte sans jeu", () => {
+  it("POST /cyberpunk/map/prepare : 409 avec une phrase, sans téléchargement", async () => {
+    const dir = path.join(steam, "steamapps", "common", "Cyberpunk 2077");
+    fs.renameSync(dir, `${dir}.off`);
+    try {
+      const res = await call("POST", "/cyberpunk/map/prepare", {});
+      assert.equal(res.status, 409);
+      assert.match(res.json.message, /Cyberpunk 2077/);
+    } finally {
+      fs.renameSync(`${dir}.off`, dir);
+    }
+  });
+});
+
 describe("install et désinstallation du mod", () => {
   it("installe les trois fichiers, puis le dit à jour", async () => {
     const res = await call("POST", "/cyberpunk/install", {});

@@ -13,7 +13,8 @@ import { readJson, updateJson } from "./store.ts";
  */
 
 export type Pin = { id: number; x: number; y: number; z: number; name?: string; at: number };
-type PinsFile = { pins: Pin[]; tracked?: number };
+/** `next` : dernier id attribué + 1, jamais réutilisé même après suppression. */
+type PinsFile = { pins: Pin[]; tracked?: number; next?: number };
 
 const file = () => path.join(dataDir, "cyberpunk-pins.json");
 const empty = (): PinsFile => ({ pins: [] });
@@ -32,7 +33,8 @@ let epoch: { session: unknown; seq: number } | null = null;
 export async function addPin(input: { x: number; y: number; z?: number; name?: string }) {
   const pin: Pin = { id: 0, x: input.x, y: input.y, z: input.z ?? 0, ...(input.name ? { name: input.name } : {}), at: Date.now() };
   await updateJson(file(), empty, (d) => {
-    pin.id = Math.max(0, ...d.pins.map((p) => p.id)) + 1;
+    pin.id = Math.max(d.next ?? 1, ...d.pins.map((p) => p.id + 1));
+    d.next = pin.id + 1;
     d.pins.push(pin);
   });
   if (await inGame()) {
@@ -51,7 +53,7 @@ export async function removePin(id: number) {
   });
   if (!found) throw notFound();
   sent.delete(id);
-  if (await inGame()) await enqueue([{ t: "unpin", pid: id }]);
+  if (await inGame()) await enqueue([{ t: "unpin", pid: id }]).catch((e) => logFailure("repère Cyberpunk non retiré dans le mod", e));
   return { ok: true };
 }
 

@@ -116,6 +116,13 @@ describe("pyramide de tuiles", () => {
     assert.equal(await map.tile(3, 0, 0), null);
     assert.deepEqual(fs.readdirSync(path.join(tmp, "sha", "src")), []);
   });
+
+  it("une image dont la taille annoncée n'est pas celle du manifeste est refusée", async () => {
+    const map = newMap("size", [{ ...FILES[0], size: FILES[0].size + 1 }, FILES[1]]);
+    await map.prepare();
+    await until(async () => (await map.status()).status === "error", 60_000);
+    assert.match((await map.status()).error!, /taille/);
+  });
 });
 
 describe("routes de la carte", () => {

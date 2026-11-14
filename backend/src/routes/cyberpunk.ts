@@ -2,6 +2,7 @@ import type { FastifyInstance } from "fastify";
 import { cyberpunkMap } from "../cyberpunk-map.ts";
 import { sendCommand, type Command } from "../cyberpunk-commands.ts";
 import { addPin, listPins, removePin, replayPins, trackPin } from "../cyberpunk-pins.ts";
+import { findGame } from "../cyberpunk-steam.ts";
 import { block, installMod, overview, presence, uninstallMod } from "../cyberpunk.ts";
 import { pluginOn } from "../plugins.ts";
 
@@ -38,7 +39,7 @@ const pinSchema = {
   properties: {
     x: { type: "number", minimum: -8000, maximum: 8000 },
     y: { type: "number", minimum: -8000, maximum: 8000 },
-    z: { type: "number" },
+    z: { type: "number", minimum: -2000, maximum: 2000 },
     name: { type: "string", maxLength: 40 },
   },
 };
@@ -90,6 +91,8 @@ export default async function cyberpunkRoutes(app: FastifyInstance) {
 
   app.get("/cyberpunk/map", async () => (await cyberpunkMap()).status());
   app.post("/cyberpunk/map/prepare", async () => {
+    // Pas de jeu, pas de téléchargement de 700 Mo.
+    if (!findGame()) throw Object.assign(new Error("Cyberpunk 2077 (Steam) est introuvable sur cet ordinateur"), { statusCode: 409 });
     const map = await cyberpunkMap();
     await map.prepare();
     return map.status();

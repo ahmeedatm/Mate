@@ -67,6 +67,14 @@ describe("/cyberpunk/pins", () => {
     assert.equal((await call("POST", "/cyberpunk/pins/999/track", {})).status, 404);
   });
 
+  it("un id supprimé n'est jamais réutilisé", async () => {
+    const a = (await call("POST", "/cyberpunk/pins", { x: 1, y: 1 })).json.id;
+    const b = (await call("POST", "/cyberpunk/pins", { x: 2, y: 2 })).json.id;
+    await call("DELETE", `/cyberpunk/pins/${b}`);
+    const c = (await call("POST", "/cyberpunk/pins", { x: 3, y: 3 })).json.id;
+    assert.deepEqual([a, b, c], [1, 2, 3]);
+  });
+
   it("validation : nombres finis, |x| et |y| ≤ 8000, nom ≤ 40", async () => {
     for (const body of [
       {},
@@ -74,6 +82,8 @@ describe("/cyberpunk/pins", () => {
       { x: "a", y: 1 },
       { x: 8001, y: 0 },
       { x: 0, y: -8001 },
+      { x: 0, y: 0, z: 2001 },
+      { x: 0, y: 0, z: -2001 },
       { x: 0, y: 0, name: "x".repeat(41) },
       { x: 0, y: 0, z: "h" },
     ])

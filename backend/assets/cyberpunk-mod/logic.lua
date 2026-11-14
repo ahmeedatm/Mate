@@ -9,6 +9,8 @@ local errs = {}
 local acks = {}
 local pins = {}
 local mappinIds = {}
+local pinKeys = {} -- pid -> valeur 64 bits de l'identifiant du repère, en chaîne de chiffres (pour pins.json)
+local loadErrs = {}
 local trackedPin = nil
 local lastCmd = nil
 local hadPlayer = false
@@ -73,6 +75,42 @@ local function readAll(name)
   if not f then return nil end
   local b = f:read("*a"); f:close()
   return b
+end
+
+-- pins.json : les repères posés avec la valeur 64 bits de leur identifiant. Un rechargement de logic.lua (reload.txt) perd
+-- les tables ci-dessus alors que le jeu garde les repères : à la relecture on les désenregistre, puis le backend rejoue
+-- les siens (state.pins vide). À prouver en jeu.
+local function savePins()
+  local list = {}
+  for _, p in ipairs(pins) do
+    local k = pinKeys[tostring(p.pid)]
+    if k then list[#list + 1] = { pid = p.pid, x = p.x, y = p.y, z = p.z, id = k } end
+  end
+  putAtomic("pins.json", json.encode({ v = 1, pins = list }))
+end
+
+local function idKey(id)
+  -- tostring d'un uint64 LuaJIT : « 123ULL » ; on ne garde que les chiffres.
+  return string.match(tostring(id.value), "^(%d+)")
+end
+
+local function forgetSavedPins() -- à prouver en jeu
+  local body = readAll("pins.json")
+  if not body or body == "" then return end
+  local ok, doc = pcall(json.decode, body)
+  if not (ok and type(doc) == "table" and type(doc.pins) == "table") then return end
+  for _, p in ipairs(doc.pins) do
+    local done, err = pcall(function()
+      local digits = string.match(tostring(p.id), "^%d+$")
+      if not digits then error("identifiant illisible") end
+      -- Littéral 64 bits LuaJIT (suffixe ULL) : seulement via loadstring, des chiffres validés au-dessus.
+      local id = gameNewMappinID.new()
+      id.value = loadstring("return " .. digits .. "ULL")()
+      Game.GetMappinSystem():UnregisterMappin(id)
+    end)
+    if not done then loadErrs["pin." .. tostring(p.pid)] = tostring(err) end
+  end
+  putAtomic("pins.json", json.encode({ v = 1, pins = {} }))
 end
 
 -- Bloc lent : réécrit seulement si son JSON change ; le compteur blocks[key] le dit au backend.
@@ -280,6 +318,10 @@ COMMANDS.use = function(c)
   local pl = Game.GetPlayer()
   local id = ItemID.FromTDBID(TweakDBID.new(tostring(c.tdb)))
   if Game.GetTransactionSystem():GetItemQuantity(pl, id) < 1 then return "none" end
+  -- Seuls les consommables (type « Con_… », hors munitions) : même extraction du type que le bloc inventaire.
+  local ok, typ = pcall(function() return tostring(TweakDBInterface.GetItemRecord(ItemID.GetTDBID(id)):ItemType():Type()) end)
+  typ = ok and typ and (string.match(typ, ":%s*(%S+)") or typ) or nil
+  if not (typ and string.find(typ, "^Con_") and typ ~= "Con_Ammo") then return "none" end
   ItemActionsHelper.ConsumeItem(pl, id, true)
   return "used"
 end
@@ -307,6 +349,8 @@ end
 COMMANDS.pin = function(c)
   local pid = tostring(c.pid)
   if mappinIds[pid] then return "exists" end
+  local function finite(v) local n = tonumber(v); return n ~= nil and n == n and n ~= math.huge and n ~= -math.huge end
+  if not (finite(c.x) and finite(c.y) and finite(c.z)) then return "invalide" end
   local data = MappinData.new()
   data.mappinType = TweakDBID.new("Mappins.DefaultStaticMappin")
   data.variant = gamedataMappinVariant.CustomPositionVariant
@@ -314,6 +358,9 @@ COMMANDS.pin = function(c)
   local id = Game.GetMappinSystem():RegisterMappin(data, Vector4.new(tonumber(c.x), tonumber(c.y), tonumber(c.z), 1))
   mappinIds[pid] = id
   pins[#pins + 1] = { pid = c.pid, x = c.x, y = c.y, z = c.z }
+  local okKey, key = pcall(idKey, id)
+  if okKey and key then pinKeys[pid] = key else errs["pinKey"] = tostring(key) end
+  pcall(savePins)
   return "pinned"
 end
 
@@ -323,8 +370,10 @@ COMMANDS.unpin = function(c)
   if not id then return "unknown" end
   Game.GetMappinSystem():UnregisterMappin(id)
   mappinIds[pid] = nil
+  pinKeys[pid] = nil
   for i = #pins, 1, -1 do if tostring(pins[i].pid) == pid then table.remove(pins, i) end end
   if trackedPin and tostring(trackedPin) == pid then trackedPin = nil end
+  pcall(savePins)
   return "unpinned"
 end
 
@@ -351,7 +400,9 @@ local function runCommands()
       lastCmd = c.id
       local run = COMMANDS[tostring(c.t)]
       local ok, res
-      if Game.GetPlayer() == nil then ok, res = false, "hors partie"
+      local okP, player = pcall(function() return Game.GetPlayer() end)
+      if not okP then ok, res = false, "jeu indisponible : " .. tostring(player)
+      elseif player == nil then ok, res = false, "hors partie"
       elseif run then ok, res = pcall(run, c)
       else ok, res = false, "inconnu" end
       acks[#acks + 1] = { id = c.id, ok = ok and true or false, res = tostring(res) }
@@ -366,7 +417,8 @@ local function trackSession()
   if present and not hadPlayer then
     session = session + 1
     -- Le jeu a oublié les repères de la partie d'avant : le backend renvoie les siens (pins/acks).
-    pins, mappinIds, trackedPin = {}, {}, nil
+    pins, mappinIds, pinKeys, trackedPin = {}, {}, {}, nil
+    pcall(savePins)
     put("session.txt", tostring(session))
   end
   hadPlayer = present
@@ -376,6 +428,8 @@ local ok0, p0 = pcall(function() return Game.GetPlayer() end)
 hadPlayer = ok0 and p0 ~= nil
 session = tonumber(readAll("session.txt") or "") or 0
 
+pcall(forgetSavedPins)
+
 local SLOW = { inventoryBlock, contactsBlock, questsBlock }
 
 return { update = function(dt)
@@ -383,7 +437,8 @@ return { update = function(dt)
   if acc < every then return end
   acc = 0
   tick = tick + 1
-  errs = {}
+  errs = loadErrs
+  loadErrs = {}
   pcall(trackSession)
   pcall(runCommands)
   -- Un bloc lent par seconde, à tour de rôle (chacun toutes les 5 s), jamais pendant l'écran de chargement.

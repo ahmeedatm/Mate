@@ -1,4 +1,4 @@
-import { execFile, execFileSync } from "node:child_process";
+import { execFile } from "node:child_process";
 import { createHash } from "node:crypto";
 import fs from "node:fs/promises";
 import path from "node:path";
@@ -125,12 +125,6 @@ const range = (n: number) => [...Array(n).keys()];
 export function createMap(opts: MapOptions) {
   const entries = opts.files.map(parseEntry);
   const tilePath = (z: number, x: number, y: number) => path.join(opts.dir, String(z), String(x), `${y}.webp`);
-  const exists = (file: string) =>
-    fs.access(file).then(
-      () => true,
-      () => false,
-    );
-
   /** Tuiles de z1 à z3 que couvre une image. */
   const imageTiles = (e: Entry) =>
     [1, 2, 3].flatMap((z) => {
@@ -178,7 +172,12 @@ export function createMap(opts: MapOptions) {
   async function download(e: Entry, dest: string) {
     const res = await fetch(`${opts.baseUrl}/${e.file}`, { signal: AbortSignal.timeout(180_000) });
     if (!res.ok) throw new MapError(`Téléchargement de la carte impossible (${e.file}, ${res.status})`);
+    // Taille annoncée différente de l'attendue : refusée avant de lire le corps.
+    const announced = res.headers.get("content-length");
+    if (announced !== null && Number(announced) !== e.size)
+      throw new MapError(`Image de carte refusée : ${e.file} n'a pas la taille attendue`);
     const body = Buffer.from(await res.arrayBuffer());
+    if (body.length !== e.size) throw new MapError(`Image de carte refusée : ${e.file} n'a pas la taille attendue`);
     // SHA-1 de blob git : sha1("blob <taille>\0" + contenu).
     if (createHash("sha1").update(`blob ${body.length}\0`).update(body).digest("hex") !== e.sha1)
       throw new MapError(`Image de carte refusée : ${e.file} ne correspond pas à l'empreinte attendue`);
@@ -284,30 +283,49 @@ export function createMap(opts: MapOptions) {
 const LIBWEBP_ZIP = {
   url: "https://storage.googleapis.com/downloads.webmproject.org/releases/webp/libwebp-1.6.0-windows-x64.zip",
   /** Relevé le 14/11/2026 sur le zip officiel (4,1 Mo). */
+  /** Octets du zip, vérifiés avant de le lire. */
+  size: 4106264,
   sha256: "48886f506b21f62e4661f0f4cbfca19800897c385128e8902542d29a950c93f1",
   bin: path.join("libwebp", "libwebp-1.6.0-windows-x64", "bin"),
 };
 
-/** Windows : `dwebp.exe` et `cwebp.exe` du zip officiel, téléchargé dans `.data/` au premier usage (SHA-256 vérifié). Ailleurs : le PATH. */
+const exists = (file: string) =>
+  fs.access(file).then(
+    () => true,
+    () => false,
+  );
+
+/** bsdtar de Windows 10+ (chemin complet : un `tar` du PATH, ex. Git, lit mal les zip). Chemins relatifs, une lettre de lecteur serait prise pour un hôte. */
+const winTar = () => path.join(process.env.SystemRoot ?? "C:\\Windows", "System32", "tar.exe");
+const execFileP = (file: string, args: string[], cwd: string) =>
+  new Promise<void>((resolve, reject) =>
+    execFile(file, args, { cwd, windowsHide: true, timeout: 180_000 }, (e) => (e ? reject(e) : resolve())),
+  );
+
+/** Windows : `dwebp.exe` et `cwebp.exe` du zip officiel, téléchargé dans `.data/` au premier usage (taille et SHA-256 vérifiés). Ailleurs : le PATH. */
 async function libwebpBin(): Promise<{ dwebp: string; cwebp: string }> {
   if (osName !== "windows") return { dwebp: "dwebp", cwebp: "cwebp" };
   const bin = path.join(dataDir, LIBWEBP_ZIP.bin);
-  if (
-    !(await fs.access(path.join(bin, "dwebp.exe")).then(
-      () => true,
-      () => false,
-    ))
-  ) {
+  if (!((await exists(path.join(bin, "dwebp.exe"))) && (await exists(path.join(bin, "cwebp.exe"))))) {
     const res = await fetch(LIBWEBP_ZIP.url, { signal: AbortSignal.timeout(180_000) });
-    const zip = Buffer.from(await res.arrayBuffer());
-    if (!res.ok || createHash("sha256").update(zip).digest("hex") !== LIBWEBP_ZIP.sha256)
+    const announced = res.headers.get("content-length");
+    if (!res.ok || (announced !== null && Number(announced) !== LIBWEBP_ZIP.size))
       throw new MapError("Outils de conversion de la carte (libwebp) : téléchargement refusé");
+    const zip = Buffer.from(await res.arrayBuffer());
+    if (zip.length !== LIBWEBP_ZIP.size || createHash("sha256").update(zip).digest("hex") !== LIBWEBP_ZIP.sha256)
+      throw new MapError("Outils de conversion de la carte (libwebp) : téléchargement refusé");
+    // Extraction dans un dossier temporaire, puis renommage : un arrêt en route ne laisse pas un dossier à moitié rempli.
     await fs.rm(path.join(dataDir, "libwebp"), { recursive: true, force: true });
-    await fs.mkdir(path.join(dataDir, "libwebp"), { recursive: true });
+    await fs.rm(path.join(dataDir, "libwebp.tmp"), { recursive: true, force: true });
+    await fs.mkdir(path.join(dataDir, "libwebp.tmp"), { recursive: true });
     await fs.writeFile(path.join(dataDir, "libwebp.zip"), zip);
-    // bsdtar de Windows 10 lit les zip ; chemins relatifs (une lettre de lecteur serait prise pour un hôte).
-    execFileSync("tar", ["-xf", "libwebp.zip", "-C", "libwebp"], { cwd: dataDir, stdio: "ignore", windowsHide: true });
-    await fs.rm(path.join(dataDir, "libwebp.zip"));
+    try {
+      await execFileP(winTar(), ["-xf", "libwebp.zip", "-C", "libwebp.tmp"], dataDir);
+      await fs.rename(path.join(dataDir, "libwebp.tmp"), path.join(dataDir, "libwebp"));
+    } finally {
+      await fs.rm(path.join(dataDir, "libwebp.zip"), { force: true });
+      await fs.rm(path.join(dataDir, "libwebp.tmp"), { recursive: true, force: true });
+    }
   }
   return { dwebp: path.join(bin, "dwebp.exe"), cwebp: path.join(bin, "cwebp.exe") };
 }
@@ -317,7 +335,14 @@ const run = (file: string, args: string[]) =>
     execFile(
       file,
       args,
-      { windowsHide: true, timeout: 180_000, env: { ...process.env, PATH: `${process.env.PATH}:/opt/homebrew/bin:/usr/local/bin` } },
+      {
+        windowsHide: true,
+        timeout: 180_000,
+        env: {
+          ...process.env,
+          PATH: osName === "windows" ? process.env.PATH : [process.env.PATH, "/opt/homebrew/bin", "/usr/local/bin"].join(path.delimiter),
+        },
+      },
       (e) => (e ? reject(e) : resolve()),
     ),
   );
@@ -327,7 +352,7 @@ export async function libwebp(): Promise<Converter> {
   return {
     decode: (webp, size, ppm) => run(dwebp, ["-ppm", "-scale", String(size), String(size), "-o", ppm, webp]),
     encode: (tile, webp) => run(cwebp, ["-quiet", "-q", "70", tile, "-o", webp]),
-    input: process.platform === "win32" ? "bmp" : "ppm",
+    input: osName === "windows" ? "bmp" : "ppm",
   };
 }
 
