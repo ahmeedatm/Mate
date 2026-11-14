@@ -217,6 +217,7 @@ class MapView(
         scope.cancel()
         cache = null
         camera = null
+        geometry = null
         mapKey = null
         dialog?.dismiss()
     }
@@ -269,31 +270,45 @@ class MapView(
     private fun updatePosPolling() {
         val wanted = drive.driving && camera != null && isShown
         if (!wanted) {
-            posJob?.cancel()
-            posJob = null
-            routeLayer.clear()
+            stopPolling()
             return
         }
         if (posJob?.isActive == true) return
         posJob = scope.launch {
-            var polls = 0
+            // À part : une lecture lente du chemin ne retarde jamais la position.
+            launch { pollRoute() }
             while (true) {
                 runCatchingCancellable { api.livePos() }.getOrNull()?.let {
                     lastLiveAt = SystemClock.uptimeMillis()
                     track.push(lastLiveAt, it.x, it.y, it.yaw)
                     liveSpeed = it.speed
                 }
-                if (polls++ % ROUTE_EVERY_POLLS == 0) pollRoute()
                 delay(POS_POLL_MS)
             }
         }
     }
 
-    /** Chemin du GPS : périmé ou vide, la ligne droite revient ; une requête ratée garde le chemin d'avant (pas de clignotement). */
+    private fun stopPolling() {
+        posJob?.cancel()
+        posJob = null
+        routeLayer.clear()
+    }
+
+    /**
+     * Chemin du GPS chaque seconde : périmé ou vide, la ligne droite revient. Une requête ratée garde le chemin d'avant (pas
+     * de clignotement), mais pas plus de [ROUTE_STALE_MS] : la voiture avance, un vieux chemin mentirait.
+     */
     private suspend fun pollRoute() {
-        runCatchingCancellable { api.route() }.onSuccess { world ->
-            val geo = geometry
-            if (world == null || geo == null) routeLayer.clear() else routeLayer.setRoute(world, geo)
+        var okAt = SystemClock.uptimeMillis()
+        while (true) {
+            runCatchingCancellable { api.route() }
+                .onSuccess { world ->
+                    okAt = SystemClock.uptimeMillis()
+                    val geo = geometry
+                    if (world == null || geo == null) routeLayer.clear() else routeLayer.setRoute(world, geo)
+                }
+                .onFailure { if (SystemClock.uptimeMillis() - okAt > ROUTE_STALE_MS) routeLayer.clear() }
+            delay(ROUTE_POLL_MS)
         }
     }
 
@@ -487,8 +502,7 @@ class MapView(
 
     override fun onDetachedFromWindow() {
         animator.cancel()
-        posJob?.cancel()
-        posJob = null
+        stopPolling()
         dialog?.dismiss()
         super.onDetachedFromWindow()
     }
@@ -763,8 +777,10 @@ class MapView(
         const val DRIVE_SWITCH_MS = 400L
         const val POS_POLL_MS = 250L
 
-        /** Le chemin du GPS est relu une fois sur 4 positions : chaque seconde. */
-        const val ROUTE_EVERY_POLLS = 4
+        const val ROUTE_POLL_MS = 1_000L
+
+        /** Sans réponse du compagnon depuis 3 s, le chemin d'avant est retiré. */
+        const val ROUTE_STALE_MS = 3_000L
 
         /** Plus de position rapide depuis 1,5 s : la position de l'état (1 par seconde) reprend. */
         const val LIVE_STALE_MS = 1_500L

@@ -76,9 +76,16 @@ export async function readPos() {
 
 type RouteKind = "quest" | "poi";
 
+/** `route.json` est réécrit chaque seconde : une saccade du jeu de 2 ou 3 s ne fait pas revenir la ligne droite. */
+const ROUTE_STALE_MS = 4_000;
+
+export function isRouteFresh(at: unknown, seqSeenAt: number, now: number) {
+  return isNum(at) && now - at * 1000 <= ROUTE_STALE_MS + AT_ROUNDING_MS && now - seqSeenAt <= ROUTE_STALE_MS;
+}
+
 /**
- * Chemin du GPS du jeu (`route.json`, réécrit toutes les ~0,5 s en véhicule) : `source` dit si In-World Navigation est là
- * pour le lire ; sans lui, ou sans destination suivie, `points` est vide. Périmé comme `pos.json` (à pied, pause, menu).
+ * Chemin du GPS du jeu (`route.json`, réécrit chaque seconde en véhicule) : `source` dit si In-World Navigation est là
+ * pour le lire ; sans lui, ou sans destination suivie, `points` est vide. Périmé à 4 s (à pied, pause, menu).
  */
 export async function readRoute() {
   const game = findGame();
@@ -89,7 +96,7 @@ export async function readRoute() {
   const now = Date.now();
   const seen = seqSeen.get(file);
   if (seen?.seq !== route.seq) seqSeen.set(file, { seq: route.seq, at: now });
-  if (!isPosFresh(route.at, seqSeen.get(file)!.at, now)) return { fresh: false };
+  if (!isRouteFresh(route.at, seqSeen.get(file)!.at, now)) return { fresh: false };
   if (route.iwn !== true) return { fresh: true, source: "absent", kind: null, points: [] };
   const kind: RouteKind | null = route.kind === "quest" || route.kind === "poi" ? route.kind : null;
   return { fresh: true, source: "iwn", kind, points: kind && Array.isArray(route.pts) ? simplifyRoute(route.pts) : [] };

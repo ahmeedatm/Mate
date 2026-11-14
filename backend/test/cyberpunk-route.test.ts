@@ -39,13 +39,15 @@ describe("simplifyRoute", () => {
     assert.deepEqual(simplifyRoute(pts), [0, 0, 100, 0, 100, 50]);
   });
 
-  it("arrondit au décimètre, et ne garde pas plus de MAX_ROUTE_POINTS points (le début, côté voiture)", () => {
+  it("arrondit au décimètre ; au-delà de MAX_ROUTE_POINTS, simplifie plus fort sans perdre la destination", () => {
     assert.deepEqual(simplifyRoute([1.234, 5.678, 9.87, 6.54]), [1.2, 5.7, 9.9, 6.5]);
-    // Zigzag de 30 m d'amplitude : rien n'est retiré, la coupe s'applique.
-    const zigzag = Array.from({ length: MAX_ROUTE_POINTS + 50 }, (_, i) => [i * 10, (i % 2) * 30]).flat();
+    // Zigzag de 3 m d'amplitude : à 1 m tout est gardé, trop de points ; la tolérance monte.
+    const n = MAX_ROUTE_POINTS + 50;
+    const zigzag = Array.from({ length: n }, (_, i) => [i * 10, (i % 2) * 3]).flat();
     const out = simplifyRoute(zigzag);
-    assert.equal(out.length, MAX_ROUTE_POINTS * 2);
-    assert.deepEqual(out.slice(0, 4), [0, 0, 10, 30]);
+    assert.ok(out.length / 2 <= MAX_ROUTE_POINTS, `${out.length / 2} points`);
+    assert.deepEqual(out.slice(0, 2), [0, 0]);
+    assert.deepEqual(out.slice(-2), zigzag.slice(-2));
   });
 
   it("moins de deux points ou coordonnées illisibles : pas de tracé", () => {
@@ -77,7 +79,7 @@ describe("/cyberpunk/route (chemin du GPS du jeu, en véhicule)", () => {
   });
 
   it("route.json vieux, absent ou illisible : périmé, sans chemin", async () => {
-    setRoute({ iwn: true, kind: "quest", pts: [0, 0, 10, 10], at: now() - 5 });
+    setRoute({ iwn: true, kind: "quest", pts: [0, 0, 10, 10], at: now() - 10 });
     assert.deepEqual((await call("GET", "/cyberpunk/route")).json, { fresh: false });
     fs.rmSync(path.join(modDir, "route.json"));
     assert.deepEqual((await call("GET", "/cyberpunk/route")).json, { fresh: false });

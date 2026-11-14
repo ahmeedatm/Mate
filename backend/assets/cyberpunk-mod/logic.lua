@@ -1,6 +1,6 @@
 -- Mate pour Cyberpunk 2077 : écrit l'état de la partie dans state.json (~1 s), les blocs lents dans
 -- inventory.json, contacts.json, quests.json et mappins.json, la position du véhicule dans pos.json (~0,2 s, en
--- véhicule seulement), le chemin du GPS dans route.json (~0,5 s, en véhicule seulement), et exécute les ordres de commands.json (écrit par le backend de Mate).
+-- véhicule seulement), le chemin du GPS dans route.json (~1 s, en véhicule seulement), et exécute les ordres de commands.json (écrit par le backend de Mate).
 -- Tout appel au jeu est sous pcall. Aucun appel inconnu du moteur hors des commandes ci-dessous.
 -- Contrat : docs/specs/2026-11-14-plugin-cyberpunk-design.md, section « Contrat ». Pas de variable globale (CET les refuse).
 local VERSION = "1.5.0"
@@ -631,7 +631,7 @@ local function writePos()
   putAtomic("pos.json", json.encode({ v = 1, seq = posSeq, at = os.time(), x = v.x, y = v.y, yaw = v.yaw, speed = v.speed, vehicle = true }))
 end
 
--- route.json : chemin du GPS du jeu, en véhicule seulement, toutes les ~0,5 s. Le jeu ne le montre pas aux scripts : le
+-- route.json : chemin du GPS du jeu, en véhicule seulement, chaque seconde (la tablette le relit à ce rythme). Le jeu ne le montre pas aux scripts : le
 -- mod In-World Navigation (RED4ext, MIT) rend lisibles les points que la mini-map dessine. Sans lui, iwn = false et la
 -- tablette garde la ligne droite. Repère suivi (poi) d'abord, sinon l'objectif de quête. À prouver en jeu.
 local routeAcc, routeSeq, routeErr = 0, 0, nil
@@ -677,7 +677,7 @@ return { update = function(dt)
     end
   end
   routeAcc = routeAcc + dt
-  if routeAcc >= 0.5 then
+  if routeAcc >= 1.0 then
     routeAcc = 0
     if hadPlayer then
       local ok, e = pcall(writeRoute)

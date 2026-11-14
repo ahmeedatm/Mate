@@ -24,18 +24,13 @@ function distSq(p: number[], i: number, a: number, b: number) {
   return ex * ex + ey * ey;
 }
 
-/**
- * Ramer-Douglas-Peucker sur `[x0, y0, x1, y1, …]` : les virages restent, les points alignés partent. Rend `[]` si le
- * chemin a moins de deux points ou une coordonnée qui n'est pas un nombre fini.
- */
-export function simplifyRoute(pts: unknown[]): number[] {
-  if (pts.length % 2 !== 0 || pts.length < 4 || !pts.every((v) => typeof v === "number" && Number.isFinite(v))) return [];
-  const p = pts as number[];
+/** Indices des points gardés par Ramer-Douglas-Peucker à `tolerance` mètres. */
+function keptPoints(p: number[], tolerance: number) {
   const n = p.length / 2;
   const keep = new Uint8Array(n);
   keep[0] = keep[n - 1] = 1;
   const stack: [number, number][] = [[0, n - 1]];
-  const tol = TOLERANCE_M * TOLERANCE_M;
+  const tol = tolerance * tolerance;
   while (stack.length > 0) {
     const [a, b] = stack.pop()!;
     let far = -1;
@@ -48,7 +43,21 @@ export function simplifyRoute(pts: unknown[]): number[] {
     keep[far] = 1;
     stack.push([a, far], [far, b]);
   }
+  return keep;
+}
+
+/**
+ * Chemin `[x0, y0, x1, y1, …]` simplifié : les virages restent, les points alignés partent. Au-delà de [MAX_ROUTE_POINTS],
+ * la tolérance double jusqu'à tenir : la destination (dernier point) n'est jamais coupée. Rend `[]` si le chemin a moins de
+ * deux points ou une coordonnée qui n'est pas un nombre fini.
+ */
+export function simplifyRoute(pts: unknown[]): number[] {
+  if (pts.length % 2 !== 0 || pts.length < 4 || !pts.every((v) => typeof v === "number" && Number.isFinite(v))) return [];
+  const p = pts as number[];
+  let tolerance = TOLERANCE_M;
+  let keep = keptPoints(p, tolerance);
+  while (keep.reduce((a, b) => a + b, 0) > MAX_ROUTE_POINTS) keep = keptPoints(p, (tolerance *= 2));
   const out: number[] = [];
-  for (let i = 0; i < n && out.length < MAX_ROUTE_POINTS * 2; i++) if (keep[i]) out.push(round(p[2 * i]), round(p[2 * i + 1]));
+  for (let i = 0; i < keep.length; i++) if (keep[i]) out.push(round(p[2 * i]), round(p[2 * i + 1]));
   return out;
 }

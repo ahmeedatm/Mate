@@ -28,46 +28,35 @@ fun routeBufferSize(map: DoubleArray) = 3 * 2 * (map.size / 2)
 fun projectRoute(map: DoubleArray, m: FloatArray, cx: Double, cy: Double, out: FloatArray): Int {
     var count = 0
     var penDown = false
-    fun w(x: Double, y: Double) = m[6] * x + m[7] * y + m[8]
-    fun emit(x: Double, y: Double, start: Boolean) {
-        val d = w(x, y)
-        out[3 * count] = ((m[0] * x + m[1] * y + m[2]) / d).toFloat()
-        out[3 * count + 1] = ((m[3] * x + m[4] * y + m[5]) / d).toFloat()
-        out[3 * count + 2] = if (start) 1f else 0f
-        count++
-    }
     for (i in 1 until map.size / 2) {
         val ax = map[2 * i - 2] - cx
         val ay = map[2 * i - 1] - cy
         val bx = map[2 * i] - cx
         val by = map[2 * i + 1] - cy
-        val wa = w(ax, ay)
-        val wb = w(bx, by)
+        val wa = m[6] * ax + m[7] * ay + m[8]
+        val wb = m[6] * bx + m[7] * by + m[8]
         if (wa < MapCamera.MIN_W && wb < MapCamera.MIN_W) {
             penDown = false
             continue
         }
         // `w` est affine le long du segment : la coupe à MIN_W est exacte.
-        var sx = ax
-        var sy = ay
-        if (wa < MapCamera.MIN_W) {
-            val t = (MapCamera.MIN_W - wa) / (wb - wa)
-            sx = ax + (bx - ax) * t
-            sy = ay + (by - ay) * t
-            penDown = false
-        }
-        var ex = bx
-        var ey = by
-        if (wb < MapCamera.MIN_W) {
-            val t = (MapCamera.MIN_W - wb) / (wa - wb)
-            ex = bx + (ax - bx) * t
-            ey = by + (ay - by) * t
-        }
-        if (!penDown) emit(sx, sy, start = true)
-        emit(ex, ey, start = false)
+        val ts = if (wa < MapCamera.MIN_W) (MapCamera.MIN_W - wa) / (wb - wa) else 0.0
+        val te = if (wb < MapCamera.MIN_W) (MapCamera.MIN_W - wa) / (wb - wa) else 1.0
+        if (wa < MapCamera.MIN_W) penDown = false
+        if (!penDown) count = putPoint(out, count, m, ax + (bx - ax) * ts, ay + (by - ay) * ts, start = true)
+        count = putPoint(out, count, m, ax + (bx - ax) * te, ay + (by - ay) * te, start = false)
         penDown = wb >= MapCamera.MIN_W
     }
     return count
+}
+
+/** Écrit le triplet n° `count` (point projeté, début de morceau) et rend le compte suivant. */
+private fun putPoint(out: FloatArray, count: Int, m: FloatArray, x: Double, y: Double, start: Boolean): Int {
+    val w = m[6] * x + m[7] * y + m[8]
+    out[3 * count] = ((m[0] * x + m[1] * y + m[2]) / w).toFloat()
+    out[3 * count + 1] = ((m[3] * x + m[4] * y + m[5]) / w).toFloat()
+    out[3 * count + 2] = if (start) 1f else 0f
+    return count + 1
 }
 
 /**
