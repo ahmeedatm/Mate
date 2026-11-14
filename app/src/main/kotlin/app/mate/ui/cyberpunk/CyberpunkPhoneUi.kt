@@ -130,7 +130,11 @@ class CyberpunkPhoneUi(private val kit: CyberpunkKit, private val actions: Cyber
             orientation = LinearLayout.VERTICAL
             if (state.lookStatus == CyberpunkPhoneStatus.ERROR) addView(kit.text(context.getString(R.string.cp_phone_look_failed), 16f, R.color.cp_gris), kit.lp(MATCH, WRAP).apply { bottomMargin = kit.dp(8) })
             addView(
-                kit.button(context.getString(R.string.cp_phone_prepare), context.getString(R.string.cp_phone_prepare_description), R.color.cp_panneau, R.color.cp_cyan).apply { setOnClickListener { actions.prepareLook() } },
+                kit.button(context.getString(R.string.cp_phone_prepare), context.getString(R.string.cp_phone_prepare_description), R.color.cp_panneau, R.color.cp_cyan).apply {
+                    // Action secondaire : panneau à barre cyan, pas un aplat qui écrase la liste.
+                    background = kit.panel(R.color.cp_panneau, R.color.cp_cyan, 3, cutDp = 8, both = false)
+                    setOnClickListener { actions.prepareLook() }
+                },
                 kit.lp(MATCH, WRAP),
             )
         }
