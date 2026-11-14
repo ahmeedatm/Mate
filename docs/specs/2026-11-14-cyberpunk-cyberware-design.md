@@ -162,3 +162,26 @@ ne pourrait pas poser chez le charcudoc est refusé avec la raison.
 Spike sur ATLAS : enveloppe temporaire autour de `mods\mate\logic.lua` (rechargée par `reload.txt`,
 comme pour le téléphone), ordres par `cmd.txt` via `ssh pc` ; lecture des possédés et de la
 capacité, puis une pose avec l'accord d'Ahmed ; `logic.lua` d'origine remis ensuite.
+
+## Ce que le spike a prouvé (2026-11-14, sur la vraie partie d'Ahmed)
+
+Enveloppe temporaire autour de `mods\mate\logic.lua` (1.1.0), ordres par `cmd.txt` via `ssh pc`, puis le vrai
+`cyberware.lua` chargé par l'enveloppe ; `logic.lua` d'origine remis ensuite (MD5 identique). Ahmed à pied, partie
+sauvegardée à la main avant.
+
+- Lire : corps (`GetResolvedGenderName` → `Male`), capacité (`HumanityAvailable` 60, `HumanityAllocated` 36,
+  `HumanityTotalMaxValue` 96), 11 zones ; `GetNumberOfSlots(area, true)` compte aussi les emplacements verrouillés
+  (`IsSlotLocked` vrai : OS, yeux, mains, squelette en ont un). Posés : Dynalar Sandevistan, Kiroshi, tatouage Tyger
+  Claws, Ossature cinétique, Armure sous-cutanée. Possédés non posés : Militech Paraline (OS), Coprocesseur balistique
+  (mains), Microrotors (cardiovasculaire). Clé `Items.X#rng_seed` stable ; coût lu par `RPGManager.GetEquipRequirements` ;
+  `UnequipBlocked` lu sans erreur.
+- Icône : `rec:Icon()` rend l'atlas de repli ; `rec:IconPath()` (« cw_skeleton_cyberrotors ») est le nom de la pièce dans
+  les planches `item_icons0` à `23` (125 icônes d'implants et de tatouages dans 17 planches).
+- Poser (avec l'accord d'Ahmed) : Microrotors dans l'emplacement 1 du système cardiovasculaire par `cyberware.lua`
+  (`EquipRequest`) : posé en moins de 3 s, capacité utilisée 36 → 48, l'implant reste dans l'inventaire ; Ahmed l'a vu
+  posé dans l'écran Cyberware du jeu, sans bug. Retiré par `UnequipRequest` : 36/96, emplacement vide, comme avant.
+- Refus du mod vérifiés en jeu : `zone-fermee` (OS), `slot-verrouille` (verrouillé et hors bornes), `mauvaise-zone`,
+  `non-possede` ; déjà posé : `ok` sans requête.
+- Véhicule : `Game.GetMountedVehicle` non nul en voiture, nul à pied ; `HighLevel` vaut 1 en jeu libre.
+- Pas essayé : bras et OS (restent fermés), un remplacement (implant déjà dans le slot), un rechargement de sauvegarde
+  avec l'implant posé.
