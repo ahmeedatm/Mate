@@ -1,7 +1,9 @@
 package app.mate.ui.home
 
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
+import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class ValorantDuelTest {
@@ -43,5 +45,15 @@ class ValorantDuelTest {
         assertEquals(listOf(1f, -0.5f, 0f), ValorantDuel.swings(listOf(20, -10, 0)))
         assertEquals(listOf(0f), ValorantDuel.swings(listOf(0)))
         assertEquals(emptyList<Float>(), ValorantDuel.swings(emptyList()))
+    }
+
+    @Test
+    fun lowZoomDropsTheSmallStatsLine() {
+        assertTrue(ValorantDuel.roomy(bodyDp = 0, pairs = 5))
+        val enough = ValorantDuel.HEADER_DP + 5 * ValorantDuel.ROOMY_PAIR_DP
+        assertTrue(ValorantDuel.roomy(enough, pairs = 5))
+        assertFalse(ValorantDuel.roomy(enough - 1, pairs = 5))
+        // Sélection : l'équipe d'en face n'est pas là, mais les cinq paires gardent leur place.
+        assertTrue(ValorantDuel.roomy(enough, pairs = 0))
     }
 }

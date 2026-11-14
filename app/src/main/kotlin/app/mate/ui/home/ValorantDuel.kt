@@ -13,6 +13,14 @@ object ValorantDuel {
     /** Plus petit bout de barre : une valeur nulle ou inconnue ne fait pas une ligne vide. */
     const val MIN_BAR = 0.04f
 
+    /** Haut de la vue (score, frise, moyennes) ; une paire qui garde sa petite ligne tête / victoires. */
+    const val HEADER_DP = 190
+    const val ROOMY_PAIR_DP = 76
+    private const val TEAM = 5
+
+    /** Assez haut pour la petite ligne de chaque joueur ; [bodyDp] 0 : pas encore mesuré. Au moins une équipe de 5. */
+    fun roomy(bodyDp: Int, pairs: Int): Boolean = bodyDp <= 0 || bodyDp - HEADER_DP >= maxOf(pairs, TEAM) * ROOMY_PAIR_DP
+
     /** Joueur face à celui de même place (du meilleur rang au plus bas) ; place vide si l'autre équipe en a moins. */
     fun <T> pairs(allies: List<T>, enemies: List<T>): List<Pair<T?, T?>> =
         List(maxOf(allies.size, enemies.size)) { allies.getOrNull(it) to enemies.getOrNull(it) }

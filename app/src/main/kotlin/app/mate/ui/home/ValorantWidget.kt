@@ -11,6 +11,7 @@ import android.widget.ScrollView
 import app.mate.R
 import app.mate.net.BackendClient
 import app.mate.net.Valorant
+import app.mate.net.ValorantEnd
 import app.mate.net.ValorantEndStatus
 import app.mate.net.ValorantMapStats
 import app.mate.net.ValorantMe
@@ -34,9 +35,11 @@ class ValorantSample(val valorant: Valorant) : WidgetSample
  * une ligne par joueur (agent, nom, niveau, rang et RR, meilleur rang, K/D, % tête, % de victoires, groupe), ton équipe
  * puis l'équipe d'en face, côte à côte quand le widget est large ; pendant la sélection, ton équipe seulement (Riot ne
  * donne l'autre qu'au début de la partie). Après la partie : le tableau des scores, 2 min. Au menu : ton rang et tes
- * dernières classées. Pastille, ligne et colonne : ton rang et le score seulement ([ValorantShape]). Bandeau de la carte
- * ([ValorantBand]) : mini à la place du score, fin à côté du titre, moyen ou plein au-dessus du tableau. Relu toutes les
- * 5 s pendant une file ou une partie, toutes les 15 s sinon, seulement quand le widget est affiché.
+ * dernières classées. Pastille, ligne et colonne : l'essentiel selon le moment et la place ([ValorantGlance]). Le
+ * tableau ne garde que ce qui tient dans la hauteur réelle ([ValorantFit]). Bandeau de la carte ([ValorantBand]) : mini à
+ * la place du score, fin à côté du titre, moyen ou plein au-dessus du tableau. Agrandi ([zoomed]) : la vue Face-à-face
+ * ([ValorantDuelView]) sur un fond opaque. Relu toutes les 5 s pendant une file ou une partie, toutes les 15 s sinon,
+ * seulement quand le widget est affiché.
  */
 class ValorantWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidget(context, host, placed) {
     private val title = cardTitle(R.string.widget_valorant)
@@ -78,14 +81,30 @@ class ValorantWidget(context: Context, host: HomeHost, placed: Placed) : HomeWid
     private var error: String? = null
     private var job: Job? = null
 
-    /** Dernier état dessiné, avec la forme : rien n'est refait tant que rien ne change (la plupart des relevés). */
-    private var drawn: Pair<Valorant?, WidgetSize>? = null
+    /** Dernier état dessiné, avec la forme et la hauteur : rien n'est refait tant que rien ne change (la plupart des relevés). */
+    private var drawn: Triple<Valorant?, WidgetSize, Int>? = null
+
+    /** Hauteur mesurée de la place sous le titre, en dp (0 : pas encore mesurée) ; elle change avec le thème et le profil de rangées. */
+    private var bodyDp = 0
+
+    init {
+        scroll.addOnLayoutChangeListener { _, _, top, _, bottom, _, _, _, _ ->
+            val height = ((bottom - top) / context.resources.displayMetrics.density).toInt()
+            if (height != bodyDp) {
+                bodyDp = height
+                // Après la mise en page en cours : ce qui tient dans la nouvelle hauteur.
+                scroll.post { render() }
+            }
+        }
+    }
 
     override fun applySize() {
         // Pastille : ni titre ni ligne d'état, le logo et le chiffre prennent toute la case.
         val pill = family == ShapeFamily.PILL
         title.visibility = if (pill) View.GONE else View.VISIBLE
         status.visibility = if (pill) View.GONE else View.VISIBLE
+        // Agrandi : un fond opaque, la grille ne se devine plus derrière les chiffres.
+        if (zoomed) view.background = ValorantDuelView.sheet(context)
         drawn = null
         render()
     }
@@ -124,47 +143,58 @@ class ValorantWidget(context: Context, host: HomeHost, placed: Placed) : HomeWid
 
     private fun render() {
         val v = last
-        val line = error ?: statusLine(v)
+        val shape = ValorantShape.of(placed.size)
+        val size = if (zoomed) ValorantBand.Size.NONE else ValorantBand.Size.of(placed.size)
+        // Forme résumée : le bandeau seulement là où il porte l'info ([ValorantGlance]).
+        val showsBand = v != null && ValorantBand.shows(v, size) && (!shape.summary || ValorantGlance.of(v, placed.size).band)
+        val line = error ?: statusLine(v, showsBand)
         if (status.text.toString() != line) status.text = line
         // Ordinateur muet : la dernière partie reste, estompée, pour ne pas passer pour l'état présent.
         body.alpha = if (error != null) STALE_ALPHA else 1f
-        if (drawn == v to placed.size) return
-        drawn = v to placed.size
+        val key = Triple(v, placed.size, bodyDp)
+        if (drawn == key) return
+        drawn = key
         body.removeAllViews()
         slot.removeAllViews()
-        val shape = ValorantShape.of(placed.size)
         // Un kit par rendu : ses images partent vers l'ordinateur actif du moment, avec un seul client.
         val kit = ValorantKit(context, host.scope, online = !preview)
         val fill = LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT)
         val end = v?.end?.takeIf { it.status == ValorantEndStatus.READY }
-        val size = ValorantBand.Size.of(placed.size)
-        // Sans mon rang, la forme résumée n'écrit qu'un conseil : pas de bandeau (ni d'image demandée) pour rien.
-        val band = v?.takeIf { ValorantBand.shows(it, size) && !(shape.summary && it.me == null) }?.let { ValorantBand.view(it, kit, size) }
+        val band = v?.takeIf { showsBand }?.let { ValorantBand.view(it, kit, size) }
         slot.visibility = if (size == ValorantBand.Size.THIN && band != null) View.VISIBLE else View.GONE
         if (size == ValorantBand.Size.THIN && band != null) slot.addView(band, FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT))
+        val big = band != null && (size == ValorantBand.Size.MEDIUM || size == ValorantBand.Size.FULL)
+        // Place du tableau : celle du corps, moins le bandeau et la légende posés au-dessus et dessous.
+        val legend = big && end != null && size == ValorantBand.Size.FULL
+        val tableDp = if (bodyDp <= 0 || v == null || !big) bodyDp else bodyDp - ValorantBand.heightDp(v, size) - BAND_GAP_DP - if (legend) LEGEND_DP else 0
+        val fit = ValorantFit.of(shape, tableDp, context.resources.configuration.fontScale)
         val main = when {
             v == null || v.state == ValorantState.OFF -> center(context.getString(R.string.valorant_off_hint))
-            shape.summary -> ValorantTable.summary(v, kit, family, band.takeIf { size == ValorantBand.Size.MINI })
-            end != null -> ValorantTable.end(end, kit, shape)
-            v.state == ValorantState.MENU || v.state == ValorantState.QUEUE -> ValorantTable.menu(v, kit, shape)
-            else -> ValorantTable.match(v, kit, shape)
+            zoomed -> ValorantDuelView.view(v, kit, bodyDp) ?: table(v, end, kit, shape, fit)
+            shape.summary -> ValorantTable.summary(v, kit, placed.size, band.takeIf { size == ValorantBand.Size.MINI }, bodyDp)
+            else -> table(v, end, kit, shape, fit)
         }
-        if (band == null || (size != ValorantBand.Size.MEDIUM && size != ValorantBand.Size.FULL)) {
+        if (!big) {
             body.addView(main, fill)
             return
         }
         // Moyen et plein : le bandeau en haut, le tableau dessous (centré dans la place qui reste), la légende de la frise à la fin.
-        body.addView(band, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, dp(ValorantBand.heightDp(v, size))))
-        body.addView(main, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, 0, 1f).apply { topMargin = dp(14) })
-        if (end != null && size == ValorantBand.Size.FULL) body.addView(ValorantBand.legend(kit), LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT).apply { topMargin = dp(10) })
+        body.addView(band, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, dp(ValorantBand.heightDp(v!!, size))))
+        body.addView(main, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, 0, 1f).apply { topMargin = dp(BAND_GAP_DP) })
+        if (legend) body.addView(ValorantBand.legend(kit), LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT).apply { topMargin = dp(10) })
     }
 
-    private fun statusLine(v: Valorant?): String {
+    private fun table(v: Valorant, end: ValorantEnd?, kit: ValorantKit, shape: ValorantShape, fit: ValorantFit): View = when {
+        end != null -> ValorantTable.end(end, kit, shape, fit)
+        v.state == ValorantState.MENU || v.state == ValorantState.QUEUE -> ValorantTable.menu(v, kit, shape)
+        else -> ValorantTable.match(v, kit, shape, fit)
+    }
+
+    private fun statusLine(v: Valorant?, band: Boolean): String {
         if (v == null || v.state == ValorantState.OFF) return context.getString(R.string.valorant_off)
         val full = fullLine(v)
-        // Grand bandeau : la carte, la file et le score y sont déjà ; la ligne d'état garde le moment.
-        val big = ValorantBand.Size.of(placed.size).let { it == ValorantBand.Size.MEDIUM || it == ValorantBand.Size.FULL }
-        return if (big && ValorantBand.shows(v, ValorantBand.Size.of(placed.size))) full.substringBefore(" · ") else full
+        // Bandeau affiché, ou vue agrandie : la carte et le score y sont déjà ; la ligne d'état garde le moment.
+        return if (band || zoomed) full.substringBefore(" · ") else full
     }
 
     private fun fullLine(v: Valorant): String {
@@ -204,6 +234,10 @@ class ValorantWidget(context: Context, host: HomeHost, placed: Placed) : HomeWid
         private const val BUSY_MS = 5_000L
         private const val IDLE_MS = 15_000L
         private const val STALE_ALPHA = 0.4f
+        private const val BAND_GAP_DP = 14
+
+        /** Légende des fins de round sous le tableau de fin, avec sa marge. */
+        private const val LEGEND_DP = 30
 
         private fun player(name: String?, tier: Int, rr: Int, ally: Boolean, level: Int, peak: Int, kd: Double, hs: Int, wr: Int, party: Int? = null, me: Boolean = false) =
             ValorantPlayer(name, null, true, tier, null, rr, ally, me, null, level, peak, wr, kd, hs, party)

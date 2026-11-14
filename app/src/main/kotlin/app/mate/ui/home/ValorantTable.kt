@@ -13,7 +13,9 @@ import app.mate.net.ValorantEnd
 import app.mate.net.ValorantEndPlayer
 import app.mate.net.ValorantEndStatus
 import app.mate.net.ValorantMatch
+import app.mate.net.ValorantMe
 import app.mate.net.ValorantPlayer
+import app.mate.net.ValorantScore
 import app.mate.net.ValorantState
 
 /**
@@ -39,12 +41,12 @@ object ValorantTable {
     /** Taille de texte (réglage d'Accessibilité) au-delà de laquelle le tableau de fin perd ses trois dernières colonnes. */
     private const val LARGE_TEXT = 1.15f
 
-    fun match(v: Valorant, kit: ValorantKit, shape: ValorantShape): View {
+    /** [fit] : ce qui tient dans la hauteur réelle ([ValorantFit]) ; sans l'équipe d'en face, ton équipe seule. */
+    fun match(v: Valorant, kit: ValorantKit, shape: ValorantShape, fit: ValorantFit): View {
         val later = if (v.state == ValorantState.PREGAME) R.string.valorant_enemies_later else null
-        val allies = team(kit, R.string.valorant_allies, true, v.allies, null, shape)
-        // Petites formes empilées et texte grossi : dix lignes ne tiennent pas, ton équipe seulement (l'autre en plus grand).
-        if (!shape.side && !shape.detail && shape.stretch && largeText(kit)) return allies
-        val enemies = team(kit, R.string.valorant_enemies, false, v.enemies, later, shape)
+        val allies = team(kit, R.string.valorant_allies, true, v.allies, null, shape, fit)
+        if (!fit.enemies) return allies
+        val enemies = team(kit, R.string.valorant_enemies, false, v.enemies, later, shape, fit)
         return sides(kit, allies, enemies, shape.side)
     }
 
@@ -71,17 +73,17 @@ object ValorantTable {
         setPadding(kit.dp(4), 0, kit.dp(4), 0)
     }
 
-    private fun team(kit: ValorantKit, title: Int, ally: Boolean, players: List<ValorantPlayer>, empty: Int?, shape: ValorantShape) = LinearLayout(kit.context).apply {
+    private fun team(kit: ValorantKit, title: Int, ally: Boolean, players: List<ValorantPlayer>, empty: Int?, shape: ValorantShape, fit: ValorantFit) = LinearLayout(kit.context).apply {
         orientation = LinearLayout.VERTICAL
         gravity = Gravity.CENTER_VERTICAL
-        val captions = if (shape.detail) {
+        val captions = if (fit.detail) {
             listOf(R.string.valorant_col_peak to PEAK, R.string.valorant_col_kd to CHIP, R.string.valorant_col_hs to CHIP, R.string.valorant_col_wr to CHIP)
         } else {
             listOf(R.string.valorant_col_kd to CHIP)
         }
         addView(head(kit, title, ally, captions), kit.lp(MATCH_PARENT).apply { bottomMargin = kit.dp(4) })
         if (players.isEmpty() && empty != null) addView(kit.text(kit.string(empty), 14f, R.attr.c_text_faint))
-        for (p in players) addView(player(kit, p, shape.detail), rowLp(kit, shape.stretch))
+        for (p in players) addView(player(kit, p, fit.detail, fit.level), rowLp(kit, shape.stretch))
     }
 
     /** Nom en capitales (le mien en gras, quelle que soit la police du thème) ; `spacing` faux : plus de place pour le tag. */
@@ -92,18 +94,18 @@ object ValorantTable {
         }
 
     /** Nom, pastille du groupe à côté (même couleur pour les joueurs venus ensemble), niveau dessous. */
-    private fun who(kit: ValorantKit, p: ValorantPlayer, detail: Boolean): View {
+    private fun who(kit: ValorantKit, p: ValorantPlayer, detail: Boolean, level: Boolean): View {
         // Le nom se coupe avant la pastille du groupe (un nom long ne la pousse jamais hors du champ).
         val top = kit.row(name(kit, p.name, p.me, if (detail) 14f else 13f).apply { layoutParams = kit.lp(0, WRAP_CONTENT, 1f) })
         ValorantArt.partyDot(kit, p.party)?.let { top.addView(it) }
-        // Texte grossi : le niveau tombe, pour que les cinq lignes tiennent.
-        if (!detail || p.level == null || largeText(kit)) return top
+        // Pas la place ([ValorantFit]) : le niveau tombe le premier.
+        if (!level || p.level == null) return top
         return kit.column(top.apply { layoutParams = kit.lp(MATCH_PARENT) }, kit.text(kit.string(R.string.valorant_level_short, p.level).uppercase(), 12f, R.attr.c_text_faint).apply { letterSpacing = 0.06f })
     }
 
-    private fun player(kit: ValorantKit, p: ValorantPlayer, detail: Boolean): View {
+    private fun player(kit: ValorantKit, p: ValorantPlayer, detail: Boolean, level: Boolean): View {
         val line = kit.row(ValorantArt.face(kit, p.agentId, p.agent, p.tier, if (detail) 32 else 20, dim = !p.locked), kit.space(10))
-        line.addView(who(kit, p, detail), kit.lp(0, WRAP_CONTENT, 1f))
+        line.addView(who(kit, p, detail, level), kit.lp(0, WRAP_CONTENT, 1f))
         if (detail) {
             // Meilleur rang pas encore lu : la place reste vide (pas de logo « Non classé » trompeur, rien à lire à voix haute).
             val peak = if (p.peakTier == null) View(kit.context) else kit.rank(p.peakTier, 24)
@@ -122,11 +124,12 @@ object ValorantTable {
 
     private fun largeText(kit: ValorantKit) = kit.context.resources.configuration.fontScale > LARGE_TEXT
 
-    fun end(end: ValorantEnd, kit: ValorantKit, shape: ValorantShape): View {
-        // Texte grossi (Accessibilité) : sans % tête, ADR et premiers kills, pour que les noms restent lisibles.
-        val full = shape.detail && !largeText(kit)
+    fun end(end: ValorantEnd, kit: ValorantKit, shape: ValorantShape, fit: ValorantFit): View {
+        // Texte grossi (Accessibilité) ou peu de hauteur : sans % tête, ADR et premiers kills, pour que les noms restent lisibles.
+        val full = fit.detail && !largeText(kit)
         // Combat à mort : chacun pour soi, une seule liste classée par kills (ordre du compagnon).
         if (end.ffa) return board(kit, R.string.valorant_ffa, true, end.players, end.players, full, shape.stretch)
+        if (!fit.enemies) return board(kit, R.string.valorant_allies, true, end.allies, end.players, full, shape.stretch)
         return sides(
             kit,
             board(kit, R.string.valorant_allies, true, end.allies, end.players, full, shape.stretch),
@@ -242,47 +245,127 @@ object ValorantTable {
     }
 
     /**
-     * Pastille, ligne, colonne : mon rang (logo et nom), mes RR et la barre, et le score de la partie en cours (ou le
-     * résultat de celle qui vient de finir) ; en ligne et en colonne, `band` (mini bandeau de la carte) le remplace. Le
-     * reste se lit dans un widget plus grand.
+     * Pastille, ligne, colonne : une info par niveau d'importance, choisie par [ValorantGlance] (le score ou le
+     * résultat, mon rang, la carte, puis ma ligne, ma journée ou mes dernières). `band` : le mini bandeau de la carte
+     * (score et frise sur la photo). [heightDp] : hauteur mesurée de la place (0 : pas encore mesurée), le logo s'y tient.
      */
-    fun summary(v: Valorant, kit: ValorantKit, family: ShapeFamily, band: View? = null): View {
-        val me = v.me ?: return kit.text(kit.string(R.string.valorant_off_hint), 14f, R.attr.c_text_dim)
+    fun summary(v: Valorant, kit: ValorantKit, size: WidgetSize, band: View?, heightDp: Int): View {
+        val glance = ValorantGlance.of(v, size)
+        val me = v.me
+        if (me == null && glance.rank) return kit.text(kit.string(R.string.valorant_off_hint), 14f, R.attr.c_text_dim)
+        val family = size.family
         val end = v.end?.takeIf { it.status == ValorantEndStatus.READY }
-        val result = end?.let { e -> listOfNotNull(kit.string(resultText(e.won)), e.score?.let { kit.string(R.string.valorant_score, it.ally, it.enemy) }).joinToString(" ") }
-        val live = v.score?.takeIf { v.state == ValorantState.INGAME }?.let { kit.string(R.string.valorant_score, it.ally, it.enemy) }
-        val score = when {
-            result != null -> kit.text(result, 18f, resultHue(end.won), R.attr.c_font_title)
-            live != null -> kit.text(live, 26f, R.attr.c_text, R.attr.c_font_display)
-            else -> null
+        val parts = mutableListOf<View>()
+        if (glance.score) v.score?.let { parts += score(kit, it, if (family == ShapeFamily.PILL) 30f else 34f) }
+        if (glance.score && family == ShapeFamily.COLUMN) {
+            parts += ValorantFrieze(kit.context, ValorantBand.cells(v.rounds, live = true), FRIEZE_DP, false, kit.color(R.attr.c_stroke))
         }
+        if (glance.result && end != null) parts += result(kit, end, pill = family == ShapeFamily.PILL)
+        if (glance.myLine) end?.players?.firstOrNull { it.me }?.let { parts += kit.text(kit.string(R.string.valorant_acs_value, it.acs) + " · " + kit.string(R.string.valorant_kda, it.kills, it.deaths, it.assists), 13f, R.attr.c_text_dim) }
+        val rank = if (glance.rank && me != null) rankBlock(kit, me, family, heightDp) else null
+        val today = v.today?.takeIf { glance.today }?.let { day ->
+            kit.column(kit.caption(R.string.valorant_band_today), kit.text(kit.string(R.string.valorant_rr_change, ValorantKit.signed(day.rr)), 20f, rrHue(day.rr), R.attr.c_font_title), gravity = Gravity.END).apply {
+                addView(kit.text(kit.string(R.string.valorant_band_wl, day.wins, day.losses), 13f, R.attr.c_text_dim))
+            }
+        }
+        val history = v.history.takeIf { glance.history }?.let { dots(kit, it) }
+        val shown = if (glance.band) band else null
+        val view = when (family) {
+            ShapeFamily.ROW -> kit.row().apply {
+                rank?.let { addView(it, kit.lp(0, WRAP_CONTENT, 1f)) }
+                parts.forEach { addView(it, kit.lp(if (rank == null) 0 else WRAP_CONTENT, WRAP_CONTENT, if (rank == null) 1f else 0f)) }
+                // En partie sans rang (2 × 1) : le bandeau prend toute la ligne.
+                shown?.let { addView(it, kit.lp(if (rank == null) 0 else kit.dp(BAND_WIDTH), kit.dp(ValorantBand.Size.MINI.heightDp), if (rank == null) 1f else 0f).apply { if (rank != null) marginStart = kit.dp(12) }) }
+                today?.let { addView(it, kit.lp(WRAP_CONTENT).apply { marginStart = kit.dp(12) }) }
+            }
+            else -> kit.column(gravity = Gravity.CENTER).apply {
+                rank?.let { addView(it, kit.lp(MATCH_PARENT)) }
+                parts.forEachIndexed { i, it ->
+                    val frieze = it is ValorantFrieze
+                    addView(it, kit.lp(if (frieze) MATCH_PARENT else WRAP_CONTENT).apply { if (i > 0 || rank != null) topMargin = kit.dp(if (frieze) 10 else 6) })
+                }
+                shown?.let { addView(it, kit.lp(MATCH_PARENT, kit.dp(ValorantBand.Size.MINI.heightDp)).apply { if (rank != null) topMargin = kit.dp(10) }) }
+                history?.let { addView(it, kit.lp(WRAP_CONTENT).apply { topMargin = kit.dp(12) }) }
+            }
+        }
+        val words = listOfNotNull(
+            me?.rank?.takeIf { glance.rank },
+            me?.rr?.takeIf { glance.rank }?.let { kit.string(R.string.valorant_rr, it) },
+            v.score?.takeIf { glance.score }?.let { kit.string(R.string.valorant_score, it.ally, it.enemy) },
+            end?.takeIf { glance.result }?.let { kit.string(resultText(it.won)) },
+            end?.rr?.takeIf { glance.result }?.let { kit.string(R.string.valorant_rr_change, ValorantKit.signed(it)) },
+        )
+        if (words.isNotEmpty()) view.contentDescription = words.joinToString(", ")
+        return view
+    }
+
+    /** Score en grand, teinté de l'équipe qui mène (le chiffre le dit aussi). */
+    private fun score(kit: ValorantKit, s: ValorantScore, size: Float): View {
+        val hue = when {
+            s.ally > s.enemy -> R.attr.c_hue_cyan
+            s.ally < s.enemy -> R.attr.c_hue_red
+            else -> R.attr.c_text
+        }
+        return kit.text(kit.string(R.string.valorant_score, s.ally, s.enemy), size, hue, R.attr.c_font_display).apply { gravity = Gravity.CENTER }
+    }
+
+    /** Partie finie : le mot (Victoire…) et les RR gagnés en grand (le mot dessous en pastille) ; sans RR encore comptés, le score. */
+    private fun result(kit: ValorantKit, end: ValorantEnd, pill: Boolean): View {
+        val big = end.rr?.let { kit.text(kit.string(R.string.valorant_rr_change, ValorantKit.signed(it)), 26f, rrHue(it), R.attr.c_font_title) }
+            ?: end.score?.let { kit.text(kit.string(R.string.valorant_score, it.ally, it.enemy), 26f, resultHue(end.won), R.attr.c_font_title) }
+        val label = kit.text(kit.string(resultText(end.won)), 14f, resultHue(end.won), R.attr.c_font_medium)
+        return kit.column(gravity = Gravity.CENTER).apply {
+            if (!pill) addView(label)
+            big?.let { addView(it) }
+            if (pill) addView(label)
+        }
+    }
+
+    /** Mon rang : logo à la taille de la place, nom, RR et barre (pastille : logo et RR seulement). */
+    private fun rankBlock(kit: ValorantKit, me: ValorantMe, family: ShapeFamily, heightDp: Int): View {
         val rr = me.rr?.let { kit.text(kit.string(R.string.valorant_rr, it), 13f, R.attr.c_text_dim) }
+        if (family == ShapeFamily.PILL) {
+            // Texte et marge sous le logo : ~30 dp ; une rangée basse rapetisse le logo plutôt que de le rogner.
+            val logo = if (heightDp > 0) (heightDp - PILL_TEXT_DP).coerceIn(PILL_LOGO_MIN, PILL_LOGO) else PILL_LOGO
+            return kit.column(kit.rank(me.tier, logo), gravity = Gravity.CENTER).apply { rr?.let { addView(it, kit.lp(WRAP_CONTENT).apply { topMargin = kit.dp(4) }) } }
+        }
         val bar = ValorantKit.rrProgress(me.tier, me.rr)?.let { kit.rrBar(it) }
         val name = kit.text(me.rank.uppercase(), 18f, R.attr.c_text, R.attr.c_font_title).apply { letterSpacing = 0.06f }
-        return when (family) {
-            ShapeFamily.PILL -> kit.column(kit.rank(me.tier, 56), gravity = Gravity.CENTER).apply {
-                addView(score ?: rr ?: name, kit.lp(WRAP_CONTENT).apply { topMargin = kit.dp(6) })
-            }
-            ShapeFamily.ROW -> kit.row(kit.rank(me.tier, 64), kit.space(12)).apply {
-                val info = kit.column(name)
-                rr?.let { info.addView(it) }
-                bar?.let { info.addView(it, kit.lp(MATCH_PARENT).apply { topMargin = kit.dp(6) }) }
-                addView(info, kit.lp(0, WRAP_CONTENT, 1f))
-                if (band != null) {
-                    addView(band, kit.lp(kit.dp(BAND_WIDTH), kit.dp(ValorantBand.Size.MINI.heightDp)).apply { marginStart = kit.dp(12) })
-                } else {
-                    score?.let { addView(it, kit.lp(WRAP_CONTENT).apply { marginStart = kit.dp(12) }) }
-                }
-            }
-            else -> kit.column(kit.rank(me.tier, 72), name, gravity = Gravity.CENTER).apply {
-                rr?.let { addView(it) }
-                bar?.let { addView(it, kit.lp(MATCH_PARENT).apply { topMargin = kit.dp(6) }) }
-                if (band != null) {
-                    addView(band, kit.lp(MATCH_PARENT, kit.dp(ValorantBand.Size.MINI.heightDp)).apply { topMargin = kit.dp(10) })
-                } else {
-                    score?.let { addView(it, kit.lp(WRAP_CONTENT).apply { topMargin = kit.dp(10) }) }
-                }
-            }
-        }.apply { contentDescription = listOfNotNull(me.rank, me.rr?.let { kit.string(R.string.valorant_rr, it) }, result ?: live).joinToString(", ") }
+        if (family == ShapeFamily.ROW) {
+            val logo = if (heightDp > 0) heightDp.coerceIn(PILL_LOGO_MIN, ROW_LOGO) else ROW_LOGO
+            val info = kit.column(name)
+            rr?.let { info.addView(it) }
+            bar?.let { info.addView(it, kit.lp(MATCH_PARENT).apply { topMargin = kit.dp(6) }) }
+            return kit.row(kit.rank(me.tier, logo), kit.space(12)).apply { addView(info, kit.lp(0, WRAP_CONTENT, 1f)) }
+        }
+        return kit.column(kit.rank(me.tier, COLUMN_LOGO), name, gravity = Gravity.CENTER).apply {
+            rr?.let { addView(it) }
+            bar?.let { addView(it, kit.lp(MATCH_PARENT).apply { topMargin = kit.dp(6) }) }
+        }
     }
+
+    /** Mes dernières classées en pastilles, de la plus ancienne à la plus récente : pleine gagnée, creuse perdue. */
+    private fun dots(kit: ValorantKit, games: List<ValorantMatch>): View = kit.row().apply {
+        games.take(DOTS).reversed().forEachIndexed { i, m ->
+            addView(
+                View(kit.context).apply {
+                    background = GradientDrawable().apply {
+                        shape = GradientDrawable.OVAL
+                        if (m.won == true) setColor(kit.color(resultHue(m.won))) else setStroke(kit.dp(2), kit.color(resultHue(m.won)))
+                    }
+                },
+                kit.lp(kit.dp(DOT_DP), kit.dp(DOT_DP)).apply { if (i > 0) marginStart = kit.dp(6) },
+            )
+        }
+        contentDescription = games.take(DOTS).joinToString(", ") { kit.string(resultText(it.won)) }
+    }
+
+    private const val FRIEZE_DP = 8
+    private const val PILL_LOGO = 56
+    private const val PILL_LOGO_MIN = 24
+    private const val PILL_TEXT_DP = 30
+    private const val ROW_LOGO = 64
+    private const val COLUMN_LOGO = 72
+    private const val DOTS = 5
+    private const val DOT_DP = 12
 }
