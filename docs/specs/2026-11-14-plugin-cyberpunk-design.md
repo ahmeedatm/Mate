@@ -257,3 +257,13 @@ Routes (jeton d'appairage ; 403 si plugin coupé, sauf `presence` qui rend `avai
 Tuiles : `dwebp`/`cwebp` officiels de libwebp (BSD, zip `libwebp-1.6.0-windows-x64.zip` téléchargé dans
 `.data/` au premier usage, SHA-256 épinglé), images sources épinglées par commit et SHA-1 de blob du
 dépôt de fans ; pyramide de tuiles 512 px dans `.data/cyberpunk-map/`.
+
+## Calage de la carte (mesuré le 2026-11-14)
+
+Sans mesure en jeu : les 255 532 bâtiments de Night City en coordonnées du jeu (données de
+`Open2077/open77-resources`, `standalone/op77_map3d/web/data/buildings.bin`, MIT, extraites de
+`base\entities\cameras\3dmap`) ont été dessinés vus du dessus puis recalés par corrélation sur les
+contours de la carte de fans (aperçu 1792 px). Pic net à 0,174 px d'aperçu par mètre, même échelle
+en x et y, nord en haut, sans rotation ; la superposition tombe sur les bâtiments (place Arasaka,
+ponts, côte). Sur la carte pleine résolution (111 104 px de côté) :
+pixel = (61008 + 10,788·x ; 46934 − 10,788·y), x et y en mètres du jeu (X est, Y nord).
