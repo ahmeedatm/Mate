@@ -37,6 +37,7 @@ class ProfileRail(
     private val statusName: TextView = activity.findViewById(R.id.status_name)
     private val statusState: TextView = activity.findViewById(R.id.status_state)
     override val status: View = activity.findViewById(R.id.status)
+    override val cyberpunk: View = activity.findViewById(R.id.rail_cyberpunk)
     override val root: View = rail
     override val talk: View = activity.layoutInflater.inflate(R.layout.item_rail_talk, rail, false).also { rail.addView(it, 0) }
     override val talkIcon: View = talk.findViewById(R.id.rail_icon)
@@ -140,6 +141,10 @@ class ProfileRail(
 
     private var linkState: Link.State? = null
 
+    override fun showCyberpunk(shown: Boolean) {
+        cyberpunk.visibility = if (shown) View.VISIBLE else View.GONE
+    }
+
     /** Recrée les entrées (profils ajoutés, renommés, retirés, appel commencé ou fini). */
     override fun applySettings() = render()
 
@@ -159,6 +164,7 @@ class ProfileRail(
         talk.visibility = if (Prefs.railTalk(activity)) View.VISIBLE else View.GONE
         talk.findViewById<View>(R.id.rail_talk_label).visibility = if (labels) View.VISIBLE else View.GONE
         statusName.visibility = if (labels) View.VISIBLE else View.GONE
+        cyberpunk.findViewById<View>(R.id.rail_cyberpunk_name).visibility = if (labels) View.VISIBLE else View.GONE
         entries = RailModel.entries(layout, inCall, Prefs.railTools(activity))
         bar.removeAllViews()
         views.clear()

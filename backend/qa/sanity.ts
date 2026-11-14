@@ -918,6 +918,16 @@ export async function runSanity(opts: { url: string; token: string; os?: Os; hoo
       },
     },
     {
+      name: "Cyberpunk 2077 (cyberware)",
+      run: async () => {
+        // Lecture seule, sans poser d'implant : bloc vide hors partie ou avec un mod d'avant 1.2.0.
+        const cw = await call("GET", "/cyberpunk/cyberware");
+        expectStatus(cw, 200, "/cyberpunk/cyberware");
+        expect(cw.json.v === 1 && typeof cw.json.zones === "object" && Array.isArray(cw.json.owned), "bloc cyberware mal formé");
+        return `${Object.keys(cw.json.zones).length} zone(s), ${cw.json.owned.length} implant(s) possédé(s)`;
+      },
+    },
+    {
       name: "Cyberpunk 2077 (look du téléphone)",
       run: async () => {
         // Lecture seule, sans lancer l'extraction (téléchargement de 80 Mo d'outils) : le statut se lit sur tous les systèmes.

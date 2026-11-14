@@ -113,6 +113,7 @@ export default async function cyberpunkRoutes(app: FastifyInstance) {
   app.get("/cyberpunk/inventory", () => block("inventory"));
   app.get("/cyberpunk/contacts", () => block("contacts"));
   app.get("/cyberpunk/quests", () => block("quests"));
+  app.get("/cyberpunk/cyberware", () => block("cyberware"));
   app.get("/cyberpunk/mappins", () => mappins());
   app.post("/cyberpunk/install", () => installMod());
   app.post("/cyberpunk/uninstall", () => uninstallMod());

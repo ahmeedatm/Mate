@@ -318,6 +318,11 @@ class MainActivity : AppCompatActivity() {
         banner = Banner(findViewById(R.id.remote_banner), lifecycleScope)
         alerts = TabletAlerts(this, banner)
         nav.lock.setOnClickListener { lockScreen.lockTablet() }
+        nav.cyberpunk.setOnClickListener { reopenCyberpunk() }
+        cyberpunk.onClosedByHand = { id ->
+            cyberpunkSession.closedByHand(id)
+            showCyberpunkReturn()
+        }
         signals.onMinute {
             Screen.apply(this@MainActivity)
             // Verrou levé, modification finie : la caméra de la veille repart.
@@ -860,14 +865,8 @@ class MainActivity : AppCompatActivity() {
         when (decision.step) {
             CyberpunkSession.Step.NONE -> Unit
             CyberpunkSession.Step.OPEN -> {
-                val game = Computers.all(this).firstOrNull { it.id == decision.computerId }
                 // État sauvegardé (appli qui part) ou ordinateur disparu : la prochaine relève retentera.
-                if (game == null || supportFragmentManager.isStateSaved) return cyberpunkSession.reset()
-                if (decision.switchTo != null) {
-                    Computers.setActive(this, game.id)
-                    onComputerChanged(game, automatic = true)
-                }
-                cyberpunk.open(game)
+                if (!openCyberpunk(decision.computerId)) cyberpunkSession.reset()
             }
             CyberpunkSession.Step.CLOSE -> {
                 cyberpunk.close()
@@ -878,7 +877,27 @@ class MainActivity : AppCompatActivity() {
                 }
             }
         }
+        showCyberpunkReturn()
     }
+
+    /** Page Cyberpunk sur l'ordinateur du jeu, en le rendant actif s'il ne l'est pas ; faux si impossible pour l'instant. */
+    private fun openCyberpunk(computerId: String?): Boolean {
+        val game = Computers.all(this).firstOrNull { it.id == computerId }
+        if (game == null || supportFragmentManager.isStateSaved) return false
+        if (Computers.active(this)?.id != game.id) {
+            Computers.setActive(this, game.id)
+            onComputerChanged(game, automatic = true)
+        }
+        cyberpunk.open(game)
+        return true
+    }
+
+    /** Icône de retour de la barre (ou du bandeau) : partie en cours dont la page a été fermée à la main. */
+    private fun reopenCyberpunk() {
+        if (openCyberpunk(cyberpunkSession.resumeOn)) showCyberpunkReturn()
+    }
+
+    private fun showCyberpunkReturn() = nav.showCyberpunk(cyberpunkSession.resumeOn != null && !cyberpunk.isOpen)
 
     private val game = GameSession()
 

@@ -30,6 +30,11 @@ interface Navigation {
     /** Ordinateur piloté et pastille de connexion ; toucher : changer d'ordinateur. */
     val status: View
 
+    /** Retour à la page Cyberpunk (partie en cours, page fermée), collé au bloc de l'ordinateur ; toucher : la rouvrir. */
+    val cyberpunk: View
+
+    fun showCyberpunk(shown: Boolean)
+
     fun select(mode: Mode, changed: Boolean)
 
     /** Depuis l'ordi montre ses notifications : la cloche est l'élément choisi, plus « Depuis l'ordi ». */

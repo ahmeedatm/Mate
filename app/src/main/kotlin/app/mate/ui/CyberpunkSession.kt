@@ -7,7 +7,8 @@ import app.mate.net.CyberpunkPresence
  * Windows appairé (sondée par remote/CyberpunkWatch) ; MainActivity applique. Ouvre quand `inGame` passe à vrai (en
  * passant sur l'ordinateur du jeu s'il n'est pas actif), ferme quand il est faux depuis [CLOSE_AFTER_MS] et rend
  * l'ordinateur d'avant, sauf si Ahmed en a choisi un autre entre-temps. Jamais pendant une saisie ni un appel. Une
- * fermeture à la main (bouton Fermer) ne rouvre pas la page tant que la même `session` du jeu dure.
+ * fermeture à la main (bouton Fermer) ne rouvre pas la page tant que la même `session` du jeu dure : [resumeOn] donne
+ * alors l'ordinateur du jeu, pour l'icône de retour de la barre.
  */
 class CyberpunkSession(private val now: () -> Long = System::currentTimeMillis) {
 
@@ -25,6 +26,15 @@ class CyberpunkSession(private val now: () -> Long = System::currentTimeMillis) 
     private var dismissed: String? = null
     private var lastInGameMs = 0L
 
+    /** Partie en cours dont la page a été fermée à la main : ordinateur du jeu, sinon null (pas d'icône de retour). */
+    var resumeOn: String? = null
+        private set
+
+    /** Croix de la page : l'icône de retour paraît tout de suite, sans attendre la relève suivante. */
+    fun closedByHand(computerId: String) {
+        if (tracking) resumeOn = computerId
+    }
+
     /** `presences` : null pour un ordinateur qui ne répond pas (compte comme « pas en jeu »). */
     fun decide(presences: Map<String, CyberpunkPresence?>, ctx: Context): Decision {
         val playing = presences.filterValues { it != null && it.available && it.inGame }
@@ -34,12 +44,14 @@ class CyberpunkSession(private val now: () -> Long = System::currentTimeMillis) 
         lastInGameMs = now()
         val key = pick.value?.session ?: pick.key
         if (tracking && !ctx.pageOpen && dismissed == null) dismissed = key
+        resumeOn = pick.key.takeIf { !ctx.pageOpen && dismissed == key }
         if (ctx.pageOpen || busy || dismissed == key) return Decision(Step.NONE)
         val switchTo = pick.key.takeIf { it != ctx.activeId }
         if (switchTo != null && before == null) before = ctx.activeId
         tracking = true
         openedOn = pick.key
         dismissed = null
+        resumeOn = null
         return Decision(Step.OPEN, computerId = pick.key, switchTo = switchTo)
     }
 
@@ -55,6 +67,7 @@ class CyberpunkSession(private val now: () -> Long = System::currentTimeMillis) 
         before = null
         openedOn = null
         dismissed = null
+        resumeOn = null
     }
 
     companion object {

@@ -42,7 +42,7 @@ class CyberpunkApiTest {
                  "cyberware":{"Eyes":[{"tdb":"Items.X","name":"Optiques","quality":"Common"}],"Legs":[false]},
                  "tracked":{"kind":"quest","id":"q1","quest":"Disasterpiece","desc":"Rejoindre Judy."},
                  "call":{"phase":"active","contact":"Judy","audio":true},
-                 "blocks":{"inv":3,"contacts":2,"quests":1,"mappins":7},
+                 "blocks":{"inv":3,"contacts":2,"quests":1,"cyber":5,"mappins":7},
                  "pins":[{"pid":"p1","x":1,"y":2,"z":3}],"acks":[],"errors":{}}}""",
         )
         assertEquals(CyberpunkStatus.INGAME, s.status)
@@ -58,7 +58,7 @@ class CyberpunkApiTest {
         assertEquals("Disasterpiece", st.tracked?.quest)
         assertEquals(CyberpunkCallPhase.ACTIVE, st.call?.phase)
         assertEquals("Judy", st.call?.contact)
-        assertEquals(CyberpunkBlocks(3, 2, 1, 7), st.blocks)
+        assertEquals(CyberpunkBlocks(3, 2, 1, cyber = 5, mappins = 7), st.blocks)
         assertEquals("p1", st.pins.single().pid)
     }
 
@@ -77,7 +77,7 @@ class CyberpunkApiTest {
         assertNull(s.player)
         assertNull(s.tracked)
         assertNull(s.call)
-        assertEquals(CyberpunkBlocks(0, 0, 0, 0), s.blocks)
+        assertEquals(CyberpunkBlocks(0, 0, 0, 0, 0), s.blocks)
         assertTrue(s.cyberware.isEmpty())
     }
 
@@ -286,5 +286,40 @@ class CyberpunkApiTest {
     @Test
     fun mappinsToleratesAnEmptyAnswer() {
         assertTrue(CyberpunkApi.parseMappins("""{"v":1}""").isEmpty())
+    }
+
+    @Test
+    fun readsCyberwareBlock() {
+        val b = CyberpunkApi.parseCyberware(
+            """{"v":1,"body":"woman","capacity":{"free":30,"used":90,"max":120},
+              "zones":{"EyesCW":[{"locked":false,"item":{"key":"Items.Kiroshi#12","tdb":"Items.Kiroshi","name":"Kiroshi","quality":"Rare","cost":12,"icon":"cw_eyes_kiroshioptics"}}],
+                       "LegsCW":[{"locked":true}]},
+              "owned":[{"key":"Items.Sandy#7","tdb":"Items.Sandy","name":"Sandevistan","quality":"Epic","cost":40,"area":"SystemReplacementCW"}]}""",
+        )
+        assertEquals(CyberpunkBody.WOMAN, b.body)
+        assertEquals(30.0, b.capacity!!.free!!, 0.0)
+        val eyes = b.zones.getValue("EyesCW").single()
+        assertEquals("Items.Kiroshi#12", eyes.item!!.key)
+        assertEquals(12, eyes.item!!.cost)
+        assertEquals("cw_eyes_kiroshioptics.png", eyes.item!!.iconAsset)
+        assertNull(b.owned.single().iconAsset)
+        assertTrue(b.zones.getValue("LegsCW").single().locked)
+        assertNull(b.zones.getValue("LegsCW").single().item)
+        assertEquals("SystemReplacementCW", b.owned.single().area)
+        assertTrue(b.ready)
+    }
+
+    @Test
+    fun emptyCyberwareBlockIsNotReady() {
+        val b = CyberpunkApi.parseCyberware("""{"v":1,"zones":{},"owned":[]}""")
+        assertFalse(b.ready)
+        assertEquals(CyberpunkBody.MAN, b.body)
+        assertNull(b.capacity)
+    }
+
+    @Test
+    fun cyberBlockCounterIsRead() {
+        val s = CyberpunkApi.parseSnapshot("""{"status":"ingame","install":{},"state":{"seq":1,"inGame":true,"blocks":{"inv":1,"contacts":2,"quests":3,"cyber":9}}}""")
+        assertEquals(9, s.state!!.blocks.cyber)
     }
 }

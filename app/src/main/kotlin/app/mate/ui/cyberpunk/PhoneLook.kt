@@ -11,7 +11,7 @@ import kotlinx.coroutines.withContext
 import java.io.File
 
 /**
- * Pièces du téléphone du jeu, extraites par l'ordinateur et gardées dans le cache de l'appli (jamais dans l'APK) :
+ * Pièces du look du jeu (téléphone, écran cyberware), extraites par l'ordinateur et gardées dans le cache de l'appli (jamais dans l'APK) :
  * masques blancs teintés en `cp_*` par l'affichage, et les deux polices. Une pièce illisible est simplement absente
  * (le tiroir retombe sur ses cadres et sur Chakra Petch).
  */
@@ -31,8 +31,17 @@ class PhoneLook(private val bitmaps: Map<String, Bitmap>, val title: Typeface?, 
         /** Côté le plus court gardé à 64 px au moins : assez net pour un cadre de 420 dp, sans garder le 1080p. */
         private const val MIN_SIDE_PX = 64
 
-        /** Pas plus d'une requête par pièce : celles déjà en cache disque ne sont pas redemandées. */
-        suspend fun load(context: Context, api: CyberpunkApi, available: List<String>): PhoneLook = withContext(Dispatchers.IO) {
+        /**
+         * Pas plus d'une requête par pièce : celles déjà en cache disque ne sont pas redemandées. `pieces` : les images à
+         * décoder (le téléphone par défaut) ; `minSidePx` : côté le plus court gardé au décodage.
+         */
+        suspend fun load(
+            context: Context,
+            api: CyberpunkApi,
+            available: List<String>,
+            pieces: List<String> = PIECES,
+            minSidePx: Int = MIN_SIDE_PX,
+        ): PhoneLook = withContext(Dispatchers.IO) {
             val dir = File(context.cacheDir, CACHE_DIR).apply { mkdirs() }
             // Pièces ré-extraites ailleurs (autre tablette, jeu mis à jour) : la liste change, le cache repart de zéro.
             val stamp = File(dir, STAMP)
@@ -53,7 +62,7 @@ class PhoneLook(private val bitmaps: Map<String, Bitmap>, val title: Typeface?, 
                     .onFailure { tmp.delete() }.getOrNull()
             }
 
-            val bitmaps = PIECES.mapNotNull { name -> fetch(name)?.let { decode(it) }?.let { name to it } }.toMap()
+            val bitmaps = pieces.mapNotNull { name -> fetch(name)?.let { decode(it, minSidePx) }?.let { name to it } }.toMap()
             PhoneLook(
                 bitmaps,
                 fetch(TITLE_FONT)?.let { runCatching { Typeface.createFromFile(it) }.getOrNull() },
@@ -66,13 +75,13 @@ class PhoneLook(private val bitmaps: Map<String, Bitmap>, val title: Typeface?, 
             File(context.cacheDir, CACHE_DIR).listFiles()?.forEach { it.delete() }
         }
 
-        private fun decode(file: File): Bitmap? {
+        private fun decode(file: File, minSidePx: Int): Bitmap? {
             val bounds = BitmapFactory.Options().apply { inJustDecodeBounds = true }
             BitmapFactory.decodeFile(file.path, bounds)
             val side = minOf(bounds.outWidth, bounds.outHeight)
             if (side <= 0) return null
             var sample = 1
-            while (side / (sample * 2) >= MIN_SIDE_PX) sample *= 2
+            while (side / (sample * 2) >= minSidePx) sample *= 2
             return BitmapFactory.decodeFile(file.path, BitmapFactory.Options().apply { inSampleSize = sample })
         }
     }

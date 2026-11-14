@@ -50,7 +50,7 @@ const written = (work: string, rel: string, data: Buffer | string) => {
 };
 
 /** Faux outil : fait ce que WolvenKit fait (arborescence du jeu sous out/, PNG à plat sous png/) avec des images générées. */
-const fakeTools = (opts: { fail?: boolean; skipPart?: string } = {}) => ({
+const fakeTools = (opts: { fail?: boolean; skipPart?: string; noIcons?: boolean } = {}) => ({
   async extract(_game: string, work: string) {
     if (opts.fail) throw new Error("WolvenKit a planté : C:\\secret\\chemin");
     for (const a of ATLASES) {
@@ -60,6 +60,11 @@ const fakeTools = (opts: { fail?: boolean; skipPart?: string } = {}) => ({
       written(work, `out/base/gameplay/gui/${a.name}.inkatlas.json`, img.json);
     }
     for (const f of FONTS) written(work, `out/base/fonts/${f}.ttf`, `ttf-${f}`);
+    if (opts.noIcons) return;
+    // Icônes d'objets : une planche avec deux implants et une arme (pas gardée).
+    const icons = fakeAtlas(["cw_eyes_kiroshioptics", "weapon_lexington", "icon_tattoo_tyger"]);
+    written(work, "png/item_icons10_1080p.png", icons.png);
+    written(work, "out/base/gameplay/gui/common/icons/items/item_icons10.inkatlas.json", icons.json);
   },
 });
 
@@ -79,7 +84,7 @@ describe("extraction du téléphone du jeu", () => {
     await p.prepare();
     await settle(p, "ready");
     const s = await p.status();
-    const names = ASSETS;
+    const names = [...ASSETS, "cw_eyes_kiroshioptics.png", "icon_tattoo_tyger.png"];
     assert.deepEqual([...s.assets].sort(), [...names].sort());
     // Icônes des points d'intérêt de la carte : préfixe poi_, découpées comme les autres pièces.
     assert.ok(s.assets.includes("poi_ripperdoc.png") && s.assets.includes("poi_fast_travel_metro.png"));
@@ -108,6 +113,69 @@ describe("extraction du téléphone du jeu", () => {
     await p.prepare();
     await settle(p, "ready");
     assert.ok((await p.status()).assets.includes("poi_gigs.png"));
+  });
+
+  it("cyberware : corps homme et femme par système, fond pointillé, icônes des zones", async () => {
+    const p = newPhone("cyber");
+    await p.prepare();
+    await settle(p, "ready");
+    const s = await p.status();
+    for (const n of [
+      "ma_full_skeleton.png",
+      "wo_skeleton.png",
+      "ma_nervous.png",
+      "wo_operating_system.png",
+      "dots_bg.png",
+      "slot_brain.png",
+    ])
+      assert.ok(s.assets.includes(n), n);
+  });
+
+  it("icônes des implants : seules les pièces cw_ et tatouages des planches item_icons, en plus de la liste", async () => {
+    const p = newPhone("icones");
+    await p.prepare();
+    await settle(p, "ready");
+    const s = await p.status();
+    assert.ok(s.assets.includes("cw_eyes_kiroshioptics.png") && s.assets.includes("icon_tattoo_tyger.png"));
+    assert.ok(!s.assets.includes("weapon_lexington.png"));
+    const png = readPng((await p.asset("icon_tattoo_tyger.png"))!)!;
+    assert.deepEqual([...png.rgba.subarray(0, 4)], [3, 6, 9, 128]);
+  });
+
+  it("pièce d'un pixel (trait pointillé du jeu) : gardée, jamais vide après l'arrondi", async () => {
+    const base = fakeTools();
+    const thin = {
+      async extract(game: string, work: string) {
+        await base.extract(game, work);
+        const img = fakeAtlas(["cw_trait_fin"]);
+        const json = JSON.parse(img.json);
+        // 0,4 px de haut sur 8 : l'arrondi donnait 0.
+        json.Data.RootChunk.slots.Elements[0].parts[0].clippingRectInUVCoords = { Left: 0, Top: 0.5, Right: 1, Bottom: 0.55 };
+        written(work, "png/item_icons3_1080p.png", img.png);
+        written(work, "out/base/gameplay/gui/common/icons/items/item_icons3.inkatlas.json", JSON.stringify(json));
+      },
+    };
+    const p = newPhone("fin", thin);
+    await p.prepare();
+    await settle(p, "ready");
+    const png = readPng((await p.asset("cw_trait_fin.png"))!)!;
+    assert.deepEqual([png.width, png.height], [4, 1]);
+  });
+
+  it("sans planche d'icônes (jeu changé) : prêt quand même, sans icônes", async () => {
+    const p = newPhone("sansicones", fakeTools({ noIcons: true }));
+    await p.prepare();
+    await settle(p, "ready");
+    assert.ok(!(await p.status()).assets.some((n) => n.startsWith("cw_eyes")));
+  });
+
+  it("extraction d'avant (liste sans les nouvelles pièces) : absent, à refaire", async () => {
+    const p = newPhone("ancienne");
+    await p.prepare();
+    await settle(p, "ready");
+    fs.writeFileSync(path.join(tmp, "ancienne", "assets.json"), JSON.stringify(["frame_main.png"]));
+    assert.equal((await p.status()).status, "absent");
+    assert.equal(await p.asset("frame_main.png"), null);
   });
 
   it("liste blanche : seul un nom de la liste est servi", async () => {
@@ -211,6 +279,8 @@ describe("routes du téléphone", () => {
     fs.writeFileSync(path.join(dir, "frame_main.png"), "PNGDATA");
     fs.writeFileSync(path.join(dir, "raj-bold.ttf"), "TTFDATA");
     fs.writeFileSync(path.join(dir, "intrus.png"), "x");
+    // Toutes les pièces attendues listées (sinon « absent ») ; seules deux existent vraiment ici.
+    for (const n of ASSETS) if (!fs.existsSync(path.join(dir, n))) fs.writeFileSync(path.join(dir, n), "x");
     fs.writeFileSync(path.join(dir, "assets.json"), JSON.stringify(ASSETS));
   });
   after(() => app.close());
@@ -232,7 +302,7 @@ describe("routes du téléphone", () => {
     assert.equal(ttf.headers["content-type"], "font/ttf");
     assert.equal((await app.inject({ method: "GET", url: "/cyberpunk/phone/intrus.png" })).statusCode, 404);
     assert.equal((await app.inject({ method: "GET", url: "/cyberpunk/phone/absent.png" })).statusCode, 404);
-    for (const bad of ["..%2Fassets.json", "a.exe", "a.png%00", "x".repeat(41) + ".png", "assets.json"])
+    for (const bad of ["..%2Fassets.json", "a.exe", "a.png%00", "x".repeat(61) + ".png", "assets.json"])
       assert.equal((await app.inject({ method: "GET", url: `/cyberpunk/phone/${bad}` })).statusCode, 400, bad);
   });
 

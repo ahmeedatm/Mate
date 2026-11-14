@@ -96,6 +96,10 @@ class CyberpunkOverlay(private val activity: FragmentActivity) {
     private var poiAssets: List<String>? = null
     private var poiIconsState = PoiIconsState.UNKNOWN
     private var lastQuestId: String? = null
+    private val cyber = CyberwareController(activity) { renderDrawer() }
+
+    /** Fermée par la croix ou Retour (pas par la fin de partie) : ordinateur du jeu, pour l'icône de retour (MainActivity). */
+    var onClosedByHand: (String) -> Unit = {}
 
     val isOpen get() = root != null
 
@@ -111,6 +115,7 @@ class CyberpunkOverlay(private val activity: FragmentActivity) {
         computer = on
         val client = BackendClient(on).cyberpunk
         api = client
+        cyber.attach(client)
         val ctx = ContextThemeWrapper(activity, R.style.Fonts_Cyberpunk)
         val kit = CyberpunkKit(ctx)
         val v = build(kit)
@@ -133,6 +138,7 @@ class CyberpunkOverlay(private val activity: FragmentActivity) {
         root = null
         views = null
         api = null
+        cyber.attach(null)
         computer = null
         snapshot = null
         error = null
@@ -170,8 +176,14 @@ class CyberpunkOverlay(private val activity: FragmentActivity) {
         when {
             phone.thread != null -> closeThread()
             page != null -> showDrawer(null)
-            else -> close()
+            else -> closeByHand()
         }
+    }
+
+    private fun closeByHand() {
+        val id = computerId
+        close()
+        id?.let(onClosedByHand)
     }
 
     /** Écran éteint ou appli en arrière-plan : plus de sondage. */
@@ -221,6 +233,7 @@ class CyberpunkOverlay(private val activity: FragmentActivity) {
                     sync(Block.INVENTORY, b.inv)
                     sync(Block.CONTACTS, b.contacts)
                     sync(Block.QUESTS, b.quests)
+                    cyber.sync(b.cyber)
                     sync(Block.MAPPINS, b.mappins)
                 }
             }
@@ -536,8 +549,9 @@ class CyberpunkOverlay(private val activity: FragmentActivity) {
                     if (api !== client) return@onSuccess
                     PhoneLook.clearCache(activity)
                     phone = phone.copy(lookStatus = CyberpunkPhoneStatus.LOADING, look = null)
+                    cyber.reloadLook()
                     renderDrawer()
-                    loadLook()
+                    if (page != CyberpunkPage.CYBER) loadLook()
                 }
                 .onFailure {
                     if (api === client) phone = phone.copy(lookStatus = CyberpunkPhoneStatus.ERROR).also { renderDrawer() }
@@ -576,12 +590,26 @@ class CyberpunkOverlay(private val activity: FragmentActivity) {
                     loadLook()
                 }
                 CyberpunkPage.ITEMS -> load(Block.INVENTORY, versions[Block.INVENTORY] ?: snapshot?.state?.blocks?.inv ?: 0)
+                CyberpunkPage.CYBER -> cyber.show()
                 else -> Unit
             }
         }
-        renderDrawer()
+        if (page != CyberpunkPage.CYBER) cyber.hide()
         val open = page != null
-        v.drawer.animate().translationX(if (open) 0f else -v.drawerHidden).setDuration(DRAWER_MS).start()
+        val wasClosed = v.drawer.translationX != 0f
+        // Cyber : toute la largeur à droite du rail (le corps et ses onze zones) ; les autres tiroirs : 420 dp.
+        val lp = v.drawer.layoutParams
+        val width = if (page == CyberpunkPage.CYBER) maxOf(v.root.width - v.kit.dp(DRAWER_LEFT_DP + MARGIN_DP), v.kit.dp(DRAWER_DP)) else v.kit.dp(DRAWER_DP)
+        if (open && lp.width != width) {
+            v.drawer.layoutParams = lp.apply { this.width = width }
+            // Pleine largeur : fond opaque, la carte et le HUD ne transparaissent pas sous le corps.
+            v.drawer.background = v.kit.panel(if (page == CyberpunkPage.CYBER) R.color.cp_fond else R.color.cp_tiroir, R.color.cp_rouge, 3)
+        }
+        renderDrawer()
+        val hidden = (lp.width + v.kit.dp(DRAWER_LEFT_DP)).toFloat()
+        // Fermé et élargi : il repart de sa nouvelle position cachée, sans bord qui surgit sur la carte.
+        if (open && wasClosed) v.drawer.translationX = -hidden
+        v.drawer.animate().translationX(if (open) 0f else -hidden).setDuration(DRAWER_MS).start()
         val shift = if (open) v.kit.dp(HUD_SHIFT_DP).toFloat() else 0f
         v.hud.animate().translationX(shift).setDuration(DRAWER_MS).start()
         v.callHolder.animate().translationX(shift).setDuration(DRAWER_MS).start()
@@ -602,7 +630,7 @@ class CyberpunkOverlay(private val activity: FragmentActivity) {
             CyberpunkPage.JOURNAL -> quests
             CyberpunkPage.PHONE -> contacts
             CyberpunkPage.ITEMS -> inventory
-            CyberpunkPage.CYBER -> st?.cyberware
+            CyberpunkPage.CYBER -> cyber.ui.takeIf { it.block != null } ?: st?.cyberware
             CyberpunkPage.PERSO -> st?.player
         }
         // Lecture échouée et rien à montrer : la phrase d'erreur à la place de « Chargement ».
@@ -626,7 +654,7 @@ class CyberpunkOverlay(private val activity: FragmentActivity) {
             CyberpunkPage.JOURNAL -> v.drawers.journal(quests)
             CyberpunkPage.PHONE -> v.drawers.phone(contacts, phone)
             CyberpunkPage.ITEMS -> v.drawers.items(inventory)
-            CyberpunkPage.CYBER -> v.drawers.cyber(st)
+            CyberpunkPage.CYBER -> cyber.ui.block?.let { v.drawers.cyberware(cyber.ui, v.drawer.height - v.kit.dp(CYBER_CHROME_DP)) } ?: v.drawers.cyber(st)
             CyberpunkPage.PERSO -> v.drawers.perso(st?.player)
         }
 
@@ -739,7 +767,6 @@ class CyberpunkOverlay(private val activity: FragmentActivity) {
         val unread: TextView,
         val drawer: FrameLayout,
         val drawerBody: LinearLayout,
-        val drawerHidden: Float,
         val drawers: CyberpunkDrawers,
         val hud: FrameLayout,
         val level: TextView,
@@ -849,7 +876,7 @@ class CyberpunkOverlay(private val activity: FragmentActivity) {
             setColorFilter(kit.color(R.color.cp_texte))
             scaleType = ImageView.ScaleType.CENTER
             contentDescription = ctx.getString(R.string.close)
-            setOnClickListener { close() }
+            setOnClickListener { closeByHand() }
             with(kit) { pressable() }
         }
         val toast = kit.text("", 16f, R.color.cp_sur_jaune, kit.bold, spacing = 0.1f, upper = true).apply {
@@ -879,7 +906,7 @@ class CyberpunkOverlay(private val activity: FragmentActivity) {
         val buttons = rail.third
         buttons.forEach { (p, b) -> b.setOnClickListener { showDrawer(p) } }
         return Views(
-            kit, root, mapSlot, message, messageText, installButton, buttons, rail.first, unread, drawer, drawerBody, hidden, drawers,
+            kit, root, mapSlot, message, messageText, installButton, buttons, rail.first, unread, drawer, drawerBody, drawers,
             hud, level, health, money, callHolder, callText, callButton, questCard, questTitle, questDesc, pins, actions, toast, link,
         )
     }
@@ -937,6 +964,9 @@ class CyberpunkOverlay(private val activity: FragmentActivity) {
         const val RAIL_DP = 76
         const val DRAWER_DP = 420
         const val DRAWER_LEFT_DP = 104
+
+        /** Marges du tiroir et titre, au-dessus de l'écran cyberware. */
+        const val CYBER_CHROME_DP = 104
         /** Le HUD et l'appel se recentrent sur la place laissée par le tiroir (centre à 880 sur 1280). */
         const val HUD_SHIFT_DP = 240
         const val CALL_TOP_DP = 88
