@@ -162,22 +162,19 @@ class MapCamera(private val geo: MapGeometry) {
     fun screenToWorld(sx: Double, sy: Double) = screenToMap(sx, sy).let { geo.mapToWorld(it.x, it.y) }
 
     /**
-     * Matrice 3 × 3 (ligne par ligne, comme `android.graphics.Matrix.setValues`) qui envoie un pixel du niveau max à l'écran :
-     * rotation et zoom autour du centre, puis perspective autour du point d'ancrage.
+     * Matrice 3 × 3 (ligne par ligne, comme `android.graphics.Matrix.setValues`) qui envoie un point de la carte, en pixels
+     * du niveau max **relatifs au centre** ([centerX], [centerY]), à l'écran : rotation et zoom, puis perspective autour du
+     * point d'ancrage. Relative au centre pour que le passage en float ne perde rien (pas de translation de 1e4 px).
      */
-    fun matrix(): DoubleArray {
+    fun matrix(out: FloatArray = FloatArray(MATRIX_SIZE)): FloatArray {
         val a = scale * cos
         val b = -scale * sin
-        val c = -(a * centerX + b * centerY)
         val d = scale * sin
         val e = scale * cos
-        val f = -(d * centerX + e * centerY)
         // Perspective [1 0 ax ; 0 1 ay ; 0 −k 1] appliquée après : la 3e ligne vaut −k × la 2e, plus 1.
-        return doubleArrayOf(
-            a - k * ax * d, b - k * ax * e, c + ax - k * ax * f,
-            d - k * ay * d, e - k * ay * e, f + ay - k * ay * f,
-            -k * d, -k * e, 1 - k * f,
-        )
+        val m = doubleArrayOf(a - k * ax * d, b - k * ax * e, ax, d - k * ay * d, e - k * ay * e, ay, -k * d, -k * e, 1.0)
+        for (i in m.indices) out[i] = m[i].toFloat()
+        return out
     }
 
     fun centerOn(x: Double, y: Double) {
@@ -256,6 +253,7 @@ class MapCamera(private val geo: MapGeometry) {
 
         /** Plus petit diviseur de perspective accepté (un point projeté 5 fois plus bas que sur la carte à plat). */
         private const val MIN_W = 0.2
+        private const val MATRIX_SIZE = 9
         private const val ANCHOR_MIN = 0.1
         private const val ANCHOR_MAX = 0.9
 
@@ -279,16 +277,32 @@ class MapCamera(private val geo: MapGeometry) {
 
 /** Vrai si le polygone convexe `quad` et le rectangle se touchent (axes séparateurs). */
 internal fun intersects(quad: List<Pt>, r: MapRect): Boolean {
-    if (quad.maxOf { it.x } < r.left || quad.minOf { it.x } > r.right || quad.maxOf { it.y } < r.top || quad.minOf { it.y } > r.bottom) return false
-    val corners = listOf(Pt(r.left, r.top), Pt(r.right, r.top), Pt(r.right, r.bottom), Pt(r.left, r.bottom))
+    var qx0 = Double.MAX_VALUE
+    var qx1 = -Double.MAX_VALUE
+    var qy0 = Double.MAX_VALUE
+    var qy1 = -Double.MAX_VALUE
+    for (p in quad) {
+        qx0 = min(qx0, p.x)
+        qx1 = max(qx1, p.x)
+        qy0 = min(qy0, p.y)
+        qy1 = max(qy1, p.y)
+    }
+    if (qx1 < r.left || qx0 > r.right || qy1 < r.top || qy0 > r.bottom) return false
+    // Sans allocation : appelé pour chaque tuile candidate, à chaque image en conduite.
     for (i in quad.indices) {
         val a = quad[i]
         val b = quad[(i + 1) % quad.size]
         val nx = b.y - a.y
         val ny = a.x - b.x
-        val q = quad.map { (it.x - a.x) * nx + (it.y - a.y) * ny }
-        val c = corners.map { (it.x - a.x) * nx + (it.y - a.y) * ny }
-        if (q.max() < c.min() || q.min() > c.max()) return false
+        fun side(x: Double, y: Double) = (x - a.x) * nx + (y - a.y) * ny
+        var q0 = Double.MAX_VALUE
+        var q1 = -Double.MAX_VALUE
+        for (p in quad) side(p.x, p.y).let { q0 = min(q0, it); q1 = max(q1, it) }
+        val c1 = side(r.left, r.top)
+        val c2 = side(r.right, r.top)
+        val c3 = side(r.right, r.bottom)
+        val c4 = side(r.left, r.bottom)
+        if (q1 < min(min(c1, c2), min(c3, c4)) || q0 > max(max(c1, c2), max(c3, c4))) return false
     }
     return true
 }

@@ -25,6 +25,12 @@ class DriveSwitch {
         return driving
     }
 
+    /** Partie finie ou lien perdu : à pied tout de suite. */
+    fun reset() {
+        driving = false
+        misses = 0
+    }
+
     private companion object {
         const val EXIT_READS = 2
     }
@@ -35,6 +41,11 @@ fun shortestTurn(from: Double, to: Double): Double {
     val d = ((to - from) % 360 + 540) % 360 - 180
     return if (d == -180.0 && to > from) 180.0 else d
 }
+
+/** Glisse `value` vers `target` en `dtMs` : 63 % du chemin en [EASE_TAU_MS], quel que soit le nombre d'images. */
+fun easeToward(value: Double, target: Double, dtMs: Long): Double = value + (target - value) * (1 - exp(-dtMs.coerceAtLeast(0) / EASE_TAU_MS))
+
+private const val EASE_TAU_MS = 1_000.0
 
 /** Zoom de conduite : près à l'arrêt, plus loin avec la vitesse (m/s), atteint à [FAR_SPEED]. */
 fun driveScale(speed: Double): Double {

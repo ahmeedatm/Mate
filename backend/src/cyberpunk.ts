@@ -50,7 +50,14 @@ export async function readState(game: Game): Promise<{ state: Json | null; fresh
 
 /** `pos.json` : le mod ne l'écrit qu'en véhicule, toutes les ~0,2 s ; `at` est en secondes entières (os.time). */
 const POS_STALE_MS = 2_000;
+/** `at` vient de os.time : arrondi à la seconde, donc jusqu'à 1 s de retard sans que le mod soit figé. */
+const AT_ROUNDING_MS = 1_000;
 const isNum = (v: unknown): v is number => typeof v === "number" && Number.isFinite(v);
+
+/** `pos.json` encore bon : `at` récent (à l'arrondi de os.time près) et `seq` vu changer il y a moins de 2 s. */
+export function isPosFresh(at: unknown, seqSeenAt: number, now: number) {
+  return isNum(at) && now - at * 1000 <= POS_STALE_MS + AT_ROUNDING_MS && now - seqSeenAt <= POS_STALE_MS;
+}
 
 /** Position du véhicule pour la vue conduite de la tablette, ou `{ fresh: false }` (à pied, pause, menu, jeu fermé). */
 export async function readPos() {
@@ -62,9 +69,7 @@ export async function readPos() {
   const now = Date.now();
   const seen = seqSeen.get(file);
   if (seen?.seq !== pos.seq) seqSeen.set(file, { seq: pos.seq, at: now });
-  // Une seconde de plus sur `at` : os.time arrondit à la seconde.
-  const fresh = isNum(pos.at) && now - pos.at * 1000 <= POS_STALE_MS + 1000 && now - seqSeen.get(file)!.at <= POS_STALE_MS;
-  if (!fresh) return { fresh: false };
+  if (!isPosFresh(pos.at, seqSeen.get(file)!.at, now)) return { fresh: false };
   return { fresh: true, vehicle: pos.vehicle === true, x: pos.x, y: pos.y, yaw: pos.yaw, speed: isNum(pos.speed) ? pos.speed : null };
 }
 

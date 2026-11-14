@@ -26,6 +26,21 @@ class DrivingTest {
         assertFalse(s.feed(fresh = true, inVehicle = false))
     }
 
+    @Test fun `partie finie ou lien perdu, retour a pied tout de suite`() {
+        val s = DriveSwitch()
+        s.feed(fresh = true, inVehicle = true)
+        s.reset()
+        assertFalse(s.driving)
+        assertTrue(s.feed(fresh = true, inVehicle = true))
+    }
+
+    @Test fun `lissage du zoom selon le temps, pas le nombre d'images`() {
+        val slow = (1..5).fold(0.0) { z, _ -> easeToward(z, 10.0, 200L) }
+        val fast = (1..50).fold(0.0) { z, _ -> easeToward(z, 10.0, 20L) }
+        assertEquals(slow, fast, 1e-6)
+        assertTrue(slow > 0.0 && slow < 10.0)
+    }
+
     @Test fun `angle le plus court`() {
         assertEquals(20.0, shortestTurn(350.0, 10.0), 1e-9)
         assertEquals(-20.0, shortestTurn(10.0, 350.0), 1e-9)

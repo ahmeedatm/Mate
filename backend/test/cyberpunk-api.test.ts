@@ -3,7 +3,7 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { after, afterEach, before, beforeEach, describe, it } from "node:test";
-import { isFresh } from "../src/cyberpunk.ts";
+import { isFresh, isPosFresh } from "../src/cyberpunk.ts";
 import { startServer, type TestServer } from "./server.ts";
 
 const ASSETS = path.resolve(import.meta.dirname, "..", "assets", "cyberpunk-mod");
@@ -52,6 +52,17 @@ describe("isFresh", () => {
     assert.equal(isFresh(now / 1000 - 11, now - 2000, now), false);
     assert.equal(isFresh(now / 1000, now - 11_000, now), false);
     assert.equal(isFresh(undefined, now, now), false);
+  });
+});
+
+describe("isPosFresh", () => {
+  it("frais : at à 3 s près (os.time arrondit) et seq vu il y a moins de 2 s ; mod figé : périmé", () => {
+    const now = 1_000_000_000_000;
+    assert.equal(isPosFresh(now / 1000 - 1, now - 1500, now), true);
+    assert.equal(isPosFresh(now / 1000 - 4, now - 100, now), false);
+    // seq qui ne bouge plus depuis 2,5 s, même avec un at récent : périmé.
+    assert.equal(isPosFresh(now / 1000, now - 2500, now), false);
+    assert.equal(isPosFresh(undefined, now, now), false);
   });
 });
 
@@ -200,6 +211,7 @@ describe("plugin coupé", () => {
     for (const [m, r] of [
       ["GET", "/cyberpunk"],
       ["GET", "/cyberpunk/inventory"],
+      ["GET", "/cyberpunk/pos"],
       ["POST", "/cyberpunk/install"],
       ["POST", "/cyberpunk/uninstall"],
     ])

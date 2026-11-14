@@ -94,6 +94,10 @@ class MapView(
     private var flatScale: Double? = null
     private var liveSpeed: Double? = null
     private var zoomSpeed = 0.0
+    private var zoomedAt = 0L
+
+    /** Pincement en conduite : multiplie le zoom de conduite (remis à 1 par « Me centrer » et à chaque montée). */
+    private var driveZoom = 1.0
     private var lastLiveAt = 0L
     private var posJob: Job? = null
     private val driveAnimator = ValueAnimator.ofFloat(0f, 1f).apply {
@@ -219,6 +223,7 @@ class MapView(
             track = PoseTrack()
             liveSpeed = null
             zoomSpeed = 0.0
+            driveZoom = 1.0
         }
         userMoved = false
         driveAnimator.cancel()
@@ -259,10 +264,14 @@ class MapView(
         val f = driveLevel.toDouble()
         val p = track.at(SystemClock.uptimeMillis()) ?: player?.let { Pose(it.x, it.y, it.yaw) } ?: return null
         cam.setPose(shortestTurn(0.0, p.yaw) * f, f, MapCamera.FLAT_ANCHOR + (MapCamera.DRIVE_ANCHOR - MapCamera.FLAT_ANCHOR) * f)
-        zoomSpeed += ((liveSpeed ?: track.speed) - zoomSpeed) * ZOOM_EASE
+        val now = SystemClock.uptimeMillis()
+        zoomSpeed = easeToward(zoomSpeed, liveSpeed ?: track.speed, if (zoomedAt == 0L) 0 else now - zoomedAt)
+        zoomedAt = now
         if (!userMoved) {
             val from = flatScale ?: cam.scale.also { flatScale = it }
-            cam.setScale(from + (driveScale(zoomSpeed) - from) * f)
+            // Jamais plus loin que le zoom de pleine vitesse : le cache de tuiles est taillé pour lui.
+            val target = (driveScale(zoomSpeed) * driveZoom).coerceAtLeast(MapCamera.DRIVE_SCALE_FAR)
+            cam.setScale(from + (target - from) * f)
             cam.centerOn(p.x, p.y)
         }
         return p
@@ -308,8 +317,16 @@ class MapView(
         }
     }
 
+    /** La partie n'est plus en cours (menu, jeu fermé, lien perdu) : retour à plat, plus de sondage rapide. */
+    fun leaveDrive() {
+        if (!drive.driving) return
+        drive.reset()
+        switchDrive(false)
+    }
+
     private fun recenter() {
         userMoved = false
+        driveZoom = 1.0
         if (!inDrive()) player?.let { camera?.centerOn(it.x, it.y) }
         surface.invalidate()
     }
@@ -468,6 +485,12 @@ class MapView(
 
         /** Tant que la carte suit le joueur, le zoom se fait autour de lui (le centre) ; sinon autour du doigt. */
         private fun zoom(factor: Double, x: Float, y: Float) {
+            // En conduite, le zoom suit la vitesse : le pincement le multiplie, sans arrêter le suivi.
+            if (drive.driving && !userMoved) {
+                driveZoom = (driveZoom * factor).coerceIn(DRIVE_ZOOM_MIN, DRIVE_ZOOM_MAX)
+                invalidate()
+                return
+            }
             if (userMoved) camera?.zoomAt(factor, x, y) else camera?.zoomAt(factor, width / 2f, height / 2f)
             invalidate()
         }
@@ -514,14 +537,13 @@ class MapView(
         /** Tuiles dessinées en pixels du niveau max, à travers la matrice de la caméra (rotation et perspective comprises). */
         private fun drawTiles(canvas: Canvas, cam: MapCamera) {
             val tiles = cache ?: return
-            cam.matrix().forEachIndexed { i, v -> matrixValues[i] = v.toFloat() }
-            matrix.setValues(matrixValues)
+            matrix.setValues(cam.matrix(matrixValues))
             canvas.save()
             canvas.concat(matrix)
             for (key in cam.visibleTiles()) {
                 val bmp = tiles.get(key)
                 if (bmp != null) {
-                    drawTile(canvas, bmp, cam.tileMapRect(key), null)
+                    drawTile(canvas, bmp, cam.tileMapRect(key), null, cam)
                     continue
                 }
                 // En attendant la tuile nette : la tuile du niveau au-dessus déjà en mémoire, coupée à la place de celle-ci.
@@ -529,22 +551,25 @@ class MapView(
                 while (parent.z > 0) {
                     parent = TileKey(parent.z - 1, parent.x shr 1, parent.y shr 1)
                     val coarse = tiles.peek(parent) ?: continue
-                    drawTile(canvas, coarse, cam.tileMapRect(parent), cam.tileMapRect(key))
+                    drawTile(canvas, coarse, cam.tileMapRect(parent), cam.tileMapRect(key), cam)
                     break
                 }
             }
             canvas.restore()
         }
 
-        private fun drawTile(canvas: Canvas, bmp: Bitmap, r: MapRect, clip: MapRect?) {
+        /** Rectangles en pixels du niveau max, dessinés relatifs au centre de la caméra (voir [MapCamera.matrix]). */
+        private fun drawTile(canvas: Canvas, bmp: Bitmap, r: MapRect, clip: MapRect?, cam: MapCamera) {
+            val ox = cam.centerX
+            val oy = cam.centerY
             src.set(0, 0, bmp.width, bmp.height)
-            dst.set(r.left.toFloat(), r.top.toFloat(), r.right.toFloat(), r.bottom.toFloat())
+            dst.set((r.left - ox).toFloat(), (r.top - oy).toFloat(), (r.right - ox).toFloat(), (r.bottom - oy).toFloat())
             if (clip == null) {
                 canvas.drawBitmap(bmp, src, dst, tilePaint)
                 return
             }
             canvas.save()
-            canvas.clipRect(clip.left.toFloat(), clip.top.toFloat(), clip.right.toFloat(), clip.bottom.toFloat())
+            canvas.clipRect((clip.left - ox).toFloat(), (clip.top - oy).toFloat(), (clip.right - ox).toFloat(), (clip.bottom - oy).toFloat())
             canvas.drawBitmap(bmp, src, dst, tilePaint)
             canvas.restore()
         }
@@ -574,9 +599,11 @@ class MapView(
                 ring.color = yellow
                 ring.alpha = (WAVE_ALPHA * (1f - phase)).toInt()
                 drawCircle(0f, 0f, kit.dp(WAVE_DP) * (WAVE_MIN + (WAVE_MAX - WAVE_MIN) * phase), ring)
-                // shortcut: yaw lu comme le jeu (0 = nord, positif vers la gauche), sens non mesuré en partie ; à vérifier à l'essai.
+                // Yaw du jeu : 0 = nord, positif vers l'ouest (mesuré en partie le 14/11, contre le vecteur avant du véhicule).
                 // En conduite la carte a tourné de `bearing` : la flèche pointe alors vers le haut.
                 rotate((cam.bearing - me.yaw).toFloat())
+                // En conduite, la flèche est le seul repère de l'écran : plus grosse, lisible à bout de bras.
+                (1f + (DRIVE_ARROW - 1f) * driveLevel).let { scale(it, it) }
                 fill.color = yellow
                 drawPath(arrow, fill)
             }
@@ -637,8 +664,10 @@ class MapView(
         /** Plus de position rapide depuis 1,5 s : la position de l'état (1 par seconde) reprend. */
         const val LIVE_STALE_MS = 1_500L
 
-        /** Part du chemin que le zoom de conduite fait vers sa cible à chaque image (pas de pompage à chaque lecture). */
-        const val ZOOM_EASE = 0.03
+        /** Pincement en conduite : de deux fois plus loin à deux fois plus près que le zoom de la vitesse. */
+        const val DRIVE_ZOOM_MIN = 0.5
+        const val DRIVE_ZOOM_MAX = 2.0
+        const val DRIVE_ARROW = 1.6f
 
         /** Hauteur du fondu du haut, en multiples de la partie opaque. */
         const val FADE_SPAN = 2.5f

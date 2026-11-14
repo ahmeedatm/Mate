@@ -1,6 +1,7 @@
 package app.mate.ui.cyberpunk
 
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -113,6 +114,14 @@ class MapCameraTest {
         assertEquals(28672.0, edge.right, 1e-6)
     }
 
+    @Test fun `quad et rectangle, touches ou separes`() {
+        val quad = listOf(Pt(0.0, 0.0), Pt(10.0, 0.0), Pt(6.0, 10.0), Pt(4.0, 10.0))
+        assertTrue(intersects(quad, MapRect(5.0, 5.0, 20.0, 20.0)))
+        assertFalse(intersects(quad, MapRect(11.0, 0.0, 20.0, 5.0)))
+        // Dans la boîte englobante, mais hors du trapèze (coin coupé) : séparés.
+        assertFalse(intersects(quad, MapRect(8.5, 8.5, 10.0, 10.0)))
+    }
+
     @Test fun `la matrice donne le meme point que worldToScreen, a plat comme en conduite`() {
         val c = camera()
         c.centerOn(50.0, 60.0)
@@ -120,11 +129,12 @@ class MapCameraTest {
         for (pose in listOf(Triple(0.0, 0.0, 0.5), Triple(37.0, 1.0, MapCamera.DRIVE_ANCHOR))) {
             c.setPose(pose.first, pose.second, pose.third)
             val m = c.matrix()
-            val p = geo.worldToMap(-80.0, 140.0)
+            // Matrice relative au centre, en float (comme le Canvas) : au millième de pixel près.
+            val p = geo.worldToMap(-80.0, 140.0).let { Pt(it.x - c.centerX, it.y - c.centerY) }
             val w = m[6] * p.x + m[7] * p.y + m[8]
             val s = c.worldToScreen(-80.0, 140.0)
-            assertEquals(s.x, (m[0] * p.x + m[1] * p.y + m[2]) / w, 1e-6)
-            assertEquals(s.y, (m[3] * p.x + m[4] * p.y + m[5]) / w, 1e-6)
+            assertEquals(s.x, (m[0] * p.x + m[1] * p.y + m[2]) / w, 1e-3)
+            assertEquals(s.y, (m[3] * p.x + m[4] * p.y + m[5]) / w, 1e-3)
         }
     }
 
