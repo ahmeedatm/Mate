@@ -31,8 +31,10 @@ const tilesPerSide = (z: number) => (GRID * IMAGE_PX[z]) / TILE;
 export type Converter = {
   /** Décode une image webp en PPM, réduite à `size` × `size` px. */
   decode(webp: string, size: number, ppm: string): Promise<void>;
-  /** Encode un PPM en webp. */
-  encode(ppm: string, webp: string): Promise<void>;
+  /** Encode une tuile (PPM, ou BMP si `input` le demande) en webp. */
+  encode(tile: string, webp: string): Promise<void>;
+  /** Format de tuile que l'encodeur sait lire ; PPM par défaut. */
+  input?: "ppm" | "bmp";
 };
 export type SourceFile = { file: string; sha1: string; size: number };
 export type MapOptions = { dir: string; baseUrl: string; files: SourceFile[]; converter: () => Promise<Converter> };
@@ -60,6 +62,31 @@ function parsePpm(buf: Buffer): Img {
 
 const writePpm = (file: string, w: number, h: number, data: Buffer) =>
   fs.writeFile(file, Buffer.concat([Buffer.from(`P6\n${w} ${h}\n255\n`), data]));
+
+/** BMP 24 bits (lignes du bas vers le haut, BGR, complétées à 4 octets) : cwebp de Windows lit par WIC, sans PPM. */
+export function bmp(w: number, h: number, rgb: Buffer): Buffer {
+  const row = Math.ceil((w * 3) / 4) * 4;
+  const out = Buffer.alloc(54 + row * h);
+  out.write("BM", 0, "latin1");
+  out.writeUInt32LE(out.length, 2);
+  out.writeUInt32LE(54, 10);
+  out.writeUInt32LE(40, 14);
+  out.writeInt32LE(w, 18);
+  out.writeInt32LE(h, 22);
+  out.writeUInt16LE(1, 26);
+  out.writeUInt16LE(24, 28);
+  out.writeUInt32LE(row * h, 34);
+  for (let y = 0; y < h; y++) {
+    const dst = 54 + (h - 1 - y) * row;
+    for (let x = 0; x < w; x++) {
+      const i = (y * w + x) * 3;
+      out[dst + x * 3] = rgb[i + 2];
+      out[dst + x * 3 + 1] = rgb[i + 1];
+      out[dst + x * 3 + 2] = rgb[i];
+    }
+  }
+  return out;
+}
 
 /** Moitié de la taille : moyenne de chaque bloc de 2 × 2 pixels. */
 function halve(img: Img): Img {
@@ -139,8 +166,9 @@ export function createMap(opts: MapOptions) {
   }
 
   async function encodeTile(conv: Converter, data: Buffer, file: string) {
-    const ppm = path.join(opts.dir, "tmp", `tile-${tmpCount++}.ppm`);
-    await writePpm(ppm, TILE, TILE, data);
+    const ppm = path.join(opts.dir, "tmp", `tile-${tmpCount++}.${conv.input ?? "ppm"}`);
+    if (conv.input === "bmp") await fs.writeFile(ppm, bmp(TILE, TILE, data));
+    else await writePpm(ppm, TILE, TILE, data);
     await fs.mkdir(path.dirname(file), { recursive: true });
     await conv.encode(ppm, `${file}.part`);
     await renameRetry(`${file}.part`, file);
@@ -175,12 +203,16 @@ export function createMap(opts: MapOptions) {
       const n = 2 ** (z - 1);
       return range(n).flatMap((i) => range(n).map((j) => ({ z, i, j, n })));
     });
-    for (let k = 0; k < jobs.length; k += 4)
-      await Promise.all(
+    for (let k = 0; k < jobs.length; k += 4) {
+      // allSettled : sur un échec, attendre les trois autres cwebp avant de nettoyer tmp (sinon EBUSY masque la cause).
+      const results = await Promise.allSettled(
         jobs
           .slice(k, k + 4)
           .map(({ z, i, j, n }) => encodeTile(conv, crop(levels[z], i * TILE, j * TILE), tilePath(z, e.col * n + i, e.row * n + j))),
       );
+      const failed = results.find((r): r is PromiseRejectedResult => r.status === "rejected");
+      if (failed) throw failed.reason;
+    }
     return levels[0];
   }
 
@@ -207,7 +239,8 @@ export function createMap(opts: MapOptions) {
       const conv = await opts.converter();
       for (const g of groups.values()) await processGroup(conv, g);
     } finally {
-      await fs.rm(path.join(opts.dir, "tmp"), { recursive: true, force: true });
+      // Un nettoyage raté ne doit pas remplacer l'erreur d'origine ; tmp est vidé au prochain lancement.
+      await fs.rm(path.join(opts.dir, "tmp"), { recursive: true, force: true, maxRetries: 10, retryDelay: 100 }).catch(() => {});
     }
   }
 
@@ -293,7 +326,8 @@ export async function libwebp(): Promise<Converter> {
   const { dwebp, cwebp } = await libwebpBin();
   return {
     decode: (webp, size, ppm) => run(dwebp, ["-ppm", "-scale", String(size), String(size), "-o", ppm, webp]),
-    encode: (ppm, webp) => run(cwebp, ["-quiet", "-q", "70", ppm, "-o", webp]),
+    encode: (tile, webp) => run(cwebp, ["-quiet", "-q", "70", tile, "-o", webp]),
+    input: process.platform === "win32" ? "bmp" : "ppm",
   };
 }
 

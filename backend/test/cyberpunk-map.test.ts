@@ -6,7 +6,7 @@ import type { AddressInfo } from "node:net";
 import os from "node:os";
 import path from "node:path";
 import { after, before, describe, it } from "node:test";
-import { AFFINE, createMap, type Converter } from "../src/cyberpunk-map.ts";
+import { AFFINE, bmp, createMap, type Converter } from "../src/cyberpunk-map.ts";
 import { fakeSteam, until } from "./cyberpunk-fakemod.ts";
 import { startServer, type TestServer } from "./server.ts";
 
@@ -159,5 +159,24 @@ describe("routes de la carte", () => {
 
   it("sans jeton : refusé", async () => {
     assert.equal((await server.call("GET", "/cyberpunk/tiles/1/2/3.webp", undefined, false)).status, 401);
+  });
+});
+
+describe("tuile BMP (cwebp de Windows ne lit pas le PPM)", () => {
+  it("en-tête 24 bits et lignes du bas vers le haut, en BGR", () => {
+    // 2 × 2 : haut = rouge, vert ; bas = bleu, blanc (RGB)
+    const rgb = Buffer.from([255, 0, 0, 0, 255, 0, 0, 0, 255, 255, 255, 255]);
+    const b = bmp(2, 2, rgb);
+    assert.equal(b.toString("latin1", 0, 2), "BM");
+    const rowSize = 8; // 2 px × 3 octets, complétés à un multiple de 4
+    assert.equal(b.readUInt32LE(2), 54 + rowSize * 2);
+    assert.equal(b.readUInt32LE(10), 54);
+    assert.equal(b.readInt32LE(18), 2);
+    assert.equal(b.readInt32LE(22), 2);
+    assert.equal(b.readUInt16LE(28), 24);
+    // première ligne du fichier = ligne du bas : bleu puis blanc, en BGR
+    assert.deepEqual([...b.subarray(54, 60)], [255, 0, 0, 255, 255, 255]);
+    // deuxième ligne du fichier = ligne du haut : rouge puis vert, en BGR
+    assert.deepEqual([...b.subarray(54 + rowSize, 60 + rowSize)], [0, 0, 255, 0, 255, 0]);
   });
 });
