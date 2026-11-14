@@ -35,6 +35,9 @@ import app.mate.ui.cyberpunk.CyberpunkKit.Companion.WRAP
 import app.mate.ui.errorText
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.cancel
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import kotlin.math.PI
@@ -51,13 +54,19 @@ import kotlin.math.sin
 class MapView(
     private val kit: CyberpunkKit,
     private val api: CyberpunkApi,
-    private val scope: CoroutineScope,
+    parentScope: CoroutineScope,
     /** Un repère a changé côté ordinateur : relire la liste. */
     private val onPinsChanged: () -> Unit,
     /** La préparation de la carte est lancée : relire son état. */
     private val onMapChanged: () -> Unit,
     private val say: (String) -> Unit,
 ) : FrameLayout(kit.context) {
+    /** Une portée par ouverture de la page : [release] annule les tuiles et les requêtes en cours. */
+    private val scope = CoroutineScope(parentScope.coroutineContext + SupervisorJob(parentScope.coroutineContext[Job]))
+
+    /** Faux quand la page n'est plus en partie : ni repère posé, ni repère supprimé. */
+    var interactive = true
+
     private var mapKey: List<Any?>? = null
     private var camera: MapCamera? = null
     private var cache: TileCache<Bitmap>? = null
@@ -108,7 +117,7 @@ class MapView(
         addView(CyberpunkGridView(context, kit.color(R.color.cp_grille), kit.dp(GRID_DP)), LayoutParams(MATCH, MATCH))
         addView(surface, LayoutParams(MATCH, MATCH))
         addView(statusPanel, LayoutParams(WRAP, WRAP, Gravity.BOTTOM or Gravity.CENTER_HORIZONTAL).apply { bottomMargin = kit.dp(STATUS_BOTTOM_DP) })
-        addView(centerButton, LayoutParams(WRAP, WRAP, Gravity.BOTTOM or Gravity.START).apply { bottomMargin = kit.dp(MARGIN_DP); marginStart = kit.dp(MARGIN_DP) })
+        addView(centerButton, LayoutParams(WRAP, WRAP, Gravity.BOTTOM or Gravity.END).apply { bottomMargin = kit.dp(MARGIN_DP); marginEnd = kit.dp(CENTER_END_DP) })
         statusPanel.visibility = GONE
     }
 
@@ -134,6 +143,15 @@ class MapView(
         centerButton.visibility = VISIBLE
         recenter()
         updateAnimation()
+    }
+
+    /** La page se ferme : requêtes de tuiles annulées, cache vidé. */
+    fun release() {
+        scope.cancel()
+        cache = null
+        camera = null
+        mapKey = null
+        dialog?.dismiss()
     }
 
     /** La lecture de l'état de la carte a échoué : phrase déjà rédigée (errorText). */
@@ -214,6 +232,7 @@ class MapView(
     }
 
     private fun tapAt(x: Float, y: Float) {
+        if (!interactive) return
         val cam = camera ?: return
         val hit = hitPin(x, y)
         when {
@@ -227,6 +246,7 @@ class MapView(
     }
 
     private fun longPressAt(x: Float, y: Float) {
+        if (!interactive) return
         val pin = hitPin(x, y) ?: return
         dialog?.dismiss()
         dialog = AlertDialog.Builder(context)
@@ -485,6 +505,9 @@ class MapView(
         const val HIT_DP = 28
         const val OFFSCREEN = 80
         const val MARGIN_DP = 16
+
+        /** À gauche de la carte de quête (360 dp + 2 marges de 16), loin du tiroir qui couvre la gauche. */
+        const val CENTER_END_DP = 392
         const val STATUS_BOTTOM_DP = 110
         const val ALMOST = 0.99
 

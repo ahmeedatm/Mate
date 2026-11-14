@@ -2385,7 +2385,14 @@
     <string name="cp_rail_items">Objets</string>
     <string name="cp_rail_cyber">Cyber</string>
     <string name="cp_rail_perso">Perso</string>
-    <string name="cp_unread">Messages non lus</string>
+    <plurals name="cp_unread_count">
+        <item quantity="one">%1$d message non lu</item>
+        <item quantity="other">%1$d messages non lus</item>
+    </plurals>
+    <string name="cp_unread_thread">non lu</string>
+    <string name="cp_back">Retour</string>
+    <string name="cp_back_threads">Retour aux conversations</string>
+    <string name="cp_link_lost">Liaison avec l\'ordinateur perdue, nouvel essai…</string>
     <string name="cp_title_cyber">Cyberware</string>
     <string name="cp_level">NIV %1$d</string>
     <string name="cp_money">%1$s €$</string>

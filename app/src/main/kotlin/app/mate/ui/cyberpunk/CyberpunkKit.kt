@@ -149,7 +149,7 @@ class CyberpunkKit(val context: Context) {
     }
 
     /** Petite étiquette en capitales espacées. */
-    fun label(text: CharSequence, colorRes: Int = R.color.cp_rouge_doux) = text(text, 13f, colorRes, medium, spacing = 0.18f, upper = true)
+    fun label(text: CharSequence, colorRes: Int = R.color.cp_etiquette) = text(text, 13f, colorRes, medium, spacing = 0.18f, upper = true)
 
     /** Bouton plein (rouge ou cyan) ou creux ; au moins 48 dp de haut, il s'enfonce à l'appui. */
     fun button(text: CharSequence, description: CharSequence, fillRes: Int = R.color.cp_rouge, textRes: Int = R.color.cp_sur_rouge, minWidthDp: Int = 0): TextView =

@@ -17,12 +17,14 @@ import kotlinx.coroutines.launch
 /**
  * Guette Cyberpunk 2077 sur chaque ordinateur Windows appairé, actif ou non (la tablette n'écoute que son ordinateur
  * actif, elle ne saurait pas qu'une partie démarre sur ATLAS quand elle est sur le Mac). Une requête légère
- * (`GET /cyberpunk/presence`, délai [CONNECT_TIMEOUT_MS]) toutes les [PERIOD_MS], seulement appli au premier plan
+ * (`GET /cyberpunk/presence`, délai [CONNECT_TIMEOUT_MS]) toutes les [PERIOD_MS] (sauf l'ordinateur dont la page est ouverte), seulement appli au premier plan
  * (MainActivity : onResume / onPause). `onPresences` est appelé sur le fil principal ; null : l'ordinateur ne répond pas.
  */
 class CyberpunkWatch(
     private val context: Context,
     private val scope: CoroutineScope,
+    /** Ordinateur dont la page est ouverte : pas sondé ici, le sondage de la page suffit (MainActivity relaie son statut). */
+    private val pageComputerId: () -> String?,
     private val onPresences: (Map<String, CyberpunkPresence?>) -> Unit,
 ) {
     private var job: Job? = null
@@ -44,7 +46,8 @@ class CyberpunkWatch(
 
     private suspend fun poll(): Map<String, CyberpunkPresence?> = coroutineScope {
         // Windows seulement : le mod CET ne tourne pas sur Mac. Un ordinateur à réappairer n'a pas de jeton utilisable.
-        val windows = Computers.all(context).filter { it.os == "windows" && !it.needsRepair }
+        val skip = pageComputerId()
+        val windows = Computers.all(context).filter { it.os == "windows" && !it.needsRepair && it.id != skip }
         windows.map { c ->
             async { c.id to runCatchingCancellable { BackendClient(c, CONNECT_TIMEOUT_MS).cyberpunk.presence() }.getOrNull() }
         }.awaitAll().toMap()

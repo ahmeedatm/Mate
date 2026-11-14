@@ -25,11 +25,13 @@ import app.mate.net.CyberpunkContacts
 import app.mate.net.CyberpunkItem
 import app.mate.net.CyberpunkMap
 import app.mate.net.CyberpunkMapStatus
+import app.mate.net.CyberpunkPresence
 import app.mate.net.CyberpunkQuest
 import app.mate.net.CyberpunkServerPin
 import app.mate.net.CyberpunkSnapshot
 import app.mate.net.CyberpunkState
 import app.mate.net.CyberpunkStatus
+import app.mate.net.CyberpunkThread
 import app.mate.net.runCatchingCancellable
 import app.mate.ui.cyberpunk.CyberpunkKit.Companion.MATCH
 import app.mate.ui.cyberpunk.CyberpunkKit.Companion.WRAP
@@ -60,6 +62,14 @@ class CyberpunkOverlay(private val activity: FragmentActivity) {
 
     private var snapshot: CyberpunkSnapshot? = null
     private var error: String? = null
+
+    /** Dernier état lu en partie, gardé pendant les sondages ratés ([CyberpunkLink]) ; `misses` : sondages de suite sans état en partie. */
+    private var liveSnapshot: CyberpunkSnapshot? = null
+    private var misses = 0
+    private var mode = CyberpunkLink.Mode.AWAY
+    private val blockErrors = mutableMapOf<Block, String>()
+    private val failedVersions = mutableMapOf<Block, Int>()
+    private var openThread: String? = null
     private var inventory: List<CyberpunkItem>? = null
     private var contacts: CyberpunkContacts? = null
     private var quests: List<CyberpunkQuest>? = null
@@ -80,6 +90,10 @@ class CyberpunkOverlay(private val activity: FragmentActivity) {
     /** Ordinateur dont la page montre la partie (pas forcément l'actif : un autre peut avoir été choisi depuis). */
     val computerId: String? get() = computer?.id
 
+    /** Ce que le sondage de la page dit du jeu, pour ui/CyberpunkSession (null : plus en partie). */
+    fun presence(): CyberpunkPresence? =
+        if (isOpen && mode.shown) CyberpunkPresence(available = true, gameFound = true, modInstalled = true, running = true, inGame = true) else null
+
     fun open(on: Computer) {
         if (isOpen) close()
         computer = on
@@ -99,6 +113,7 @@ class CyberpunkOverlay(private val activity: FragmentActivity) {
 
     fun close() {
         pause()
+        mapView?.release()
         root?.let { (it.parent as? ViewGroup)?.removeView(it) }
         root = null
         views = null
@@ -106,6 +121,12 @@ class CyberpunkOverlay(private val activity: FragmentActivity) {
         computer = null
         snapshot = null
         error = null
+        liveSnapshot = null
+        misses = 0
+        mode = CyberpunkLink.Mode.AWAY
+        blockErrors.clear()
+        failedVersions.clear()
+        openThread = null
         inventory = null
         contacts = null
         quests = null
@@ -122,9 +143,13 @@ class CyberpunkOverlay(private val activity: FragmentActivity) {
         lastQuestId = null
     }
 
-    /** Retour : ferme le tiroir, puis la page. */
+    /** Retour : ferme la conversation ouverte, puis le tiroir, puis la page. */
     fun onBack() {
-        if (page != null) showDrawer(null) else close()
+        when {
+            openThread != null -> closeThread()
+            page != null -> showDrawer(null)
+            else -> close()
+        }
     }
 
     /** Écran éteint ou appli en arrière-plan : plus de sondage. */
@@ -155,10 +180,19 @@ class CyberpunkOverlay(private val activity: FragmentActivity) {
 
     private suspend fun tick() {
         val client = api ?: return
-        runCatchingCancellable { client.state() }
+        val result = runCatchingCancellable { client.state() }
+        // Page fermée ou rouverte sur un autre ordinateur pendant la requête : le résultat est perdu.
+        if (api !== client) return
+        result
             .onSuccess {
                 snapshot = it
                 error = null
+                if (it.status == CyberpunkStatus.INGAME && it.state != null) {
+                    liveSnapshot = it
+                    misses = 0
+                } else {
+                    misses++
+                }
                 syncMap()
                 syncPins(it.state)
                 it.state?.blocks?.let { b ->
@@ -167,7 +201,10 @@ class CyberpunkOverlay(private val activity: FragmentActivity) {
                     sync(Block.QUESTS, b.quests)
                 }
             }
-            .onFailure { error = activity.errorText(it) }
+            .onFailure {
+                error = activity.errorText(it)
+                misses++
+            }
         render()
     }
 
@@ -222,7 +259,8 @@ class CyberpunkOverlay(private val activity: FragmentActivity) {
 
     /** Lit le bloc s'il n'a jamais été lu ou si son compteur a changé. */
     private fun sync(block: Block, version: Int) {
-        if (versions[block] != version) load(block, version)
+        // Un échec n'est pas relancé chaque seconde : au prochain changement de compteur ou à la réouverture du tiroir.
+        if (versions[block] != version && failedVersions[block] != version) load(block, version)
     }
 
     private fun load(block: Block, version: Int) {
@@ -240,6 +278,13 @@ class CyberpunkOverlay(private val activity: FragmentActivity) {
                 }.onSuccess {
                     if (api !== client) return@onSuccess
                     versions[block] = version
+                    blockErrors.remove(block)
+                    failedVersions.remove(block)
+                    render()
+                }.onFailure {
+                    if (api !== client) return@onFailure
+                    blockErrors[block] = activity.errorText(it)
+                    failedVersions[block] = version
                     render()
                 }
             } finally {
@@ -285,6 +330,18 @@ class CyberpunkOverlay(private val activity: FragmentActivity) {
             perform(activity.getString(R.string.cp_calling, contact.name)) { action("call", contact = contact.id ?: contact.name) }
 
         override fun use(item: CyberpunkItem) = this@CyberpunkOverlay.use(item)
+
+        override fun openThread(thread: CyberpunkThread) {
+            openThread = thread.name
+            renderDrawer()
+        }
+
+        override fun closeThread() = this@CyberpunkOverlay.closeThread()
+    }
+
+    private fun closeThread() {
+        openThread = null
+        renderDrawer()
     }
 
     private fun toast(text: String) {
@@ -303,9 +360,11 @@ class CyberpunkOverlay(private val activity: FragmentActivity) {
     private fun showDrawer(next: CyberpunkPage?) {
         val v = views ?: return
         page = if (next == page) null else next
+        openThread = null
         drawn = null
         v.railButtons.forEach { (p, b) -> b.setSelectedPage(p == page) }
         page?.let {
+            blockOf(it)?.let { b -> failedVersions.remove(b) }
             when (it) {
                 CyberpunkPage.JOURNAL -> load(Block.QUESTS, versions[Block.QUESTS] ?: snapshot?.state?.blocks?.quests ?: 0)
                 CyberpunkPage.PHONE -> load(Block.CONTACTS, versions[Block.CONTACTS] ?: snapshot?.state?.blocks?.contacts ?: 0)
@@ -321,10 +380,17 @@ class CyberpunkOverlay(private val activity: FragmentActivity) {
         v.callHolder.animate().translationX(shift).setDuration(DRAWER_MS).start()
     }
 
+    private fun blockOf(p: CyberpunkPage): Block? = when (p) {
+        CyberpunkPage.JOURNAL -> Block.QUESTS
+        CyberpunkPage.PHONE -> Block.CONTACTS
+        CyberpunkPage.ITEMS -> Block.INVENTORY
+        else -> null
+    }
+
     private fun renderDrawer() {
         val v = views ?: return
         val p = page ?: return
-        val st = snapshot?.state
+        val st = liveSnapshot?.state
         val data: Any? = when (p) {
             CyberpunkPage.JOURNAL -> quests
             CyberpunkPage.PHONE -> contacts
@@ -332,39 +398,58 @@ class CyberpunkOverlay(private val activity: FragmentActivity) {
             CyberpunkPage.CYBER -> st?.cyberware
             CyberpunkPage.PERSO -> st?.player
         }
+        // Lecture échouée et rien à montrer : la phrase d'erreur à la place de « Chargement ».
+        val failure = if (data == null) blockOf(p)?.let { blockErrors[it] } else null
         // Rien n'est refait (ni le défilement perdu) tant que la donnée n'a pas changé.
-        if (drawn == p to data) return
-        drawn = p to data
-        val content = when (p) {
+        val key = Triple(p, data ?: failure, openThread)
+        if (drawn == key) return
+        drawn = key
+        val thread = if (p == CyberpunkPage.PHONE) contacts?.threads?.firstOrNull { it.name == openThread } else null
+        val content = when {
+            failure != null -> v.drawers.failed(p.labelRes, failure)
+            thread != null -> v.drawers.thread(thread)
+            else -> pageContent(v, p, st)
+        }
+        v.drawerBody.removeAllViews()
+        v.drawerBody.addView(content, ViewGroup.LayoutParams(MATCH, WRAP))
+    }
+
+    private fun pageContent(v: Views, p: CyberpunkPage, st: CyberpunkState?): View =
+        when (p) {
             CyberpunkPage.JOURNAL -> v.drawers.journal(quests)
             CyberpunkPage.PHONE -> v.drawers.phone(contacts)
             CyberpunkPage.ITEMS -> v.drawers.items(inventory)
             CyberpunkPage.CYBER -> v.drawers.cyber(st)
             CyberpunkPage.PERSO -> v.drawers.perso(st?.player)
         }
-        v.drawerBody.removeAllViews()
-        v.drawerBody.addView(content, ViewGroup.LayoutParams(MATCH, WRAP))
-    }
 
     private fun render() {
         val v = views ?: return
+        mode = CyberpunkLink.decide(liveSnapshot != null, misses)
+        val live = mode.shown
         val snap = snapshot
-        val st = snap?.state
-        val live = error == null && snap?.status == CyberpunkStatus.INGAME && st != null
+        val st = liveSnapshot?.state
         v.liveGroup.forEach { it.visibility = if (live) View.VISIBLE else View.GONE }
         v.message.visibility = if (live) View.GONE else View.VISIBLE
+        v.link.visibility = if (mode == CyberpunkLink.Mode.DEGRADED) View.VISIBLE else View.GONE
+        mapView?.interactive = live
         if (!live) {
-            if (page != null) showDrawer(null)
+            // Le tiroir se ferme quand la partie est vraiment finie, jamais pour une erreur réseau (il revient avec la liaison).
+            if (page != null && error == null) showDrawer(null)
             renderMessage(v, snap)
             return
         }
+        v.link.text = error ?: activity.getString(R.string.cp_link_lost)
         st ?: return
         renderHud(v, st)
         renderCall(v, st)
         renderQuest(v, st)
         st.tracked?.takeIf { it.kind == "quest" && it.id != null }?.let { lastQuestId = it.id }
         mapView?.update(st.pos, st.tracked, lastQuestId ?: quests?.firstOrNull { it.tracked }?.id)
-        v.unread.visibility = if ((contacts?.unread ?: 0) > 0) View.VISIBLE else View.GONE
+        val unread = contacts?.unread ?: 0
+        v.unread.visibility = if (unread > 0) View.VISIBLE else View.GONE
+        v.unread.text = unread.toString()
+        v.unread.contentDescription = activity.resources.getQuantityString(R.plurals.cp_unread_count, unread, unread)
         renderDrawer()
     }
 
@@ -423,6 +508,7 @@ class CyberpunkOverlay(private val activity: FragmentActivity) {
 
     private fun View.setSelectedPage(selected: Boolean) {
         val kit = views?.kit ?: return
+        isSelected = selected
         background = kit.panel(if (selected) R.color.cp_rouge else R.color.cp_panneau, cutDp = 8, both = false)
         val tint = kit.color(if (selected) R.color.cp_sur_rouge else R.color.cp_gris)
         val inner = (this as? ViewGroup)?.getChildAt(0) as? ViewGroup ?: return
@@ -441,7 +527,7 @@ class CyberpunkOverlay(private val activity: FragmentActivity) {
         val installButton: TextView,
         val railButtons: Map<CyberpunkPage, View>,
         val rail: View,
-        val unread: View,
+        val unread: TextView,
         val drawer: FrameLayout,
         val drawerBody: LinearLayout,
         val drawerHidden: Float,
@@ -459,6 +545,7 @@ class CyberpunkOverlay(private val activity: FragmentActivity) {
         val pins: TextView,
         val actions: View,
         val toast: TextView,
+        val link: TextView,
     ) {
         /** Ce qui n'a de sens qu'en partie : tout sauf le message d'état, la carte et Fermer. */
         val liveGroup get() = listOf(rail, drawer, hud, callHolder, questCard, actions)
@@ -562,15 +649,21 @@ class CyberpunkOverlay(private val activity: FragmentActivity) {
             alpha = 0f
         }
 
+        val link = kit.text("", 15f, R.color.cp_sur_jaune, kit.medium).apply {
+            background = kit.panel(R.color.cp_jaune, cutDp = 8, both = false)
+            setPadding(kit.dp(16), kit.dp(6), kit.dp(16), kit.dp(6))
+            visibility = View.GONE
+        }
         val m = kit.dp(MARGIN_DP)
         root.addView(hud, FrameLayout.LayoutParams(MATCH, WRAP, Gravity.TOP).apply { topMargin = m })
         root.addView(callHolder, FrameLayout.LayoutParams(MATCH, WRAP, Gravity.TOP).apply { topMargin = kit.dp(CALL_TOP_DP) })
-        root.addView(actions, FrameLayout.LayoutParams(WRAP, WRAP, Gravity.TOP or Gravity.END).apply { topMargin = kit.dp(CALL_TOP_DP); marginEnd = m })
+        root.addView(actions, FrameLayout.LayoutParams(WRAP, WRAP, Gravity.TOP or Gravity.END).apply { topMargin = kit.dp(ACTIONS_TOP_DP); marginEnd = m })
         root.addView(questCard, FrameLayout.LayoutParams(kit.dp(QUEST_WIDTH_DP), WRAP, Gravity.BOTTOM or Gravity.END).apply { bottomMargin = m; marginEnd = m })
         root.addView(drawer, FrameLayout.LayoutParams(kit.dp(DRAWER_DP), MATCH).apply { marginStart = kit.dp(DRAWER_LEFT_DP); topMargin = m; bottomMargin = m })
         root.addView(rail.first, FrameLayout.LayoutParams(kit.dp(RAIL_DP), WRAP).apply { marginStart = m; topMargin = m })
         root.addView(message, FrameLayout.LayoutParams(WRAP, WRAP, Gravity.CENTER))
         root.addView(close, FrameLayout.LayoutParams(kit.dp(48), kit.dp(48), Gravity.TOP or Gravity.END).apply { topMargin = kit.dp(CLOSE_MARGIN_DP); marginEnd = kit.dp(CLOSE_MARGIN_DP) })
+        root.addView(link, FrameLayout.LayoutParams(WRAP, WRAP, Gravity.BOTTOM or Gravity.CENTER_HORIZONTAL).apply { bottomMargin = kit.dp(LINK_BOTTOM_DP) })
         root.addView(toast, FrameLayout.LayoutParams(WRAP, WRAP, Gravity.BOTTOM or Gravity.CENTER_HORIZONTAL).apply { bottomMargin = kit.dp(28) })
 
         val drawers = CyberpunkDrawers(kit, drawerActions)
@@ -578,15 +671,19 @@ class CyberpunkOverlay(private val activity: FragmentActivity) {
         buttons.forEach { (p, b) -> b.setOnClickListener { showDrawer(p) } }
         return Views(
             kit, root, mapSlot, message, messageText, installButton, buttons, rail.first, unread, drawer, drawerBody, hidden, drawers,
-            hud, level, health, money, callHolder, callText, callButton, questCard, questTitle, questDesc, pins, actions, toast,
+            hud, level, health, money, callHolder, callText, callButton, questCard, questTitle, questDesc, pins, actions, toast, link,
         )
     }
 
     /** Rail : colonne de cinq boutons carrés de 76 dp ; rend la colonne, la pastille « non lus » et les boutons. */
-    private fun buildRail(kit: CyberpunkKit): Triple<LinearLayout, View, Map<CyberpunkPage, View>> {
+    private fun buildRail(kit: CyberpunkKit): Triple<LinearLayout, TextView, Map<CyberpunkPage, View>> {
         val ctx = kit.context
-        val unread = View(ctx).apply {
+        val unread = kit.text("", 12f, R.color.cp_sur_cyan, kit.bold).apply {
             background = kit.panel(R.color.cp_cyan, cutDp = 0, both = false)
+            gravity = Gravity.CENTER
+            minWidth = kit.dp(UNREAD_DP)
+            minHeight = kit.dp(UNREAD_DP)
+            setPadding(kit.dp(4), 0, kit.dp(4), 0)
             visibility = View.GONE
         }
         val buttons = CyberpunkPage.entries.associateWith { p ->
@@ -601,7 +698,8 @@ class CyberpunkOverlay(private val activity: FragmentActivity) {
                     orientation = LinearLayout.VERTICAL
                     gravity = Gravity.CENTER
                     addView(ImageView(ctx).apply { setImageResource(p.iconRes); setColorFilter(kit.color(R.color.cp_gris)) }, kit.lp(kit.dp(30), kit.dp(30)))
-                    addView(kit.text(label, 11f, R.color.cp_gris, kit.medium, spacing = 0.1f, upper = true), kit.lp(WRAP, WRAP).apply { topMargin = kit.dp(4) })
+                    // 13 sp, en minuscules : « TÉLÉPHONE » en capitales ne tient pas dans 76 dp.
+                    addView(kit.text(label, 13f, R.color.cp_gris, kit.medium, spacing = 0.02f), kit.lp(WRAP, WRAP).apply { topMargin = kit.dp(4) })
                 }
                 addView(inner, FrameLayout.LayoutParams(MATCH, MATCH))
             }
@@ -609,8 +707,8 @@ class CyberpunkOverlay(private val activity: FragmentActivity) {
         }
         buttons[CyberpunkPage.PHONE]?.let {
             (it as FrameLayout).addView(
-                unread.apply { contentDescription = ctx.getString(R.string.cp_unread) },
-                FrameLayout.LayoutParams(kit.dp(10), kit.dp(10), Gravity.TOP or Gravity.END).apply { topMargin = kit.dp(8); marginEnd = kit.dp(10) },
+                unread,
+                FrameLayout.LayoutParams(WRAP, WRAP, Gravity.TOP or Gravity.END).apply { topMargin = kit.dp(6); marginEnd = kit.dp(6) },
             )
         }
         val column = LinearLayout(ctx).apply {
@@ -632,11 +730,16 @@ class CyberpunkOverlay(private val activity: FragmentActivity) {
         /** Le HUD et l'appel se recentrent sur la place laissée par le tiroir (centre à 880 sur 1280). */
         const val HUD_SHIFT_DP = 240
         const val CALL_TOP_DP = 88
+
+        /** Fermer finit à 60 dp du haut : 36 dp d'écart avec Soin (24 au minimum). */
+        const val ACTIONS_TOP_DP = 96
+        const val LINK_BOTTOM_DP = 76
         const val ACTION_WIDTH_DP = 150
         const val QUEST_WIDTH_DP = 360
         /** Bouton Fermer centré dans le coin libre de 72 dp. */
         const val CLOSE_MARGIN_DP = 12
         const val GRID_DP = 64
+        const val UNREAD_DP = 20
     }
 }
 

@@ -147,7 +147,7 @@ class MainActivity : AppCompatActivity() {
     /** Page Cyberpunk 2077 : ouverte et fermée toute seule selon le jeu des ordinateurs Windows ([CyberpunkWatch]). */
     private val cyberpunk = CyberpunkOverlay(this)
     private val cyberpunkSession = CyberpunkSession()
-    private val cyberpunkWatch = CyberpunkWatch(this, lifecycleScope, ::onCyberpunkPresences)
+    private val cyberpunkWatch = CyberpunkWatch(this, lifecycleScope, { cyberpunk.computerId }, ::onCyberpunkPresences)
     private lateinit var banner: Banner
     private lateinit var alerts: TabletAlerts
     private lateinit var welcome: WelcomeView
@@ -850,7 +850,9 @@ class MainActivity : AppCompatActivity() {
      * Présence de Cyberpunk 2077 sur chaque ordinateur Windows ([CyberpunkWatch]) : la page s'ouvre quand une partie
      * se charge (sur l'ordinateur du jeu, actif ou non), et se ferme avec elle en rendant l'ordinateur d'avant.
      */
-    private fun onCyberpunkPresences(presences: Map<String, CyberpunkPresence?>) {
+    private fun onCyberpunkPresences(polled: Map<String, CyberpunkPresence?>) {
+        // L'ordinateur dont la page est ouverte n'est pas sondé : son statut vient du sondage de la page.
+        val presences = polled + (cyberpunk.computerId?.let { mapOf(it to cyberpunk.presence()) } ?: emptyMap())
         val fullScreen = current == Mode.CAMERA || homeFragment()?.editing == true
         val typing = Typing.active(focusIsEditText = currentFocus is android.widget.EditText) || fullScreen
         val inCall = call.active || callOverlay.app != null
