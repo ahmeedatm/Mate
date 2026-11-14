@@ -56,4 +56,18 @@ class TileCacheTest {
         assertNull(cache.get(k))
         assertEquals(2, calls.get())
     }
+
+    @Test fun `juste apres un dezoom, les tuiles visibles tiennent toutes et ne sont chargees qu'une fois`() {
+        val geo = MapGeometry(28672, 28672, 4, 512, listOf(1.0, 0.0, 0.0, 0.0, 1.0, 0.0))
+        val cam = MapCamera(geo).apply { setViewport(1280, 800) }
+        cam.setScale(0.5001) // niveau 3, tuiles de ~256 px : le plus de tuiles visibles
+        cam.centerOn(10_000.0, 10_000.0)
+        val loads = AtomicInteger()
+        val bytes = 512 * 512 * 2
+        val cache = TileCache<ByteArray>(scope, MapCamera.tileCacheBytes(1280, 800, 512), { it.size }, {}) { loads.incrementAndGet(); ByteArray(bytes) }
+        val visible = cam.visibleTiles()
+        assertEquals(30, visible.size)
+        repeat(5) { visible.forEach { cache.get(it) } }
+        assertEquals(visible.size, loads.get())
+    }
 }
