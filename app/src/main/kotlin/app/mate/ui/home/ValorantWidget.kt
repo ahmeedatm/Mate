@@ -82,7 +82,7 @@ class ValorantWidget(context: Context, host: HomeHost, placed: Placed) : HomeWid
     private var job: Job? = null
 
     /** Dernier état dessiné, avec la forme et la hauteur : rien n'est refait tant que rien ne change (la plupart des relevés). */
-    private var drawn: Triple<Valorant?, WidgetSize, Int>? = null
+    private var drawn: List<Any?>? = null
 
     /** Hauteur mesurée de la place sous le titre, en dp (0 : pas encore mesurée) ; elle change avec le thème et le profil de rangées. */
     private var bodyDp = 0
@@ -93,7 +93,7 @@ class ValorantWidget(context: Context, host: HomeHost, placed: Placed) : HomeWid
             if (height != bodyDp) {
                 bodyDp = height
                 // Après la mise en page en cours : ce qui tient dans la nouvelle hauteur.
-                scroll.post { render() }
+                scroll.post { if (scroll.isAttachedToWindow) render() }
             }
         }
     }
@@ -153,7 +153,8 @@ class ValorantWidget(context: Context, host: HomeHost, placed: Placed) : HomeWid
         if (status.text.toString() != line) status.text = line
         // Ordinateur muet : la dernière partie reste, estompée, pour ne pas passer pour l'état présent.
         body.alpha = if (error != null) STALE_ALPHA else 1f
-        val key = Triple(v, placed.size, bodyDp)
+        // Taille du texte dans la clé : elle change ce qui tient ([ValorantFit]).
+        val key = listOf(v, placed.size, bodyDp, context.resources.configuration.fontScale)
         if (drawn == key) return
         drawn = key
         body.removeAllViews()

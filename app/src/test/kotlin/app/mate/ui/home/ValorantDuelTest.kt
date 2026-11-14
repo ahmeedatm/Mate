@@ -49,11 +49,35 @@ class ValorantDuelTest {
 
     @Test
     fun lowZoomDropsTheSmallStatsLine() {
-        assertTrue(ValorantDuel.roomy(bodyDp = 0, pairs = 5))
+        assertTrue((ValorantDuel.lines(bodyDp = 0, pairs = 5) == 3))
         val enough = ValorantDuel.HEADER_DP + 5 * ValorantDuel.ROOMY_PAIR_DP
-        assertTrue(ValorantDuel.roomy(enough, pairs = 5))
-        assertFalse(ValorantDuel.roomy(enough - 1, pairs = 5))
+        assertTrue((ValorantDuel.lines(enough, pairs = 5) == 3))
+        assertFalse((ValorantDuel.lines(enough - 1, pairs = 5) == 3))
         // Sélection : l'équipe d'en face n'est pas là, mais les cinq paires gardent leur place.
-        assertTrue(ValorantDuel.roomy(enough, pairs = 0))
+        assertTrue((ValorantDuel.lines(enough, pairs = 0) == 3))
+        // Texte grossi : la petite ligne demande plus de place.
+        assertFalse((ValorantDuel.lines(enough, pairs = 5, fontScale = 1.3f) == 3))
+    }
+
+    @Test
+    fun eachPlayerKeepsTheLinesThatFit() {
+        assertEquals(3, ValorantDuel.lines(bodyDp = 0, pairs = 5))
+        val three = ValorantDuel.HEADER_DP + 5 * ValorantDuel.ROOMY_PAIR_DP
+        val two = ValorantDuel.HEADER_DP + 5 * ValorantDuel.TWO_LINES_DP
+        assertEquals(3, ValorantDuel.lines(three, pairs = 5))
+        assertEquals(2, ValorantDuel.lines(three - 1, pairs = 5))
+        assertEquals(2, ValorantDuel.lines(two, pairs = 5))
+        // Plus que le nom : rien de rogné à moitié.
+        assertEquals(1, ValorantDuel.lines(two - 1, pairs = 5))
+        // Texte grossi : l'en-tête et les lignes grandissent.
+        assertEquals(1, ValorantDuel.lines(two, pairs = 5, fontScale = 1.3f))
+    }
+
+    @Test
+    fun menuDialShrinksToTheRoom() {
+        assertEquals(ValorantDuel.DIAL_DP, ValorantDuel.dialDp(bodyDp = 0))
+        assertEquals(ValorantDuel.DIAL_DP, ValorantDuel.dialDp(bodyDp = 1000))
+        assertEquals(300 - ValorantDuel.DIAL_MARGIN_DP, ValorantDuel.dialDp(bodyDp = 300))
+        assertEquals(ValorantDuel.DIAL_MIN_DP, ValorantDuel.dialDp(bodyDp = 50))
     }
 }

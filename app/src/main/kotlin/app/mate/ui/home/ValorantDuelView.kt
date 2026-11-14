@@ -47,13 +47,13 @@ object ValorantDuelView {
     /** Une barre garde la place de son chiffre, même pour une petite valeur. */
     private const val LABEL_MIN = 0.22f
 
-    /** [bodyDp] : hauteur mesurée de la place, 0 si pas encore mesurée ([ValorantDuel.roomy]). */
+    /** [bodyDp] : hauteur mesurée de la place, 0 si pas encore mesurée ([ValorantDuel.lines]). */
     fun view(v: Valorant, kit: ValorantKit, bodyDp: Int): View? {
         val end = v.end?.takeIf { it.status == ValorantEndStatus.READY }
         return when {
             end != null -> if (end.ffa) null else end(end, kit, bodyDp)
             v.state == ValorantState.INGAME || v.state == ValorantState.PREGAME -> if (v.allies.isEmpty()) null else match(v, kit, bodyDp)
-            else -> menu(v, kit)
+            else -> menu(v, kit, bodyDp)
         }
     }
 
@@ -73,23 +73,23 @@ object ValorantDuelView {
         tug(kit, R.string.valorant_duel_kd, ValorantDuel.average(allies.map { it.kd }), ValorantDuel.average(enemies.map { it.kd }), ValorantKit::kd)?.let { box.addView(it, tugLp(kit)) }
         tug(kit, R.string.valorant_duel_wr, ValorantDuel.average(allies.map { it.winRate?.toDouble() }), ValorantDuel.average(enemies.map { it.winRate?.toDouble() })) { ValorantKit.pct(it?.let(Math::round)?.toInt()) }
             ?.let { box.addView(it, tugLp(kit)) }
-        val roomy = ValorantDuel.roomy(bodyDp, maxOf(allies.size, enemies.size))
+        val lines = ValorantDuel.lines(bodyDp, maxOf(allies.size, enemies.size), kit.context.resources.configuration.fontScale)
         val later = R.string.valorant_enemies_later.takeIf { v.state == ValorantState.PREGAME && enemies.isEmpty() }
         val pairs = ValorantDuel.pairs(allies, enemies).mapIndexed { i, (a, e) ->
-            pair(kit, a?.let { live(kit, it, false, roomy) }, e?.let { live(kit, it, true, roomy) } ?: later?.takeIf { i == 0 }?.let { kit.text(kit.string(it), 14f, R.attr.c_text_faint).apply { gravity = Gravity.END or Gravity.CENTER_VERTICAL } }, a?.me == true)
+            pair(kit, a?.let { live(kit, it, false, lines) }, e?.let { live(kit, it, true, lines) } ?: later?.takeIf { i == 0 }?.let { kit.text(kit.string(it), 14f, R.attr.c_text_faint).apply { gravity = Gravity.END or Gravity.CENTER_VERTICAL } }, a?.me == true)
         }
         box.addView(rows(kit, pairs), kit.lp(MATCH_PARENT, 0, 1f).apply { topMargin = kit.dp(10) })
         return box
     }
 
-    private fun live(kit: ValorantKit, p: ValorantPlayer, right: Boolean, roomy: Boolean): View {
+    private fun live(kit: ValorantKit, p: ValorantPlayer, right: Boolean, lines: Int): View {
         val rank = p.rank ?: kit.rankName(p.tier)
         val meta = p.peakTier?.let { kit.string(R.string.valorant_duel_rank_peak, rank, kit.rankName(it)) } ?: rank
-        val dots = if (!roomy) emptyList() else listOf(
+        val dots = if (lines < 3) emptyList() else listOf(
             kit.string(R.string.valorant_duel_hs, ValorantKit.pct(p.hs)) to ValorantArt.hsTone(p.hs),
             kit.string(R.string.valorant_duel_wr_short, ValorantKit.pct(p.winRate)) to ValorantArt.wrTone(p.winRate),
         )
-        val who = who(kit, p.name, p.me, right, meta, dots, ValorantArt.partyDot(kit, p.party))
+        val who = who(kit, p.name, p.me, right, meta.takeIf { lines >= 2 }, dots, ValorantArt.partyDot(kit, p.party))
         val face = ValorantArt.face(kit, p.agentId, p.agent, p.tier, FACE, dim = !p.locked)
         val bar = meter(kit, ValorantDuel.fraction(p.kd, ValorantDuel.KD_FULL), ValorantKit.kd(p.kd), ValorantArt.kdTone(p.kd), right)
         return side(kit, face, who, bar, right).apply { contentDescription = kit.describe(p) }
@@ -108,10 +108,10 @@ object ValorantDuelView {
             val text = kit.string(R.string.valorant_duel_match_rr, ValorantKit.signed(rr), kit.string(resultText(e.won)))
             box.addView(kit.text(text, 15f, rrHue(rr), R.attr.c_font_medium).apply { gravity = Gravity.CENTER }, kit.lp(MATCH_PARENT).apply { topMargin = kit.dp(6) })
         }
-        val roomy = ValorantDuel.roomy(bodyDp, maxOf(allies.size, enemies.size))
+        val lines = ValorantDuel.lines(bodyDp, maxOf(allies.size, enemies.size), kit.context.resources.configuration.fontScale)
         val places = EndPlaces(e.players)
         val pairs = ValorantDuel.pairs(allies, enemies).map { (a, b) ->
-            pair(kit, a?.let { scored(kit, it, places, false, roomy) }, b?.let { scored(kit, it, places, true, roomy) }, a?.me == true)
+            pair(kit, a?.let { scored(kit, it, places, false, lines) }, b?.let { scored(kit, it, places, true, lines) }, a?.me == true)
         }
         box.addView(rows(kit, pairs), kit.lp(MATCH_PARENT, 0, 1f).apply { topMargin = kit.dp(10) })
         return box
@@ -128,14 +128,14 @@ object ValorantDuelView {
         fun first(p: ValorantEndPlayer) = ValorantArt.rankTone(first.indexOf(p.firstKills), count)
     }
 
-    private fun scored(kit: ValorantKit, p: ValorantEndPlayer, places: EndPlaces, right: Boolean, roomy: Boolean): View {
+    private fun scored(kit: ValorantKit, p: ValorantEndPlayer, places: EndPlaces, right: Boolean, lines: Int): View {
         val meta = kit.string(R.string.valorant_duel_kda_adr, p.kills, p.deaths, p.assists, p.adr)
-        val dots = if (!roomy) emptyList() else listOf(
+        val dots = if (lines < 3) emptyList() else listOf(
             kit.string(R.string.valorant_duel_hs, ValorantKit.pct(p.hs)) to ValorantArt.hsTone(p.hs),
             kit.string(R.string.valorant_duel_first, p.firstKills) to places.first(p),
         )
         val badge = if (p.mvp) mvp(kit) else null
-        val who = who(kit, p.name, p.me, right, meta, dots, badge)
+        val who = who(kit, p.name, p.me, right, meta.takeIf { lines >= 2 }, dots, badge)
         val face = ValorantArt.face(kit, p.agentId, p.agent, p.tier, FACE)
         val bar = meter(kit, ValorantDuel.fraction(p.acs.toDouble(), places.best.toDouble()), p.acs.toString(), places.acs(p), right)
         return side(kit, face, who, bar, right).apply { contentDescription = kit.describe(p) }
@@ -165,6 +165,7 @@ object ValorantDuelView {
             kit.text(map.orEmpty().uppercase(), 34f, R.attr.c_text, R.attr.c_font_display).apply { letterSpacing = 0.12f }
         }
         val line = kit.row(team(R.string.valorant_allies, true, Gravity.END), middle, team(R.string.valorant_enemies, false, Gravity.START))
+        if (score != null) line.contentDescription = kit.string(R.string.valorant_duel_score, score.ally, score.enemy)
         line.getChildAt(0).layoutParams = kit.lp(0, WRAP_CONTENT, 1f).apply { marginEnd = kit.dp(28) }
         line.getChildAt(2).layoutParams = kit.lp(0, WRAP_CONTENT, 1f).apply { marginStart = kit.dp(28) }
         val box = kit.column(line, gravity = Gravity.CENTER_HORIZONTAL)
@@ -256,8 +257,22 @@ object ValorantDuelView {
             kit.lp(kit.dp(VS)),
         )
         addView(right ?: View(kit.context), kit.lp(0, MATCH_PARENT, 1f))
-        if (mine) left?.let(kit::mine)
+        if (mine) left?.let(::mine)
     }
+
+    /**
+     * Ma ligne : un filet d'accent, pas l'aplat de la grille. Sur un aplat de teinte proche (Instrument nuit), la barre
+     * perdrait son bord ; mon nom est aussi en gras.
+     */
+    private fun mine(view: View) {
+        view.background = GradientDrawable().apply {
+            cornerRadius = view.context.dp(MINE_RADIUS_DP).toFloat()
+            setStroke(view.context.dp(MINE_STROKE_DP), themeColor(view.context, R.attr.c_accent))
+        }
+    }
+
+    private const val MINE_RADIUS_DP = 10
+    private const val MINE_STROKE_DP = 2
 
     /** Un joueur : icône, nom et détail, barre ; à droite, tout en miroir (la barre pousse toujours vers le centre). */
     private fun side(kit: ValorantKit, face: View, who: View, bar: View, right: Boolean): View = LinearLayout(kit.context).apply {
@@ -268,7 +283,7 @@ object ValorantDuelView {
         for ((view, lp) in if (right) parts.reversed() else parts) addView(view, lp)
     }
 
-    private fun who(kit: ValorantKit, name: String?, me: Boolean, right: Boolean, meta: String, dots: List<Pair<String, ValorantArt.Tone>>, badge: View?): View {
+    private fun who(kit: ValorantKit, name: String?, me: Boolean, right: Boolean, meta: String?, dots: List<Pair<String, ValorantArt.Tone>>, badge: View?): View {
         val align = if (right) Gravity.END else Gravity.START
         val title = kit.text((name?.substringBefore('#') ?: kit.string(R.string.valorant_hidden)).uppercase(), 16f, if (name == null) R.attr.c_text_faint else R.attr.c_text, R.attr.c_font_medium).apply {
             if (me) setTypeface(typeface, Typeface.BOLD)
@@ -282,7 +297,7 @@ object ValorantDuelView {
         }
         val box = kit.column(top, gravity = align)
         top.layoutParams = kit.lp(MATCH_PARENT)
-        box.addView(kit.text(meta.uppercase(), 12f, R.attr.c_text_faint).apply { letterSpacing = 0.06f }, kit.lp(WRAP_CONTENT).apply { topMargin = kit.dp(2) })
+        meta?.let { box.addView(kit.text(it.uppercase(), 12f, R.attr.c_text_dim).apply { letterSpacing = 0.06f }, kit.lp(WRAP_CONTENT).apply { topMargin = kit.dp(2) }) }
         if (dots.isNotEmpty()) {
             val line = kit.row()
             dots.forEachIndexed { i, (text, tone) ->
@@ -314,7 +329,7 @@ object ValorantDuelView {
 
     // --- Au menu
 
-    private fun menu(v: Valorant, kit: ValorantKit): View {
+    private fun menu(v: Valorant, kit: ValorantKit, bodyDp: Int): View {
         val me = v.me ?: return kit.text(kit.string(R.string.valorant_off_hint), 18f, R.attr.c_text_dim).apply { gravity = Gravity.CENTER }
         val left = kit.column(gravity = Gravity.CENTER_VERTICAL)
         v.today?.takeIf { it.results.isNotEmpty() }?.let { day ->
@@ -327,7 +342,8 @@ object ValorantDuelView {
             left.addView(kit.row(kit.rank(peak, 40), kit.space(10), kit.text(kit.rankName(peak), 22f, R.attr.c_text, R.attr.c_font_title)), kit.lp(WRAP_CONTENT).apply { topMargin = kit.dp(6) })
         }
         val progress = ValorantKit.rrProgress(me.tier, me.rr)
-        val inside = kit.column(kit.rank(me.tier, 130), gravity = Gravity.CENTER).apply {
+        val dialDp = ValorantDuel.dialDp(bodyDp)
+        val inside = kit.column(kit.rank(me.tier, dialDp * RANK_IN_DIAL / 100), gravity = Gravity.CENTER).apply {
             addView(kit.text(me.rank.uppercase(), 30f, R.attr.c_text, R.attr.c_font_title).apply { letterSpacing = 0.05f }, kit.lp(WRAP_CONTENT).apply { topMargin = kit.dp(4) })
             me.rr?.let { addView(kit.text(kit.string(if (progress != null) R.string.valorant_duel_rr_of else R.string.valorant_rr, it), 17f, R.attr.c_text_dim)) }
         }
@@ -342,20 +358,22 @@ object ValorantDuelView {
                 addView(kit.text(kit.string(R.string.valorant_no_history), 15f, R.attr.c_text_faint))
             } else {
                 addView(kit.text(kit.string(R.string.valorant_duel_last, games.size).uppercase(), 12f, R.attr.c_text_dim).apply { letterSpacing = 0.06f })
-                addView(Swings(kit.context, games), kit.lp(MATCH_PARENT, kit.dp(SWINGS_DP)).apply { topMargin = kit.dp(10) })
+                addView(Swings(kit.context, games), kit.lp(MATCH_PARENT, kit.dp(minOf(SWINGS_DP, dialDp))).apply { topMargin = kit.dp(10) })
             }
         }
         return LinearLayout(kit.context).apply {
             orientation = LinearLayout.HORIZONTAL
             gravity = Gravity.CENTER_VERTICAL
             addView(left, kit.lp(0, WRAP_CONTENT, 1f).apply { marginStart = kit.dp(20) })
-            addView(dial, kit.lp(kit.dp(DIAL_DP), kit.dp(DIAL_DP)).apply { marginStart = kit.dp(24); marginEnd = kit.dp(24) })
+            addView(dial, kit.lp(kit.dp(dialDp), kit.dp(dialDp)).apply { marginStart = kit.dp(24); marginEnd = kit.dp(24) })
             addView(right, kit.lp(0, WRAP_CONTENT, 1f).apply { marginEnd = kit.dp(12) })
         }
     }
 
     private const val LAST = 5
-    private const val DIAL_DP = 340
+
+    /** Logo du rang dans le cadran, en % de sa taille. */
+    private const val RANK_IN_DIAL = 38
     private const val SWINGS_DP = 260
 
     /** Cadran de RR : la piste en relief, remplie d'accent de 0 à 100 ; piste seule en Immortel et Radiant. */
@@ -407,6 +425,9 @@ object ValorantDuelView {
         }
         private val rect = RectF()
         private val radius = context.dp(6).toFloat()
+        private val minBar = context.dp(3).toFloat()
+        private val numbers = games.map { ValorantKit.signed(it.rr) }
+        private val maps = games.map { (it.map ?: ValorantKit.DASH).uppercase() }
 
         init {
             contentDescription = context.getString(R.string.valorant_duel_swings, games.joinToString(", ") { ValorantKit.signed(it.rr) })
@@ -423,14 +444,14 @@ object ValorantDuelView {
                 val s = swings[i]
                 val left = i * slot + slot * 0.18f
                 val right = (i + 1) * slot - slot * 0.18f
-                val h = maxOf(reach * kotlin.math.abs(s), context.dp(3).toFloat())
+                val h = maxOf(reach * kotlin.math.abs(s), minBar)
                 bar.color = if (game.rr >= 0) up else down
                 if (game.rr >= 0) rect.set(left, mid - h, right, mid) else rect.set(left, mid, right, mid + h)
                 canvas.drawRoundRect(rect, radius, radius, bar)
                 val cx = (left + right) / 2f
                 val y = if (game.rr >= 0) mid - h - number.textSize * 0.4f else mid + h + number.textSize
-                canvas.drawText(ValorantKit.signed(game.rr), cx, y, number)
-                canvas.drawText((game.map ?: ValorantKit.DASH).uppercase(), cx, height - map.textSize * 0.5f, map)
+                canvas.drawText(numbers[i], cx, y, number)
+                canvas.drawText(maps[i], cx, height - map.textSize * 0.5f, map)
             }
         }
 

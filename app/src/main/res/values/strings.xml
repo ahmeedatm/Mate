@@ -2090,6 +2090,7 @@
     <string name="valorant_round_time">temps écoulé</string>
     <string name="valorant_duel_vs">VS</string>
     <string name="valorant_duel_peak">Meilleur rang</string>
+    <string name="valorant_duel_score">Score : ton équipe %1$d, en face %2$d</string>
     <string name="valorant_duel_kd">K/D moyen</string>
     <string name="valorant_duel_wr">Victoires</string>
     <string name="valorant_duel_acs">ACS moyen</string>
