@@ -14,8 +14,8 @@ object ValorantDuel {
     const val MIN_BAR = 0.04f
 
     /** Haut de la vue (score, frise, moyennes) ; une paire qui garde sa petite ligne tête / victoires. */
-    const val HEADER_DP = 190
-    const val ROOMY_PAIR_DP = 76
+    const val HEADER_DP = 170
+    const val ROOMY_PAIR_DP = 70
     private const val TEAM = 5
 
     /** Assez haut pour la petite ligne de chaque joueur ; [bodyDp] 0 : pas encore mesuré. Au moins une équipe de 5. */

@@ -260,7 +260,7 @@ object ValorantTable {
         if (glance.score && family == ShapeFamily.COLUMN) {
             parts += ValorantFrieze(kit.context, ValorantBand.cells(v.rounds, live = true), FRIEZE_DP, false, kit.color(R.attr.c_stroke))
         }
-        if (glance.result && end != null) parts += result(kit, end, pill = family == ShapeFamily.PILL)
+        if (glance.result && end != null) parts += result(kit, end, pill = family == ShapeFamily.PILL, word = family != ShapeFamily.PILL || heightDp <= 0 || heightDp >= PILL_WORD_DP)
         if (glance.myLine) end?.players?.firstOrNull { it.me }?.let { parts += kit.text(kit.string(R.string.valorant_acs_value, it.acs) + " · " + kit.string(R.string.valorant_kda, it.kills, it.deaths, it.assists), 13f, R.attr.c_text_dim) }
         val rank = if (glance.rank && me != null) rankBlock(kit, me, family, heightDp) else null
         val today = v.today?.takeIf { glance.today }?.let { day ->
@@ -273,7 +273,7 @@ object ValorantTable {
         val view = when (family) {
             ShapeFamily.ROW -> kit.row().apply {
                 rank?.let { addView(it, kit.lp(0, WRAP_CONTENT, 1f)) }
-                parts.forEach { addView(it, kit.lp(if (rank == null) 0 else WRAP_CONTENT, WRAP_CONTENT, if (rank == null) 1f else 0f)) }
+                parts.forEachIndexed { i, it -> addView(it, kit.lp(WRAP_CONTENT).apply { if (i > 0 || rank != null) marginStart = kit.dp(24) }) }
                 // En partie sans rang (2 × 1) : le bandeau prend toute la ligne.
                 shown?.let { addView(it, kit.lp(if (rank == null) 0 else kit.dp(BAND_WIDTH), kit.dp(ValorantBand.Size.MINI.heightDp), if (rank == null) 1f else 0f).apply { if (rank != null) marginStart = kit.dp(12) }) }
                 today?.let { addView(it, kit.lp(WRAP_CONTENT).apply { marginStart = kit.dp(12) }) }
@@ -310,14 +310,15 @@ object ValorantTable {
     }
 
     /** Partie finie : le mot (Victoire…) et les RR gagnés en grand (le mot dessous en pastille) ; sans RR encore comptés, le score. */
-    private fun result(kit: ValorantKit, end: ValorantEnd, pill: Boolean): View {
+    private fun result(kit: ValorantKit, end: ValorantEnd, pill: Boolean, word: Boolean): View {
         val big = end.rr?.let { kit.text(kit.string(R.string.valorant_rr_change, ValorantKit.signed(it)), 26f, rrHue(it), R.attr.c_font_title) }
             ?: end.score?.let { kit.text(kit.string(R.string.valorant_score, it.ally, it.enemy), 26f, resultHue(end.won), R.attr.c_font_title) }
         val label = kit.text(kit.string(resultText(end.won)), 14f, resultHue(end.won), R.attr.c_font_medium)
         return kit.column(gravity = Gravity.CENTER).apply {
-            if (!pill) addView(label)
+            if (!pill && word) addView(label)
             big?.let { addView(it) }
-            if (pill) addView(label)
+            // Pastille basse : le chiffre seul, sa couleur dit gagné ou perdu (et la description le lit).
+            if (pill && (word || big == null)) addView(label)
         }
     }
 
@@ -364,6 +365,9 @@ object ValorantTable {
     private const val PILL_LOGO = 56
     private const val PILL_LOGO_MIN = 24
     private const val PILL_TEXT_DP = 30
+
+    /** Hauteur sous laquelle la pastille ne garde que les RR, sans le mot du résultat. */
+    private const val PILL_WORD_DP = 64
     private const val ROW_LOGO = 64
     private const val COLUMN_LOGO = 72
     private const val DOTS = 5

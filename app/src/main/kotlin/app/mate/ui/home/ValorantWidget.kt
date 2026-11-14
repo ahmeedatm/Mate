@@ -146,8 +146,10 @@ class ValorantWidget(context: Context, host: HomeHost, placed: Placed) : HomeWid
         val shape = ValorantShape.of(placed.size)
         val size = if (zoomed) ValorantBand.Size.NONE else ValorantBand.Size.of(placed.size)
         // Forme résumée : le bandeau seulement là où il porte l'info ([ValorantGlance]).
-        val showsBand = v != null && ValorantBand.shows(v, size) && (!shape.summary || ValorantGlance.of(v, placed.size).band)
-        val line = error ?: statusLine(v, showsBand)
+        val glance = v?.takeIf { shape.summary }?.let { ValorantGlance.of(it, placed.size) }
+        val showsBand = v != null && ValorantBand.shows(v, size) && (glance == null || glance.band)
+        // Le score ou le résultat déjà écrit en grand (bandeau, forme résumée) : la ligne d'état garde le moment.
+        val line = error ?: statusLine(v, showsBand || glance?.score == true || glance?.result == true)
         if (status.text.toString() != line) status.text = line
         // Ordinateur muet : la dernière partie reste, estompée, pour ne pas passer pour l'état présent.
         body.alpha = if (error != null) STALE_ALPHA else 1f
@@ -190,11 +192,11 @@ class ValorantWidget(context: Context, host: HomeHost, placed: Placed) : HomeWid
         else -> ValorantTable.match(v, kit, shape, fit)
     }
 
-    private fun statusLine(v: Valorant?, band: Boolean): String {
+    private fun statusLine(v: Valorant?, said: Boolean): String {
         if (v == null || v.state == ValorantState.OFF) return context.getString(R.string.valorant_off)
         val full = fullLine(v)
-        // Bandeau affiché, ou vue agrandie : la carte et le score y sont déjà ; la ligne d'état garde le moment.
-        return if (band || zoomed) full.substringBefore(" · ") else full
+        // Bandeau, chiffre en grand ou vue agrandie : la carte et le score y sont déjà ; la ligne d'état garde le moment.
+        return if (said || zoomed) full.substringBefore(" · ") else full
     }
 
     private fun fullLine(v: Valorant): String {
