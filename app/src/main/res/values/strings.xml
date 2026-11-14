@@ -2412,6 +2412,19 @@
         <item quantity="one">%1$d repère</item>
         <item quantity="other">%1$d repères</item>
     </plurals>
+    <string name="cp_map_description">Carte de Night City. Glisser pour déplacer, toucher pour poser un repère.</string>
+    <string name="cp_map_center">Me centrer</string>
+    <string name="cp_map_center_description">Centrer la carte sur ta position</string>
+    <string name="cp_map_prepare">Préparer la carte</string>
+    <string name="cp_map_prepare_description">Télécharger et préparer la carte de la ville sur l\'ordinateur</string>
+    <string name="cp_map_loading">Préparation de la carte : %1$d sur %2$d</string>
+    <string name="cp_map_absent">La carte de la ville n\'est pas encore prête.</string>
+    <string name="cp_map_failed">La carte n\'a pas pu être préparée.</string>
+    <string name="cp_pin_added">Repère posé</string>
+    <string name="cp_pin_followed">Repère suivi</string>
+    <string name="cp_pin_back_to_quest">Retour à la quête</string>
+    <string name="cp_pin_deleted">Repère supprimé</string>
+    <string name="cp_pin_delete_title">Supprimer ce repère ?</string>
     <string name="cp_no_quests">Aucune quête active</string>
     <string name="cp_threads">Messages</string>
     <string name="cp_no_threads">Aucun message</string>

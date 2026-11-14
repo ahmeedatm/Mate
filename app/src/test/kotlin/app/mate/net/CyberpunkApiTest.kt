@@ -141,6 +141,23 @@ class CyberpunkApiTest {
     }
 
     @Test
+    fun marksTheTrackedPinFromTheTopLevelId() {
+        val pins = CyberpunkApi.parsePins("""{"pins":[{"id":"a","x":1,"y":2,"z":3,"at":5},{"id":"b","x":4,"y":5,"z":0}],"tracked":"b"}""")
+        assertEquals(listOf(false, true), pins.map { it.tracked })
+    }
+
+    @Test
+    fun readsTheOptionalObjectivePosition() {
+        val withPos = CyberpunkApi.parseSnapshot(
+            """{"status":"ingame","state":{"tracked":{"kind":"quest","id":"q1","pos":{"x":10.5,"y":-3}}}}""",
+        ).state!!.tracked!!
+        val without = CyberpunkApi.parseSnapshot("""{"status":"ingame","state":{"tracked":{"kind":"quest","id":"q1"}}}""").state!!.tracked!!
+        assertEquals(10.5, withPos.x!!, 0.0)
+        assertEquals(-3.0, withPos.y!!, 0.0)
+        assertNull(without.x)
+    }
+
+    @Test
     fun readsTheMapDescription() {
         val m = CyberpunkApi.parseMap(
             """{"status":"ready","done":197,"total":197,"tile":512,"levels":3,"size":[7000,7000],"affine":[1,0,2,0,-1,3]}""",

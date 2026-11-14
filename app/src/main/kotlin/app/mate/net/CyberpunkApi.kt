@@ -52,8 +52,8 @@ data class CyberpunkPos(val x: Double, val y: Double, val z: Double, val yaw: Do
 
 data class CyberpunkImplant(val tdb: String?, val name: String, val quality: String?)
 
-/** `kind` : "quest" ou "pin". */
-data class CyberpunkTracked(val kind: String, val id: String?, val quest: String?, val desc: String?)
+/** `kind` : "quest" ou "pin". `x`, `y` : position de l'objectif dans le monde, si le mod la donne. */
+data class CyberpunkTracked(val kind: String, val id: String?, val quest: String?, val desc: String?, val x: Double? = null, val y: Double? = null)
 
 enum class CyberpunkCallPhase { INCOMING, ACTIVE }
 
@@ -230,11 +230,16 @@ class CyberpunkApi(private val http: Http) {
                 player = s.optJSONObject("player")?.let(::player),
                 pos = s.optJSONObject("pos")?.let { CyberpunkPos(it.double("x"), it.double("y"), it.double("z"), it.double("yaw")) },
                 cyberware = cyberware(s.optJSONObject("cyberware")),
-                tracked = s.optJSONObject("tracked")?.let { CyberpunkTracked(it.optString("kind"), it.text("id"), it.text("quest"), it.text("desc")) },
+                tracked = s.optJSONObject("tracked")?.let { tracked(it) },
                 call = s.optJSONObject("call")?.let(::call),
                 blocks = CyberpunkBlocks(blocks?.optInt("inv") ?: 0, blocks?.optInt("contacts") ?: 0, blocks?.optInt("quests") ?: 0),
                 pins = s.optJSONArray("pins").items { CyberpunkPin(it.optString("pid"), it.double("x"), it.double("y"), it.double("z")) },
             )
+        }
+
+        private fun tracked(t: JSONObject): CyberpunkTracked {
+            val pos = t.optJSONObject("pos")?.takeIf { it.has("x") && it.has("y") }
+            return CyberpunkTracked(t.optString("kind"), t.text("id"), t.text("quest"), t.text("desc"), pos?.double("x"), pos?.double("y"))
         }
 
         private fun player(p: JSONObject): CyberpunkPlayer {
@@ -288,11 +293,14 @@ class CyberpunkApi(private val http: Http) {
         fun parseAction(json: String): CyberpunkActionResult =
             JSONObject(json).let { CyberpunkActionResult(it.optBoolean("ok"), if (it.has("id")) it.optInt("id") else null, it.text("res")) }
 
-        /** `{ pins: [...] }` ou directement la liste. */
+        /** `{ pins: [{ id, x, y, z, name?, at }], tracked?: id }` ou directement la liste. */
         fun parsePins(json: String): List<CyberpunkServerPin> {
-            val array = if (json.trimStart().startsWith("[")) JSONArray(json) else JSONObject(json).optJSONArray("pins")
+            val root = if (json.trimStart().startsWith("[")) null else JSONObject(json)
+            val array = root?.optJSONArray("pins") ?: if (root == null) JSONArray(json) else null
+            val tracked = root?.text("tracked")
             return array.items {
-                CyberpunkServerPin(it.text("id") ?: it.optString("pid"), it.double("x"), it.double("y"), it.double("z"), it.text("name"), it.optBoolean("tracked"))
+                val id = it.text("id") ?: it.optString("pid")
+                CyberpunkServerPin(id, it.double("x"), it.double("y"), it.double("z"), it.text("name"), it.optBoolean("tracked") || id == tracked)
             }
         }
 

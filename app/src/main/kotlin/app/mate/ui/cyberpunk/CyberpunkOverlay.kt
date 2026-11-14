@@ -23,7 +23,10 @@ import app.mate.net.CyberpunkCallPhase
 import app.mate.net.CyberpunkContact
 import app.mate.net.CyberpunkContacts
 import app.mate.net.CyberpunkItem
+import app.mate.net.CyberpunkMap
+import app.mate.net.CyberpunkMapStatus
 import app.mate.net.CyberpunkQuest
+import app.mate.net.CyberpunkServerPin
 import app.mate.net.CyberpunkSnapshot
 import app.mate.net.CyberpunkState
 import app.mate.net.CyberpunkStatus
@@ -64,6 +67,13 @@ class CyberpunkOverlay(private val activity: FragmentActivity) {
     private val loading = mutableSetOf<Block>()
     private var page: CyberpunkPage? = null
     private var drawn: Any? = null
+    private var mapView: MapView? = null
+    private var map: CyberpunkMap? = null
+    private var mapLoading = false
+    private var pins: List<CyberpunkServerPin>? = null
+    private var pinsKey: Any? = null
+    private var pinsLoading = false
+    private var lastQuestId: String? = null
 
     val isOpen get() = root != null
 
@@ -73,12 +83,15 @@ class CyberpunkOverlay(private val activity: FragmentActivity) {
     fun open(on: Computer) {
         if (isOpen) close()
         computer = on
-        api = BackendClient(on).cyberpunk
+        val client = BackendClient(on).cyberpunk
+        api = client
         val ctx = ContextThemeWrapper(activity, R.style.Fonts_Cyberpunk)
         val kit = CyberpunkKit(ctx)
         val v = build(kit)
         views = v
         root = v.root
+        mapView = MapView(kit, client, activity.lifecycleScope, onPinsChanged = { pinsKey = null; loadPins() }, onMapChanged = { map = null; loadMap() }, say = ::toast)
+            .also { setMapView(it) }
         activity.findViewById<ViewGroup>(android.R.id.content).addView(v.root)
         render()
         resume()
@@ -100,6 +113,13 @@ class CyberpunkOverlay(private val activity: FragmentActivity) {
         loading.clear()
         page = null
         drawn = null
+        mapView = null
+        map = null
+        mapLoading = false
+        pins = null
+        pinsKey = null
+        pinsLoading = false
+        lastQuestId = null
     }
 
     /** Retour : ferme le tiroir, puis la page. */
@@ -139,6 +159,8 @@ class CyberpunkOverlay(private val activity: FragmentActivity) {
             .onSuccess {
                 snapshot = it
                 error = null
+                syncMap()
+                syncPins(it.state)
                 it.state?.blocks?.let { b ->
                     sync(Block.INVENTORY, b.inv)
                     sync(Block.CONTACTS, b.contacts)
@@ -147,6 +169,55 @@ class CyberpunkOverlay(private val activity: FragmentActivity) {
             }
             .onFailure { error = activity.errorText(it) }
         render()
+    }
+
+    /** L'état de la carte se relit tant qu'elle n'est pas prête (progression) ; absente ou en erreur, au bouton « Préparer ». */
+    private fun syncMap() {
+        val m = map
+        if (m == null || m.status == CyberpunkMapStatus.LOADING) loadMap()
+    }
+
+    private fun loadMap() {
+        val client = api ?: return
+        if (mapLoading) return
+        mapLoading = true
+        activity.lifecycleScope.launch {
+            try {
+                runCatchingCancellable { client.map() }
+                    .onSuccess { if (api === client) { map = it; mapView?.setMap(it) } }
+                    .onFailure { if (api === client) mapView?.setMapError(activity.errorText(it)) }
+            } finally {
+                mapLoading = false
+            }
+        }
+    }
+
+    /** Les repères se relisent quand leur liste ou le suivi change dans l'état du mod. */
+    private fun syncPins(st: CyberpunkState?) {
+        st ?: return
+        val key = listOf(st.pins.map { it.pid }, st.tracked?.kind, st.tracked?.id)
+        if (key != pinsKey) {
+            pinsKey = key
+            loadPins()
+        }
+    }
+
+    private fun loadPins() {
+        val client = api ?: return
+        if (pinsLoading) {
+            pinsKey = null // une lecture est en cours : la relancer au prochain sondage
+            return
+        }
+        pinsLoading = true
+        activity.lifecycleScope.launch {
+            try {
+                runCatchingCancellable { client.pins() }
+                    .onSuccess { if (api === client) { pins = it; mapView?.setPins(it); render() } }
+                    .onFailure { pinsKey = null }
+            } finally {
+                pinsLoading = false
+            }
+        }
     }
 
     /** Lit le bloc s'il n'a jamais été lu ou si son compteur a changé. */
@@ -291,6 +362,8 @@ class CyberpunkOverlay(private val activity: FragmentActivity) {
         renderHud(v, st)
         renderCall(v, st)
         renderQuest(v, st)
+        st.tracked?.takeIf { it.kind == "quest" && it.id != null }?.let { lastQuestId = it.id }
+        mapView?.update(st.pos, st.tracked, lastQuestId ?: quests?.firstOrNull { it.tracked }?.id)
         v.unread.visibility = if ((contacts?.unread ?: 0) > 0) View.VISIBLE else View.GONE
         renderDrawer()
     }
@@ -345,7 +418,7 @@ class CyberpunkOverlay(private val activity: FragmentActivity) {
         }
         v.questDesc.text = t?.desc.orEmpty()
         v.questDesc.visibility = if (t?.desc.isNullOrEmpty()) View.GONE else View.VISIBLE
-        v.pins.text = activity.resources.getQuantityString(R.plurals.cp_pins, st.pins.size, st.pins.size)
+        v.pins.text = (pins?.size ?: st.pins.size).let { activity.resources.getQuantityString(R.plurals.cp_pins, it, it) }
     }
 
     private fun View.setSelectedPage(selected: Boolean) {
@@ -568,7 +641,7 @@ class CyberpunkOverlay(private val activity: FragmentActivity) {
 }
 
 /** Fond de carte provisoire : grille sombre. La carte (tuiles) le remplace par [CyberpunkOverlay.setMapView]. */
-private class CyberpunkGridView(context: android.content.Context, color: Int, private val step: Int) : View(context) {
+internal class CyberpunkGridView(context: android.content.Context, color: Int, private val step: Int) : View(context) {
     private val paint = Paint().apply {
         this.color = color
         strokeWidth = 1f
