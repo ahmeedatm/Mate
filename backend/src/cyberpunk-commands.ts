@@ -15,9 +15,10 @@ const MAX_CMDS = 20;
 /** Délai d'attente de l'ack ; MATE_CYBERPUNK_ACK_MS le raccourcit dans les tests. */
 const ackWaitMs = () => Number(process.env.MATE_CYBERPUNK_ACK_MS) || 5000;
 
-export type Command = {
-  t: "call" | "answer" | "hangup" | "use" | "summon" | "track" | "pin" | "unpin" | "thread" | "reply" | "equip";
-} & Record<string, unknown>;
+export type Command = { t: "call" | "answer" | "hangup" | "use" | "summon" | "track" | "pin" | "unpin" | "thread" | "reply" } & Record<
+  string,
+  unknown
+>;
 export type Ack = { id: number; ok: boolean; res: string };
 
 const fail = (message: string, statusCode: number): never => {
@@ -104,45 +105,27 @@ export async function sendCommand(cmd: Command) {
 const REFUS: Record<string, string> = {
   "fil-introuvable": "Ce fil n'existe plus dans le téléphone du jeu",
   "choix-perime": "Ce choix n'est plus proposé : le fil a changé",
-  // Ordre inconnu : c'est la réponse d'un mod plus ancien encore chargé.
+  // Ordre inconnu : c'est la réponse d'un mod 1.0.0 encore chargé.
   inconnu: "Le mod Mate du jeu est trop ancien : mets-le à jour depuis le compagnon",
-  "non-possede": "Cet implant n'est plus dans ton inventaire",
-  "mauvaise-zone": "Cet implant ne va pas dans cette zone",
-  "slot-verrouille": "Cet emplacement est verrouillé dans le jeu",
-  capacite: "Pas assez de capacité de cyberware pour cet implant",
-  bloque: "L'implant en place ne peut pas être retiré",
-  indisponible: "Impossible maintenant : combat, scène, véhicule ou menu en cours",
-  "arme-sortie": "Range d'abord ton arme de bras",
-  "zone-fermee": "Cette zone se change seulement chez un charcudoc",
-  echec: "Le jeu n'a pas posé l'implant ; l'ancien est resté en place",
 };
 
 /** Erreur 409 qui garde le `res` du mod quand il est connu (la tablette lit `res`) ; jamais une trace Lua brute. */
-export class GameRefusal extends Error {
+export class PhoneRefusal extends Error {
   statusCode = 409;
   res: string;
-  constructor(res: string, fallback: string) {
-    super(REFUS[res] ?? fallback);
+  constructor(res: string) {
+    super(REFUS[res] ?? "Le téléphone du jeu n'a pas pu répondre");
     this.res = res in REFUS ? res : "erreur";
   }
 }
 
-/** Un ordre dont le refus devient une `GameRefusal` ; un refus inconnu part au journal. */
-async function refusable(cmd: Command, fallback: string) {
+async function phoneCommand(cmd: Command) {
   const sent = await sendCommand(cmd);
   if (!sent.ok) {
     if (!(sent.res in REFUS)) logFailure(`cyberpunk ${cmd.t}`, new Error(sent.res));
-    throw new GameRefusal(sent.res, fallback);
+    throw new PhoneRefusal(sent.res);
   }
   return sent;
-}
-
-const phoneCommand = (cmd: Command) => refusable(cmd, "Le téléphone du jeu n'a pas pu répondre");
-
-/** Pose `item` (clé `Items.X#graine`) dans le slot : le mod vérifie comme le charcudoc et réécrit cyberware.json avant l'ack. */
-export async function equipCyberware(area: string, slot: number, item: string) {
-  await refusable({ t: "equip", area, slot, item }, "Le jeu n'a pas pu poser l'implant");
-  return { ok: true };
 }
 
 /** Un fil lu à la fois : `thread.json` est unique, deux lectures croisées se l'écraseraient. */

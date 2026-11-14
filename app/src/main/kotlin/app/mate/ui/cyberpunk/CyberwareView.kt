@@ -21,22 +21,16 @@ import app.mate.ui.cyberpunk.CyberpunkItems.Zone
 import app.mate.ui.cyberpunk.CyberpunkKit.Companion.MATCH
 import app.mate.ui.cyberpunk.CyberpunkKit.Companion.WRAP
 
-/** Ce que l'écran cyberware peut demander au jeu. */
-interface CyberwareActions {
-    fun equip(area: String, slot: Int, implant: CyberwareImplant)
-}
-
 /**
  * Écran cyberware du charcudoc : le corps de V au centre (image du système choisi par-dessus), les zones et leurs
- * emplacements placés comme dans le jeu ([CyberwareLayout]), la capacité en haut. Toucher un emplacement ouvre le panneau
- * de droite : l'implant posé, puis ceux de l'inventaire qui vont dans cette zone, à poser. Sans les images du jeu, le
- * corps manque et les emplacements gardent leurs cadres.
+ * emplacements placés comme dans le jeu ([CyberwareLayout]), la capacité en bas à droite. Toucher un emplacement ouvre le
+ * panneau de droite : l'implant posé, puis ceux de l'inventaire qui vont dans cette zone. Sans les images du jeu, le
+ * corps manque et les emplacements gardent leurs cadres. Lecture seule : rien ne se pose depuis la tablette.
  */
-class CyberwareView(private val kit: CyberpunkKit, private val actions: CyberwareActions) : ViewGroup(kit.context) {
+class CyberwareView(private val kit: CyberpunkKit) : ViewGroup(kit.context) {
     private val context0 = kit.context
     private var block: CyberwareBlock? = null
     private var look: PhoneLook? = null
-    private var sending = false
     private var selected: Pair<String, Int>? = null
     private var fit = CyberwareLayout.fit(1f, 1f)
 
@@ -64,11 +58,10 @@ class CyberwareView(private val kit: CyberpunkKit, private val actions: Cyberwar
         setOnClickListener { select(null) }
     }
 
-    fun bind(block: CyberwareBlock, look: PhoneLook?, sending: Boolean) {
+    fun bind(block: CyberwareBlock, look: PhoneLook?) {
         val zonesChanged = this.block?.zones?.keys != block.zones.keys
         this.block = block
         this.look = look
-        this.sending = sending
         if (selected?.let { (a, i) -> block.zones[a]?.getOrNull(i) } == null) selected = null
         if (zonesChanged) buildZones()
         refresh()
@@ -193,26 +186,20 @@ class CyberwareView(private val kit: CyberpunkKit, private val actions: Cyberwar
             kit.lp(kit.dp(48), kit.dp(48)),
         )
         panelBody.addView(head)
-        slot.item?.let { panelBody.addView(implantRow(it, null), kit.lp(MATCH, WRAP)) }
+        slot.item?.let { panelBody.addView(implantRow(it), kit.lp(MATCH, WRAP)) }
             ?: panelBody.addView(kit.text(context0.getString(R.string.cp_empty_slot), 17f, R.color.cp_gris), kit.lp(MATCH, WRAP).apply { topMargin = kit.dp(6) })
-        val blocker = when {
-            slot.locked -> R.string.cp_cw_locked
-            area in b.closed -> R.string.cp_cw_closed
-            slot.item?.blocked == true -> R.string.cp_cw_blocked
-            else -> null
-        }
-        if (blocker != null) {
-            panelBody.addView(kit.text(context0.getString(blocker), 15f, R.color.cp_jaune), kit.lp(MATCH, WRAP).apply { topMargin = kit.dp(12) })
+        if (slot.locked) {
+            panelBody.addView(kit.text(context0.getString(R.string.cp_cw_locked), 15f, R.color.cp_jaune), kit.lp(MATCH, WRAP).apply { topMargin = kit.dp(12) })
             return
         }
         panelBody.addView(kit.label(context0.getString(R.string.cp_cw_owned)), kit.lp(MATCH, WRAP).apply { topMargin = kit.dp(20); bottomMargin = kit.dp(4) })
         val owned = b.owned.filter { it.area == area }
         if (owned.isEmpty()) panelBody.addView(kit.text(context0.getString(R.string.cp_cw_none_owned), 15f, R.color.cp_gris))
-        owned.forEach { panelBody.addView(implantRow(it, area to i), kit.lp(MATCH, WRAP)) }
+        owned.forEach { panelBody.addView(implantRow(it), kit.lp(MATCH, WRAP)) }
     }
 
-    /** Une ligne d'implant : barre de rareté, nom, coût ; `target` non nul : bouton Poser. */
-    private fun implantRow(it: CyberwareImplant, target: Pair<String, Int>?): View {
+    /** Une ligne d'implant : barre de rareté, icône, nom, coût en capacité. */
+    private fun implantRow(it: CyberwareImplant): View {
         val line = kit.row()
         line.addView(kit.rarityBar(kit.rarityColor(CyberpunkItems.rarity(it.quality))), kit.lp(kit.dp(4), kit.dp(30)).apply { marginEnd = kit.dp(10) })
         it.iconAsset?.let { a -> look?.bitmap(a) }?.let { bmp ->
@@ -222,15 +209,6 @@ class CyberwareView(private val kit: CyberpunkKit, private val actions: Cyberwar
         texts.addView(kit.text(it.name, 16f, R.color.cp_texte, kit.medium))
         it.cost?.let { c -> texts.addView(kit.text(context0.getString(R.string.cp_cw_cost, c), 13f, R.color.cp_gris, kit.mono), kit.lp(WRAP, WRAP).apply { topMargin = kit.dp(2) }) }
         line.addView(texts, kit.lp(0, WRAP).apply { weight = 1f })
-        if (target != null) {
-            val label = context0.getString(if (sending) R.string.cp_cw_sending else R.string.cp_cw_equip)
-            val button = kit.button(label, context0.getString(R.string.cp_cw_equip_desc, it.name), R.color.cp_cyan, R.color.cp_sur_cyan).apply {
-                isEnabled = !sending
-                alpha = if (sending) 0.5f else 1f
-                setOnClickListener { _ -> if (!sending) actions.equip(target.first, target.second, it) }
-            }
-            line.addView(button, kit.lp(WRAP, kit.dp(48)).apply { marginStart = kit.dp(8) })
-        }
         return LinearLayout(context0).apply {
             orientation = LinearLayout.VERTICAL
             addView(line, kit.lp(MATCH, WRAP))

@@ -1,10 +1,10 @@
 import type { FastifyInstance, FastifyReply } from "fastify";
 import { cyberpunkMap } from "../cyberpunk-map.ts";
 import { phoneRoutes } from "../cyberpunk-phone.ts";
-import { equipCyberware, GameRefusal, readThread, replyThread, sendCommand, type Command } from "../cyberpunk-commands.ts";
+import { PhoneRefusal, readThread, replyThread, sendCommand, type Command } from "../cyberpunk-commands.ts";
 import { addPin, listPins, removePin, replayPins, trackPin } from "../cyberpunk-pins.ts";
 import { findGame } from "../cyberpunk-steam.ts";
-import { block, installMod, overview, presence, uninstallMod } from "../cyberpunk.ts";
+import { block, installMod, overview, presence, readPos, uninstallMod } from "../cyberpunk.ts";
 import { pluginOn } from "../plugins.ts";
 
 /**
@@ -65,31 +65,6 @@ function toCommand(a: Action): Command {
   }
 }
 
-/** Les 11 zones de cyberware du jeu (gamedataEquipmentArea). */
-const CW_AREAS = [
-  "SystemReplacementCW",
-  "FrontalCortexCW",
-  "EyesCW",
-  "ArmsCW",
-  "HandsCW",
-  "MusculoskeletalSystemCW",
-  "NervousSystemCW",
-  "CardiovascularSystemCW",
-  "ImmuneSystemCW",
-  "IntegumentarySystemCW",
-  "LegsCW",
-];
-const equipBody = {
-  type: "object",
-  required: ["area", "slot", "item"],
-  additionalProperties: false,
-  properties: {
-    area: { enum: CW_AREAS },
-    slot: { type: "integer", minimum: 0, maximum: 9 },
-    item: { type: "string", maxLength: 200, pattern: "^Items\\.[A-Za-z0-9_.]+#[0-9]{1,10}$" },
-  },
-};
-
 const threadParams = {
   type: "object",
   required: ["hash"],
@@ -110,7 +85,7 @@ async function withRes<T>(reply: FastifyReply, run: () => Promise<T>) {
   try {
     return await run();
   } catch (e) {
-    if (e instanceof GameRefusal) return reply.code(409).send({ error: e.message, res: e.res });
+    if (e instanceof PhoneRefusal) return reply.code(409).send({ error: e.message, res: e.res });
     throw e;
   }
 }
@@ -132,15 +107,12 @@ export default async function cyberpunkRoutes(app: FastifyInstance) {
     if (res.status === "ingame") void replayPins();
     return res;
   });
+  // Sondée ~4 fois par seconde par la tablette, en vue conduite seulement.
+  app.get("/cyberpunk/pos", () => readPos());
   app.get("/cyberpunk/inventory", () => block("inventory"));
   app.get("/cyberpunk/contacts", () => block("contacts"));
   app.get("/cyberpunk/quests", () => block("quests"));
   app.get("/cyberpunk/cyberware", () => block("cyberware"));
-  app.post<{ Body: { area: string; slot: number; item: string } }>(
-    "/cyberpunk/cyberware/equip",
-    { schema: { body: equipBody } },
-    (req, reply) => withRes(reply, () => equipCyberware(req.body.area, req.body.slot, req.body.item)),
-  );
   app.post("/cyberpunk/install", () => installMod());
   app.post("/cyberpunk/uninstall", () => uninstallMod());
 

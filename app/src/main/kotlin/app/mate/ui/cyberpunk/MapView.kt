@@ -8,15 +8,20 @@ import android.graphics.Canvas
 import android.graphics.ColorMatrix
 import android.graphics.ColorMatrixColorFilter
 import android.graphics.DashPathEffect
+import android.graphics.LinearGradient
+import android.graphics.Matrix
 import android.graphics.Paint
 import android.graphics.Path
 import android.graphics.Rect
 import android.graphics.RectF
+import android.graphics.Shader
+import android.os.SystemClock
 import android.view.GestureDetector
 import android.view.Gravity
 import android.view.MotionEvent
 import android.view.ScaleGestureDetector
 import android.view.View
+import android.view.animation.DecelerateInterpolator
 import android.view.animation.LinearInterpolator
 import android.widget.FrameLayout
 import android.widget.LinearLayout
@@ -38,6 +43,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import kotlin.math.PI
@@ -49,6 +55,8 @@ import kotlin.math.sin
  * dessin, joueur en flèche jaune orientée par son yaw, objectif de quête, repères, trajet GPS. Glisser déplace, pincer ou
  * double toucher zoome, toucher le vide pose un repère, toucher un repère le fait suivre (re-toucher le suivi : retour à la
  * quête), appui long sur un repère le supprime. Tant que la carte n'a pas été déplacée à la main, elle suit le joueur.
+ * En véhicule (vue conduite) : la carte zoome sur lui, tourne pour que l'avant du véhicule pointe vers le haut et se penche
+ * en perspective ; sa position est relue ~4 fois par seconde (`GET /cyberpunk/pos`) et lissée entre deux lectures.
  * Carte absente ou en préparation : fond de grille, bouton et progression.
  */
 class MapView(
@@ -79,6 +87,28 @@ class MapView(
     private var drawnPhase = 0f
     private var dialog: AlertDialog? = null
 
+    // Vue conduite
+    private val drive = DriveSwitch()
+    private var track = PoseTrack()
+    private var driveLevel = 0f
+    private var flatScale: Double? = null
+    private var liveSpeed: Double? = null
+    private var zoomSpeed = 0.0
+    private var zoomedAt = 0L
+
+    /** Pincement en conduite : multiplie le zoom de la vitesse (remis à 1 par « Me centrer » et à chaque montée). */
+    private var driveZoom = 1.0
+    private var lastLiveAt = 0L
+    private var posJob: Job? = null
+    private val driveAnimator = ValueAnimator.ofFloat(0f, 1f).apply {
+        duration = DRIVE_SWITCH_MS
+        interpolator = DecelerateInterpolator()
+        addUpdateListener {
+            driveLevel = it.animatedValue as Float
+            surface.invalidate()
+        }
+    }
+
     private val surface = Surface(kit.context)
     private val statusText = kit.text("", 20f, R.color.cp_texte, kit.medium).apply { gravity = Gravity.CENTER }
     private val prepareButton = kit.button(context.getString(R.string.cp_map_prepare), context.getString(R.string.cp_map_prepare_description))
@@ -103,8 +133,9 @@ class MapView(
         interpolator = LinearInterpolator()
         addUpdateListener {
             val p = it.animatedValue as Float
-            // Un redessin toutes les ~40 ms suffit pour l'onde et le pouls (tablette à 55 Hz, peu de GPU).
-            if (abs(p - drawnPhase) >= WAVE_STEP) {
+            // Un redessin toutes les ~40 ms suffit pour l'onde et le pouls (tablette à 55 Hz, peu de GPU) ; en conduite,
+            // la carte glisse avec le véhicule : chaque image.
+            if (inDrive() || abs(p - drawnPhase) >= WAVE_STEP) {
                 phase = p
                 drawnPhase = p
                 surface.invalidate()
@@ -150,6 +181,7 @@ class MapView(
 
     /** La page se ferme : requêtes de tuiles annulées, cache vidé. */
     fun release() {
+        driveAnimator.cancel()
         scope.cancel()
         cache = null
         camera = null
@@ -166,13 +198,84 @@ class MapView(
         surface.invalidate()
     }
 
-    fun update(pos: CyberpunkPos?, tracked: CyberpunkTracked?, questId: String?) {
+    /** Appelé à chaque état frais de la partie (~1 par seconde) ; `inVehicle` fait basculer la vue conduite. */
+    fun update(pos: CyberpunkPos?, tracked: CyberpunkTracked?, questId: String?, inVehicle: Boolean = false) {
         player = pos
         this.tracked = tracked
         this.questId = questId
-        if (!userMoved) pos?.let { camera?.centerOn(it.x, it.y) }
+        val was = drive.driving
+        if (drive.feed(fresh = true, inVehicle = inVehicle) != was) switchDrive(drive.driving)
+        // Sans position rapide récente (mod d'avant, réseau lent) : la position de l'état sert de repli.
+        val now = SystemClock.uptimeMillis()
+        if (drive.driving && pos != null && now - lastLiveAt > LIVE_STALE_MS) track.push(now, pos.x, pos.y, pos.yaw)
+        if (!userMoved && !inDrive()) pos?.let { camera?.centerOn(it.x, it.y) }
         updateAnimation()
         surface.invalidate()
+    }
+
+    private fun inDrive() = drive.driving || driveLevel > 0f
+
+    /** Monte ou descend : transition animée ; à la descente, le zoom d'avant la montée revient. */
+    private fun switchDrive(on: Boolean) {
+        if (on) {
+            // Carte pas encore chargée : le zoom à plat est pris à la première image de conduite.
+            if (driveLevel == 0f) flatScale = camera?.scale
+            track = PoseTrack()
+            liveSpeed = null
+            zoomSpeed = 0.0
+            zoomedAt = 0L
+            driveZoom = 1.0
+        }
+        userMoved = false
+        driveAnimator.cancel()
+        driveAnimator.setFloatValues(driveLevel, if (on) 1f else 0f)
+        driveAnimator.start()
+        updatePosPolling()
+    }
+
+    /** Position rapide du véhicule, seulement en vue conduite et carte visible. */
+    private fun updatePosPolling() {
+        val wanted = drive.driving && camera != null && isShown
+        if (!wanted) {
+            posJob?.cancel()
+            posJob = null
+            return
+        }
+        if (posJob?.isActive == true) return
+        posJob = scope.launch {
+            while (true) {
+                runCatchingCancellable { api.livePos() }.getOrNull()?.let {
+                    lastLiveAt = SystemClock.uptimeMillis()
+                    track.push(lastLiveAt, it.x, it.y, it.yaw)
+                    liveSpeed = it.speed
+                }
+                delay(POS_POLL_MS)
+            }
+        }
+    }
+
+    /** Pose de la caméra pour l'image en cours : à plat, en conduite, ou entre les deux pendant la transition. */
+    private fun applyDrivePose(cam: MapCamera): Pose? {
+        if (!inDrive()) {
+            if (cam.tilt != 0.0 || cam.bearing != 0.0) cam.setPose(0.0, 0.0, MapCamera.FLAT_ANCHOR)
+            flatScale?.let { if (!userMoved) cam.setScale(it) }
+            flatScale = null
+            return null
+        }
+        val f = driveLevel.toDouble()
+        val p = track.at(SystemClock.uptimeMillis()) ?: player?.let { Pose(it.x, it.y, it.yaw) } ?: return null
+        cam.setPose(shortestTurn(0.0, p.yaw) * f, f, MapCamera.FLAT_ANCHOR + (MapCamera.DRIVE_ANCHOR - MapCamera.FLAT_ANCHOR) * f)
+        val now = SystemClock.uptimeMillis()
+        zoomSpeed = easeToward(zoomSpeed, liveSpeed ?: track.speed, if (zoomedAt == 0L) 0 else now - zoomedAt)
+        zoomedAt = now
+        if (!userMoved) {
+            val from = flatScale ?: cam.scale.also { flatScale = it }
+            // Jamais plus loin que le zoom de pleine vitesse : le cache de tuiles est taillé pour lui.
+            val target = (driveScale(zoomSpeed) * driveZoom).coerceAtLeast(MapCamera.DRIVE_SCALE_FAR)
+            cam.setScale(from + (target - from) * f)
+            cam.centerOn(p.x, p.y)
+        }
+        return p
     }
 
     fun setPins(pins: List<CyberpunkServerPin>) {
@@ -215,9 +318,17 @@ class MapView(
         }
     }
 
+    /** La partie n'est plus en cours (menu, jeu fermé, lien perdu) : retour à plat, plus de sondage rapide. */
+    fun leaveDrive() {
+        if (!drive.driving) return
+        drive.reset()
+        switchDrive(false)
+    }
+
     private fun recenter() {
         userMoved = false
-        player?.let { camera?.centerOn(it.x, it.y) }
+        driveZoom = 1.0
+        if (!inDrive()) player?.let { camera?.centerOn(it.x, it.y) }
         surface.invalidate()
     }
 
@@ -237,6 +348,7 @@ class MapView(
     private fun tapAt(x: Float, y: Float) {
         if (!interactive) return
         val cam = camera ?: return
+        if (y < cam.visibleTop) return
         val hit = hitPin(x, y)
         when {
             hit == null -> {
@@ -262,7 +374,7 @@ class MapView(
     /** Repère sous le doigt : cible de 56 dp centrée sur le corps du repère, pas sur sa pointe. */
     private fun hitPin(x: Float, y: Float): CyberpunkServerPin? {
         val cam = camera ?: return null
-        val centers = pins.map { it.id to cam.worldToScreen(it.x, it.y).let { p -> Pt(p.x, p.y - kit.dp(PIN_R_DP) * PIN_BODY) } }
+        val centers = pins.mapNotNull { pin -> cam.worldToScreenOrNull(pin.x, pin.y)?.let { p -> pin.id to Pt(p.x, p.y - kit.dp(PIN_R_DP) * PIN_BODY) } }
         val id = nearestPoint(centers, x.toDouble(), y.toDouble(), kit.dp(HIT_DP).toDouble())
         return pins.firstOrNull { it.id == id }
     }
@@ -270,8 +382,9 @@ class MapView(
     // --- Animation (une seule, coupée quand la vue est cachée ou rien ne bouge)
 
     private fun updateAnimation() {
-        val wanted = camera != null && isShown && (player != null || pins.any { it.tracked })
+        val wanted = camera != null && isShown && (player != null || pins.any { it.tracked } || drive.driving)
         if (wanted && !animator.isStarted) animator.start() else if (!wanted && animator.isStarted) animator.cancel()
+        updatePosPolling()
     }
 
     override fun onAttachedToWindow() {
@@ -281,6 +394,8 @@ class MapView(
 
     override fun onDetachedFromWindow() {
         animator.cancel()
+        posJob?.cancel()
+        posJob = null
         dialog?.dismiss()
         super.onDetachedFromWindow()
     }
@@ -325,8 +440,11 @@ class MapView(
             lineTo(-r, 0f)
             close()
         }
+        private val fade = Paint()
         private val src = Rect()
         private val dst = RectF()
+        private val matrix = Matrix()
+        private val matrixValues = FloatArray(9)
 
         private val scale = ScaleGestureDetector(
             context,
@@ -368,11 +486,24 @@ class MapView(
 
         /** Tant que la carte suit le joueur, le zoom se fait autour de lui (le centre) ; sinon autour du doigt. */
         private fun zoom(factor: Double, x: Float, y: Float) {
+            // En conduite, le zoom suit la vitesse : le pincement le multiplie, sans arrêter le suivi.
+            if (drive.driving && !userMoved) {
+                // Borné pour que le zoom obtenu reste entre la pleine vitesse et le zoom max : pas de pincement « mort ».
+                val s = driveScale(zoomSpeed)
+                driveZoom = (driveZoom * factor).coerceIn(MapCamera.DRIVE_SCALE_FAR / s, MapCamera.MAX_SCALE / s)
+                invalidate()
+                return
+            }
             if (userMoved) camera?.zoomAt(factor, x, y) else camera?.zoomAt(factor, width / 2f, height / 2f)
             invalidate()
         }
 
         override fun onSizeChanged(w: Int, h: Int, oldw: Int, oldh: Int) {
+            val bg = kit.color(R.color.cp_fond)
+            fade.shader = LinearGradient(
+                0f, 0f, 0f, h * MapCamera.TOP_CUT.toFloat() * FADE_SPAN,
+                intArrayOf(bg, bg, bg and TRANSPARENT_MASK), floatArrayOf(0f, 1f / FADE_SPAN, 1f), Shader.TileMode.CLAMP,
+            )
             camera?.setViewport(w, h)
             if (!userMoved) player?.let { camera?.centerOn(it.x, it.y) }
         }
@@ -386,26 +517,36 @@ class MapView(
 
         override fun onDraw(canvas: Canvas) {
             val cam = camera ?: return
+            val pose = applyDrivePose(cam)
             drawTiles(canvas, cam)
-            drawRoute(canvas, cam)
+            if (driveLevel > 0f) {
+                fade.alpha = (OPAQUE * driveLevel).toInt()
+                canvas.drawRect(0f, 0f, width.toFloat(), height * MapCamera.TOP_CUT.toFloat() * FADE_SPAN, fade)
+            }
+            val me = pose ?: player?.let { Pose(it.x, it.y, it.yaw) }
+            drawRoute(canvas, cam, me)
             pins.filter { !it.tracked }.forEach { drawPin(canvas, cam, it, R.color.cp_cyan, 0f) }
             pins.firstOrNull { it.tracked }?.let { drawPin(canvas, cam, it, R.color.cp_jaune, -kit.dp(PULSE_DP) * abs(sin(phase * PI.toFloat()))) }
             objective()?.takeIf { pins.none { it.tracked } }?.let { p ->
-                val s = cam.worldToScreen(p.x, p.y)
+                val s = cam.worldToScreenOrNull(p.x, p.y) ?: return@let
                 fill.color = kit.color(R.color.cp_jaune)
                 canvas.withAt(s) { drawPath(diamond, fill) }
             }
-            player?.let { drawPlayer(canvas, cam, it) }
+            me?.let { drawPlayer(canvas, cam, it) }
         }
 
         private fun objective(): Pt? = tracked?.takeIf { it.x != null && it.y != null }?.let { Pt(it.x!!, it.y!!) }
 
+        /** Tuiles dessinées en pixels du niveau max, à travers la matrice de la caméra (rotation et perspective comprises). */
         private fun drawTiles(canvas: Canvas, cam: MapCamera) {
             val tiles = cache ?: return
+            matrix.setValues(cam.matrix(matrixValues))
+            canvas.save()
+            canvas.concat(matrix)
             for (key in cam.visibleTiles()) {
                 val bmp = tiles.get(key)
                 if (bmp != null) {
-                    drawTile(canvas, bmp, cam.tileRect(key), null)
+                    drawTile(canvas, bmp, cam.tileMapRect(key), null, cam)
                     continue
                 }
                 // En attendant la tuile nette : la tuile du niveau au-dessus déjà en mémoire, coupée à la place de celle-ci.
@@ -413,35 +554,38 @@ class MapView(
                 while (parent.z > 0) {
                     parent = TileKey(parent.z - 1, parent.x shr 1, parent.y shr 1)
                     val coarse = tiles.peek(parent) ?: continue
-                    drawTile(canvas, coarse, cam.tileRect(parent), cam.tileRect(key))
+                    drawTile(canvas, coarse, cam.tileMapRect(parent), cam.tileMapRect(key), cam)
                     break
                 }
             }
+            canvas.restore()
         }
 
-        private fun drawTile(canvas: Canvas, bmp: Bitmap, r: MapRect, clip: MapRect?) {
+        /** Rectangles en pixels du niveau max, dessinés relatifs au centre de la caméra (voir [MapCamera.matrix]). */
+        private fun drawTile(canvas: Canvas, bmp: Bitmap, r: MapRect, clip: MapRect?, cam: MapCamera) {
+            val ox = cam.centerX
+            val oy = cam.centerY
             src.set(0, 0, bmp.width, bmp.height)
-            dst.set(r.left.toFloat(), r.top.toFloat(), r.right.toFloat(), r.bottom.toFloat())
+            dst.set((r.left - ox).toFloat(), (r.top - oy).toFloat(), (r.right - ox).toFloat(), (r.bottom - oy).toFloat())
             if (clip == null) {
                 canvas.drawBitmap(bmp, src, dst, tilePaint)
                 return
             }
             canvas.save()
-            canvas.clipRect(clip.left.toFloat(), clip.top.toFloat(), clip.right.toFloat(), clip.bottom.toFloat())
+            canvas.clipRect((clip.left - ox).toFloat(), (clip.top - oy).toFloat(), (clip.right - ox).toFloat(), (clip.bottom - oy).toFloat())
             canvas.drawBitmap(bmp, src, dst, tilePaint)
             canvas.restore()
         }
 
-        private fun drawRoute(canvas: Canvas, cam: MapCamera) {
-            val me = player ?: return
+        private fun drawRoute(canvas: Canvas, cam: MapCamera, me: Pose?) {
+            me ?: return
             val target = pins.firstOrNull { it.tracked }?.let { Pt(it.x, it.y) } ?: objective() ?: return
-            val a = cam.worldToScreen(me.x, me.y)
-            val b = cam.worldToScreen(target.x, target.y)
+            val (a, b) = cam.segmentToScreen(me.x, me.y, target.x, target.y) ?: return
             canvas.drawLine(a.x.toFloat(), a.y.toFloat(), b.x.toFloat(), b.y.toFloat(), line)
         }
 
         private fun drawPin(canvas: Canvas, cam: MapCamera, pin: CyberpunkServerPin, colorRes: Int, lift: Float) {
-            val s = cam.worldToScreen(pin.x, pin.y)
+            val s = cam.worldToScreenOrNull(pin.x, pin.y) ?: return
             if (s.x < -OFFSCREEN || s.y < -OFFSCREEN || s.x > width + OFFSCREEN || s.y > height + OFFSCREEN) return
             canvas.withAt(s, lift) {
                 fill.color = kit.color(colorRes)
@@ -451,15 +595,18 @@ class MapView(
             }
         }
 
-        private fun drawPlayer(canvas: Canvas, cam: MapCamera, me: CyberpunkPos) {
+        private fun drawPlayer(canvas: Canvas, cam: MapCamera, me: Pose) {
             val s = cam.worldToScreen(me.x, me.y)
             val yellow = kit.color(R.color.cp_jaune)
             canvas.withAt(s) {
                 ring.color = yellow
                 ring.alpha = (WAVE_ALPHA * (1f - phase)).toInt()
                 drawCircle(0f, 0f, kit.dp(WAVE_DP) * (WAVE_MIN + (WAVE_MAX - WAVE_MIN) * phase), ring)
-                // shortcut: yaw lu comme le jeu (0 = nord, positif vers la gauche), sens non mesuré en partie ; à vérifier à l'essai.
-                rotate(-me.yaw.toFloat())
+                // Yaw du jeu : 0 = nord, positif vers l'ouest (mesuré en partie le 14/11, contre le vecteur avant du véhicule).
+                // En conduite la carte a tourné de `bearing` : la flèche pointe alors vers le haut.
+                rotate((cam.bearing - me.yaw).toFloat())
+                // En conduite, la flèche est le seul repère de l'écran : plus grosse, lisible à bout de bras.
+                (1f + (DRIVE_ARROW - 1f) * driveLevel).let { scale(it, it) }
                 fill.color = yellow
                 drawPath(arrow, fill)
             }
@@ -512,6 +659,20 @@ class MapView(
         const val CENTER_END_DP = 392
         const val STATUS_BOTTOM_DP = 110
         const val ALMOST = 0.99
+
+        // Vue conduite
+        const val DRIVE_SWITCH_MS = 400L
+        const val POS_POLL_MS = 250L
+
+        /** Plus de position rapide depuis 1,5 s : la position de l'état (1 par seconde) reprend. */
+        const val LIVE_STALE_MS = 1_500L
+
+        const val DRIVE_ARROW = 1.6f
+
+        /** Hauteur du fondu du haut, en multiples de la partie opaque. */
+        const val FADE_SPAN = 2.5f
+        const val OPAQUE = 255
+        const val TRANSPARENT_MASK = 0x00FFFFFF
 
         // Gris (luminance), contraste puis luminosité : la teinte `cp_carte_teinte` est le blanc de la carte.
         const val LUMA_R = 0.299f

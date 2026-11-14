@@ -1,8 +1,9 @@
 -- Mate pour Cyberpunk 2077 : écrit l'état de la partie dans state.json (~1 s), les blocs lents dans
--- inventory.json, contacts.json, quests.json et cyberware.json, et exécute les ordres de commands.json (écrit par le backend de Mate).
+-- inventory.json, contacts.json et quests.json, la position du véhicule dans pos.json (~0,2 s, en véhicule seulement),
+-- et exécute les ordres de commands.json (écrit par le backend de Mate).
 -- Tout appel au jeu est sous pcall. Aucun appel inconnu du moteur hors des commandes ci-dessous.
 -- Contrat : docs/specs/2026-11-14-plugin-cyberpunk-design.md, section « Contrat ». Pas de variable globale (CET les refuse).
-local VERSION = "1.2.0"
+local VERSION = "1.3.0"
 local every, acc = 1.0, 0
 local seq, tick = 0, 0
 local errs = {}
@@ -16,7 +17,6 @@ local lastCmd = nil
 local hadPlayer = false
 local session = 0
 local blocks = { inv = os.time(), contacts = os.time(), quests = os.time(), cyber = os.time() }
-local pending = {} -- ordres dont l'ack attend une vérification (pose d'implant)
 local lastJson = {}
 
 local function try(key, f)
@@ -194,7 +194,7 @@ local function cyberware(pl)
   return out
 end
 
--- Écran cyberware (cyberware.lua) ; absent ou illisible : pas de bloc, l'ordre equip répond une erreur.
+-- Écran cyberware (cyberware.lua, lecture seule) ; absent ou illisible : pas de bloc.
 local cw = nil
 do
   local f, e = loadfile("cyberware.lua")
@@ -232,6 +232,26 @@ local function callInfo()
   return { phase = phase, contact = who, audio = v.isAudioCall }
 end
 
+-- Véhicule où le joueur est monté (conducteur ou passager), ou nil à pied. Deux appels connus, essayés dans l'ordre.
+local function mountedVehicle(pl)
+  local ok, v = pcall(function() return Game.GetMountedVehicle(pl) end)
+  if ok and v ~= nil then return v end
+  ok, v = pcall(function() return pl:GetMountedVehicle() end)
+  if ok and v ~= nil then return v end
+  return nil
+end
+
+-- Position, cap (degrés, comme le yaw du joueur) et vitesse (m/s, nil si illisible) du véhicule monté, ou nil.
+local function vehicleInfo(pl)
+  local veh = mountedVehicle(pl)
+  if veh == nil then return nil end
+  local p = veh:GetWorldPosition()
+  local okYaw, yaw = pcall(function() return veh:GetWorldYaw() end)
+  if not okYaw or yaw == nil then yaw = pl:GetWorldYaw() end
+  local okSpeed, speed = pcall(function() return math.abs(veh:GetCurrentSpeed()) end)
+  return { x = p.x, y = p.y, yaw = yaw, speed = okSpeed and speed or nil }
+end
+
 local function snapshot()
   seq = seq + 1
   local out = { v = 1, seq = seq, at = os.time(), inGame = false, session = session, mod = VERSION }
@@ -256,6 +276,10 @@ local function snapshot()
     out.pos = try("pos", function()
       local p = pl:GetWorldPosition()
       return { x = p.x, y = p.y, z = p.z, yaw = pl:GetWorldYaw() }
+    end)
+    out.vehicle = try("vehicle", function()
+      local v = vehicleInfo(pl)
+      return v and { speed = v.speed, yaw = v.yaw } or nil
     end)
     out.cyberware = cyberware(pl)
     local t = try("tracked", trackedEntry)
@@ -495,31 +519,6 @@ COMMANDS.reply = function(c)
   return "ok"
 end
 
--- Pose d'un implant : l'ack attend que le jeu ait traité la requête (cyberware.lua rend une vérification).
-COMMANDS.equip = function(c)
-  if cw == nil then error("cyberware.lua indisponible", 0) end
-  return cw.equip(c)
-end
-
-local function ack(id, ok, res)
-  acks[#acks + 1] = { id = id, ok = ok and true or false, res = tostring(res) }
-  while #acks > 20 do table.remove(acks, 1) end
-end
-
--- Vérifications en attente : nil = pas encore ; un résultat ou une erreur = ack, après réécriture de cyberware.json
--- (la tablette relit un bloc déjà à jour).
-local function runPending()
-  for i = #pending, 1, -1 do
-    local p = pending[i]
-    local ok, res = pcall(p.check)
-    if not ok or res ~= nil then
-      table.remove(pending, i)
-      pcall(cyberBlock)
-      ack(p.id, ok, res)
-    end
-  end
-end
-
 local function readCommands()
   local body = readAll("commands.json")
   if not body or body == "" then return nil end
@@ -548,11 +547,8 @@ local function runCommands()
       elseif player == nil then ok, res = false, "hors partie"
       elseif run then ok, res = pcall(run, c)
       else ok, res = false, "inconnu" end
-      if ok and type(res) == "function" then pending[#pending + 1] = { id = c.id, check = res }
-      else
-        if c.t == "equip" then pcall(cyberBlock) end
-        ack(c.id, ok, res)
-      end
+      acks[#acks + 1] = { id = c.id, ok = ok and true or false, res = tostring(res) }
+      while #acks > 20 do table.remove(acks, 1) end
     end
   end
 end
@@ -578,15 +574,34 @@ pcall(forgetSavedPins)
 
 local SLOW = { inventoryBlock, contactsBlock, questsBlock, cyberBlock }
 
+-- pos.json : en véhicule seulement, toutes les ~0,2 s, pour que la carte de la tablette suive la voiture sans saut.
+local posAcc, posSeq, posErr = 0, 0, nil
+local function writePos()
+  local pl = Game.GetPlayer()
+  if pl == nil then return end
+  local v = vehicleInfo(pl)
+  if v == nil then return end
+  posSeq = posSeq + 1
+  putAtomic("pos.json", json.encode({ v = 1, seq = posSeq, at = os.time(), x = v.x, y = v.y, yaw = v.yaw, speed = v.speed, vehicle = true }))
+end
+
 return { update = function(dt)
+  posAcc = posAcc + dt
+  if posAcc >= 0.2 then
+    posAcc = 0
+    if hadPlayer then
+      local ok, e = pcall(writePos)
+      if not ok then posErr = tostring(e) end
+    end
+  end
   acc = acc + dt
   if acc < every then return end
   acc = 0
   tick = tick + 1
   errs = loadErrs
   loadErrs = {}
+  if posErr then errs.pos, posErr = posErr, nil end
   pcall(trackSession)
-  pcall(runPending)
   pcall(runCommands)
   -- Un bloc lent par seconde, à tour de rôle (chacun toutes les 5 s), jamais pendant l'écran de chargement.
   local slot = tick % 5

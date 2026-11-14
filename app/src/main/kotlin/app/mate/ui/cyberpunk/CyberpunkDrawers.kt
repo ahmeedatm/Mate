@@ -27,7 +27,7 @@ enum class CyberpunkPage(val labelRes: Int, val iconRes: Int) {
 }
 
 /** Ce que les tiroirs peuvent demander au jeu. */
-interface CyberpunkDrawerActions : CyberpunkPhoneActions, CyberwareActions {
+interface CyberpunkDrawerActions : CyberpunkPhoneActions {
     fun trackQuest(quest: CyberpunkQuest)
 
     fun use(item: CyberpunkItem)
@@ -39,7 +39,7 @@ class CyberpunkDrawers(private val kit: CyberpunkKit, private val actions: Cyber
     private val phoneUi = CyberpunkPhoneUi(kit, actions)
 
     /** Gardé d'un affichage à l'autre : l'emplacement choisi survit à une relecture du bloc. */
-    private val cyberware by lazy { CyberwareView(kit, actions) }
+    private val cyberware by lazy { CyberwareView(kit) }
 
     private fun column(titleRes: Int): LinearLayout = LinearLayout(context).apply {
         orientation = LinearLayout.VERTICAL
@@ -111,7 +111,7 @@ class CyberpunkDrawers(private val kit: CyberpunkKit, private val actions: Cyber
     fun cyberware(ui: CyberwareUi, height: Int): View = column(R.string.cp_title_cyber).apply {
         val block = ui.block ?: return@apply
         (cyberware.parent as? ViewGroup)?.removeView(cyberware)
-        cyberware.bind(block, ui.look, ui.sending)
+        cyberware.bind(block, ui.look)
         val title = getChildAt(0) as? TextView
         if (ui.look == null && (ui.lookStatus == CyberpunkPhoneStatus.ABSENT || ui.lookStatus == CyberpunkPhoneStatus.ERROR)) {
             removeView(title)

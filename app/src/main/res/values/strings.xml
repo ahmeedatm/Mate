@@ -2088,6 +2088,23 @@
     <string name="valorant_round_detonate">spike explosé</string>
     <string name="valorant_round_defuse">spike désamorcé</string>
     <string name="valorant_round_time">temps écoulé</string>
+    <string name="valorant_duel_vs">VS</string>
+    <string name="valorant_duel_peak">Meilleur rang</string>
+    <string name="valorant_duel_score">Score : ton équipe %1$d, en face %2$d</string>
+    <string name="valorant_duel_kd">K/D moyen</string>
+    <string name="valorant_duel_wr">Victoires</string>
+    <string name="valorant_duel_acs">ACS moyen</string>
+    <string name="valorant_duel_rank_peak">%1$s · pic %2$s</string>
+    <string name="valorant_duel_hs">tête %1$s</string>
+    <string name="valorant_duel_wr_short">vict. %1$s</string>
+    <string name="valorant_duel_first">1ers %1$d</string>
+    <string name="valorant_duel_kda_adr">%1$d / %2$d / %3$d · ADR %4$d</string>
+    <string name="valorant_duel_map_rate">%1$d %% de victoires ici</string>
+    <string name="valorant_duel_rr_of">%1$d / 100 RR</string>
+    <string name="valorant_duel_last">%1$d dernières classées</string>
+    <string name="valorant_duel_match_rr">%1$s RR · %2$s</string>
+    <string name="valorant_duel_tug">%1$s : ton équipe %2$s, en face %3$s</string>
+    <string name="valorant_duel_swings">RR de tes dernières classées : %1$s</string>
     <string-array name="valorant_divisions">
         <item>Fer</item>
         <item>Bronze</item>
@@ -2477,20 +2494,12 @@
     <string name="cp_cw_capacity">Capacité</string>
     <string name="cp_cw_capacity_value">%1$d / %2$d</string>
     <string name="cp_cw_locked">Emplacement verrouillé dans le jeu (perk ou attribut).</string>
-    <string name="cp_cw_blocked">Cet implant ne peut pas être retiré.</string>
-    <string name="cp_cw_closed">Cette zone se change seulement chez un charcudoc.</string>
-    <string name="cp_cw_readonly">Mets à jour le mod Mate du jeu pour poser des implants depuis la tablette.</string>
-    <string name="cp_cw_owned">Tes implants pour cette zone</string>
+    <string name="cp_cw_owned">Dans ton inventaire</string>
     <string name="cp_cw_none_owned">Aucun implant de cette zone dans ton inventaire.</string>
-    <string name="cp_cw_equip">Poser</string>
-    <string name="cp_cw_equip_desc">Poser %1$s</string>
-    <string name="cp_cw_sending">Pose…</string>
     <string name="cp_cw_cost">Coût %1$d</string>
     <string name="cp_cw_slot_desc">%1$s, emplacement %2$d : %3$s</string>
     <string name="cp_cw_slot_locked">verrouillé</string>
-    <string name="cp_cw_hint">Touche un emplacement pour voir l\'implant ou en poser un.</string>
     <string name="cp_cw_close">Fermer le panneau</string>
-    <string name="cp_cw_done">%1$s posé</string>
     <string name="cp_attr_body">Corps</string>
     <string name="cp_attr_ref">Réflexes</string>
     <string name="cp_attr_tech">Capacités techniques</string>

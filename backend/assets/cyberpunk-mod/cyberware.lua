@@ -1,6 +1,5 @@
--- Mate pour Cyberpunk 2077 : écran cyberware. Bloc lent cyberware.json (corps de V, capacité, slots par zone, implants
--- possédés) et ordre `equip`, qui fait ce que fait le charcudoc du jeu (ripperdoc.script, EquipCyberware) : mêmes
--- contrôles que CheckIfCanEquip, UnequipRequest sur le slot occupé, puis EquipRequest. Chargé par logic.lua.
+-- Mate pour Cyberpunk 2077 : écran cyberware, en lecture seule (rien n'est posé ni retiré). Bloc lent cyberware.json :
+-- corps de V, capacité, emplacements par zone (verrouillés compris), implants posés et possédés. Chargé par logic.lua.
 -- Contrat : docs/specs/2026-11-14-cyberpunk-cyberware-design.md.
 return function(h)
   local try, itemInfo = h.try, h.itemInfo
@@ -10,10 +9,6 @@ return function(h)
     "NervousSystemCW", "CardiovascularSystemCW", "ImmuneSystemCW", "IntegumentarySystemCW", "LegsCW" }
   local IS_AREA = {}
   for _, a in ipairs(AREAS) do IS_AREA[a] = true end
-  -- Zones qui changent les armes ou le mode de jeu : en lecture seule tant que le spike ne les a pas prouvées sûres.
-  local CLOSED = { ArmsCW = true, SystemReplacementCW = true }
-  -- Pose en attente de vérification : au plus 3 s, le jeu traite les requêtes à son rythme.
-  local VERIFY_S = 3
 
   -- « gamedataEquipmentArea : EyesCW (12) » → « EyesCW ».
   local function word(e)
@@ -51,10 +46,6 @@ return function(h)
     return 0
   end
 
-  local function blocked(pl, id)
-    return Game.GetTransactionSystem():HasTag(pl, CName.new("UnequipBlocked"), id) == true
-  end
-
   local function stat(pl, name) return Game.GetStatsSystem():GetStatValue(pl:GetEntityID(), gamedataStatType[name]) end
 
   local function describe(pl, id, k)
@@ -62,7 +53,6 @@ return function(h)
     local rec = TweakDBInterface.GetItemRecord(ItemID.GetTDBID(id))
     local r = { key = key(id), tdb = info.tdb, name = info.name, quality = info.quality }
     r.cost = try(k .. ".cost", function() return cost(pl, id) end)
-    r.blocked = try(k .. ".blocked", function() return blocked(pl, id) end) == true
     -- Icône : le nom de la pièce dans les atlas item_icons du jeu (IconPath = pièce de UIIcon.<nom>, vu au spike).
     r.icon = try(k .. ".icon", function() return rec:IconPath() end)
     return r
@@ -110,71 +100,9 @@ return function(h)
         used = try("cw.used", function() return stat(pl, "HumanityAllocated") end),
         max = try("cw.max", function() return stat(pl, "HumanityTotalMaxValue") end),
       },
-      closed = { "ArmsCW", "SystemReplacementCW" },
       zones = zones,
       owned = owned,
     }
-  end
-
-  -- Combat, scène (tiers 2 à 5, comme BlockedBySceneTier du jeu) ou véhicule : pas de pose.
-  local function busy(pl)
-    if pl:IsInCombat() then return true end
-    local psm = GetAllBlackboardDefs().PlayerStateMachine
-    local tier = Game.GetBlackboardSystem():GetLocalInstanced(pl:GetEntityID(), psm):GetInt(psm.HighLevel)
-    if tier >= 2 and tier <= 5 then return true end
-    return Game.GetMountedVehicle(pl) ~= nil
-  end
-
-  local function findOwned(pl, k)
-    local _, list = Game.GetTransactionSystem():GetItemList(pl)
-    for i = 1, #(list or {}) do
-      local id = list[i]:GetID()
-      if key(id) == k then return id end
-    end
-    return nil
-  end
-
-  local function request(cls, fields)
-    local r = cls.new()
-    for f, v in pairs(fields) do r[f] = v end
-    es():QueueRequest(r)
-  end
-
-  -- Pose `c.item` dans `c.slot` de `c.area`. Rend une fonction de vérification : le jeu traite les requêtes plus tard,
-  -- l'ack part quand le slot porte l'implant (ou après VERIFY_S : l'ancien est remis, `echec`).
-  function M.equip(c)
-    local pl = Game.GetPlayer()
-    local a = tostring(c.area)
-    if not IS_AREA[a] then error("mauvaise-zone", 0) end
-    if CLOSED[a] then error("zone-fermee", 0) end
-    local ok, b = pcall(busy, pl)
-    if not ok or b then error("indisponible", 0) end
-    local area = gamedataEquipmentArea[a]
-    local pd = es():GetPlayerData(pl)
-    local slot = tonumber(c.slot)
-    if not slot or slot % 1 ~= 0 or slot < 0 or slot >= pd:GetNumberOfSlots(area, true) then error("slot-verrouille", 0) end
-    if pd:IsSlotLocked(area, slot) then error("slot-verrouille", 0) end
-    local id = findOwned(pl, tostring(c.item))
-    if not id then error("non-possede", 0) end
-    if areaOf(id) ~= a then error("mauvaise-zone", 0) end
-    local cur = inSlot(pd, area, slot)
-    local hasCur = valid(cur)
-    -- Déjà posé (ordre rejoué, double appui) : rien à faire.
-    if hasCur and key(cur) == key(id) then return "ok" end
-    if hasCur and blocked(pl, cur) then error("bloque", 0) end
-    local need = cost(pl, id) - (hasCur and cost(pl, cur) or 0)
-    if need > (tonumber(stat(pl, "HumanityAvailable")) or 0) then error("capacite", 0) end
-    if hasCur then request(UnequipRequest, { owner = pl, areaType = area, slotIndex = slot }) end
-    request(EquipRequest, { owner = pl, itemID = id, slotIndex = slot, addToInventory = false })
-    local want, start = key(id), os.time()
-    return function()
-      local now = inSlot(pd, area, slot)
-      if valid(now) and key(now) == want then return "ok" end
-      if os.time() - start < VERIFY_S then return nil end
-      -- Pas posé : l'ancien revient s'il a été retiré, comme si rien ne s'était passé.
-      if hasCur and not valid(now) then pcall(request, EquipRequest, { owner = pl, itemID = cur, slotIndex = slot, addToInventory = false }) end
-      error("echec", 0)
-    end
   end
 
   return M

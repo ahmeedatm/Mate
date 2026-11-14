@@ -1,6 +1,7 @@
 package app.mate.ui.cyberpunk
 
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -101,17 +102,103 @@ class MapCameraTest {
         assertTrue(far.contains(TileKey(3, 55, 55)))
     }
 
-    @Test fun `rectangle ecran d'une tuile`() {
+    @Test fun `rectangle d'une tuile en pixels du niveau max`() {
         val c = camera()
-        c.setScale(0.5)
-        c.centerOn(geo.mapToWorld(1024.0, 1024.0).x, geo.mapToWorld(1024.0, 1024.0).y)
-        val r = c.tileRect(TileKey(3, 2, 2)) // pixels 1024..1536 : démarre au centre de la vue
-        assertEquals(640.0, r.left, 1e-6)
-        assertEquals(400.0, r.top, 1e-6)
-        assertEquals(256.0, r.right - r.left, 1e-6)
-        val coarse = c.tileRect(TileKey(2, 1, 1)) // même zone au niveau 2 : 1024..2048
-        assertEquals(640.0, coarse.left, 1e-6)
-        assertEquals(512.0, coarse.right - coarse.left, 1e-6)
+        val r = c.tileMapRect(TileKey(3, 2, 2))
+        assertEquals(1024.0, r.left, 1e-6)
+        assertEquals(1536.0, r.right, 1e-6)
+        val coarse = c.tileMapRect(TileKey(2, 1, 1)) // même zone au niveau 2 : 1024..2048
+        assertEquals(1024.0, coarse.left, 1e-6)
+        assertEquals(2048.0, coarse.bottom, 1e-6)
+        val edge = c.tileMapRect(TileKey(0, 6, 6)) // dernière tuile du niveau 0 : coupée au bord de la carte
+        assertEquals(28672.0, edge.right, 1e-6)
+    }
+
+    @Test fun `quad et rectangle, touches ou separes`() {
+        val quad = listOf(Pt(0.0, 0.0), Pt(10.0, 0.0), Pt(6.0, 10.0), Pt(4.0, 10.0))
+        assertTrue(intersects(quad, MapRect(5.0, 5.0, 20.0, 20.0)))
+        assertFalse(intersects(quad, MapRect(11.0, 0.0, 20.0, 5.0)))
+        // Dans la boîte englobante, mais hors du trapèze (coin coupé) : séparés.
+        assertFalse(intersects(quad, MapRect(8.5, 8.5, 10.0, 10.0)))
+    }
+
+    @Test fun `la matrice donne le meme point que worldToScreen, a plat comme en conduite`() {
+        val c = camera()
+        c.centerOn(50.0, 60.0)
+        c.setScale(0.8)
+        for (pose in listOf(Triple(0.0, 0.0, 0.5), Triple(37.0, 1.0, MapCamera.DRIVE_ANCHOR))) {
+            c.setPose(pose.first, pose.second, pose.third)
+            val m = c.matrix()
+            // Matrice relative au centre, en float (comme le Canvas) : au millième de pixel près.
+            val p = geo.worldToMap(-80.0, 140.0).let { Pt(it.x - c.centerX, it.y - c.centerY) }
+            val w = m[6] * p.x + m[7] * p.y + m[8]
+            val s = c.worldToScreen(-80.0, 140.0)
+            assertEquals(s.x, (m[0] * p.x + m[1] * p.y + m[2]) / w, 1e-3)
+            assertEquals(s.y, (m[3] * p.x + m[4] * p.y + m[5]) / w, 1e-3)
+        }
+    }
+
+    @Test fun `en conduite le centre est au tiers bas et l'avant du vehicule pointe vers le haut`() {
+        val c = camera()
+        c.centerOn(0.0, 0.0)
+        c.setPose(90.0, 1.0, MapCamera.DRIVE_ANCHOR)
+        val me = c.worldToScreen(0.0, 0.0)
+        assertEquals(640.0, me.x, 1e-6)
+        assertEquals(800 * MapCamera.DRIVE_ANCHOR, me.y, 1e-6)
+        // yaw 90 : la flèche du joueur pointe à l'ouest (gauche de la carte à plat) ; en conduite, l'ouest est en haut.
+        val west = c.worldToScreen(-100.0, 0.0)
+        assertEquals(640.0, west.x, 1e-6)
+        assertTrue(west.y < me.y)
+    }
+
+    @Test fun `en conduite le loin est ecrase par la perspective, pas le pres`() {
+        val c = camera()
+        c.centerOn(0.0, 0.0)
+        c.setPose(0.0, 1.0, MapCamera.DRIVE_ANCHOR)
+        val me = c.worldToScreen(0.0, 0.0).y
+        val near = me - c.worldToScreen(0.0, 50.0).y
+        val far = me - c.worldToScreen(0.0, 100.0).y
+        assertTrue(near > 0)
+        assertTrue(far < 2 * near)
+        c.setPose(0.0, 0.0, MapCamera.DRIVE_ANCHOR)
+        assertEquals(2 * (me - c.worldToScreen(0.0, 50.0).y), me - c.worldToScreen(0.0, 100.0).y, 1e-6)
+    }
+
+    @Test fun `en conduite ecran vers monde puis retour, zoom autour du doigt et glisser`() {
+        val c = camera()
+        c.centerOn(50.0, 60.0)
+        c.setPose(-123.0, 1.0, MapCamera.DRIVE_ANCHOR)
+        val s = c.worldToScreen(-80.0, 140.0)
+        val w = c.screenToWorld(s.x, s.y)
+        assertEquals(-80.0, w.x, 1e-6)
+        assertEquals(140.0, w.y, 1e-6)
+        val before = c.screenToWorld(900.0, 300.0)
+        c.zoomAt(1.7, 900f, 300f)
+        val after = c.screenToWorld(900.0, 300.0)
+        assertEquals(before.x, after.x, 1e-6)
+        assertEquals(before.y, after.y, 1e-6)
+        val anchor = c.screenToWorld(640.0, 800 * MapCamera.DRIVE_ANCHOR - 40)
+        c.panBy(0f, 40f)
+        val moved = c.worldToScreen(anchor.x, anchor.y)
+        assertEquals(640.0, moved.x, 1e-6)
+        assertEquals(800 * MapCamera.DRIVE_ANCHOR, moved.y, 1e-6)
+    }
+
+    @Test fun `en conduite les tuiles visibles couvrent tout l'ecran sous le fondu`() {
+        val c = camera()
+        c.setScale(MapCamera.DRIVE_SCALE_FAR)
+        c.centerOn(geo.mapToWorld(14000.0, 9000.0).x, geo.mapToWorld(14000.0, 9000.0).y)
+        c.setPose(33.0, 1.0, MapCamera.DRIVE_ANCHOR)
+        val z = c.level()
+        val tiles = c.visibleTiles(z).toSet()
+        val span = geo.span(z) * geo.tile
+        for (sx in 0..1280 step 40) for (sy in c.visibleTop.toInt()..800 step 40) {
+            val w = c.screenToWorld(sx.toDouble(), sy.toDouble())
+            val m = geo.worldToMap(w.x, w.y)
+            assertTrue("($sx, $sy)", TileKey(z, (m.x / span).toInt(), (m.y / span).toInt()) in tiles)
+        }
+        // Le rectangle englobant d'un trapèze tourné en compte bien plus : seules celles qui le touchent restent.
+        assertTrue(tiles.size < 40)
     }
 
     @Test fun `centre borne dans la carte`() {
@@ -146,8 +233,62 @@ class MapCameraTest {
         }
     }
 
+    @Test fun `le cache tient aussi la vue conduite, a tous les caps et vitesses`() {
+        val budget = MapCamera.tileCacheBytes(1280, 800, 512)
+        val c = camera()
+        c.centerOn(geo.mapToWorld(14000.0, 9000.0).x, geo.mapToWorld(14000.0, 9000.0).y)
+        var s = MapCamera.DRIVE_SCALE_FAR
+        while (s <= MapCamera.DRIVE_SCALE_NEAR) {
+            c.setScale(s)
+            for (b in 0 until 360 step 7) {
+                c.setPose(b.toDouble(), 1.0, MapCamera.DRIVE_ANCHOR)
+                val z = c.level()
+                val tiles = c.visibleTiles(z).size + if (z > 0) c.visibleTiles(z - 1).size else 0
+                assertTrue("scale $s cap $b : $tiles tuiles", tiles * 512 * 512 * 2 <= budget)
+            }
+            s *= 1.05
+        }
+    }
+
     @Test fun `cache plafonne pour une tuile demesuree ou minuscule`() {
         assertEquals(MapCamera.MAX_CACHE_BYTES, MapCamera.tileCacheBytes(1280, 800, 4096))
         assertTrue(MapCamera.tileCacheBytes(1280, 800, 1) in 1..MapCamera.MAX_CACHE_BYTES)
+    }
+
+    @Test fun `en conduite un point loin derriere n'est pas dessine en miroir`() {
+        val c = camera()
+        c.centerOn(0.0, 0.0)
+        c.setPose(0.0, 1.0, MapCamera.DRIVE_ANCHOR)
+        assertTrue(c.worldToScreenOrNull(0.0, 50.0) != null)
+        assertNull(c.worldToScreenOrNull(0.0, -100000.0))
+        c.setPose(0.0, 0.0, MapCamera.FLAT_ANCHOR)
+        assertTrue(c.worldToScreenOrNull(0.0, -100000.0) != null)
+    }
+
+    @Test fun `en conduite un trajet vers l'arriere est coupe avant le miroir`() {
+        val c = camera()
+        c.centerOn(0.0, 0.0)
+        c.setPose(0.0, 1.0, MapCamera.DRIVE_ANCHOR)
+        val seg = c.segmentToScreen(0.0, 0.0, 0.0, -100000.0)!!
+        assertEquals(640.0, seg.first.x, 1e-6)
+        assertEquals(800 * MapCamera.DRIVE_ANCHOR, seg.first.y, 1e-6)
+        assertTrue("${seg.second.y}", seg.second.y > 800)
+        assertTrue(seg.second.y.isFinite())
+        val ahead = c.segmentToScreen(0.0, 0.0, 0.0, 100.0)!!
+        assertEquals(c.worldToScreen(0.0, 100.0).y, ahead.second.y, 1e-6)
+    }
+
+    @Test fun `penchee, on ne dezoome pas plus loin que le zoom de pleine vitesse`() {
+        val c = camera()
+        c.setPose(10.0, 1.0, MapCamera.DRIVE_ANCHOR)
+        c.zoomAt(1e-6, 640f, 400f)
+        assertEquals(MapCamera.DRIVE_SCALE_FAR, c.scale, 1e-9)
+        // À mi-transition, la borne est à mi-chemin : la transition depuis un zoom de ville ne saute pas.
+        c.setPose(10.0, 0.5, MapCamera.DRIVE_ANCHOR)
+        c.setScale(0.0)
+        assertEquals(c.minScale + (MapCamera.DRIVE_SCALE_FAR - c.minScale) * 0.5, c.scale, 1e-9)
+        c.setPose(0.0, 0.0, MapCamera.FLAT_ANCHOR)
+        c.setScale(0.0)
+        assertEquals(c.minScale, c.scale, 1e-9)
     }
 }

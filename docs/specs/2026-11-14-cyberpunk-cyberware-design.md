@@ -21,6 +21,13 @@ seulement regarder : poser ou changer un implant dans un slot depuis la tablette
 - Images du jeu extraites de son jeu installé sur ATLAS et servies par le backend du PC ; jamais
   commitées (dépôt public, droits CD Projekt).
 
+## Décision finale d'Ahmed (2026-11-14, après le spike)
+
+Lecture seule. Pour garder le réalisme du jeu, on ne pose ni ne retire aucun implant depuis la tablette : l'écran
+montre en temps réel le cyberware de V (posé, emplacements libres et verrouillés, capacité, implants de l'inventaire
+par zone). L'ordre `equip`, sa route et le bouton « Poser » sont retirés ; le spike de pose ci-dessous reste comme
+trace (il a prouvé que c'était possible). Les objectifs 3 et les parties « pose » du contrat ne s'appliquent plus.
+
 ## Objectifs
 
 1. Voir d'un coup d'œil tout son cyberware, placé sur le corps comme dans le jeu : zone, slots

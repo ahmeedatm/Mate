@@ -592,6 +592,7 @@ class HomeFragment : Fragment(), HomeHost, WidgetGrid.Listener {
         // Même réglages (objet partagé) : ce qui est changé dans le grand vaut pour le widget de la grille.
         val big = Placed(placed.type, placed.type.zoomSize, placed.page, placed.col, placed.row, placed.config)
         val widget = HomeWidget.create(requireContext(), this, big, noComputer)
+        widget.zoomed = true
         widget.applySize()
         widget.onCalendar()
         widget.onMinute()

@@ -35,7 +35,6 @@ import app.mate.net.CyberpunkStatus
 import app.mate.net.CyberpunkThread
 import app.mate.net.CyberpunkThreadChoice
 import app.mate.net.CyberpunkThreadDetail
-import app.mate.net.CyberwareImplant
 import app.mate.net.runCatchingCancellable
 import app.mate.ui.cyberpunk.CyberpunkKit.Companion.MATCH
 import app.mate.ui.cyberpunk.CyberpunkKit.Companion.WRAP
@@ -90,7 +89,7 @@ class CyberpunkOverlay(private val activity: FragmentActivity) {
     private var pinsKey: Any? = null
     private var pinsLoading = false
     private var lastQuestId: String? = null
-    private val cyber = CyberwareController(activity, { renderDrawer() }, { toast(it) })
+    private val cyber = CyberwareController(activity) { renderDrawer() }
 
     val isOpen get() = root != null
 
@@ -355,8 +354,6 @@ class CyberpunkOverlay(private val activity: FragmentActivity) {
         override fun reply(choice: CyberpunkThreadChoice) = this@CyberpunkOverlay.reply(choice)
 
         override fun prepareLook() = this@CyberpunkOverlay.prepareLook()
-
-        override fun equip(area: String, slot: Int, implant: CyberwareImplant) = cyber.equip(area, slot, implant)
     }
 
     // --- Téléphone : fils et look du jeu
@@ -582,6 +579,8 @@ class CyberpunkOverlay(private val activity: FragmentActivity) {
         v.link.visibility = if (mode == CyberpunkLink.Mode.DEGRADED) View.VISIBLE else View.GONE
         mapView?.interactive = live
         if (!live) {
+            // Partie vraiment finie seulement : une coupure réseau brève ne fait pas quitter la vue conduite.
+            if (error == null) mapView?.leaveDrive()
             // Le tiroir se ferme quand la partie est vraiment finie, jamais pour une erreur réseau (il revient avec la liaison).
             if (page != null && error == null) showDrawer(null)
             renderMessage(v, snap)
@@ -593,7 +592,7 @@ class CyberpunkOverlay(private val activity: FragmentActivity) {
         renderCall(v, st)
         renderQuest(v, st)
         st.tracked?.takeIf { it.kind == "quest" && it.id != null }?.let { lastQuestId = it.id }
-        mapView?.update(st.pos, st.tracked, lastQuestId ?: quests?.firstOrNull { it.tracked }?.id)
+        mapView?.update(st.pos, st.tracked, lastQuestId ?: quests?.firstOrNull { it.tracked }?.id, st.inVehicle)
         val unread = contacts?.unread ?: 0
         v.unread.visibility = if (unread > 0) View.VISIBLE else View.GONE
         v.unread.text = unread.toString()

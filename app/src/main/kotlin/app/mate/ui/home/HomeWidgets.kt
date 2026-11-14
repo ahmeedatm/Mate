@@ -107,6 +107,9 @@ abstract class HomeWidget(val context: Context, val host: HomeHost, val placed: 
     /** Famille de la forme posée, celle que [applySize] dessine. */
     protected val family get() = placed.size.family
 
+    /** Exemplaire agrandi par-dessus l'écran ([WidgetZoom]), posé avant [applySize] : un widget peut s'y dessiner autrement. */
+    var zoomed = false
+
     /**
      * Aperçu du catalogue : remplit le widget avec son exemple ([WidgetSamples]), après [applySize] ; l'exemple tient si
      * [applySize] repasse. Le catalogue n'appelle ni [load] ni [setActive] et garde les touchers pour lui : rien ne doit

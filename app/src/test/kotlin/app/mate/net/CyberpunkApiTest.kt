@@ -242,16 +242,31 @@ class CyberpunkApiTest {
     }
 
     @Test
+    fun `en vehicule ou a pied selon le champ vehicle de l'etat`() {
+        assertTrue(CyberpunkApi.parseSnapshot("""{"status":"ingame","state":{"vehicle":{"speed":12.5}}}""").state!!.inVehicle)
+        assertFalse(CyberpunkApi.parseSnapshot("""{"status":"ingame","state":{}}""").state!!.inVehicle)
+    }
+
+    @Test
+    fun `position du vehicule fraiche, perimee, sans vitesse`() {
+        val p = CyberpunkApi.parseLivePos("""{"fresh":true,"vehicle":true,"x":1.5,"y":-2,"yaw":90,"speed":20}""")
+        assertEquals(CyberpunkLivePos(1.5, -2.0, 90.0, 20.0), p)
+        assertNull(CyberpunkApi.parseLivePos("""{"fresh":false}"""))
+        assertNull(CyberpunkApi.parseLivePos("""{"fresh":true,"vehicle":false,"x":1,"y":2,"yaw":0}"""))
+        assertNull(CyberpunkApi.parseLivePos("""{"fresh":true,"vehicle":true,"y":2,"yaw":0}"""))
+        assertNull(CyberpunkApi.parseLivePos("""{"fresh":true,"vehicle":true,"x":1,"y":2,"yaw":0,"speed":null}""")!!.speed)
+    }
+
+    @Test
     fun readsCyberwareBlock() {
         val b = CyberpunkApi.parseCyberware(
-            """{"v":1,"body":"woman","capacity":{"free":30,"used":90,"max":120},"closed":["ArmsCW"],
-              "zones":{"EyesCW":[{"locked":false,"item":{"key":"Items.Kiroshi#12","tdb":"Items.Kiroshi","name":"Kiroshi","quality":"Rare","cost":12,"blocked":false,"icon":"cw_eyes_kiroshioptics"}}],
+            """{"v":1,"body":"woman","capacity":{"free":30,"used":90,"max":120},
+              "zones":{"EyesCW":[{"locked":false,"item":{"key":"Items.Kiroshi#12","tdb":"Items.Kiroshi","name":"Kiroshi","quality":"Rare","cost":12,"icon":"cw_eyes_kiroshioptics"}}],
                        "LegsCW":[{"locked":true}]},
-              "owned":[{"key":"Items.Sandy#7","tdb":"Items.Sandy","name":"Sandevistan","quality":"Epic","cost":40,"blocked":false,"area":"SystemReplacementCW"}]}""",
+              "owned":[{"key":"Items.Sandy#7","tdb":"Items.Sandy","name":"Sandevistan","quality":"Epic","cost":40,"area":"SystemReplacementCW"}]}""",
         )
         assertEquals(CyberpunkBody.WOMAN, b.body)
         assertEquals(30.0, b.capacity!!.free!!, 0.0)
-        assertEquals(setOf("ArmsCW"), b.closed)
         val eyes = b.zones.getValue("EyesCW").single()
         assertEquals("Items.Kiroshi#12", eyes.item!!.key)
         assertEquals(12, eyes.item!!.cost)
