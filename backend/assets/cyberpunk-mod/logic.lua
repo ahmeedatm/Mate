@@ -1,9 +1,9 @@
 -- Mate pour Cyberpunk 2077 : écrit l'état de la partie dans state.json (~1 s), les blocs lents dans
 -- inventory.json, contacts.json, quests.json et mappins.json, la position du véhicule dans pos.json (~0,2 s, en
--- véhicule seulement), et exécute les ordres de commands.json (écrit par le backend de Mate).
+-- véhicule seulement), le chemin du GPS dans route.json (~1 s, en véhicule seulement), et exécute les ordres de commands.json (écrit par le backend de Mate).
 -- Tout appel au jeu est sous pcall. Aucun appel inconnu du moteur hors des commandes ci-dessous.
 -- Contrat : docs/specs/2026-11-14-plugin-cyberpunk-design.md, section « Contrat ». Pas de variable globale (CET les refuse).
-local VERSION = "1.4.0"
+local VERSION = "1.5.0"
 local every, acc = 1.0, 0
 local seq, tick = 0, 0
 local errs = {}
@@ -631,6 +631,39 @@ local function writePos()
   putAtomic("pos.json", json.encode({ v = 1, seq = posSeq, at = os.time(), x = v.x, y = v.y, yaw = v.yaw, speed = v.speed, vehicle = true }))
 end
 
+-- route.json : chemin du GPS du jeu, en véhicule seulement, chaque seconde (la tablette le relit à ce rythme). Le jeu ne le montre pas aux scripts : le
+-- mod In-World Navigation (RED4ext, MIT) rend lisibles les points que la mini-map dessine. Sans lui, iwn = false et la
+-- tablette garde la ligne droite. Repère suivi (poi) d'abord, sinon l'objectif de quête. À prouver en jeu.
+local routeAcc, routeSeq, routeErr = 0, 0, nil
+local function deci(v) return math.floor(v * 10 + 0.5) / 10 end
+local function flat(points)
+  local out = {}
+  for i = 1, #points do
+    local p = points[i]
+    out[#out + 1] = deci(p.x); out[#out + 1] = deci(p.y)
+  end
+  return out
+end
+local function gpsRoute()
+  local ok, iwn = pcall(function() return InWorldNavigation.GetInstance() end)
+  if not ok or iwn == nil then return { iwn = false } end
+  local mm = iwn.mmcc
+  if mm == nil then return { iwn = true, pts = {} } end
+  local poiPts = mm.hasPoiMappin and mm.poiPoints or nil
+  if poiPts and #poiPts >= 2 then return { iwn = true, kind = "poi", pts = flat(poiPts) } end
+  local questPts = mm.hasQuestMappin and mm.questPoints or nil
+  if questPts and #questPts >= 2 then return { iwn = true, kind = "quest", pts = flat(questPts) } end
+  return { iwn = true, pts = {} }
+end
+local function writeRoute()
+  local pl = Game.GetPlayer()
+  if pl == nil or mountedVehicle(pl) == nil then return end
+  local r = gpsRoute()
+  routeSeq = routeSeq + 1
+  r.v, r.seq, r.at = 1, routeSeq, os.time()
+  putAtomic("route.json", json.encode(r))
+end
+
 return { update = function(dt)
   -- Un paquet de points par image, hors de la cadence d'une seconde.
   local okPoi, ePoi = pcall(poiStep)
@@ -643,6 +676,14 @@ return { update = function(dt)
       if not ok then posErr = tostring(e) end
     end
   end
+  routeAcc = routeAcc + dt
+  if routeAcc >= 1.0 then
+    routeAcc = 0
+    if hadPlayer then
+      local ok, e = pcall(writeRoute)
+      if not ok then routeErr = tostring(e) end
+    end
+  end
   acc = acc + dt
   if acc < every then return end
   acc = 0
@@ -650,6 +691,7 @@ return { update = function(dt)
   errs = loadErrs
   loadErrs = {}
   if posErr then errs.pos, posErr = posErr, nil end
+  if routeErr then errs.route, routeErr = routeErr, nil end
   pcall(trackSession)
   pcall(runCommands)
   -- Un bloc lent par seconde, à tour de rôle (chacun toutes les 5 s), jamais pendant l'écran de chargement.

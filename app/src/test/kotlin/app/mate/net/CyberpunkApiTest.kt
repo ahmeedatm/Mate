@@ -258,6 +258,16 @@ class CyberpunkApiTest {
     }
 
     @Test
+    fun `chemin du GPS frais, vide, absent ou perime`() {
+        assertEquals(listOf(0.0, 0.0, 100.0, 0.0, 100.0, 80.5), CyberpunkApi.parseRoute("""{"fresh":true,"source":"iwn","kind":"poi","points":[0,0,100,0,100,80.5]}""")!!.toList())
+        assertEquals(0, CyberpunkApi.parseRoute("""{"fresh":true,"source":"absent","kind":null,"points":[]}""")!!.size)
+        assertNull(CyberpunkApi.parseRoute("""{"fresh":false}"""))
+        // Nombre de valeurs impair ou valeur illisible : pas de tracé plutôt qu'un chemin faux.
+        assertEquals(0, CyberpunkApi.parseRoute("""{"fresh":true,"points":[0,0,100]}""")!!.size)
+        assertEquals(0, CyberpunkApi.parseRoute("""{"fresh":true,"points":[0,"a",100,0]}""")!!.size)
+    }
+
+    @Test
     fun readsMappins() {
         val points = CyberpunkApi.parseMappins(
             """{"v":1,"points":[
