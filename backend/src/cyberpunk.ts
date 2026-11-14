@@ -133,9 +133,10 @@ const BLOCKS = {
   inventory: { file: "inventory.json", empty: { v: 1, items: [] } },
   contacts: { file: "contacts.json", empty: { v: 1, contacts: [], threads: [] } },
   quests: { file: "quests.json", empty: { v: 1, quests: [] } },
+  cyberware: { file: "cyberware.json", empty: { v: 1, zones: {}, owned: [] } },
 } as const;
 
-/** Blocs lents (inventaire, contacts, quêtes) ; vide tant que le mod ne les a pas écrits. */
+/** Blocs lents (inventaire, contacts, quêtes, cyberware) ; vide tant que le mod ne les a pas écrits. */
 export async function block(name: keyof typeof BLOCKS) {
   const game = findGame();
   const { file, empty } = BLOCKS[name];

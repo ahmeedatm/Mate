@@ -23,7 +23,15 @@ export const threadVersion = (t: FakeThread) => `${t.messages.length}:${t.messag
 
 export function fakeMod(
   modDir: string,
-  opts: { silent?: boolean; session?: number; threads?: Record<string, FakeThread>; wrongCmd?: boolean; failWith?: string } = {},
+  opts: {
+    silent?: boolean;
+    session?: number;
+    threads?: Record<string, FakeThread>;
+    wrongCmd?: boolean;
+    failWith?: string;
+    /** Réponse du mod à un ordre `equip` (par défaut : posé). */
+    equip?: (c: any) => { ok: boolean; res: string };
+  } = {},
 ) {
   let last: number | null = null;
   let seq = 0;
@@ -77,7 +85,13 @@ export function fakeMod(
         if (opts.silent) continue;
         if (c.t === "pin" && !pins.some((p) => p.pid === c.pid)) pins.push({ pid: c.pid, x: c.x, y: c.y, z: c.z });
         if (c.t === "unpin") pins = pins.filter((p) => p.pid !== c.pid);
-        acks.push({ id: c.id, ...(c.t === "thread" || c.t === "reply" ? phone(c) : { ok: true, res: c.t }) });
+        const res =
+          c.t === "thread" || c.t === "reply"
+            ? phone(c)
+            : c.t === "equip"
+              ? (opts.equip?.(c) ?? { ok: true, res: "ok" })
+              : { ok: true, res: c.t };
+        acks.push({ id: c.id, ...res });
         acks = acks.slice(-20);
       }
     write();
