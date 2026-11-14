@@ -561,6 +561,17 @@ export function riotLockfile(): string | null {
   return isWindows && local ? path.join(local, "Riot Games", "Riot Client", "Config", "lockfile") : null;
 }
 
+/** Windows : dossier de Steam (`SteamPath` du registre de l'utilisateur) ; ailleurs ou sans Steam, null. */
+export function steamPath(): string | null {
+  if (!isWindows) return null;
+  try {
+    const out = execFileSync("reg", ["query", "HKCU\\Software\\Valve\\Steam", "/v", "SteamPath"], { encoding: "utf8", windowsHide: true });
+    return /SteamPath\s+REG_\w+\s+(.+)/.exec(out)?.[1]?.trim() || null;
+  } catch {
+    return null;
+  }
+}
+
 /** Notification système (demande d'appairage), sans attendre qu'elle disparaisse. */
 export async function notify(title: string, text: string) {
   // Tests d'intégration et instance de test : pas de notification réelle à chaque appairage.

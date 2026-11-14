@@ -41,11 +41,13 @@ import app.mate.net.AgentState
 import app.mate.net.BackendClient
 import app.mate.net.CalendarEvent
 import app.mate.net.ComputerLocked
+import app.mate.net.CyberpunkPresence
 import app.mate.net.DocEntry
 import app.mate.net.Link
 import app.mate.net.PcNotification
 import app.mate.net.runCatchingCancellable
 import app.mate.presence.Presence
+import app.mate.remote.CyberpunkWatch
 import app.mate.remote.RemoteLink
 import app.mate.trial.EssaiBackend
 import app.mate.trial.Trial
@@ -61,6 +63,7 @@ import app.mate.ui.CameraFragment
 import app.mate.ui.CompanionUpdate
 import app.mate.ui.ComputerAdder
 import app.mate.ui.ComputersDialog
+import app.mate.ui.CyberpunkSession
 import app.mate.ui.DocumentPanel
 import app.mate.ui.FocusFragment
 import app.mate.ui.FrameTracer
@@ -96,6 +99,7 @@ import app.mate.ui.TracedScreen
 import app.mate.ui.Typing
 import app.mate.ui.Wallpaper
 import app.mate.ui.WelcomeView
+import app.mate.ui.cyberpunk.CyberpunkOverlay
 import app.mate.ui.dp
 import app.mate.ui.errorText
 import app.mate.ui.home.Down
@@ -139,6 +143,11 @@ class MainActivity : AppCompatActivity() {
 
     /** Page web en plein écran de l'ordinateur (ordre `page`, maquettes). */
     val pageOverlay = PageOverlay(this)
+
+    /** Page Cyberpunk 2077 : ouverte et fermée toute seule selon le jeu des ordinateurs Windows ([CyberpunkWatch]). */
+    private val cyberpunk = CyberpunkOverlay(this)
+    private val cyberpunkSession = CyberpunkSession()
+    private val cyberpunkWatch = CyberpunkWatch(this, lifecycleScope, { cyberpunk.computerId }, ::onCyberpunkPresences)
     private lateinit var banner: Banner
     private lateinit var alerts: TabletAlerts
     private lateinit var welcome: WelcomeView
@@ -362,6 +371,7 @@ class MainActivity : AppCompatActivity() {
             when {
                 welcome.visibility == View.VISIBLE || plugins.visibility == View.VISIBLE -> Unit
                 agentAsk.isOpen -> agentAsk.close()
+                cyberpunk.isOpen -> cyberpunk.onBack()
                 pageOverlay.isOpen -> pageOverlay.close()
                 current == Mode.HOME && homeFragment()?.closeCatalogue() == true -> Unit
                 current == Mode.HOME && homeFragment()?.cancelEdit() == true -> Unit
@@ -578,6 +588,8 @@ class MainActivity : AppCompatActivity() {
     override fun onResume() {
         super.onResume()
         pageOverlay.resume()
+        cyberpunk.resume()
+        cyberpunkWatch.start()
         Kiosk.enter(this)
         Accessibility.applyAnimationScale(this, Prefs.reduceMotion(this))
         Screen.apply(this)
@@ -595,6 +607,8 @@ class MainActivity : AppCompatActivity() {
     /** Mate quitte l'écran (écran éteint, autre appli) : le mot de réveil n'écoute plus. */
     override fun onPause() {
         pageOverlay.pause()
+        cyberpunk.pause()
+        cyberpunkWatch.stop()
         wake.pause()
         presence.pause()
         Screen.stopAmbient(this)
@@ -625,6 +639,7 @@ class MainActivity : AppCompatActivity() {
         if (::frame.isInitialized && frame.isShowing) Screen.frameCharging = null
         documentPanel.close()
         pageOverlay.close()
+        cyberpunk.close()
         if (isFinishing) {
             NoisePlayer.stop()
             Ringer.stop()
@@ -829,6 +844,40 @@ class MainActivity : AppCompatActivity() {
             page == layout.callProfile -> showProfile(layout.homeProfile)
         }
         refreshRail(layout)
+    }
+
+    /**
+     * Présence de Cyberpunk 2077 sur chaque ordinateur Windows ([CyberpunkWatch]) : la page s'ouvre quand une partie
+     * se charge (sur l'ordinateur du jeu, actif ou non), et se ferme avec elle en rendant l'ordinateur d'avant.
+     */
+    private fun onCyberpunkPresences(polled: Map<String, CyberpunkPresence?>) {
+        // L'ordinateur dont la page est ouverte n'est pas sondé : son statut vient du sondage de la page.
+        val presences = polled + (cyberpunk.computerId?.let { mapOf(it to cyberpunk.presence()) } ?: emptyMap())
+        val fullScreen = current == Mode.CAMERA || homeFragment()?.editing == true
+        val typing = Typing.active(focusIsEditText = currentFocus is android.widget.EditText) || fullScreen
+        val inCall = call.active || callOverlay.app != null
+        val decision = cyberpunkSession.decide(presences, CyberpunkSession.Context(Computers.active(this)?.id, typing, inCall, cyberpunk.isOpen))
+        when (decision.step) {
+            CyberpunkSession.Step.NONE -> Unit
+            CyberpunkSession.Step.OPEN -> {
+                val game = Computers.all(this).firstOrNull { it.id == decision.computerId }
+                // État sauvegardé (appli qui part) ou ordinateur disparu : la prochaine relève retentera.
+                if (game == null || supportFragmentManager.isStateSaved) return cyberpunkSession.reset()
+                if (decision.switchTo != null) {
+                    Computers.setActive(this, game.id)
+                    onComputerChanged(game, automatic = true)
+                }
+                cyberpunk.open(game)
+            }
+            CyberpunkSession.Step.CLOSE -> {
+                cyberpunk.close()
+                val back = Computers.all(this).firstOrNull { it.id == decision.returnTo }
+                if (back != null && !supportFragmentManager.isStateSaved) {
+                    Computers.setActive(this, back.id)
+                    onComputerChanged(back, automatic = true)
+                }
+            }
+        }
     }
 
     private val game = GameSession()
