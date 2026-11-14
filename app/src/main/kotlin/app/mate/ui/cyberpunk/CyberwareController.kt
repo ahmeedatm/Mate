@@ -28,12 +28,29 @@ class CyberwareController(private val activity: FragmentActivity, private val ch
     private var loading = false
     private var lookJob: Job? = null
 
+    /** Tiroir Cyber ouvert : les images ne sont chargées (et gardées en mémoire) que pendant ce temps. */
+    private var shown = false
+
     fun attach(client: CyberpunkApi?) {
         api = client
         lookJob?.cancel()
         ui = CyberwareUi()
         version = null
         loading = false
+        shown = false
+    }
+
+    /** Tiroir Cyber ouvert : charge les images (tout de suite, ou dès que le bloc arrive). */
+    fun show() {
+        shown = true
+        loadLook()
+    }
+
+    /** Tiroir fermé ou autre tiroir : les images du corps (plusieurs Mo) sont rendues. */
+    fun hide() {
+        shown = false
+        lookJob?.cancel()
+        ui = ui.copy(look = null)
     }
 
     /** Compteur `blocks.cyber` de l'état : relit le bloc s'il a changé. */
@@ -52,8 +69,10 @@ class CyberwareController(private val activity: FragmentActivity, private val ch
                     version = next
                     val before = ui.block?.let(::pieces)
                     ui = ui.copy(block = it.takeIf { b -> b.ready })
-                    // Autre corps ou nouvel implant : les images manquantes se chargent (celles en cache disque ne repartent pas).
-                    if (ui.look != null && ui.block?.let(::pieces) != before) ui = ui.copy(look = null).also { loadLook() }
+                    // Tiroir ouvert : premier bloc arrivé après l'ouverture, autre corps ou nouvel implant → images (re)chargées
+                    // (celles en cache disque ne sont pas redemandées à l'ordinateur).
+                    val stale = ui.look != null && ui.block?.let(::pieces) != before
+                    if (shown && (stale || (ui.look == null && lookJob?.isActive != true))) ui = ui.copy(look = null).also { loadLook() }
                     changed()
                 }
             // Échec : la liste d'avant reste, nouvel essai au prochain compteur.
@@ -62,8 +81,9 @@ class CyberwareController(private val activity: FragmentActivity, private val ch
     }
 
     /** Images du jeu pour ce corps, si l'ordinateur les a extraites ; sinon le statut (bouton « Préparer »). */
-    fun loadLook() {
+    private fun loadLook() {
         val client = api ?: return
+        if (!shown) return
         val block = ui.block ?: return
         if (ui.look != null) return
         lookJob?.cancel()
@@ -87,9 +107,10 @@ class CyberwareController(private val activity: FragmentActivity, private val ch
         return CyberwareView.pieces(b.body) + implants.mapNotNull { it.iconAsset }.distinct()
     }
 
-    /** Une nouvelle extraction remplace les images : rechargées au prochain affichage. */
-    fun forgetLook() {
+    /** Une nouvelle extraction remplace les images : rechargées tout de suite si le tiroir est ouvert. */
+    fun reloadLook() {
         lookJob?.cancel()
         ui = ui.copy(look = null)
+        loadLook()
     }
 }

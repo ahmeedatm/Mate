@@ -174,7 +174,7 @@ class CyberwareView(private val kit: CyberpunkKit) : ViewGroup(kit.context) {
         panel.visibility = VISIBLE
         panelBody.removeAllViews()
         val head = kit.row().apply { minimumHeight = 0 }
-        head.addView(kit.text(zoneName(z), 22f, R.color.cp_cyan, kit.bold, spacing = 0.06f, upper = true), kit.lp(0, WRAP).apply { weight = 1f })
+        head.addView(kit.text(zoneName(z), 20f, R.color.cp_cyan, kit.bold, spacing = 0.06f, upper = true).apply { maxLines = 2 }, kit.lp(0, WRAP).apply { weight = 1f })
         head.addView(
             ImageView(context0).apply {
                 setImageResource(R.drawable.ic_close)
@@ -186,8 +186,12 @@ class CyberwareView(private val kit: CyberpunkKit) : ViewGroup(kit.context) {
             kit.lp(kit.dp(48), kit.dp(48)),
         )
         panelBody.addView(head)
-        slot.item?.let { panelBody.addView(implantRow(it), kit.lp(MATCH, WRAP)) }
-            ?: panelBody.addView(kit.text(context0.getString(R.string.cp_empty_slot), 17f, R.color.cp_gris), kit.lp(MATCH, WRAP).apply { topMargin = kit.dp(6) })
+        val item = slot.item
+        when {
+            item != null -> panelBody.addView(implantRow(item), kit.lp(MATCH, WRAP))
+            // Verrouillé : seul le message de verrou, pas « Vide ».
+            !slot.locked -> panelBody.addView(kit.text(context0.getString(R.string.cp_empty_slot), 17f, R.color.cp_gris), kit.lp(MATCH, WRAP).apply { topMargin = kit.dp(6) })
+        }
         if (slot.locked) {
             panelBody.addView(kit.text(context0.getString(R.string.cp_cw_locked), 15f, R.color.cp_jaune), kit.lp(MATCH, WRAP).apply { topMargin = kit.dp(12) })
             return
@@ -207,7 +211,7 @@ class CyberwareView(private val kit: CyberpunkKit) : ViewGroup(kit.context) {
         }
         val texts = LinearLayout(context0).apply { orientation = LinearLayout.VERTICAL }
         texts.addView(kit.text(it.name, 16f, R.color.cp_texte, kit.medium))
-        it.cost?.let { c -> texts.addView(kit.text(context0.getString(R.string.cp_cw_cost, c), 13f, R.color.cp_gris, kit.mono), kit.lp(WRAP, WRAP).apply { topMargin = kit.dp(2) }) }
+        it.cost?.let { c -> texts.addView(kit.text(context0.getString(R.string.cp_cw_cost, c), 14f, R.color.cp_etiquette, kit.mono), kit.lp(WRAP, WRAP).apply { topMargin = kit.dp(2) }) }
         line.addView(texts, kit.lp(0, WRAP).apply { weight = 1f })
         return LinearLayout(context0).apply {
             orientation = LinearLayout.VERTICAL
@@ -270,11 +274,15 @@ class CyberwareView(private val kit: CyberpunkKit) : ViewGroup(kit.context) {
             val y = spot.y.toInt().coerceIn(0, maxOf(0, h - col.measuredHeight))
             place(col, x, y)
         }
-        place(panel, w - panel.measuredWidth, 0)
+        // Du côté opposé à la zone choisie : l'emplacement ouvert reste visible.
+        val chosenRight = selected?.first?.let { fit.zone(zoneOf(it), body)?.side } == CyberwareLayout.Side.RIGHT
+        place(panel, if (chosenRight) 0 else w - panel.measuredWidth, 0)
     }
 
-    /** Un emplacement : cadre, fond de la couleur de rareté si un implant est posé, icône de la zone teintée. */
-    /** `colored` : icône de l'implant (en couleur, dessinée telle quelle) ; sinon le masque de la zone, teinté. */
+    /**
+     * Un emplacement : cadre, fond de la couleur de rareté si un implant est posé, icône. `colored` : icône de l'implant
+     * (en couleur, dessinée telle quelle) ; sinon le masque de la zone, teinté.
+     */
     private inner class SlotView(private val slot: CyberwareSlot, private val icon: Bitmap?, private val colored: Boolean, private val chosen: Boolean) : View(context0) {
         private val paint = Paint(Paint.ANTI_ALIAS_FLAG)
         private val box = RectF()
@@ -289,7 +297,7 @@ class CyberwareView(private val kit: CyberpunkKit) : ViewGroup(kit.context) {
             box.set(stroke / 2, stroke / 2, width - stroke / 2, height - stroke / 2)
             val item = slot.item
             val tint = when {
-                slot.locked -> kit.color(R.color.cp_segment_vide)
+                slot.locked -> kit.color(R.color.cp_gris)
                 item != null -> kit.rarityColor(CyberpunkItems.rarity(item.quality))
                 else -> kit.color(R.color.cp_gris)
             }
@@ -342,7 +350,7 @@ class CyberwareView(private val kit: CyberpunkKit) : ViewGroup(kit.context) {
         private const val DOTS_ALPHA = 0.25f
         private const val ICON_PAD = 0.2f
         private const val EMPTY_ICON_ALPHA = 110
-        private const val LOCKED_ICON_ALPHA = 50
+        private const val LOCKED_ICON_ALPHA = 70
         private const val FILL_ALPHA = 0x40000000
     }
 }

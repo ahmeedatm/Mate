@@ -463,9 +463,9 @@ class CyberpunkOverlay(private val activity: FragmentActivity) {
                     if (api !== client) return@onSuccess
                     PhoneLook.clearCache(activity)
                     phone = phone.copy(lookStatus = CyberpunkPhoneStatus.LOADING, look = null)
-                    cyber.forgetLook()
+                    cyber.reloadLook()
                     renderDrawer()
-                    if (page == CyberpunkPage.CYBER) cyber.loadLook() else loadLook()
+                    if (page != CyberpunkPage.CYBER) loadLook()
                 }
                 .onFailure {
                     if (api === client) phone = phone.copy(lookStatus = CyberpunkPhoneStatus.ERROR).also { renderDrawer() }
@@ -504,14 +504,16 @@ class CyberpunkOverlay(private val activity: FragmentActivity) {
                     loadLook()
                 }
                 CyberpunkPage.ITEMS -> load(Block.INVENTORY, versions[Block.INVENTORY] ?: snapshot?.state?.blocks?.inv ?: 0)
-                CyberpunkPage.CYBER -> cyber.loadLook()
+                CyberpunkPage.CYBER -> cyber.show()
                 else -> Unit
             }
         }
+        if (page != CyberpunkPage.CYBER) cyber.hide()
         val open = page != null
+        val wasClosed = v.drawer.translationX != 0f
         // Cyber : toute la largeur à droite du rail (le corps et ses onze zones) ; les autres tiroirs : 420 dp.
         val lp = v.drawer.layoutParams
-        val width = if (page == CyberpunkPage.CYBER) v.root.width - v.kit.dp(DRAWER_LEFT_DP + MARGIN_DP) else v.kit.dp(DRAWER_DP)
+        val width = if (page == CyberpunkPage.CYBER) maxOf(v.root.width - v.kit.dp(DRAWER_LEFT_DP + MARGIN_DP), v.kit.dp(DRAWER_DP)) else v.kit.dp(DRAWER_DP)
         if (open && lp.width != width) {
             v.drawer.layoutParams = lp.apply { this.width = width }
             // Pleine largeur : fond opaque, la carte et le HUD ne transparaissent pas sous le corps.
@@ -519,6 +521,8 @@ class CyberpunkOverlay(private val activity: FragmentActivity) {
         }
         renderDrawer()
         val hidden = (lp.width + v.kit.dp(DRAWER_LEFT_DP)).toFloat()
+        // Fermé et élargi : il repart de sa nouvelle position cachée, sans bord qui surgit sur la carte.
+        if (open && wasClosed) v.drawer.translationX = -hidden
         v.drawer.animate().translationX(if (open) 0f else -hidden).setDuration(DRAWER_MS).start()
         val shift = if (open) v.kit.dp(HUD_SHIFT_DP).toFloat() else 0f
         v.hud.animate().translationX(shift).setDuration(DRAWER_MS).start()
