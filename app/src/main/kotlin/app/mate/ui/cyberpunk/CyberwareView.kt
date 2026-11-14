@@ -149,7 +149,8 @@ class CyberwareView(private val kit: CyberpunkKit, private val actions: Cyberwar
         val row = LinearLayout(context0).apply { orientation = LinearLayout.HORIZONTAL }
         val icon = look?.bitmap(zoneIcon(z))
         slots.forEachIndexed { i, s ->
-            val v = SlotView(s, s.item?.iconAsset?.let { look?.bitmap(it) } ?: icon, chosen && selected?.second == i).apply {
+            val own = s.item?.iconAsset?.let { look?.bitmap(it) }
+            val v = SlotView(s, own ?: icon, own != null, chosen && selected?.second == i).apply {
                 contentDescription = context0.getString(
                     R.string.cp_cw_slot_desc,
                     zoneName(z),
@@ -295,7 +296,8 @@ class CyberwareView(private val kit: CyberpunkKit, private val actions: Cyberwar
     }
 
     /** Un emplacement : cadre, fond de la couleur de rareté si un implant est posé, icône de la zone teintée. */
-    private inner class SlotView(private val slot: CyberwareSlot, private val icon: Bitmap?, private val chosen: Boolean) : View(context0) {
+    /** `colored` : icône de l'implant (en couleur, dessinée telle quelle) ; sinon le masque de la zone, teinté. */
+    private inner class SlotView(private val slot: CyberwareSlot, private val icon: Bitmap?, private val colored: Boolean, private val chosen: Boolean) : View(context0) {
         private val paint = Paint(Paint.ANTI_ALIAS_FLAG)
         private val box = RectF()
 
@@ -319,9 +321,13 @@ class CyberwareView(private val kit: CyberpunkKit, private val actions: Cyberwar
             icon?.let {
                 val pad = width * ICON_PAD
                 val alpha = if (item != null) 255 else EMPTY_ICON_ALPHA
-                paint.colorFilter = PorterDuffColorFilter(if (item != null) kit.color(R.color.cp_texte) else tint, PorterDuff.Mode.SRC_IN)
+                paint.colorFilter = if (colored) null else PorterDuffColorFilter(if (item != null) kit.color(R.color.cp_texte) else tint, PorterDuff.Mode.SRC_IN)
                 paint.alpha = if (slot.locked) LOCKED_ICON_ALPHA else alpha
-                canvas.drawBitmap(it, null, RectF(pad, pad, width - pad, height - pad), paint)
+                // Proportions gardées : les icônes du jeu ne sont pas carrées (80 × 65…).
+                val side = minOf(width, height) - 2 * pad
+                val k = side / maxOf(it.width, it.height)
+                val (w, h) = it.width * k to it.height * k
+                canvas.drawBitmap(it, null, RectF((width - w) / 2, (height - h) / 2, (width + w) / 2, (height + h) / 2), paint)
                 paint.colorFilter = null
                 paint.alpha = 255
             }
