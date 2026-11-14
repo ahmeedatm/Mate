@@ -3,11 +3,14 @@ package app.mate.ui.cyberpunk
 import android.text.TextUtils
 import android.view.Gravity
 import android.view.View
+import android.view.ViewGroup
 import android.widget.LinearLayout
+import android.widget.TextView
 import app.mate.R
 import app.mate.net.CyberpunkContacts
 import app.mate.net.CyberpunkImplant
 import app.mate.net.CyberpunkItem
+import app.mate.net.CyberpunkPhoneStatus
 import app.mate.net.CyberpunkPlayer
 import app.mate.net.CyberpunkQuest
 import app.mate.net.CyberpunkState
@@ -24,7 +27,7 @@ enum class CyberpunkPage(val labelRes: Int, val iconRes: Int) {
 }
 
 /** Ce que les tiroirs peuvent demander au jeu. */
-interface CyberpunkDrawerActions : CyberpunkPhoneActions {
+interface CyberpunkDrawerActions : CyberpunkPhoneActions, CyberwareActions {
     fun trackQuest(quest: CyberpunkQuest)
 
     fun use(item: CyberpunkItem)
@@ -34,6 +37,9 @@ interface CyberpunkDrawerActions : CyberpunkPhoneActions {
 class CyberpunkDrawers(private val kit: CyberpunkKit, private val actions: CyberpunkDrawerActions) {
     private val context = kit.context
     private val phoneUi = CyberpunkPhoneUi(kit, actions)
+
+    /** Gardé d'un affichage à l'autre : l'emplacement choisi survit à une relecture du bloc. */
+    private val cyberware by lazy { CyberwareView(kit, actions) }
 
     private fun column(titleRes: Int): LinearLayout = LinearLayout(context).apply {
         orientation = LinearLayout.VERTICAL
@@ -99,6 +105,27 @@ class CyberpunkDrawers(private val kit: CyberpunkKit, private val actions: Cyber
             addView(line, kit.lp(MATCH, WRAP))
             addView(kit.divider(), kit.lp(MATCH, 1))
         }
+    }
+
+    /** Écran cyberware du charcudoc, de `height` pixels sous le titre ; bouton « Préparer le look du jeu » sans les images. */
+    fun cyberware(ui: CyberwareUi, height: Int): View = column(R.string.cp_title_cyber).apply {
+        val block = ui.block ?: return@apply
+        (cyberware.parent as? ViewGroup)?.removeView(cyberware)
+        cyberware.bind(block, ui.look, ui.sending)
+        val title = getChildAt(0) as? TextView
+        if (ui.look == null && (ui.lookStatus == CyberpunkPhoneStatus.ABSENT || ui.lookStatus == CyberpunkPhoneStatus.ERROR)) {
+            removeView(title)
+            val head = kit.row().apply { minimumHeight = 0 }
+            title?.let { head.addView(it, kit.lp(0, WRAP).apply { weight = 1f }) }
+            head.addView(
+                kit.button(context.getString(R.string.cp_phone_prepare), context.getString(R.string.cp_phone_prepare), R.color.cp_cyan, R.color.cp_sur_cyan).apply {
+                    setOnClickListener { actions.prepareLook() }
+                },
+                kit.lp(WRAP, kit.dp(48)),
+            )
+            addView(head, 0, kit.lp(MATCH, WRAP))
+        }
+        addView(cyberware, kit.lp(MATCH, height))
     }
 
     fun cyber(state: CyberpunkState?): View = column(R.string.cp_title_cyber).apply {

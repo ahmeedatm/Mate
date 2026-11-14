@@ -22,8 +22,10 @@ object CyberwareLayout {
         fun height() = bottom - top
     }
 
-    /** Coin haut gauche du bloc d'une zone (nom puis cases). */
-    data class Spot(val x: Float, val y: Float)
+    enum class Side { LEFT, RIGHT }
+
+    /** Haut du bloc d'une zone (nom puis cases) ; `x` : son bord droit à gauche du corps, son bord gauche à droite. */
+    data class Spot(val x: Float, val y: Float, val side: Side)
 
     /** Image d'un système : nom de la pièce extraite, taille 1080p, centre décalé du centre du corps (unités du jeu). */
     data class Part(val asset: String, val width: Int, val height: Int, val dx: Int, val dy: Int, val scale: Float)
@@ -48,6 +50,9 @@ object CyberwareLayout {
 
     /** Côté d'une case d'implant dans le jeu. */
     private const val SLOT_UNITS = 120
+
+    /** Écart entre le corps et les blocs des zones. */
+    private const val GAP_UNITS = 40
 
     private const val MAN_SCALE = 0.92f
     private const val WOMAN_SCALE = 0.9f
@@ -91,7 +96,15 @@ object CyberwareLayout {
 
         private fun y(u: Int) = oy + (u - CROP_TOP) * scale
 
-        fun zone(zone: Zone?): Spot? = anchors[zone]?.let { (ax, ay) -> Spot(x(ax), y(ay)) }
+        /**
+         * Hauteur du jeu ; en largeur, les blocs se collent au corps de chaque côté au lieu de garder l'abscisse du jeu
+         * (écran 16:9) : sur la tablette (16:10), les noms longs y tiennent sans mordre sur le corps.
+         */
+        fun zone(zone: Zone?, body: Body): Spot? = anchors[zone]?.let { (ax, ay) ->
+            val box = bodyBox(body)
+            val gap = GAP_UNITS * scale
+            if (ax < BODY_X) Spot(box.left - gap, y(ay), Side.LEFT) else Spot(box.right + gap, y(ay), Side.RIGHT)
+        }
 
         fun partRect(p: Part): Box {
             val w = p.width * 2 * p.scale * scale
@@ -101,8 +114,8 @@ object CyberwareLayout {
             return Box(cx - w / 2, cy - h / 2, cx + w / 2, cy + h / 2)
         }
 
-        /** Le corps entier (homme), pour placer ce qui l'entoure. */
-        val body: Box get() = partRect(base(Body.MAN))
+        /** Le corps entier, pour placer ce qui l'entoure. */
+        fun bodyBox(body: Body): Box = partRect(base(body))
     }
 
     fun fit(width: Float, height: Float): Fit {

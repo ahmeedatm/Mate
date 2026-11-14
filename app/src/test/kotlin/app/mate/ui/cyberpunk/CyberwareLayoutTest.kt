@@ -14,27 +14,36 @@ class CyberwareLayoutTest {
     fun zonesSitLeftAndRightOfTheBodyLikeInTheGame() {
         val left = listOf(Zone.FRONTAL, Zone.ARMS, Zone.SKELETON, Zone.NERVOUS, Zone.SKIN)
         val right = listOf(Zone.OS, Zone.EYES, Zone.HANDS, Zone.CARDIO, Zone.LEGS)
-        val center = fit.body.centerX()
-        left.forEach { assertTrue("$it à gauche", fit.zone(it)!!.x < center) }
-        right.forEach { assertTrue("$it à droite", fit.zone(it)!!.x > center) }
+        val body = fit.bodyBox(CyberwareLayout.Body.MAN)
+        // À gauche : le bloc finit avant le corps ; à droite : il commence après. Les noms ne mordent jamais sur le corps.
+        left.forEach { assertTrue("$it à gauche", fit.zone(it, CyberwareLayout.Body.MAN)!!.let { s -> s.side == CyberwareLayout.Side.LEFT && s.x <= body.left }) }
+        right.forEach { assertTrue("$it à droite", fit.zone(it, CyberwareLayout.Body.MAN)!!.let { s -> s.side == CyberwareLayout.Side.RIGHT && s.x >= body.right }) }
         // De haut en bas dans l'ordre du jeu, de chaque côté.
-        listOf(left, right).forEach { col -> assertEquals(col, col.sortedBy { fit.zone(it)!!.y }) }
+        listOf(left, right).forEach { col -> assertEquals(col, col.sortedBy { fit.zone(it, CyberwareLayout.Body.MAN)!!.y }) }
+    }
+
+    @Test
+    fun columnsHaveRoomForLongZoneNames() {
+        // « SYSTÈME CARDIOVASCULAIRE » en 13 sp espacé : environ 260 px.
+        val body = fit.bodyBox(CyberwareLayout.Body.MAN)
+        assertTrue(body.left >= 260f && 1124f - body.right >= 260f)
     }
 
     @Test
     fun everythingFitsTheDrawerWithTouchableSlots() {
-        Zone.entries.mapNotNull { fit.zone(it) }.forEach {
+        Zone.entries.mapNotNull { fit.zone(it, CyberwareLayout.Body.MAN) }.forEach {
             assertTrue("$it dans le tiroir", it.x >= 0f && it.y >= 0f && it.x <= 1124f && it.y <= 736f)
         }
-        assertTrue("body dans le tiroir", fit.body.top >= 0f && fit.body.bottom <= 736f)
+        val body = fit.bodyBox(CyberwareLayout.Body.WOMAN)
+        assertTrue("corps dans le tiroir", body.top >= 0f && body.bottom <= 736f)
         assertTrue("case de ${fit.slotPx} px", fit.slotPx >= 48f)
     }
 
     @Test
     fun immuneHasNoPlaceInTheGameScreen() {
         // Le charcudoc 2.x n'a pas d'ancre pour le système immunitaire : la tablette le met sous la peau, à gauche.
-        val skin = fit.zone(Zone.SKIN)!!
-        val immune = fit.zone(Zone.IMMUNE)!!
+        val skin = fit.zone(Zone.SKIN, CyberwareLayout.Body.MAN)!!
+        val immune = fit.zone(Zone.IMMUNE, CyberwareLayout.Body.MAN)!!
         assertEquals(skin.x, immune.x, 0.01f)
         assertTrue(immune.y > skin.y)
     }
@@ -49,11 +58,12 @@ class CyberwareLayoutTest {
         // Les jambes sous le centre du corps, les yeux au-dessus.
         val legs = fit.partRect(CyberwareLayout.part(CyberwareLayout.Body.MAN, Zone.LEGS))
         val eyes = fit.partRect(CyberwareLayout.part(CyberwareLayout.Body.MAN, Zone.EYES))
-        assertTrue(legs.centerY() > fit.body.centerY() && eyes.centerY() < fit.body.centerY())
+        val body = fit.bodyBox(CyberwareLayout.Body.MAN)
+        assertTrue(legs.centerY() > body.centerY() && eyes.centerY() < body.centerY())
     }
 
     @Test
     fun unknownZoneHasNoSpot() {
-        assertNull(CyberwareLayout.fit(1124f, 736f).zone(null))
+        assertNull(CyberwareLayout.fit(1124f, 736f).zone(null, CyberwareLayout.Body.MAN))
     }
 }
