@@ -26,7 +26,7 @@ import kotlin.math.roundToInt
 /**
  * Bandeau de carte du widget Valorant (variante « A », choisie par Ahmed le 10/11/2026) : l'image de la carte jouée, son
  * nom, le score et la frise des rounds posés dessus ; en grand, des cartes en lévitation (bilan sur la carte, journée,
- * RR de la partie finie). Au menu, en plein écran seulement : ma journée, sur fond sombre. Taille selon la forme ([Size]) :
+ * RR de la partie finie). Au menu, en 4 × 3 et en plein écran : ma journée, sur fond sombre. Taille selon la forme ([Size]) :
  * rien en pastille, mini à la place du score en ligne et colonne, fin à côté du titre, moyen ou plein au-dessus du tableau.
  */
 object ValorantBand {
@@ -67,7 +67,7 @@ object ValorantBand {
             end != null -> size != Size.MINI || end.score != null
             v.state == ValorantState.INGAME -> true
             v.state == ValorantState.PREGAME -> size != Size.MINI
-            else -> size == Size.FULL && v.today?.results?.isNotEmpty() == true
+            else -> (size == Size.FULL || size == Size.MEDIUM) && v.today?.results?.isNotEmpty() == true
         }
     }
 
