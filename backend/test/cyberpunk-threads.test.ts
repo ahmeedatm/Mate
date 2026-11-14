@@ -101,6 +101,22 @@ describe("POST /cyberpunk/threads/:hash/reply", () => {
     assert.equal(r.json.res, "choix-perime");
   });
 
+  it("erreur Lua du mod : phrase fixe, jamais la trace", async () => {
+    mod = fakeMod(modDir, { threads: { "7": takemura() }, failWith: "logic.lua:450: attempt to index a nil value" });
+    const r = await call("POST", "/cyberpunk/threads/7/reply", { choice: "-55", version: version() });
+    assert.equal(r.status, 409);
+    assert.equal(r.json.res, "erreur");
+    assert.doesNotMatch(JSON.stringify(r.json), /logic\.lua/);
+  });
+
+  it("mod 1.0.0 encore chargé (ordre inconnu) : demande la mise à jour", async () => {
+    mod = fakeMod(modDir, { threads: { "7": takemura() }, failWith: "inconnu" });
+    const r = await call("GET", "/cyberpunk/threads/7");
+    assert.equal(r.status, 409);
+    assert.equal(r.json.res, "inconnu");
+    assert.match(r.json.error, /mets-le à jour/);
+  });
+
   it("version changée : 409 avec res", async () => {
     mod = fakeMod(modDir, { threads: { "7": takemura() } });
     const r = await call("POST", "/cyberpunk/threads/7/reply", { choice: "-55", version: "9:1" });

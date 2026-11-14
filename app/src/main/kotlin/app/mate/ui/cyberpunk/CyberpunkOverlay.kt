@@ -449,6 +449,10 @@ class CyberpunkOverlay(private val activity: FragmentActivity) {
 
     private fun prepareLook() {
         val client = api ?: return
+        // Un seul POST /prepare à la fois, même sur deux appuis rapides.
+        if (phone.lookStatus == CyberpunkPhoneStatus.LOADING) return
+        phone = phone.copy(lookStatus = CyberpunkPhoneStatus.LOADING)
+        renderDrawer()
         activity.lifecycleScope.launch {
             runCatchingCancellable { client.preparePhone() }
                 .onSuccess {
@@ -458,7 +462,10 @@ class CyberpunkOverlay(private val activity: FragmentActivity) {
                     renderDrawer()
                     loadLook()
                 }
-                .onFailure { toast(activity.errorText(it)) }
+                .onFailure {
+                    if (api === client) phone = phone.copy(lookStatus = CyberpunkPhoneStatus.ERROR).also { renderDrawer() }
+                    toast(activity.errorText(it))
+                }
         }
     }
 

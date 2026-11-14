@@ -208,7 +208,8 @@ describe("routes du téléphone", () => {
     const png = await app.inject({ method: "GET", url: "/cyberpunk/phone/frame_main.png" });
     assert.equal(png.statusCode, 200);
     assert.equal(png.headers["content-type"], "image/png");
-    assert.match(String(png.headers["cache-control"]), /max-age=\d{6,}/);
+    // Pas « immutable » : les pièces gardent leur nom quand elles sont ré-extraites.
+    assert.equal(png.headers["cache-control"], "private, max-age=3600");
     assert.equal(png.body, "PNGDATA");
     const ttf = await app.inject({ method: "GET", url: "/cyberpunk/phone/raj-bold.ttf" });
     assert.equal(ttf.headers["content-type"], "font/ttf");

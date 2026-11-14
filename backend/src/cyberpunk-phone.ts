@@ -260,6 +260,6 @@ export async function phoneRoutes(app: FastifyInstance) {
     const file = await cyberpunkPhone().asset(req.params.name);
     if (!file) return reply.code(404).send({ error: "Fichier absent" });
     const type = req.params.name.endsWith(".ttf") ? "font/ttf" : "image/png";
-    return reply.header("cache-control", "public, max-age=31536000, immutable").type(type).send(file);
+    return reply.header("cache-control", "private, max-age=3600").type(type).send(file);
   });
 }

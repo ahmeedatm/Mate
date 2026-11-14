@@ -45,16 +45,24 @@ local function u32(h)
   return h
 end
 
+-- Valeur d'une énumération du jeu, ou nil si elle ne se lit pas (jamais deux échecs pris pour une égalité).
 local function enum(e)
   local ok, n = pcall(function() return tonumber(EnumInt(e)) end)
-  return ok and n or -1
+  if ok then return n end
+  return nil
 end
 
-local function isMulti(c) return enum(c.type) == enum(MessengerContactType.MultiThread) end
+local function same(a, b) return a ~= nil and a == b end
+
+local function isMulti(c) return same(enum(c.type), enum(MessengerContactType.MultiThread)) end
 
 -- Messages et choix ouverts d'un fil (téléphone du jeu fermé ; ne marque rien lu).
 local function threadData(j, c)
-  if isMulti(c) then return j:GetMessagesAndChoices(j:GetEntry(u32(c.conversationHash))) end
+  if isMulti(c) then
+    local conv = tonumber(c.conversationHash)
+    if not conv or conv == 0 then error("fil-introuvable", 0) end
+    return j:GetMessagesAndChoices(j:GetEntry(u32(conv)))
+  end
   return j:GetFlattenedMessagesAndChoices(j:GetEntry(u32(c.hash)))
 end
 
@@ -427,7 +435,7 @@ COMMANDS.thread = function(c)
     local m = msgs[i]
     local mine = true -- une réponse déjà envoyée (entrée de choix) est celle du joueur
     if m:IsA("gameJournalPhoneMessage") then
-      mine = enum(m:GetSender()) == player
+      mine = same(enum(m:GetSender()), player)
       if not j:IsEntryVisited(m) then toMark[#toMark + 1] = m end
     end
     outMsgs[#outMsgs + 1] = { hash = tostring(j:GetEntryHash(m)), text = loc(m:GetText()), player = mine }
@@ -452,16 +460,20 @@ COMMANDS.reply = function(c)
   for i = 1, #(choices or {}) do
     if tostring(j:GetEntryHash(choices[i])) == tostring(c.choice) then pick = choices[i] end
   end
-  if not pick then error("choix-perime", 0) end
+  -- Déjà envoyé (second appui, ordre rejoué) : le choix retenu est visité dès le premier envoi.
+  if not pick or j:IsEntryVisited(pick) then error("choix-perime", 0) end
+  -- Le choix retenu d'abord : un échec ensuite ne laisse jamais les autres éteints sans réponse envoyée.
+  j:SetEntryVisited(pick, true)
+  j:ChangeEntryStateByHash(u32(j:GetEntryHash(pick)), gameJournalEntryState.Succeeded, JournalNotifyOption.Notify)
   for i = 1, #choices do
     local r = choices[i]
     if r ~= pick then
-      j:SetEntryVisited(r, true)
-      j:ChangeEntryStateByHash(u32(j:GetEntryHash(r)), gameJournalEntryState.Inactive, JournalNotifyOption.Notify)
+      pcall(function()
+        j:SetEntryVisited(r, true)
+        j:ChangeEntryStateByHash(u32(j:GetEntryHash(r)), gameJournalEntryState.Inactive, JournalNotifyOption.Notify)
+      end)
     end
   end
-  j:SetEntryVisited(pick, true)
-  j:ChangeEntryStateByHash(u32(j:GetEntryHash(pick)), gameJournalEntryState.Succeeded, JournalNotifyOption.Notify)
   return "ok"
 end
 

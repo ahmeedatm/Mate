@@ -23,7 +23,7 @@ export const threadVersion = (t: FakeThread) => `${t.messages.length}:${t.messag
 
 export function fakeMod(
   modDir: string,
-  opts: { silent?: boolean; session?: number; threads?: Record<string, FakeThread>; wrongCmd?: boolean } = {},
+  opts: { silent?: boolean; session?: number; threads?: Record<string, FakeThread>; wrongCmd?: boolean; failWith?: string } = {},
 ) {
   let last: number | null = null;
   let seq = 0;
@@ -35,6 +35,7 @@ export function fakeMod(
   const threads = opts.threads ?? {};
   /** thread / reply comme logic.lua : refus = ack faux avec `res` ; thread.json porte `cmd` et la version du fil. */
   const phone = (c: any): { ok: boolean; res: string } => {
+    if (opts.failWith) return { ok: false, res: opts.failWith };
     const t = threads[String(c.hash)];
     if (!t) return { ok: false, res: "fil-introuvable" };
     if (c.t === "thread") {

@@ -26,6 +26,7 @@ class PhoneLook(private val bitmaps: Map<String, Bitmap>, val title: Typeface?, 
         const val TITLE_FONT = "raj-bold.ttf"
         const val BODY_FONT = "blenderpro-book.ttf"
         private const val CACHE_DIR = "cyberpunk-phone"
+        private const val STAMP = "assets.txt"
 
         /** Côté le plus court gardé à 64 px au moins : assez net pour un cadre de 420 dp, sans garder le 1080p. */
         private const val MIN_SIDE_PX = 64
@@ -33,13 +34,23 @@ class PhoneLook(private val bitmaps: Map<String, Bitmap>, val title: Typeface?, 
         /** Pas plus d'une requête par pièce : celles déjà en cache disque ne sont pas redemandées. */
         suspend fun load(context: Context, api: CyberpunkApi, available: List<String>): PhoneLook = withContext(Dispatchers.IO) {
             val dir = File(context.cacheDir, CACHE_DIR).apply { mkdirs() }
+            // Pièces ré-extraites ailleurs (autre tablette, jeu mis à jour) : la liste change, le cache repart de zéro.
+            val stamp = File(dir, STAMP)
+            val list = available.sorted().joinToString("\n")
+            if (runCatching { stamp.readText() }.getOrNull() != list) {
+                dir.listFiles()?.forEach { it.delete() }
+                stamp.writeText(list)
+            }
 
             suspend fun fetch(name: String): File? {
                 if (name !in available) return null
                 val file = File(dir, name)
                 if (file.length() > 0) return file
+                // Fichier temporaire puis renommage : une coupure ne laisse jamais une pièce tronquée en cache.
+                val tmp = File(dir, "$name.tmp")
                 return runCatchingCancellable { api.phoneAsset(name) }
-                    .onSuccess { file.writeBytes(it) }.map { file }.getOrNull()
+                    .mapCatching { tmp.writeBytes(it); check(tmp.renameTo(file)); file }
+                    .onFailure { tmp.delete() }.getOrNull()
             }
 
             val bitmaps = PIECES.mapNotNull { name -> fetch(name)?.let { decode(it) }?.let { name to it } }.toMap()

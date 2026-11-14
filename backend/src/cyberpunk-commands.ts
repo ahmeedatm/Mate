@@ -1,6 +1,7 @@
 import fs from "node:fs/promises";
 import path from "node:path";
 import { readState } from "./cyberpunk.ts";
+import { logFailure } from "./log.ts";
 import { findGame, type Game } from "./cyberpunk-steam.ts";
 
 /**
@@ -104,24 +105,40 @@ export async function sendCommand(cmd: Command) {
 const REFUS: Record<string, string> = {
   "fil-introuvable": "Ce fil n'existe plus dans le téléphone du jeu",
   "choix-perime": "Ce choix n'est plus proposé : le fil a changé",
+  // Ordre inconnu : c'est la réponse d'un mod 1.0.0 encore chargé.
+  inconnu: "Le mod Mate du jeu est trop ancien : mets-le à jour depuis le compagnon",
 };
 
-/** Erreur 409 qui garde le `res` du mod (la tablette lit `res`, pas seulement le code). */
+/** Erreur 409 qui garde le `res` du mod quand il est connu (la tablette lit `res`) ; jamais une trace Lua brute. */
 export class PhoneRefusal extends Error {
   statusCode = 409;
-  constructor(public res: string) {
-    super(REFUS[res] ?? `Cyberpunk 2077 a refusé : ${res}`);
+  res: string;
+  constructor(res: string) {
+    super(REFUS[res] ?? "Le téléphone du jeu n'a pas pu répondre");
+    this.res = res in REFUS ? res : "erreur";
   }
 }
 
 async function phoneCommand(cmd: Command) {
   const sent = await sendCommand(cmd);
-  if (!sent.ok) throw new PhoneRefusal(sent.res);
+  if (!sent.ok) {
+    if (!(sent.res in REFUS)) logFailure(`cyberpunk ${cmd.t}`, new Error(sent.res));
+    throw new PhoneRefusal(sent.res);
+  }
   return sent;
 }
 
+/** Un fil lu à la fois : `thread.json` est unique, deux lectures croisées se l'écraseraient. */
+let threadLock: Promise<unknown> = Promise.resolve();
+
 /** Lit le fil `hash` : ordre `thread`, puis `thread.json` lu tel quel (jamais le cache des blocs) et lié à l'ordre par `cmd`. */
 export async function readThread(hash: string) {
+  const run = threadLock.then(() => readThreadNow(hash));
+  threadLock = run.catch(() => undefined);
+  return run;
+}
+
+async function readThreadNow(hash: string) {
   const { id } = await phoneCommand({ t: "thread", hash });
   const game = findGame() ?? fail("Cyberpunk 2077 (Steam) est introuvable sur cet ordinateur", 404);
   let doc: Record<string, unknown>;
