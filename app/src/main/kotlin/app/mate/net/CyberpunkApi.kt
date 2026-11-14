@@ -84,7 +84,28 @@ data class CyberpunkItem(val tdb: String?, val name: String, val type: String?, 
 
 data class CyberpunkContact(val id: String?, val name: String, val callable: Boolean, val unread: Int)
 
-data class CyberpunkThread(val name: String, val preview: String?, val unread: Int, val time: String?)
+/** `hash` : identifiant stable du fil (chaîne de chiffres, vide si le mod est plus ancien) ; `canReply` : des choix de réponse sont ouverts. */
+data class CyberpunkThread(
+    val name: String,
+    val preview: String?,
+    val unread: Int,
+    val time: String?,
+    val hash: String = "",
+    val multi: Boolean = false,
+    val canReply: Boolean = false,
+)
+
+data class CyberpunkThreadMessage(val hash: String, val text: String, val player: Boolean)
+
+data class CyberpunkThreadChoice(val hash: String, val text: String)
+
+/** `version` : à rendre tel quel à `reply`, le mod refuse si le fil a bougé depuis. */
+data class CyberpunkThreadDetail(val version: String, val messages: List<CyberpunkThreadMessage>, val choices: List<CyberpunkThreadChoice>)
+
+enum class CyberpunkPhoneStatus { ABSENT, LOADING, READY, ERROR }
+
+/** Le « look du jeu » préparé par l'ordinateur : `assets` = noms servis par `phoneAsset`. */
+data class CyberpunkPhoneLook(val status: CyberpunkPhoneStatus, val assets: List<String>)
 
 data class CyberpunkContacts(val contacts: List<CyberpunkContact>, val threads: List<CyberpunkThread>) {
     val unread get() = contacts.sumOf { it.unread } + threads.sumOf { it.unread }
@@ -140,6 +161,21 @@ class CyberpunkApi(private val http: Http) {
 
     suspend fun contacts(): CyberpunkContacts = http.io { parseContacts(http.get("/cyberpunk/contacts", timeoutMs = STATE_TIMEOUT_MS)) }
 
+    /** Fil complet d'une conversation (le jeu la marque lue). 409 `res` `fil-introuvable` si le fil n'existe plus. */
+    suspend fun thread(hash: String): CyberpunkThreadDetail = http.io { parseThread(http.get("/cyberpunk/threads/$hash", timeoutMs = ACTION_TIMEOUT_MS)) }
+
+    /** Envoie un choix. 409 `res` `choix-perime` (voir [isStaleChoice]) ou `fil-introuvable` ; 504 sans réponse du mod. */
+    suspend fun reply(hash: String, choice: String, version: String) = http.io {
+        http.postJson("/cyberpunk/threads/$hash/reply", JSONObject().put("choice", choice).put("version", version), timeoutMs = ACTION_TIMEOUT_MS)
+    }
+
+    suspend fun phoneStatus(): CyberpunkPhoneLook = http.io { parsePhone(http.get("/cyberpunk/phone", timeoutMs = STATE_TIMEOUT_MS)) }
+
+    suspend fun preparePhone() = http.io { http.postJson("/cyberpunk/phone/prepare", JSONObject()) }
+
+    /** Une pièce du téléphone (PNG ou TTF) de la liste de [phoneStatus]. */
+    suspend fun phoneAsset(name: String): ByteArray = http.io { http.bytesOrNull("/cyberpunk/phone/" + http.encode(name), timeoutMs = TILE_TIMEOUT_MS) ?: throw HttpException(404, "") }
+
     suspend fun quests(): List<CyberpunkQuest> = http.io { parseQuests(http.get("/cyberpunk/quests", timeoutMs = STATE_TIMEOUT_MS)) }
 
     suspend fun install(): CyberpunkInstallResult = http.io { parseInstall(http.postJson("/cyberpunk/install", JSONObject())) }
@@ -187,6 +223,9 @@ class CyberpunkApi(private val http: Http) {
 
         /** Route inconnue (compagnon plus ancien) ou plugin coupé : ni jeu, ni erreur. */
         fun isUnavailable(e: HttpException) = e.code == 404 || e.code == 403
+
+        /** Le choix proposé n'est plus ouvert ou le fil a bougé : recharger le fil, ne pas renvoyer. */
+        fun isStaleChoice(e: Throwable) = (e as? HttpException)?.res == "choix-perime"
 
         private fun JSONObject.text(key: String) = if (isNull(key)) null else optString(key).ifEmpty { null }
         private fun JSONObject.double(key: String) = optDouble(key, 0.0).let { if (it.isNaN()) 0.0 else it }
@@ -280,8 +319,29 @@ class CyberpunkApi(private val http: Http) {
             val o = JSONObject(json)
             return CyberpunkContacts(
                 o.optJSONArray("contacts").items { CyberpunkContact(it.text("id"), it.optString("name"), it.optBoolean("callable"), it.count("unread")) },
-                o.optJSONArray("threads").items { CyberpunkThread(it.optString("name"), it.text("preview"), it.count("unread"), it.text("time")) },
+                o.optJSONArray("threads").items { CyberpunkThread(it.optString("name"), it.text("preview"), it.count("unread"), it.text("time"), it.optString("hash"), it.optBoolean("multi"), it.optBoolean("canReply")) },
             )
+        }
+
+        fun parseThread(json: String): CyberpunkThreadDetail {
+            val o = JSONObject(json)
+            return CyberpunkThreadDetail(
+                o.optString("version"),
+                o.optJSONArray("messages").items { CyberpunkThreadMessage(it.optString("hash"), it.optString("text"), it.optBoolean("player")) },
+                o.optJSONArray("choices").items { CyberpunkThreadChoice(it.optString("hash"), it.optString("text")) },
+            )
+        }
+
+        fun parsePhone(json: String): CyberpunkPhoneLook {
+            val o = JSONObject(json)
+            val status = when (o.optString("status")) {
+                "ready" -> CyberpunkPhoneStatus.READY
+                "loading" -> CyberpunkPhoneStatus.LOADING
+                "error" -> CyberpunkPhoneStatus.ERROR
+                else -> CyberpunkPhoneStatus.ABSENT
+            }
+            val names = o.optJSONArray("assets")
+            return CyberpunkPhoneLook(status, (0 until (names?.length() ?: 0)).map { names!!.optString(it) })
         }
 
         fun parseQuests(json: String): List<CyberpunkQuest> = JSONObject(json).optJSONArray("quests").items {

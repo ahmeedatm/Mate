@@ -912,6 +912,29 @@ export async function runSanity(opts: { url: string; token: string; os?: Os; hoo
       },
     },
     {
+      name: "Cyberpunk 2077 (look du téléphone)",
+      run: async () => {
+        // Lecture seule, sans lancer l'extraction (téléchargement de 80 Mo d'outils) : le statut se lit sur tous les systèmes.
+        const phone = await call("GET", "/cyberpunk/phone");
+        expectStatus(phone, 200, "/cyberpunk/phone");
+        expect(["absent", "loading", "ready", "error"].includes(phone.json.status), "état du look du téléphone inconnu");
+        expect(Array.isArray(phone.json.assets), "liste des pièces absente");
+        return `look du téléphone ${phone.json.status} (${phone.json.assets.length} fichier(s))`;
+      },
+    },
+    {
+      name: "Cyberpunk 2077 (fils SMS)",
+      run: async () => {
+        // Lecture d'un fil qui n'existe pas (hash 1) : 409 hors partie (ou fil introuvable), 403 plugin coupé, 404 jeu absent ; jamais un envoi.
+        const res = await call("GET", "/cyberpunk/threads/1");
+        if (res.status === 403) throw new Skip("plugin Cyberpunk coupé");
+        expect([404, 409].includes(res.status), `/cyberpunk/threads/1 : ${res.status} au lieu de 404 ou 409`);
+        expect(typeof res.json.error === "string", "phrase d'erreur absente");
+        if (res.status === 409) return `409 (${res.json.res ?? "hors partie"})`;
+        return "jeu non trouvé";
+      },
+    },
+    {
       name: "Valorant (logo de rang servi par l'ordinateur)",
       run: async () => {
         // Lecture seule : téléchargé une fois depuis valorant-api.com, puis gardé dans .cache.

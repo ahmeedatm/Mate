@@ -1,6 +1,7 @@
 import fs from "node:fs/promises";
 import path from "node:path";
 import { readState } from "./cyberpunk.ts";
+import { logFailure } from "./log.ts";
 import { findGame, type Game } from "./cyberpunk-steam.ts";
 
 /**
@@ -14,7 +15,10 @@ const MAX_CMDS = 20;
 /** Délai d'attente de l'ack ; MATE_CYBERPUNK_ACK_MS le raccourcit dans les tests. */
 const ackWaitMs = () => Number(process.env.MATE_CYBERPUNK_ACK_MS) || 5000;
 
-export type Command = { t: "call" | "answer" | "hangup" | "use" | "summon" | "track" | "pin" | "unpin" } & Record<string, unknown>;
+export type Command = { t: "call" | "answer" | "hangup" | "use" | "summon" | "track" | "pin" | "unpin" | "thread" | "reply" } & Record<
+  string,
+  unknown
+>;
 export type Ack = { id: number; ok: boolean; res: string };
 
 const fail = (message: string, statusCode: number): never => {
@@ -96,4 +100,62 @@ export async function sendCommand(cmd: Command) {
   const [id] = await enqueue([cmd]);
   const ack = (await waitAck(id)) ?? fail("Cyberpunk 2077 n'a pas répondu", 504);
   return { ok: ack.ok, id, res: ack.res };
+}
+
+const REFUS: Record<string, string> = {
+  "fil-introuvable": "Ce fil n'existe plus dans le téléphone du jeu",
+  "choix-perime": "Ce choix n'est plus proposé : le fil a changé",
+  // Ordre inconnu : c'est la réponse d'un mod 1.0.0 encore chargé.
+  inconnu: "Le mod Mate du jeu est trop ancien : mets-le à jour depuis le compagnon",
+};
+
+/** Erreur 409 qui garde le `res` du mod quand il est connu (la tablette lit `res`) ; jamais une trace Lua brute. */
+export class PhoneRefusal extends Error {
+  statusCode = 409;
+  res: string;
+  constructor(res: string) {
+    super(REFUS[res] ?? "Le téléphone du jeu n'a pas pu répondre");
+    this.res = res in REFUS ? res : "erreur";
+  }
+}
+
+async function phoneCommand(cmd: Command) {
+  const sent = await sendCommand(cmd);
+  if (!sent.ok) {
+    if (!(sent.res in REFUS)) logFailure(`cyberpunk ${cmd.t}`, new Error(sent.res));
+    throw new PhoneRefusal(sent.res);
+  }
+  return sent;
+}
+
+/** Un fil lu à la fois : `thread.json` est unique, deux lectures croisées se l'écraseraient. */
+let threadLock: Promise<unknown> = Promise.resolve();
+
+/** Lit le fil `hash` : ordre `thread`, puis `thread.json` lu tel quel (jamais le cache des blocs) et lié à l'ordre par `cmd`. */
+export async function readThread(hash: string) {
+  const run = threadLock.then(() => readThreadNow(hash));
+  threadLock = run.catch(() => undefined);
+  return run;
+}
+
+async function readThreadNow(hash: string) {
+  const { id } = await phoneCommand({ t: "thread", hash });
+  const game = findGame() ?? fail("Cyberpunk 2077 (Steam) est introuvable sur cet ordinateur", 404);
+  let doc: Record<string, unknown>;
+  try {
+    doc = JSON.parse(await fs.readFile(path.join(game.modDir, "thread.json"), "utf8"));
+  } catch {
+    return fail("Le fil n'a pas pu être lu", 409);
+  }
+  if (doc.cmd !== id || doc.hash !== hash) fail("Le fil lu n'est pas celui demandé", 409);
+  const { cmd: _cmd, ...thread } = doc;
+  // Le mod écrit un tableau vide en objet vide : la tablette reçoit toujours des tableaux.
+  const list = (v: unknown) => (Array.isArray(v) ? v : []);
+  return { ...thread, messages: list(thread.messages), choices: list(thread.choices) };
+}
+
+/** Envoie le choix `choice` du fil `hash` ; le mod refuse si le choix n'est plus ouvert ou si `version` a changé. */
+export async function replyThread(hash: string, choice: string, version: string) {
+  await phoneCommand({ t: "reply", hash, choice, version });
+  return { ok: true };
 }

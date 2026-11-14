@@ -2,7 +2,7 @@
 -- inventory.json, contacts.json et quests.json, et exécute les ordres de commands.json (écrit par le backend de Mate).
 -- Tout appel au jeu est sous pcall. Aucun appel inconnu du moteur hors des commandes ci-dessous.
 -- Contrat : docs/specs/2026-11-14-plugin-cyberpunk-design.md, section « Contrat ». Pas de variable globale (CET les refuse).
-local VERSION = "1.0.0"
+local VERSION = "1.1.0"
 local every, acc = 1.0, 0
 local seq, tick = 0, 0
 local errs = {}
@@ -35,6 +35,50 @@ local function loc(s)
   local ok, t = pcall(function() return Game.GetLocalizedTextByKey(s) end)
   if ok and t and t ~= "" then return t end
   return s
+end
+
+-- Fils SMS (méthode de dariulone/cyberpunk-vr-port, MIT, prouvée en jeu le 14/11). Le hash Int32 du jeu est relu non signé
+-- pour GetEntry, et écrit en chaîne de chiffres (tostring) pour le backend et la tablette.
+local function u32(h)
+  h = math.floor(tonumber(h) or 0)
+  if h < 0 then h = h + 4294967296 end
+  return h
+end
+
+-- Valeur d'une énumération du jeu, ou nil si elle ne se lit pas (jamais deux échecs pris pour une égalité).
+local function enum(e)
+  local ok, n = pcall(function() return tonumber(EnumInt(e)) end)
+  if ok then return n end
+  return nil
+end
+
+local function same(a, b) return a ~= nil and a == b end
+
+local function isMulti(c) return same(enum(c.type), enum(MessengerContactType.MultiThread)) end
+
+-- Messages et choix ouverts d'un fil (téléphone du jeu fermé ; ne marque rien lu).
+local function threadData(j, c)
+  if isMulti(c) then
+    local conv = tonumber(c.conversationHash)
+    if not conv or conv == 0 then error("fil-introuvable", 0) end
+    return j:GetMessagesAndChoices(j:GetEntry(u32(conv)))
+  end
+  return j:GetFlattenedMessagesAndChoices(j:GetEntry(u32(c.hash)))
+end
+
+local function findThread(j, hash)
+  local all = MessengerUtils.GetSimpleContactDataArray(j, true, true, true)
+  for i = 1, #(all or {}) do
+    if tostring(all[i].hash) == tostring(hash) then return all[i] end
+  end
+  return nil
+end
+
+-- Version du fil : nombre de messages et hash du dernier (le backend la renvoie avec le choix, le mod refuse si elle a bougé).
+local function threadVersion(j, msgs)
+  local n = #(msgs or {})
+  local last = n > 0 and tostring(j:GetEntryHash(msgs[n])) or "0"
+  return n .. ":" .. last
 end
 
 local function itemInfo(pl, id)
@@ -242,9 +286,11 @@ local function contactsBlock()
     contacts[#contacts + 1] = { id = c.contactId, name = loc(c.localizedName), callable = c.isCallable, unread = c.unreadMessegeCount or 0 }
   end
   local th = try("threads", function() return MessengerUtils.GetSimpleContactDataArray(jm, true, true, true) end)
-  for i = 1, math.min(#(th or {}), 15) do
+  -- Tous les fils (28 sur la partie d'Ahmed) : la tablette filtre (`unread > 0 or canReply`).
+  for i = 1, #(th or {}) do
     local c = th[i]
-    threads[#threads + 1] = { name = loc(c.localizedName), preview = loc(c.lastMesssagePreview), unread = #(c.unreadMessages or {}) }
+    threads[#threads + 1] = { hash = tostring(c.hash), name = loc(c.localizedName), preview = loc(c.lastMesssagePreview),
+      unread = #(c.unreadMessages or {}), multi = isMulti(c), canReply = c.playerCanReply == true }
   end
   putBlock("contacts", "contacts.json", { v = 1, contacts = contacts, threads = threads })
 end
@@ -375,6 +421,60 @@ COMMANDS.unpin = function(c)
   if trackedPin and tostring(trackedPin) == pid then trackedPin = nil end
   pcall(savePins)
   return "unpinned"
+end
+
+-- Les refus sont des erreurs sans position (niveau 0) : le message devient `res` et l'ack `ok` est faux.
+COMMANDS.thread = function(c)
+  local j = Game.GetJournalManager()
+  local t = findThread(j, c.hash)
+  if not t then error("fil-introuvable", 0) end
+  local msgs, choices = threadData(j, t)
+  local player = enum(gameMessageSender.Player)
+  local outMsgs, outChoices, toMark = {}, {}, {}
+  for i = 1, #(msgs or {}) do
+    local m = msgs[i]
+    local mine = true -- une réponse déjà envoyée (entrée de choix) est celle du joueur
+    if m:IsA("gameJournalPhoneMessage") then
+      mine = same(enum(m:GetSender()), player)
+      if not j:IsEntryVisited(m) then toMark[#toMark + 1] = m end
+    end
+    outMsgs[#outMsgs + 1] = { hash = tostring(j:GetEntryHash(m)), text = loc(m:GetText()), player = mine }
+  end
+  for i = 1, #(choices or {}) do
+    outChoices[#outChoices + 1] = { hash = tostring(j:GetEntryHash(choices[i])), text = loc(choices[i]:GetText()) }
+  end
+  putAtomic("thread.json", json.encode({ v = 1, cmd = c.id, hash = tostring(c.hash), version = threadVersion(j, msgs),
+    messages = outMsgs, choices = outChoices }))
+  -- Comme SetVisited du jeu : le fil lu ne reste pas « non lu ».
+  for _, m in ipairs(toMark) do pcall(function() j:SetEntryVisited(m, true) end) end
+  return "ok"
+end
+
+COMMANDS.reply = function(c)
+  local j = Game.GetJournalManager()
+  local t = findThread(j, c.hash)
+  if not t then error("fil-introuvable", 0) end
+  local msgs, choices = threadData(j, t)
+  if threadVersion(j, msgs) ~= tostring(c.version) then error("choix-perime", 0) end
+  local pick = nil
+  for i = 1, #(choices or {}) do
+    if tostring(j:GetEntryHash(choices[i])) == tostring(c.choice) then pick = choices[i] end
+  end
+  -- Déjà envoyé (second appui, ordre rejoué) : le choix retenu est visité dès le premier envoi.
+  if not pick or j:IsEntryVisited(pick) then error("choix-perime", 0) end
+  -- Le choix retenu d'abord : un échec ensuite ne laisse jamais les autres éteints sans réponse envoyée.
+  j:SetEntryVisited(pick, true)
+  j:ChangeEntryStateByHash(u32(j:GetEntryHash(pick)), gameJournalEntryState.Succeeded, JournalNotifyOption.Notify)
+  for i = 1, #choices do
+    local r = choices[i]
+    if r ~= pick then
+      pcall(function()
+        j:SetEntryVisited(r, true)
+        j:ChangeEntryStateByHash(u32(j:GetEntryHash(r)), gameJournalEntryState.Inactive, JournalNotifyOption.Notify)
+      end)
+    end
+  end
+  return "ok"
 end
 
 local function readCommands()
