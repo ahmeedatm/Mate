@@ -54,9 +54,10 @@ class CyberwareController(private val activity: FragmentActivity, private val ch
                 .onSuccess {
                     if (api !== client) return@onSuccess
                     version = next
-                    val bodyChanged = ui.block?.body != it.body
+                    val before = ui.block?.let(::pieces)
                     ui = ui.copy(block = it.takeIf { b -> b.ready })
-                    if (bodyChanged && ui.look != null) ui = ui.copy(look = null).also { loadLook() }
+                    // Autre corps ou nouvel implant : les images manquantes se chargent (celles en cache disque ne repartent pas).
+                    if (ui.look != null && ui.block?.let(::pieces) != before) ui = ui.copy(look = null).also { loadLook() }
                     changed()
                 }
             // Échec : la liste d'avant reste, nouvel essai au prochain compteur.
@@ -67,14 +68,14 @@ class CyberwareController(private val activity: FragmentActivity, private val ch
     /** Images du jeu pour ce corps, si l'ordinateur les a extraites ; sinon le statut (bouton « Préparer »). */
     fun loadLook() {
         val client = api ?: return
-        val body = ui.block?.body ?: return
+        val block = ui.block ?: return
         if (ui.look != null) return
         lookJob?.cancel()
         lookJob = activity.lifecycleScope.launch {
             val status = runCatchingCancellable { client.phoneStatus() }.getOrNull() ?: return@launch
             if (api !== client) return@launch
             val look = if (status.status == CyberpunkPhoneStatus.READY) {
-                runCatchingCancellable { PhoneLook.load(activity, client, status.assets, CyberwareView.pieces(body), CyberwareView.BODY_MIN_SIDE_PX) }.getOrNull()
+                runCatchingCancellable { PhoneLook.load(activity, client, status.assets, pieces(block), CyberwareView.BODY_MIN_SIDE_PX) }.getOrNull()
             } else {
                 null
             }
@@ -82,6 +83,12 @@ class CyberwareController(private val activity: FragmentActivity, private val ch
             ui = ui.copy(look = look, lookStatus = status.status)
             changed()
         }
+    }
+
+    /** Corps, icônes des zones et icônes des implants posés ou possédés. */
+    private fun pieces(b: CyberwareBlock): List<String> {
+        val implants = b.zones.values.flatten().mapNotNull { it.item } + b.owned
+        return CyberwareView.pieces(b.body) + implants.mapNotNull { it.iconAsset }.distinct()
     }
 
     /** Une nouvelle extraction remplace les images : rechargées au prochain affichage. */

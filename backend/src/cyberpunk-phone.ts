@@ -47,6 +47,10 @@ export const ATLASES = [
   { name: "atlas_cyberware", parts: CW_SLOTS.map((z) => `slot_${z}`) },
 ];
 export const FONTS = ["raj-bold", "blenderpro-book"];
+/** Planches d'icônes d'objets du jeu : on n'en garde que les implants (`cw_…`) et les tatouages (cyberware des mains). */
+const ICON_ATLASES = Array.from({ length: 24 }, (_, i) => `item_icons${i}`);
+const ICON_PART = /^(cw_|icon_tattoo)[A-Za-z0-9_-]{1,56}$/;
+
 /** Tous les fichiers d'une extraction complète : une liste plus courte (extraction d'une version d'avant) est à refaire. */
 export const ASSETS = [...ATLASES.flatMap((a) => a.parts.map((p) => `${p}.png`)), ...FONTS.map((f) => `${f}.ttf`)];
 
@@ -80,16 +84,22 @@ function cutPng(png: NonNullable<ReturnType<typeof readPng>>, x0: number, y0: nu
   return writePng(w, h, rows);
 }
 
-async function cutAtlas(work: string, atlas: (typeof ATLASES)[number]): Promise<Map<string, Buffer>> {
+/**
+ * Découpe les pièces d'un atlas. `parts` : la liste exigée (une absente = erreur) ; `null` : les icônes d'implants de
+ * l'atlas, optionnelles (un atlas absent ne rend rien).
+ */
+async function cutAtlas(work: string, atlas: { name: string; parts: string[] | null }): Promise<Map<string, Buffer>> {
   const pngFile = await find(path.join(work, "png"), `${atlas.name}_1080p.png`);
   const jsonFile = await find(path.join(work, "out"), `${atlas.name}.inkatlas.json`);
+  if ((!pngFile || !jsonFile) && atlas.parts === null) return new Map();
   if (!pngFile || !jsonFile) throw new PhoneError(`Look du téléphone : l'image ${atlas.name} n'a pas été extraite du jeu`);
   const png = readPng(await fs.readFile(pngFile));
   if (!png) throw new PhoneError(`Look du téléphone : l'image ${atlas.name} est illisible`);
   const json = JSON.parse(await fs.readFile(jsonFile, "utf8"));
   const parts: Part[] = json?.Data?.RootChunk?.slots?.Elements?.[0]?.parts ?? [];
   const out = new Map<string, Buffer>();
-  for (const name of atlas.parts) {
+  const names = atlas.parts ?? parts.map((p) => p.partName?.$value ?? "").filter((n) => ICON_PART.test(n));
+  for (const name of names) {
     const r = parts.find((p) => p.partName?.$value === name)?.clippingRectInUVCoords;
     if (!r) throw new PhoneError(`Look du téléphone : la pièce ${name} est introuvable dans ${atlas.name}`);
     const x0 = Math.max(0, Math.round(r.Left * png.width));
@@ -135,6 +145,7 @@ export function createPhone(opts: PhoneOptions) {
       await (await opts.tools()).extract(game, work);
       const files = new Map<string, Buffer>();
       for (const a of ATLASES) for (const [n, b] of await cutAtlas(work, a)) files.set(n, b);
+      for (const name of ICON_ATLASES) for (const [n, b] of await cutAtlas(work, { name, parts: null })) files.set(n, b);
       for (const f of FONTS) {
         const ttf = await find(path.join(work, "out"), `${f}.ttf`);
         if (!ttf) throw new PhoneError(`Look du téléphone : la police ${f} n'a pas été extraite du jeu`);
@@ -235,6 +246,7 @@ const ATLAS_REGEX = [
   "phone_quest_menu.messenger(_1080p)?\\.(xbm|inkatlas)$",
   "fullscreen.ripperdoc.(man_body|woman_body|assets.cw_paperdoll_assets)(_1080p)?\\.(xbm|inkatlas)$",
   "fullscreen.stats.atlas_cyberware(_1080p)?\\.(xbm|inkatlas)$",
+  "common.icons.items.item_icons[0-9]+(_1080p)?\\.(xbm|inkatlas)$",
 ].join("|");
 /** Polices à part : avec `-s`, WolvenKit sort un `.fnt.json` au lieu du `.ttf` (vu sur ATLAS le 2026-11-14). */
 const FONT_REGEX = "fonts.(raj.raj-bold|blender.book.blenderpro-book)\\.fnt$";
@@ -258,7 +270,8 @@ async function wolvenKit(): Promise<Tools> {
       await execFileP(cli, ["uncook", archives, "-o", out, "-r", FONT_REGEX], { env, timeout: 900_000 });
       const xbm = await Promise.all(ATLASES.map((a) => find(out, `${a.name}_1080p.xbm`)));
       if (xbm.some((f) => !f)) throw new PhoneError("Look du téléphone : images introuvables dans les archives du jeu");
-      await execFileP(cli, ["export", ...(xbm as string[]), "-o", png, "--uext", "png", "-gp", game], { env, timeout: 600_000 });
+      const icons = (await Promise.all(ICON_ATLASES.map((n) => find(out, `${n}_1080p.xbm`)))).filter((f): f is string => f !== null);
+      await execFileP(cli, ["export", ...(xbm as string[]), ...icons, "-o", png, "--uext", "png", "-gp", game], { env, timeout: 600_000 });
     },
   };
 }
@@ -271,7 +284,7 @@ export function cyberpunkPhone() {
   return shared;
 }
 
-const nameParams = { type: "object", properties: { name: { type: "string", pattern: "^[A-Za-z0-9_-]{1,40}\\.(png|ttf)$" } } };
+const nameParams = { type: "object", properties: { name: { type: "string", pattern: "^[A-Za-z0-9_-]{1,60}\\.(png|ttf)$" } } };
 
 export async function phoneRoutes(app: FastifyInstance) {
   app.get("/cyberpunk/phone", () => cyberpunkPhone().status());

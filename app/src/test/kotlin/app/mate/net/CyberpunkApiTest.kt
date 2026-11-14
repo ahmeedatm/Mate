@@ -245,7 +245,7 @@ class CyberpunkApiTest {
     fun readsCyberwareBlock() {
         val b = CyberpunkApi.parseCyberware(
             """{"v":1,"body":"woman","capacity":{"free":30,"used":90,"max":120},"closed":["ArmsCW"],
-              "zones":{"EyesCW":[{"locked":false,"item":{"key":"Items.Kiroshi#12","tdb":"Items.Kiroshi","name":"Kiroshi","quality":"Rare","cost":12,"blocked":false}}],
+              "zones":{"EyesCW":[{"locked":false,"item":{"key":"Items.Kiroshi#12","tdb":"Items.Kiroshi","name":"Kiroshi","quality":"Rare","cost":12,"blocked":false,"icon":"cw_eyes_kiroshioptics"}}],
                        "LegsCW":[{"locked":true}]},
               "owned":[{"key":"Items.Sandy#7","tdb":"Items.Sandy","name":"Sandevistan","quality":"Epic","cost":40,"blocked":false,"area":"SystemReplacementCW"}]}""",
         )
@@ -255,6 +255,8 @@ class CyberpunkApiTest {
         val eyes = b.zones.getValue("EyesCW").single()
         assertEquals("Items.Kiroshi#12", eyes.item!!.key)
         assertEquals(12, eyes.item!!.cost)
+        assertEquals("cw_eyes_kiroshioptics.png", eyes.item!!.iconAsset)
+        assertNull(b.owned.single().iconAsset)
         assertTrue(b.zones.getValue("LegsCW").single().locked)
         assertNull(b.zones.getValue("LegsCW").single().item)
         assertEquals("SystemReplacementCW", b.owned.single().area)

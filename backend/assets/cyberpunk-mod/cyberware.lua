@@ -34,7 +34,12 @@ return function(h)
 
   local function valid(id) return id ~= nil and ItemID.IsValid(id) end
 
-  local function areaOf(id) return word(TweakDBInterface.GetItemRecord(ItemID.GetTDBID(id)):EquipArea():Type()) end
+  -- Zone d'un objet ; nil pour ce qui ne s'équipe pas (la plupart de l'inventaire), sans erreur.
+  local function areaOf(id)
+    local rec = TweakDBInterface.GetItemRecord(ItemID.GetTDBID(id))
+    local ea = rec and rec:EquipArea()
+    return ea and word(ea:Type()) or nil
+  end
 
   -- Coût en capacité : exigence HumanityAvailable de l'implant, comme GetItemCapacityRequirement du jeu.
   local function cost(pl, id)
@@ -58,10 +63,8 @@ return function(h)
     local r = { key = key(id), tdb = info.tdb, name = info.name, quality = info.quality }
     r.cost = try(k .. ".cost", function() return cost(pl, id) end)
     r.blocked = try(k .. ".blocked", function() return blocked(pl, id) end) == true
-    r.icon = try(k .. ".icon", function()
-      local ic = rec:Icon()
-      return { atlas = tostring(ic:AtlasResourcePath()), part = tostring(ic:AtlasPartName()) }
-    end)
+    -- Icône : le nom de la pièce dans les atlas item_icons du jeu (IconPath = pièce de UIIcon.<nom>, vu au spike).
+    r.icon = try(k .. ".icon", function() return rec:IconPath() end)
     return r
   end
 
@@ -74,7 +77,8 @@ return function(h)
     local zones, equipped = {}, {}
     for _, a in ipairs(AREAS) do
       local area = gamedataEquipmentArea[a]
-      local n = try("cw.n." .. a, function() return pd:GetNumberOfSlots(area, false) end) or 0
+      -- `true` : avec les emplacements verrouillés (perk ou attribut manquant), affichés comme dans le jeu.
+      local n = try("cw.n." .. a, function() return pd:GetNumberOfSlots(area, true) end) or 0
       local slots = {}
       for i = 0, n - 1 do
         local s = { locked = try("cw.lock." .. a .. i, function() return pd:IsSlotLocked(area, i) end) == true }
@@ -148,7 +152,7 @@ return function(h)
     local area = gamedataEquipmentArea[a]
     local pd = es():GetPlayerData(pl)
     local slot = tonumber(c.slot)
-    if not slot or slot % 1 ~= 0 or slot < 0 or slot >= pd:GetNumberOfSlots(area, false) then error("slot-verrouille", 0) end
+    if not slot or slot % 1 ~= 0 or slot < 0 or slot >= pd:GetNumberOfSlots(area, true) then error("slot-verrouille", 0) end
     if pd:IsSlotLocked(area, slot) then error("slot-verrouille", 0) end
     local id = findOwned(pl, tostring(c.item))
     if not id then error("non-possede", 0) end

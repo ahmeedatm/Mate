@@ -149,7 +149,7 @@ class CyberwareView(private val kit: CyberpunkKit, private val actions: Cyberwar
         val row = LinearLayout(context0).apply { orientation = LinearLayout.HORIZONTAL }
         val icon = look?.bitmap(zoneIcon(z))
         slots.forEachIndexed { i, s ->
-            val v = SlotView(s, icon, chosen && selected?.second == i).apply {
+            val v = SlotView(s, s.item?.iconAsset?.let { look?.bitmap(it) } ?: icon, chosen && selected?.second == i).apply {
                 contentDescription = context0.getString(
                     R.string.cp_cw_slot_desc,
                     zoneName(z),
@@ -214,6 +214,9 @@ class CyberwareView(private val kit: CyberpunkKit, private val actions: Cyberwar
     private fun implantRow(it: CyberwareImplant, target: Pair<String, Int>?): View {
         val line = kit.row()
         line.addView(kit.rarityBar(kit.rarityColor(CyberpunkItems.rarity(it.quality))), kit.lp(kit.dp(4), kit.dp(30)).apply { marginEnd = kit.dp(10) })
+        it.iconAsset?.let { a -> look?.bitmap(a) }?.let { bmp ->
+            line.addView(ImageView(context0).apply { setImageBitmap(bmp); scaleType = ImageView.ScaleType.FIT_CENTER }, kit.lp(kit.dp(ROW_ICON_DP), kit.dp(ROW_ICON_DP)).apply { marginEnd = kit.dp(10) })
+        }
         val texts = LinearLayout(context0).apply { orientation = LinearLayout.VERTICAL }
         texts.addView(kit.text(it.name, 16f, R.color.cp_texte, kit.medium))
         it.cost?.let { c -> texts.addView(kit.text(context0.getString(R.string.cp_cw_cost, c), 13f, R.color.cp_gris, kit.mono), kit.lp(WRAP, WRAP).apply { topMargin = kit.dp(2) }) }
@@ -346,6 +349,7 @@ class CyberwareView(private val kit: CyberpunkKit, private val actions: Cyberwar
         const val BODY_MIN_SIDE_PX = 360
 
         private const val PANEL_DP = 360
+        private const val ROW_ICON_DP = 40
         private const val MIN_SLOT_DP = 48
         private const val SLOT_GAP_DP = 8
         private const val CAPACITY_BAR_DP = 220

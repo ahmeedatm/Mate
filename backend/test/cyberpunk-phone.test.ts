@@ -50,7 +50,7 @@ const written = (work: string, rel: string, data: Buffer | string) => {
 };
 
 /** Faux outil : fait ce que WolvenKit fait (arborescence du jeu sous out/, PNG à plat sous png/) avec des images générées. */
-const fakeTools = (opts: { fail?: boolean; skipPart?: string } = {}) => ({
+const fakeTools = (opts: { fail?: boolean; skipPart?: string; noIcons?: boolean } = {}) => ({
   async extract(_game: string, work: string) {
     if (opts.fail) throw new Error("WolvenKit a planté : C:\\secret\\chemin");
     for (const a of ATLASES) {
@@ -60,6 +60,11 @@ const fakeTools = (opts: { fail?: boolean; skipPart?: string } = {}) => ({
       written(work, `out/base/gameplay/gui/${a.name}.inkatlas.json`, img.json);
     }
     for (const f of FONTS) written(work, `out/base/fonts/${f}.ttf`, `ttf-${f}`);
+    if (opts.noIcons) return;
+    // Icônes d'objets : une planche avec deux implants et une arme (pas gardée).
+    const icons = fakeAtlas(["cw_eyes_kiroshioptics", "weapon_lexington", "icon_tattoo_tyger"]);
+    written(work, "png/item_icons10_1080p.png", icons.png);
+    written(work, "out/base/gameplay/gui/common/icons/items/item_icons10.inkatlas.json", icons.json);
   },
 });
 
@@ -79,7 +84,12 @@ describe("extraction du téléphone du jeu", () => {
     await p.prepare();
     await settle(p, "ready");
     const s = await p.status();
-    const names = [...ATLASES.flatMap((a) => a.parts.map((x) => `${x}.png`)), ...FONTS.map((f) => `${f}.ttf`)];
+    const names = [
+      ...ATLASES.flatMap((a) => a.parts.map((x) => `${x}.png`)),
+      ...FONTS.map((f) => `${f}.ttf`),
+      "cw_eyes_kiroshioptics.png",
+      "icon_tattoo_tyger.png",
+    ];
     assert.deepEqual([...s.assets].sort(), [...names].sort());
     assert.ok(s.assets.includes("frame_main.png") && s.assets.includes("msgBuble_bg.png") && s.assets.includes("raj-bold.ttf"));
     // frame_main : première bande de atlas_phone (couleur 1, 2, 3, alpha 128), 4 × 8 px.
@@ -108,6 +118,24 @@ describe("extraction du téléphone du jeu", () => {
       "slot_brain.png",
     ])
       assert.ok(s.assets.includes(n), n);
+  });
+
+  it("icônes des implants : seules les pièces cw_ et tatouages des planches item_icons, en plus de la liste", async () => {
+    const p = newPhone("icones");
+    await p.prepare();
+    await settle(p, "ready");
+    const s = await p.status();
+    assert.ok(s.assets.includes("cw_eyes_kiroshioptics.png") && s.assets.includes("icon_tattoo_tyger.png"));
+    assert.ok(!s.assets.includes("weapon_lexington.png"));
+    const png = readPng((await p.asset("icon_tattoo_tyger.png"))!)!;
+    assert.deepEqual([...png.rgba.subarray(0, 4)], [3, 6, 9, 128]);
+  });
+
+  it("sans planche d'icônes (jeu changé) : prêt quand même, sans icônes", async () => {
+    const p = newPhone("sansicones", fakeTools({ noIcons: true }));
+    await p.prepare();
+    await settle(p, "ready");
+    assert.ok(!(await p.status()).assets.some((n) => n.startsWith("cw_eyes")));
   });
 
   it("extraction d'avant (liste sans les nouvelles pièces) : absent, à refaire", async () => {
@@ -242,7 +270,7 @@ describe("routes du téléphone", () => {
     assert.equal(ttf.headers["content-type"], "font/ttf");
     assert.equal((await app.inject({ method: "GET", url: "/cyberpunk/phone/intrus.png" })).statusCode, 404);
     assert.equal((await app.inject({ method: "GET", url: "/cyberpunk/phone/absent.png" })).statusCode, 404);
-    for (const bad of ["..%2Fassets.json", "a.exe", "a.png%00", "x".repeat(41) + ".png", "assets.json"])
+    for (const bad of ["..%2Fassets.json", "a.exe", "a.png%00", "x".repeat(61) + ".png", "assets.json"])
       assert.equal((await app.inject({ method: "GET", url: `/cyberpunk/phone/${bad}` })).statusCode, 400, bad);
   });
 

@@ -73,7 +73,11 @@ data class CyberwareImplant(
     val cost: Int?,
     val blocked: Boolean,
     val area: String? = null,
-)
+    /** Pièce de l'icône dans les planches d'objets du jeu (extraite par l'ordinateur sous ce nom). */
+    val icon: String? = null,
+) {
+    val iconAsset get() = icon?.let { "$it.png" }
+}
 
 data class CyberwareSlot(val locked: Boolean, val item: CyberwareImplant?)
 
@@ -388,7 +392,7 @@ class CyberpunkApi(private val http: Http) {
         fun parseCyberware(json: String): CyberwareBlock {
             val o = JSONObject(json)
             fun implant(i: JSONObject) = i.text("key")?.let { key ->
-                CyberwareImplant(key, i.text("tdb"), i.optString("name").ifEmpty { key }, i.text("quality"), if (i.has("cost")) i.optInt("cost") else null, i.optBoolean("blocked"), i.text("area"))
+                CyberwareImplant(key, i.text("tdb"), i.optString("name").ifEmpty { key }, i.text("quality"), if (i.has("cost")) i.optInt("cost") else null, i.optBoolean("blocked"), i.text("area"), i.text("icon"))
             }
             val zones = o.optJSONObject("zones")
             val cap = o.optJSONObject("capacity")
