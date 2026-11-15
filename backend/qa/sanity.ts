@@ -589,6 +589,22 @@ export async function runSanity(opts: { url: string; token: string; os?: Os; hoo
       },
     },
     {
+      name: "écrans",
+      run: async () => {
+        const features = await call("GET", "/deck/features");
+        const res = await call("GET", "/monitors");
+        if (!features.json?.monitors) return expectStatus(res, 501, "/monitors");
+        expectStatus(res, 200, "/monitors");
+        const list: { id: string; name: string; ddc: boolean; hz: number }[] = res.json.monitors;
+        expect(Array.isArray(list) && list.every((m) => m.id && m.hz > 0), "liste des écrans invalide");
+        if (list.length === 0) return "aucun écran lu";
+        // Un mode que l'écran ne propose pas est refusé sans rien changer (le vrai changement ferait clignoter l'écran).
+        const bad = await call("POST", "/monitors", { id: list[0].id, width: 1, height: 1, hz: 1 });
+        expectStatus(bad, 400, "POST /monitors");
+        return list.map((m) => `${m.name} ${m.hz} Hz${m.ddc ? " DDC/CI" : ""}`).join(", ");
+      },
+    },
+    {
       name: "performances",
       run: async () => {
         const perf = await call("GET", "/system/perf");

@@ -73,7 +73,7 @@ enum class CatalogueShelf(@StringRes val title: Int, val types: List<WidgetType>
     DAY(R.string.catalogue_shelf_day, listOf(WidgetType.CLOCK, WidgetType.HERO, WidgetType.DAY, WidgetType.DAYLINE, WidgetType.WEATHER, WidgetType.TRANSPORT, WidgetType.NEXT, WidgetType.AGENDA)),
     LISTS(R.string.catalogue_shelf_lists, listOf(WidgetType.TASKS, WidgetType.SHOPPING, WidgetType.CHECKLIST, WidgetType.NOTE, WidgetType.MEALS, WidgetType.NEWS, WidgetType.MAIL)),
     SOUND(R.string.catalogue_shelf_sound, listOf(WidgetType.AUDIO, WidgetType.MEDIA, WidgetType.MIXER, WidgetType.YTMUSIC)),
-    COMPUTER(R.string.catalogue_shelf_computer, listOf(WidgetType.KEYS, WidgetType.APPS, WidgetType.OPEN, WidgetType.PAD, WidgetType.SCREEN, WidgetType.PERF, WidgetType.WEB)),
+    COMPUTER(R.string.catalogue_shelf_computer, listOf(WidgetType.KEYS, WidgetType.APPS, WidgetType.OPEN, WidgetType.PAD, WidgetType.SCREEN, WidgetType.MONITORS, WidgetType.PERF, WidgetType.WEB)),
     CALLS(R.string.catalogue_shelf_calls, listOf(WidgetType.DISCORD, WidgetType.MEETING, WidgetType.CALL, WidgetType.PRESENT)),
     DEV(R.string.catalogue_shelf_dev, listOf(WidgetType.AGENTS, WidgetType.JIRA, WidgetType.GITLAB, WidgetType.PIPELINES, WidgetType.GITHUB, WidgetType.ACTIONS, WidgetType.METRICS)),
     HOME(R.string.catalogue_shelf_home, listOf(WidgetType.FOCUS, WidgetType.WATER, WidgetType.AWAY, WidgetType.HA, WidgetType.VALORANT)),

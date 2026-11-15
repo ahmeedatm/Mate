@@ -275,6 +275,8 @@ export async function homeFeatures() {
     jira,
     ha: haConfigured,
     valorant: isWindows,
+    // `monitors` : widget Écrans (DDC/CI et modes d'affichage, Windows seulement : routes/monitors.ts).
+    monitors: isWindows,
     off: await pluginsOff(),
   };
 }

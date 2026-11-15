@@ -246,6 +246,7 @@ describe("cartes de l'Accueil et onglets d'appli", () => {
       jira: true,
       ha: false,
       valorant: false,
+      monitors: false,
       off: [],
     });
     server.setOs({ installed: ["Microsoft Teams"] });

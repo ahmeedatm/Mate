@@ -16,6 +16,8 @@ import { readWindowsNotifications } from "./notifications.ts";
 import type {
   AudioChange,
   AudioOutput,
+  Monitor,
+  MonitorChange,
   AudioState,
   ClipboardContent,
   MediaCommand,
@@ -335,6 +337,14 @@ export async function audioOutputs(): Promise<AudioOutput[]> {
 }
 
 /** Fait de la sortie `id` la sortie par défaut (sons et multimédia) ; rend la liste à jour. */
+export async function monitors(): Promise<Monitor[]> {
+  return call<Monitor[]>("monitors", {});
+}
+
+export async function setMonitor(change: MonitorChange): Promise<Monitor[]> {
+  return call<Monitor[]>("setmonitor", change);
+}
+
 export async function setAudioOutput(id: string): Promise<AudioOutput[]> {
   return call<AudioOutput[]>("setoutput", { id });
 }
