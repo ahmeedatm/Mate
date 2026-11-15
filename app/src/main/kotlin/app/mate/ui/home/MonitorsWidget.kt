@@ -1,6 +1,9 @@
 package app.mate.ui.home
 
 import android.content.Context
+import android.graphics.drawable.ClipDrawable
+import android.graphics.drawable.GradientDrawable
+import android.graphics.drawable.LayerDrawable
 import android.text.TextUtils
 import android.view.Gravity
 import android.view.View
@@ -205,7 +208,37 @@ class MonitorsWidget(context: Context, host: HomeHost, placed: Placed) : HomeWid
         parent.addView(row, if (side) LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f) else matchWrap())
     }
 
-    private fun slider(screen: Monitor, control: MonitorControl, level: MonitorLevel, value: TextView, name: Int) = SeekBar(context, null, 0, R.style.Slider).apply {
+    /**
+     * Piste épaisse (10 dp) remplie à l'accent jusqu'au bouton, bouton de 26 dp cerclé de la couleur de la carte : lisible
+     * dans tous les thèmes. Dessinés ici : un SeekBar créé dans le code avec le seul style `Slider` n'a ni piste ni bouton.
+     */
+    private fun styledSeekBar() = SeekBar(context).apply {
+        val height = dp(10)
+        fun bar(colorId: Int) = GradientDrawable().apply {
+            cornerRadius = height / 2f
+            setColor(color(colorId))
+        }
+        progressDrawable = LayerDrawable(arrayOf(bar(R.attr.c_slider_track), ClipDrawable(bar(R.attr.c_accent), Gravity.START, ClipDrawable.HORIZONTAL))).apply {
+            setId(0, android.R.id.background)
+            setId(1, android.R.id.progress)
+            for (i in 0..1) {
+                setLayerGravity(i, Gravity.CENTER_VERTICAL or Gravity.FILL_HORIZONTAL)
+                setLayerHeight(i, height)
+            }
+        }
+        thumb = GradientDrawable().apply {
+            shape = GradientDrawable.OVAL
+            setColor(color(R.attr.c_slider_thumb))
+            setStroke(dp(3), color(R.attr.c_surface))
+            setSize(dp(26), dp(26))
+        }
+        thumbOffset = dp(13)
+        splitTrack = false
+        background = null
+        setPadding(dp(16), 0, dp(16), 0)
+    }
+
+    private fun slider(screen: Monitor, control: MonitorControl, level: MonitorLevel, value: TextView, name: Int) = styledSeekBar().apply {
         max = 100
         progress = level.percent
         contentDescription = context.getString(name)
@@ -216,10 +249,14 @@ class MonitorsWidget(context: Context, host: HomeHost, placed: Placed) : HomeWid
                 change { monitors.setLevel(screen.id, control, level.toValue(progress)) }
             }
 
-            override fun onStartTrackingTouch(bar: SeekBar) { dragging = true }
+            override fun onStartTrackingTouch(bar: SeekBar) {
+                dragging = true
+                value.setTextColor(color(R.attr.c_accent))
+            }
 
             override fun onStopTrackingTouch(bar: SeekBar) {
                 dragging = false
+                value.setTextColor(color(R.attr.c_text_dim))
                 change { monitors.setLevel(screen.id, control, level.toValue(bar.progress)) }
             }
         })
