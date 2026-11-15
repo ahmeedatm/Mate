@@ -259,6 +259,7 @@ abstract class HomeWidget(val context: Context, val host: HomeHost, val placed: 
                 WidgetType.METRICS -> MetricsWidget(context, host, placed)
                 WidgetType.VALORANT -> ValorantWidget(context, host, placed)
                 WidgetType.SCREEN -> ScreenWidget(context, host, placed)
+                WidgetType.MONITORS -> MonitorsWidget(context, host, placed)
             }
     }
 }

@@ -92,6 +92,7 @@ object WidgetSamples {
         WidgetType.AWAY -> AwaySample(state = null, minutes = 0)
         WidgetType.HA -> HaSample.DEFAULT
         WidgetType.VALORANT -> ValorantWidget.SAMPLE
+        WidgetType.MONITORS -> MonitorsWidget.SAMPLE
     }
 
     private const val MINUTE = 60_000L

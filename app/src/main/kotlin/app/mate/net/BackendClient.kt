@@ -43,6 +43,7 @@ class BackendClient(
     val jira = JiraApi(http)
     val ha = HaApi(http)
     val valorant = ValorantApi(http)
+    val monitors = MonitorsApi(http)
     val cyberpunk = CyberpunkApi(http)
     val plugins = PluginsApi(http)
     val present = PresentApi(http)
