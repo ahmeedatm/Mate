@@ -12,6 +12,8 @@ import type {
   Layout,
   MediaCommand,
   AudioOutput,
+  Monitor,
+  MonitorChange,
   MixerChange,
   MixerState,
   OpenAction,
@@ -75,6 +77,8 @@ export type FakeState = {
   mixer?: MixerState;
   /** Sorties audio (audioOutputs) ; absentes : une seule, « Haut-parleurs ». setAudioOutput change celle qui sert. */
   audioOutputs?: AudioOutput[];
+  /** Écrans du widget Écrans (monitors) ; absents : aucun. setMonitor applique le changement reçu. */
+  monitors?: Monitor[];
   /** Appli au premier plan (frontApp) ; absente : Safari. */
   front?: { name: string; bundleId: string };
   /** Windows : fenêtre au premier plan (frontWindow, frontApp) ; absente : Chrome. */
@@ -339,6 +343,27 @@ export async function setAudioOutput(id: string): Promise<AudioOutput[]> {
   record("setAudioOutput", id);
   const next = (await audioOutputs()).map((o) => ({ ...o, current: o.id === id }));
   write({ ...read(), audioOutputs: next });
+  return next;
+}
+
+export async function monitors(): Promise<Monitor[]> {
+  if (!isWindows) unsupported();
+  return read().monitors ?? [];
+}
+
+export async function setMonitor(change: MonitorChange): Promise<Monitor[]> {
+  if (!isWindows) unsupported();
+  record("setMonitor", change);
+  const { id, control, value, width, height, hz } = change;
+  const next = (await monitors()).map((m): Monitor => {
+    if (m.id !== id) return m;
+    const out: Monitor = { ...m };
+    if (width !== undefined && height !== undefined && hz !== undefined) Object.assign(out, { width, height, hz });
+    if (control === "preset" && out.preset && value !== undefined) out.preset = { ...out.preset, value };
+    else if (control && control !== "preset" && out[control] && value !== undefined) out[control] = { ...out[control], value };
+    return out;
+  });
+  write({ ...read(), monitors: next });
   return next;
 }
 

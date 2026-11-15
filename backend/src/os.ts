@@ -32,6 +32,8 @@ import type { PointerAction, PointerButton, PointerGesture } from "./pointer.ts"
 import type {
   AudioChange,
   AudioOutput,
+  Monitor,
+  MonitorChange,
   ClipboardContent,
   Layout,
   MediaCommand,
@@ -413,6 +415,18 @@ export function audioOutputs(): Promise<AudioOutput[]> {
 export function setAudioOutput(id: string): Promise<AudioOutput[]> {
   if (isWindows) return win.setAudioOutput(id);
   if (isMac) return macAudio.setAudioOutput(id);
+  unsupported();
+}
+
+/** Écrans de l'ordinateur et leurs réglages (widget Écrans) : Windows seulement pour l'instant. */
+export function monitors(): Promise<Monitor[]> {
+  if (isWindows) return win.monitors();
+  unsupported();
+}
+
+/** Change un réglage ou le mode d'un écran ; rend la liste à jour. */
+export function setMonitor(change: MonitorChange): Promise<Monitor[]> {
+  if (isWindows) return win.setMonitor(change);
   unsupported();
 }
 

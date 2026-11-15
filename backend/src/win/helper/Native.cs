@@ -60,6 +60,8 @@ namespace Mate
                 case "mixer": return Mixer(req);
                 case "outputs": return AudioOutputs();
                 case "setoutput": return SetAudioOutput(Str(req, "id"));
+                case "monitors": return Monitors();
+                case "setmonitor": return SetMonitor(req);
                 case "perf": return Perf(req);
                 case "cpu": return Cpu();
                 case "fps": return Fps();

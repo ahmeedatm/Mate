@@ -189,3 +189,35 @@ export const TILE_SYMBOLS = [
   "sell",
   "visibility",
 ] as const;
+
+/** Widget Écrans : un réglage continu du moniteur lu par DDC/CI (valeur et maximum annoncés par l'écran). */
+export type MonitorLevel = { value: number; max: number };
+export const MONITOR_CONTROLS = ["brightness", "contrast", "sharpness", "red", "green", "blue"] as const;
+export type MonitorControl = (typeof MONITOR_CONTROLS)[number];
+
+/**
+ * Un écran de l'ordinateur (Windows) : `id` = nom du périphérique (`\\.\DISPLAY1`), nom EDID, mode actuel et modes
+ * possibles (8 résolutions au plus, la plus grande d'abord, fréquences décroissantes). `ddc` : l'écran répond en DDC/CI ;
+ * seuls les réglages qu'il annonce sont présents ; `preset` = préréglage de couleur (code VCP 0x14 de la norme MCCS).
+ */
+export type Monitor = {
+  id: string;
+  name: string;
+  primary: boolean;
+  width: number;
+  height: number;
+  hz: number;
+  modes: { width: number; height: number; hz: number[] }[];
+  ddc: boolean;
+  preset?: { value: number; options: number[] };
+} & Partial<Record<MonitorControl, MonitorLevel>>;
+
+/** Un changement : un réglage (`control` + `value`) et / ou un mode (`width`, `height`, `hz`). */
+export type MonitorChange = {
+  id: string;
+  control?: MonitorControl | "preset";
+  value?: number;
+  width?: number;
+  height?: number;
+  hz?: number;
+};
