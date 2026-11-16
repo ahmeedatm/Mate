@@ -138,6 +138,23 @@ class TransportTest {
     }
 
     @Test
+    fun `le terminus choisi reste affiche meme sans sens ou avec un sens perime`() {
+        val rerB = "STIF:Line::C01743:"
+        val all = listOf(
+            Transport.Departure(rerB, "Robinson", 60_000L, "STIF:StopPoint:Q:474019:"),
+            Transport.Departure(rerB, "Mitry - Claye", 90_000L),
+            Transport.Departure(rerB, "Aéroport Charles de Gaulle 2 (Terminal 2)", 180_000L, "STIF:StopPoint:Q:474018:"),
+        )
+        // Le passage pour Mitry n'a pas de quai : il reste, avec les autres trains du même sens.
+        assertEquals(
+            listOf("Mitry - Claye", "Aéroport Charles de Gaulle 2 (Terminal 2)"),
+            Transport.pick(all, rerB, "Mitry - Claye", "STIF:StopPoint:Q:474018:").map { it.destination },
+        )
+        // Sens enregistré qu'IDFM ne donne plus : on retombe sur le terminus.
+        assertEquals(listOf("Mitry - Claye"), Transport.pick(all, rerB, "Mitry - Claye", "STIF:StopPoint:Q:999:").map { it.destination })
+    }
+
+    @Test
     fun `sans sens connu, la direction reste le terminus`() {
         val bus = "STIF:Line::C01299:"
         val all = listOf(

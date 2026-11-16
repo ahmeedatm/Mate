@@ -97,7 +97,10 @@ object Transport {
         if (direction.isNullOrBlank()) return onLine
         val byDestination = onLine.filter { it.destination.contains(direction, ignoreCase = true) }
         val sides = if (!side.isNullOrBlank()) setOf(side) else byDestination.mapTo(HashSet()) { it.side } - ""
-        return if (sides.isEmpty()) byDestination else onLine.filter { it.side in sides }
+        if (sides.isEmpty()) return byDestination
+        // Le terminus choisi reste toujours affiché : passage sans quai ni sens, ou sens enregistré qu'IDFM aurait renommé.
+        // shortcut: un seul quai enregistré ; une grande gare où un même sens part de deux quais en cache un, à revoir si ça arrive.
+        return onLine.filter { it.side in sides || it in byDestination }
     }
 
     /** Attente en minutes, arrondie vers le bas (« dans 3 min » = le passage arrive dans 3 à 4 min), jamais négative. */
