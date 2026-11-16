@@ -59,7 +59,12 @@ class TransportWidget(context: Context, host: HomeHost, placed: Placed) : HomeWi
         runCatchingCancellable { TransportLines.load(context) }.onSuccess { lines = it }
         runCatchingCancellable { Transport.departures(stopId(), System.currentTimeMillis()) }
             .onSuccess {
-                departures = Transport.pick(it, placed.config.optString("line"), placed.config.optString("direction"))
+                departures = Transport.pick(
+                    it,
+                    placed.config.optString("line"),
+                    placed.config.optString("direction"),
+                    placed.config.optString("side"),
+                )
                 baseNow = System.currentTimeMillis()
                 error = null
                 render()
