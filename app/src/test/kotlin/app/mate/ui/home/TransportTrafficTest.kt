@@ -103,10 +103,11 @@ class TransportTrafficTest {
 
     @Test
     fun `un message au futur est à venir, même s'il annonce une interruption`() {
-        assertEquals(Level.SOON, level("Les trains seront supprimés entre Nation et Vincennes."))
+        assertEquals(Level.SOON, level("La gare de Luxembourg sera fermée ce week-end."))
         assertEquals(Level.SOON, level("Le trafic sera interrompu ce week-end (travaux)."))
         // « sera rétabli » parle de la fin d'un incident en cours, « serait » n'est pas un futur.
         assertEquals(Level.DISRUPTED, level("Le trafic est perturbé, il sera rétabli vers 18 h."))
+        assertEquals(Level.DISRUPTED, level("En raison d'un incident, des trains seront supprimés entre Nation et Vincennes."))
         assertEquals(Level.DISRUPTED, level("Trafic perturbé, le retour serait prévu vers 18 h."))
     }
 
@@ -118,6 +119,16 @@ class TransportTrafficTest {
         assertEquals(Level.SOON, level("Le 5 janvier, trafic interrompu entre Gare du Nord et Châtelet."))
         assertEquals(Level.DISRUPTED, level("Du 14 novembre au 18 novembre inclus, trafic perturbé (travaux)."))
         assertEquals(Level.INTERRUPTED, level("Le 16 novembre, trafic interrompu entre Gare du Nord et Châtelet."))
+        assertEquals(Level.SOON, level("Du 21 au 22 novembre, trafic interrompu entre Aulnay-sous-Bois et Mitry - Claye."))
+        assertEquals(Level.SOON, level("Travaux RER B, du lundi 14 au vendredi 18 décembre inclus dès 22:45, trafic interrompu."))
+        // La date d'une fin annoncée n'est pas un début.
+        assertEquals(Level.INTERRUPTED, level("Trafic interrompu entre Nation et Vincennes, retour prévu le 18 novembre."))
+    }
+
+    @Test
+    fun `une période commencée en décembre est en cours en janvier`() {
+        val january5 = now + 50L * 24 * 60 * 60_000L // 5 janvier 2027, 11 h
+        assertEquals(Level.DISRUPTED, level("Du 20 décembre au 10 janvier, trafic perturbé (travaux).", january5))
     }
 
     @Test

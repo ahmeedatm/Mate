@@ -109,7 +109,7 @@ class ApproachBar(context: Context, fill: Int, hatch: Int? = null) : View(contex
 
     private fun drawStripes(canvas: Canvas, paint: Paint, r: Float) {
         val step = height * STRIPE_STEP
-        paint.strokeWidth = step / 2
+        paint.strokeWidth = step * STRIPE_WIDTH
         canvas.save()
         clip.rewind()
         clip.addRoundRect(0f, 0f, width.toFloat(), height.toFloat(), r, r, Path.Direction.CW)
@@ -124,6 +124,7 @@ class ApproachBar(context: Context, fill: Int, hatch: Int? = null) : View(contex
 
     private companion object {
         const val TRACK_ALPHA = 0x40
-        const val STRIPE_STEP = 2.2f
+        const val STRIPE_STEP = 3f
+        const val STRIPE_WIDTH = 0.3f
     }
 }

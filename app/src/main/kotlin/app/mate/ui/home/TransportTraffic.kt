@@ -28,14 +28,23 @@ object TransportTraffic {
     private const val REFRESH_MS = 5 * 60_000L
 
     private val SPACES = Regex("\\s+")
+    private const val WEEKDAY = "(?:lundi|mardi|mercredi|jeudi|vendredi|samedi|dimanche)"
 
-    /** Un futur qui annonce la gêne (« sera interrompu », « seront supprimés »), pas sa fin (« sera rétabli »). */
-    private val FUTURE = Regex("\\bser(a|ont)\\s+(\\S+\\s+)?(interromp|perturb|ferm|supprim|dévi|modifi|ralenti|limit)", RegexOption.IGNORE_CASE)
+    /**
+     * Un futur qui annonce la gêne (« sera interrompu », « sera fermée »), pas sa fin (« sera rétabli »). Pas « seront
+     * supprimés » : IDFM l'écrit aussi pendant un incident (« des trains seront supprimés »).
+     */
+    private val FUTURE = Regex("\\bser(a|ont)\\s+(\\S+\\s+)?(interromp|perturb|ferm|dévi|modifi)", RegexOption.IGNORE_CASE)
     private val INTERRUPTED = Regex("interromp", RegexOption.IGNORE_CASE)
 
-    /** Premier jour annoncé (« du 21 novembre », « le 1er décembre »). */
+    /**
+     * Premier jour d'une période (« du 21 novembre », « du 21 au 22 novembre », « du lundi 14 au vendredi 18 décembre »,
+     * « Le 1er décembre, … » en tête de phrase). Pas un « le 18 novembre » au milieu : « retour prévu le 18 novembre »
+     * parle de la fin.
+     */
     private val START_DAY = Regex(
-        "\\b(?:du|le)\\s+(\\d{1,2})(?:er)?\\s+(janvier|février|mars|avril|mai|juin|juillet|août|septembre|octobre|novembre|décembre)",
+        "(?:\\bdu|(?:^|[.;:]\\s*)le)\\s+(?:$WEEKDAY\\s+)?(\\d{1,2})(?:er)?\\s+(?:au\\s+(?:$WEEKDAY\\s+)?\\d{1,2}(?:er)?\\s+)?" +
+            "(janvier|février|mars|avril|mai|juin|juillet|août|septembre|octobre|novembre|décembre)",
         RegexOption.IGNORE_CASE,
     )
     private val MONTHS = listOf("janvier", "février", "mars", "avril", "mai", "juin", "juillet", "août", "septembre", "octobre", "novembre", "décembre")
@@ -105,7 +114,10 @@ object TransportTraffic {
         return if (FUTURE.containsMatchIn(text)) Level.SOON else severity
     }
 
-    /** Minuit du premier jour annoncé, l'an prochain s'il est passé de plus de six mois (« le 5 janvier » lu en novembre). */
+    /**
+     * Minuit du premier jour annoncé, dans l'année qui le met à moins de six mois d'aujourd'hui : « le 5 janvier » lu en
+     * novembre est l'an prochain, « du 20 décembre » lu en janvier est l'an dernier.
+     */
     private fun startDay(text: String, today: Calendar): Calendar? {
         val match = START_DAY.find(text) ?: return null
         val month = MONTHS.indexOf(match.groupValues[2].lowercase(Locale.FRANCE)).takeIf { it >= 0 } ?: return null
@@ -114,7 +126,9 @@ object TransportTraffic {
             set(today.get(Calendar.YEAR), month, match.groupValues[1].toInt())
         }
         val halfYearAgo = (today.clone() as Calendar).apply { add(Calendar.MONTH, -6) }
+        val halfYearAhead = (today.clone() as Calendar).apply { add(Calendar.MONTH, 6) }
         if (day.before(halfYearAgo)) day.add(Calendar.YEAR, 1)
+        if (day.after(halfYearAhead)) day.add(Calendar.YEAR, -1)
         return day
     }
 

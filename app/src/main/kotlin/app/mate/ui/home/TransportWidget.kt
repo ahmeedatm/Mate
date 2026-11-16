@@ -2,9 +2,14 @@ package app.mate.ui.home
 
 import android.content.Context
 import android.view.View
+import android.view.accessibility.AccessibilityManager
 import android.widget.LinearLayout
 import androidx.annotation.ArrayRes
 import androidx.annotation.StringRes
+import androidx.core.view.AccessibilityDelegateCompat
+import androidx.core.view.ViewCompat
+import androidx.core.view.accessibility.AccessibilityNodeInfoCompat
+import androidx.core.view.accessibility.AccessibilityNodeInfoCompat.AccessibilityActionCompat
 import app.mate.Prefs
 import app.mate.R
 import app.mate.net.runCatchingCancellable
@@ -47,6 +52,7 @@ class TransportWidget(context: Context, host: HomeHost, placed: Placed) : HomeWi
     private var traffic: List<TransportTraffic.Message> = emptyList()
     private var trafficLines: List<String> = emptyList()
     private var trafficAt = 0L
+    private var trafficOkAt = 0L
     private val closeNote = Runnable { board.hideNote() }
     private var active = false
 
@@ -65,18 +71,37 @@ class TransportWidget(context: Context, host: HomeHost, placed: Placed) : HomeWi
                 traffic.isNotEmpty() -> toggleNote()
             }
         }
+        // TalkBack dit ce que fait le toucher quand il ouvre l'info trafic.
+        ViewCompat.setAccessibilityDelegate(
+            view,
+            object : AccessibilityDelegateCompat() {
+                override fun onInitializeAccessibilityNodeInfo(host: View, info: AccessibilityNodeInfoCompat) {
+                    super.onInitializeAccessibilityNodeInfo(host, info)
+                    if (!preview && stopId().isNotBlank() && traffic.isNotEmpty()) {
+                        info.addAction(AccessibilityActionCompat(AccessibilityNodeInfoCompat.ACTION_CLICK, context.getString(R.string.widget_transport_traffic_action)))
+                    }
+                }
+            },
+        )
     }
 
     private fun toggleNote() {
         view.removeCallbacks(closeNote)
         if (board.noteShown) return board.hideNote()
-        board.showNote(
-            TransportTraffic.sorted(traffic).map { m ->
-                val line = TransportLines.idOf(m.lineRef)?.let { lines[it] }
-                TrafficNote(line, PictoSpec.of(line, themeColor(context, R.attr.c_bg), themeColor(context, R.attr.c_text)), m.level, m.text)
-            },
-        )
-        view.postDelayed(closeNote, NOTE_MS)
+        val notes = TransportTraffic.sorted(traffic).distinctBy { it.text }.map { m ->
+            val line = TransportLines.idOf(m.lineRef)?.let { lines[it] }
+            val spoken = line?.let { context.getString(it.mode.spokenRes(), it.name) }.orEmpty()
+            TrafficNote(line, PictoSpec.of(line, themeColor(context, R.attr.c_bg), themeColor(context, R.attr.c_text)), spoken, m.level, m.text)
+        }
+        board.showNote(notes, onClose = { toggleNote() }, onActivity = { closeLater() })
+        closeLater()
+    }
+
+    /** La carte se retire seule après [NOTE_MS] sans toucher ni défilement ; jamais avec TalkBack, qui lit à son rythme. */
+    private fun closeLater() {
+        view.removeCallbacks(closeNote)
+        val talkBack = context.getSystemService(AccessibilityManager::class.java)?.isTouchExplorationEnabled == true
+        if (!talkBack) view.postDelayed(closeNote, NOTE_MS)
     }
 
     override fun setActive(active: Boolean) {
@@ -109,18 +134,36 @@ class TransportWidget(context: Context, host: HomeHost, placed: Placed) : HomeWi
             .onFailure { error = context.errorText(it); render() }
     }
 
-    /** Info trafic des lignes vues à l'arrêt, toutes les 5 minutes ; en échec, l'info d'avant reste (pas de faux « tout va bien »). */
+    /**
+     * Info trafic des lignes vues à l'arrêt, toutes les 5 minutes, échec compris (jamais une relance par minute sur la clé
+     * IDFM). En échec, l'info d'avant reste (pas de faux « tout va bien »), jusqu'à [STALE_MS] sans réussite.
+     */
     private suspend fun loadTraffic(all: List<Transport.Departure>) {
         val watched = TransportTraffic.watched(all, placed.config.optString("line"))
         val now = System.currentTimeMillis()
-        if (!TransportTraffic.due(trafficAt, trafficLines, watched, now)) return
-        runCatchingCancellable { TransportTraffic.load(watched, now) }.onSuccess {
-            traffic = it
-            trafficLines = watched
-            trafficAt = now
-            if (traffic.isEmpty()) board.hideNote()
-            render()
+        if (watched.isEmpty() || !TransportTraffic.due(trafficAt, trafficLines, watched, now)) {
+            if (watched.isEmpty() || now - trafficOkAt >= STALE_MS) setTraffic(emptyList())
+            return
         }
+        val stop = stopId()
+        // Posés avant l'appel : un second load() pendant celui-ci ne relance pas les mêmes requêtes.
+        trafficAt = now
+        trafficLines = watched
+        runCatchingCancellable { TransportTraffic.load(watched, now) }
+            .onSuccess {
+                // Arrêt changé pendant la lecture : ce résultat est celui de l'ancien.
+                if (stopId() != stop) return
+                trafficOkAt = now
+                setTraffic(it)
+            }
+            .onFailure { if (now - trafficOkAt >= STALE_MS) setTraffic(emptyList()) }
+    }
+
+    private fun setTraffic(messages: List<TransportTraffic.Message>) {
+        if (messages.isEmpty() && traffic.isEmpty()) return
+        traffic = messages
+        if (traffic.isEmpty()) board.hideNote()
+        render()
     }
 
     override fun onMinute() = render()
@@ -194,6 +237,9 @@ class TransportWidget(context: Context, host: HomeHost, placed: Placed) : HomeWi
         departures = emptyList()
         traffic = emptyList()
         trafficAt = 0L
+        trafficOkAt = 0L
+        trafficLines = emptyList()
+        view.removeCallbacks(closeNote)
         board.hideNote()
         error = null
         host.save()
@@ -207,6 +253,7 @@ class TransportWidget(context: Context, host: HomeHost, placed: Placed) : HomeWi
     private companion object {
         const val CARD_PAD = 7
         const val MINUTE_MS = 60_000L
-        const val NOTE_MS = 10_000L
+        const val NOTE_MS = 25_000L
+        const val STALE_MS = 30 * 60_000L
     }
 }

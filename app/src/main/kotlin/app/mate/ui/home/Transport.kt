@@ -20,11 +20,13 @@ import app.mate.ui.themeColor
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.TimeoutCancellationException
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeout
 import org.json.JSONObject
 import java.net.HttpURLConnection
+import java.net.SocketTimeoutException
 import java.net.URL
 import java.net.URLEncoder
 import java.text.SimpleDateFormat
@@ -167,7 +169,17 @@ object Transport {
     /** Clé absente (debug ou release sans secret) : rien à lire chez IDFM. */
     val keyless get() = BuildConfig.IDFM_TOKEN.isBlank()
 
-    internal suspend fun get(url: String): JSONObject = withTimeout(12_000) {
+    /**
+     * Un appel à IDFM. Le délai dépassé devient une [SocketTimeoutException] : laissé en `TimeoutCancellationException`,
+     * il passerait `runCatchingCancellable` comme une annulation et arrêterait la boucle de l'Accueil.
+     */
+    internal suspend fun get(url: String): JSONObject = try {
+        withTimeout(12_000) { read(url) }
+    } catch (e: TimeoutCancellationException) {
+        throw SocketTimeoutException("IDFM : délai dépassé").apply { initCause(e) }
+    }
+
+    private suspend fun read(url: String): JSONObject =
         withContext(Dispatchers.IO) {
             val conn = URL(url).openConnection() as HttpURLConnection
             conn.setRequestProperty("apikey", BuildConfig.IDFM_TOKEN)
@@ -180,7 +192,6 @@ object Transport {
                 conn.disconnect()
             }
         }
-    }
 
     /**
      * Choisir l'arrêt puis la direction : on tape le nom de l'arrêt, IDFM propose des arrêts ; en choisir un lit ses
