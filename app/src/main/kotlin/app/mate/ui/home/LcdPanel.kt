@@ -6,6 +6,7 @@ import android.graphics.BitmapShader
 import android.graphics.Canvas
 import android.graphics.DashPathEffect
 import android.graphics.Paint
+import android.graphics.Path
 import android.graphics.Shader
 import android.graphics.drawable.GradientDrawable
 import android.view.View
@@ -84,7 +85,7 @@ class DashDivider(context: Context, private val vertical: Boolean) : View(contex
 }
 
 /** Jauge d'approche : piste pâle de l'écran, remplie à [fraction] (0 à 1) de la couleur [fill] de la ligne. */
-class ApproachBar(context: Context, fill: Int) : View(context) {
+class ApproachBar(context: Context, fill: Int, hatch: Int? = null) : View(context) {
     var fraction = 0f
         set(value) {
             field = value.coerceIn(0f, 1f)
@@ -95,13 +96,35 @@ class ApproachBar(context: Context, fill: Int) : View(context) {
     }
     private val bar = Paint(Paint.ANTI_ALIAS_FLAG).apply { color = fill }
 
+    /** Ligne perturbée : le fond de la jauge se raye de la couleur de l'alerte, l'approche reste lisible par-dessus. */
+    private val stripes = hatch?.let { Paint(Paint.ANTI_ALIAS_FLAG).apply { color = it } }
+    private val clip = Path()
+
     override fun onDraw(canvas: Canvas) {
         val r = height / 2f
         canvas.drawRoundRect(0f, 0f, width.toFloat(), height.toFloat(), r, r, track)
+        stripes?.let { drawStripes(canvas, it, r) }
         if (fraction > 0f) canvas.drawRoundRect(0f, 0f, maxOf(height.toFloat(), width * fraction), height.toFloat(), r, r, bar)
+    }
+
+    private fun drawStripes(canvas: Canvas, paint: Paint, r: Float) {
+        val step = height * STRIPE_STEP
+        paint.strokeWidth = step * STRIPE_WIDTH
+        canvas.save()
+        clip.rewind()
+        clip.addRoundRect(0f, 0f, width.toFloat(), height.toFloat(), r, r, Path.Direction.CW)
+        canvas.clipPath(clip)
+        var x = -height.toFloat()
+        while (x < width) {
+            canvas.drawLine(x, height.toFloat(), x + height, 0f, paint)
+            x += step
+        }
+        canvas.restore()
     }
 
     private companion object {
         const val TRACK_ALPHA = 0x40
+        const val STRIPE_STEP = 3f
+        const val STRIPE_WIDTH = 0.3f
     }
 }

@@ -1954,6 +1954,18 @@
     <string name="widget_transport_say_at_stop">à quai</string>
     <string name="widget_transport_say_approaching">à l\'approche</string>
     <string name="widget_transport_say_wait">dans %1$d min</string>
+    <string name="widget_transport_traffic_disrupted">Perturbé</string>
+    <string name="widget_transport_traffic_interrupted">Interrompu</string>
+    <string name="widget_transport_traffic_soon">À venir</string>
+    <string name="widget_transport_traffic_title_disrupted">Trafic perturbé</string>
+    <string name="widget_transport_traffic_title_interrupted">Trafic interrompu</string>
+    <string name="widget_transport_traffic_title_soon">Trafic à venir</string>
+    <string name="widget_transport_traffic_source">Info trafic IDFM. Touche pour fermer.</string>
+    <string name="widget_transport_say_traffic_disrupted">trafic perturbé</string>
+    <string name="widget_transport_say_traffic_interrupted">trafic interrompu</string>
+    <string name="widget_transport_say_traffic_soon">trafic à venir</string>
+    <string name="widget_transport_traffic_action">Lire l\'info trafic</string>
+    <string name="widget_transport_sample_traffic">Le trafic est perturbé sur toute la ligne (incident technique sur un train).</string>
     <string-array name="widget_transport_sample">
         <item>Boissy-Saint-Léger</item>
         <item>La Défense</item>

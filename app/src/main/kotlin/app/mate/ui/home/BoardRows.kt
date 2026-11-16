@@ -14,7 +14,10 @@ import android.widget.TextView
 import app.mate.R
 import app.mate.ui.dp
 
-/** Un passage prêt à dessiner : picto, destination, attente et « puis N min » (null si pas de passage suivant). */
+/**
+ * Un passage prêt à dessiner : picto, destination, attente et « puis N min » (null si pas de passage suivant).
+ * [traffic] : info trafic de sa ligne, posée sur le premier passage de chaque ligne seulement (pastille, jauge rayée).
+ */
 class BoardItem(
     val line: TransportLines.Line?,
     val picto: PictoSpec,
@@ -22,6 +25,7 @@ class BoardItem(
     val wait: Transport.Wait,
     val thenMinutes: Int?,
     val approach: Float,
+    val traffic: TransportTraffic.Level? = null,
 )
 
 /** Tailles d'une famille de formes : [picto] et [gauge] (jauge d'approche) en dp de haut, [wait], [dest] et [head] (arrêt) en sp. */
@@ -33,10 +37,17 @@ class BoardLook(val picto: Int, val wait: Float, val dest: Float, val head: Floa
  * la rangée finit par la jauge d'approche du passage, à la couleur de sa ligne.
  */
 class BoardRows(private val context: Context, private val look: BoardLook, private val blinking: MutableList<View>) {
-    /** Pastille : picto, attente, destination en petit, étagés sur la hauteur. */
+    /** Pastille : picto (et le mot de l'info trafic à sa droite), attente, destination en petit, étagés sur la hauteur. */
     fun pill(item: BoardItem): View = LinearLayout(context).apply {
         orientation = LinearLayout.VERTICAL
-        addView(picto(item))
+        addView(
+            LinearLayout(context).apply {
+                gravity = Gravity.CENTER_VERTICAL
+                addView(picto(item))
+                item.traffic?.let { addView(View(context), LinearLayout.LayoutParams(0, 0, 1f)); addView(trafficWord(context, it, look.dest)) }
+            },
+            LinearLayout.LayoutParams(MATCH_PARENT, WRAP_CONTENT),
+        )
         addView(View(context), LinearLayout.LayoutParams(0, 0, 1f))
         addView(wait(item))
         addView(gauge(item), gaugeParams())
@@ -45,7 +56,7 @@ class BoardRows(private val context: Context, private val look: BoardLook, priva
         contentDescription = describe(item)
     }
 
-    /** Ligne (2 à 4 × 1) : picto, destination avec « puis N min » dessous, attente à droite. */
+    /** Ligne (2 à 4 × 1) : picto, destination avec « puis N min » dessous (le mot de l'info trafic à sa place s'il y en a une), attente à droite. */
     fun side(item: BoardItem, gauge: Boolean): View = withGauge(item, gauge) {
         LinearLayout(context).apply {
             gravity = Gravity.CENTER_VERTICAL
@@ -53,7 +64,12 @@ class BoardRows(private val context: Context, private val look: BoardLook, priva
             val text = LinearLayout(context).apply {
                 orientation = LinearLayout.VERTICAL
                 addView(dest(item, look.dest))
-                item.thenMinutes?.let { addView(lcdText(context, THEN_SP).apply { alpha = THEN_ALPHA; text = context.getString(R.string.widget_transport_then, it); maxLines = 1 }) }
+                val traffic = item.traffic
+                if (traffic != null) {
+                    addView(trafficWord(context, traffic, THEN_SP), LinearLayout.LayoutParams(WRAP_CONTENT, WRAP_CONTENT).apply { topMargin = context.dp(2) })
+                } else {
+                    item.thenMinutes?.let { addView(lcdText(context, THEN_SP).apply { alpha = THEN_ALPHA; text = context.getString(R.string.widget_transport_then, it); maxLines = 1 }) }
+                }
             }
             addView(text, LinearLayout.LayoutParams(0, WRAP_CONTENT, 1f).apply { marginStart = context.dp(GAP); marginEnd = context.dp(GAP) })
             addView(wait(item))
@@ -107,14 +123,14 @@ class BoardRows(private val context: Context, private val look: BoardLook, priva
         }
     }
 
-    private fun gauge(item: BoardItem) = ApproachBar(context, item.picto.barColor).apply {
+    private fun gauge(item: BoardItem) = ApproachBar(context, item.picto.barColor, item.traffic?.takeIf { it != TransportTraffic.Level.SOON }?.let { trafficColor(context, it) }).apply {
         fraction = item.approach
         importantForAccessibility = View.IMPORTANT_FOR_ACCESSIBILITY_NO
     }
 
     private fun gaugeParams() = LinearLayout.LayoutParams(MATCH_PARENT, context.dp(look.gauge)).apply { topMargin = context.dp(GAUGE_GAP) }
 
-    private fun picto(item: BoardItem) = LinePicto(context).apply { set(item.picto, item.line?.name.orEmpty(), look.picto) }
+    private fun picto(item: BoardItem) = LinePicto(context).apply { set(item.picto, item.line?.name.orEmpty(), look.picto, item.traffic) }
 
     private fun dest(item: BoardItem, sp: Float) = lcdText(context, sp).apply {
         text = item.destination
@@ -146,7 +162,7 @@ class BoardRows(private val context: Context, private val look: BoardLook, priva
         maxLines = 2
     }
 
-    private fun describe(item: BoardItem) = TransportSpeech.row(words, item.line, item.destination, item.wait)
+    private fun describe(item: BoardItem) = TransportSpeech.row(words, item.line, item.destination, item.wait, item.traffic)
 
     private companion object {
         const val GAP = 12

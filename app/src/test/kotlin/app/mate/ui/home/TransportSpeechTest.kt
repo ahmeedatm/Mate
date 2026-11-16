@@ -18,6 +18,11 @@ class TransportSpeechTest {
         approaching = strings.getValue("widget_transport_say_approaching"),
         waitFormat = strings.getValue("widget_transport_say_wait"),
         rowFormat = strings.getValue("widget_transport_talk_row"),
+        traffic = mapOf(
+            TransportTraffic.Level.SOON to strings.getValue("widget_transport_say_traffic_soon"),
+            TransportTraffic.Level.DISRUPTED to strings.getValue("widget_transport_say_traffic_disrupted"),
+            TransportTraffic.Level.INTERRUPTED to strings.getValue("widget_transport_say_traffic_interrupted"),
+        ),
     )
 
     private fun line(mode: TransportLines.Mode, name: String) = TransportLines.Line(name, mode, 0, 0)
@@ -26,6 +31,14 @@ class TransportSpeechTest {
     fun a_row_says_line_destination_and_wait() {
         val said = TransportSpeech.row(words, line(TransportLines.Mode.METRO, "1"), "La Défense", Transport.waitOf(3))
         assertEquals("métro 1 vers La Défense, dans 3 min", said)
+    }
+
+    @Test
+    fun a_disrupted_line_says_it_after_the_wait() {
+        val rer = line(TransportLines.Mode.RER, "B")
+        assertEquals("RER B vers Mitry - Claye, dans 6 min, trafic perturbé", TransportSpeech.row(words, rer, "Mitry - Claye", Transport.waitOf(6), TransportTraffic.Level.DISRUPTED))
+        assertEquals("RER B vers Mitry - Claye, dans 6 min, trafic interrompu", TransportSpeech.row(words, rer, "Mitry - Claye", Transport.waitOf(6), TransportTraffic.Level.INTERRUPTED))
+        assertEquals("RER B vers Mitry - Claye, dans 6 min", TransportSpeech.row(words, rer, "Mitry - Claye", Transport.waitOf(6), null))
     }
 
     @Test

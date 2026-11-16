@@ -160,6 +160,8 @@ Widget Valorant (style « Chaleur », choix d'Ahmed du 05/11 : « plus Valorant,
 
 Console de mixage (onglet Son) : afficheur #0E0F11 à chiffres vert acide, LED vert / jaune #FFD45B / corail #FF7A70. Curseur en galet (pilule pleine, index court) et touche Muet ronde au pictogramme du haut-parleur, barré, anneau et fond corail en sourdine (variante « Galet », 04/11) ; Hush et Spider-Verse gardent leur table nue, où l'icône de la voie fait Muet.
 
+Widget Transports (afficheur de quai, #231 puis info trafic, 16/11) : exception assumée aux couleurs du thème. Les pictos et les jauges portent les couleurs officielles des lignes d'IDFM ; l'info trafic porte l'orange #F28E00 (« perturbé », encre #141413) et le rouge #E2001A (« interrompu », encre blanche) des alertes d'IDFM, pareils dans tous les thèmes ; « à venir » reste à l'encre de l'écran (anneau, mot cerné). La carte des messages suit la DA : fond `c_bg`, filet `c_stroke`, sans ombre.
+
 ## Captures
 
 Émulateur `companion_api29` (Android 10, 1280×800), backend de démonstration (`backend/test/widgets-demo.ts`).
