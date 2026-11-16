@@ -108,6 +108,63 @@ class TransportTest {
     }
 
     @Test
+    fun `le sens vient du quai, sinon du sens IDFM`() {
+        val onQuay = visit("STIF:Line::C01743:", "Mitry - Claye", "2026-11-10T14:05:00.000Z")
+        onQuay.getJSONObject("MonitoredVehicleJourney").put("DirectionRef", JSONObject().put("value", "Aller"))
+            .getJSONObject("MonitoredCall")
+            .put("DepartureStopAssignment", JSONObject().put("ExpectedQuayRef", JSONObject().put("value", "STIF:StopPoint:Q:474018:")))
+        val noQuay = visit("STIF:Line::C01371:", "La Défense", "2026-11-10T14:06:00.000Z")
+        noQuay.getJSONObject("MonitoredVehicleJourney").put("DirectionRef", JSONObject().put("value", "Aller"))
+        val bare = visit("STIF:Line::C01299:", "Roissypôle", "2026-11-10T14:07:00.000Z")
+        val d = Transport.parse(monitoring(onQuay, noQuay, bare), now)
+        assertEquals(listOf("STIF:StopPoint:Q:474018:", "Aller", ""), d.map { it.side })
+    }
+
+    @Test
+    fun `une direction garde tous les trains du meme sens, quel que soit le terminus`() {
+        // Sceaux, RER B vers le nord, un matin : les trains vont à CDG 2, le premier Mitry - Claye est dans 67 min.
+        val north = "STIF:StopPoint:Q:474018:"
+        val rerB = "STIF:Line::C01743:"
+        val all = listOf(
+            Transport.Departure(rerB, "Robinson", 60_000L, "STIF:StopPoint:Q:474019:"),
+            Transport.Departure(rerB, "Aéroport Charles de Gaulle 2 (Terminal 2)", 180_000L, north),
+            Transport.Departure(rerB, "Mitry - Claye", 67 * 60_000L, north),
+        )
+        val expected = listOf("Aéroport Charles de Gaulle 2 (Terminal 2)", "Mitry - Claye")
+        // Réglage enregistré avec son sens…
+        assertEquals(expected, Transport.pick(all, rerB, "Mitry - Claye", north).map { it.destination })
+        // …ou ancien réglage sans sens : retrouvé par le terminus choisi.
+        assertEquals(expected, Transport.pick(all, rerB, "Mitry - Claye", null).map { it.destination })
+    }
+
+    @Test
+    fun `le terminus choisi reste affiche meme sans sens ou avec un sens perime`() {
+        val rerB = "STIF:Line::C01743:"
+        val all = listOf(
+            Transport.Departure(rerB, "Robinson", 60_000L, "STIF:StopPoint:Q:474019:"),
+            Transport.Departure(rerB, "Mitry - Claye", 90_000L),
+            Transport.Departure(rerB, "Aéroport Charles de Gaulle 2 (Terminal 2)", 180_000L, "STIF:StopPoint:Q:474018:"),
+        )
+        // Le passage pour Mitry n'a pas de quai : il reste, avec les autres trains du même sens.
+        assertEquals(
+            listOf("Mitry - Claye", "Aéroport Charles de Gaulle 2 (Terminal 2)"),
+            Transport.pick(all, rerB, "Mitry - Claye", "STIF:StopPoint:Q:474018:").map { it.destination },
+        )
+        // Sens enregistré qu'IDFM ne donne plus : on retombe sur le terminus.
+        assertEquals(listOf("Mitry - Claye"), Transport.pick(all, rerB, "Mitry - Claye", "STIF:StopPoint:Q:999:").map { it.destination })
+    }
+
+    @Test
+    fun `sans sens connu, la direction reste le terminus`() {
+        val bus = "STIF:Line::C01299:"
+        val all = listOf(
+            Transport.Departure(bus, "Roissypôle", 60_000L),
+            Transport.Departure(bus, "Nation - Trône", 120_000L),
+        )
+        assertEquals(listOf("Roissypôle"), Transport.pick(all, bus, "Roissypôle", null).map { it.destination })
+    }
+
+    @Test
     fun `l'attente en minutes est arrondie vers le bas, jamais negative`() {
         assertEquals(0, Transport.waitMinutes(59_000L))
         assertEquals(3, Transport.waitMinutes(239_000L))

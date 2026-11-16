@@ -43,8 +43,12 @@ object Transport {
     /** Fraction de seconde des horodatages SIRI (« .000 »), retirée avant lecture ; compilée une fois. */
     private val FRACTION = Regex("\\.\\d+")
 
-    /** Un passage : la ligne (référence IDFM), sa destination affichée et l'attente en millisecondes. */
-    class Departure(val lineRef: String, val destination: String, val waitMs: Long)
+    /**
+     * Un passage : la ligne (référence IDFM), sa destination affichée, l'attente en millisecondes et son sens [side] :
+     * le quai de départ s'il est connu (RER, train), sinon le sens IDFM (`DirectionRef`, métro), vide sinon (bus).
+     * Le quai prime : au RER A, IDFM donne des « Torcy » dans les deux sens, alors que le quai, lui, ne ment pas.
+     */
+    class Departure(val lineRef: String, val destination: String, val waitMs: Long, val side: String = "")
 
     /** Un arrêt trouvé : son nom et son identifiant IDFM (le numéro de `stop_area:IDFM:<id>`). */
     class Stop(val name: String, val id: String)
@@ -76,15 +80,27 @@ object Transport {
                 lineRef = mvj.optJSONObject("LineRef")?.optString("value").orEmpty(),
                 destination = firstValue(mvj, "DestinationName").ifBlank { firstValue(call, "DestinationDisplay") },
                 waitMs = waitMs,
+                side = sideOf(mvj, call),
             )
         }
         return out.sortedBy { it.waitMs }
     }
 
-    /** Garde les passages de la ligne [lineRef] (si donnée) et de la direction [direction] (destination, si donnée). */
-    fun pick(all: List<Departure>, lineRef: String?, direction: String?) = all.filter {
-        (lineRef.isNullOrBlank() || it.lineRef == lineRef) &&
-            (direction.isNullOrBlank() || it.destination.contains(direction, ignoreCase = true))
+    /**
+     * Garde les passages de la ligne [lineRef] (si donnée) qui vont dans le sens de la direction choisie : tous les trains
+     * du même [side], quel que soit leur terminus (à Sceaux, « vers Mitry - Claye » montre aussi les RER B pour CDG 2).
+     * [side] vide (réglage d'avant) : le sens se retrouve par le terminus [direction] parmi les passages lus. Sans sens
+     * connu (bus sans quai ni `DirectionRef`), la direction reste le terminus.
+     */
+    fun pick(all: List<Departure>, lineRef: String?, direction: String?, side: String? = null): List<Departure> {
+        val onLine = all.filter { lineRef.isNullOrBlank() || it.lineRef == lineRef }
+        if (direction.isNullOrBlank()) return onLine
+        val byDestination = onLine.filter { it.destination.contains(direction, ignoreCase = true) }
+        val sides = if (!side.isNullOrBlank()) setOf(side) else byDestination.mapTo(HashSet()) { it.side } - ""
+        if (sides.isEmpty()) return byDestination
+        // Le terminus choisi reste toujours affiché : passage sans quai ni sens, ou sens enregistré qu'IDFM aurait renommé.
+        // shortcut: un seul quai enregistré ; une grande gare où un même sens part de deux quais en cache un, à revoir si ça arrive.
+        return onLine.filter { it.side in sides || it in byDestination }
     }
 
     /** Attente en minutes, arrondie vers le bas (« dans 3 min » = le passage arrive dans 3 à 4 min), jamais négative. */
@@ -109,6 +125,13 @@ object Transport {
     /** « puis N min » : le passage qui suit [d] dans [all] (trié par attente), même ligne et même destination. */
     fun following(all: List<Departure>, d: Departure): Departure? =
         all.dropWhile { it !== d }.drop(1).firstOrNull { it.lineRef == d.lineRef && it.destination == d.destination }
+
+    /** Sens d'un passage ([Departure.side]) : quai de départ (ou d'arrivée au terminus), sinon `DirectionRef`. */
+    private fun sideOf(mvj: JSONObject, call: JSONObject): String {
+        val quay = (call.optJSONObject("DepartureStopAssignment") ?: call.optJSONObject("ArrivalStopAssignment"))
+            ?.optJSONObject("ExpectedQuayRef")?.optString("value").orEmpty()
+        return quay.ifBlank { mvj.optJSONObject("DirectionRef")?.optString("value").orEmpty() }
+    }
 
     /** Premier `[{ "value": … }]` d'un champ SIRI (DestinationName, DestinationDisplay) ; vide s'il manque. */
     private fun firstValue(obj: JSONObject, field: String) =
@@ -162,7 +185,7 @@ object Transport {
     /**
      * Choisir l'arrêt puis la direction : on tape le nom de l'arrêt, IDFM propose des arrêts ; en choisir un lit ses
      * prochains passages et montre « Toutes les directions » puis une ligne par destination observée. Enregistre
-     * `stopId`, `stop`, et si une direction précise est prise, `line` et `direction` dans [config].
+     * `stopId`, `stop`, et si une direction précise est prise, `line`, `direction` et `side` (son sens) dans [config].
      */
     fun choose(context: Context, scope: CoroutineScope, config: JSONObject, onChosen: () -> Unit) {
         fun text(size: Float, colorAttr: Int) = TextView(context).apply {
@@ -204,13 +227,13 @@ object Transport {
         }
         fun note(res: Int) = noteText(context.getString(res))
 
-        fun save(stop: Stop, lineRef: String?, direction: String?) {
+        fun save(stop: Stop, choice: Departure?) {
             hideKeyboard(context, input)
             config.put("stopId", stop.id).put("stop", stop.name)
-            if (direction.isNullOrBlank()) {
-                config.remove("line"); config.remove("direction")
+            if (choice == null) {
+                config.remove("line"); config.remove("direction"); config.remove("side")
             } else {
-                config.put("line", lineRef).put("direction", direction)
+                config.put("line", choice.lineRef).put("direction", choice.destination).put("side", choice.side)
             }
             dialog.dismiss()
             onChosen()
@@ -223,10 +246,10 @@ object Transport {
                 val deps = runCatchingCancellable { departures(stop.id, System.currentTimeMillis()) }
                 if (!dialog.isShowing) return@launch
                 results.removeAllViews()
-                results.addView(row(context.getString(R.string.widget_transport_all)) { save(stop, null, null) }, rowParams())
+                results.addView(row(context.getString(R.string.widget_transport_all)) { save(stop, null) }, rowParams())
                 // Une direction = une destination distincte observée à l'arrêt ; sa ligne sert au filtre précis.
                 deps.getOrNull().orEmpty().distinctBy { it.destination }.filter { it.destination.isNotBlank() }
-                    .forEach { d -> results.addView(row(d.destination) { save(stop, d.lineRef, d.destination) }, rowParams()) }
+                    .forEach { d -> results.addView(row(d.destination) { save(stop, d) }, rowParams()) }
                 deps.exceptionOrNull()?.let { results.addView(text(13f, R.attr.c_text_dim).apply { text = context.errorText(it); setPadding(0, context.dp(12), 0, 0) }, rowParams()) }
             }
         }
