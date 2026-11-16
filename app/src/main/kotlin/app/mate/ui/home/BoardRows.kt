@@ -14,7 +14,10 @@ import android.widget.TextView
 import app.mate.R
 import app.mate.ui.dp
 
-/** Un passage prêt à dessiner : picto, destination, attente et « puis N min » (null si pas de passage suivant). */
+/**
+ * Un passage prêt à dessiner : picto, destination, attente et « puis N min » (null si pas de passage suivant).
+ * [traffic] : info trafic de sa ligne, posée sur le premier passage de chaque ligne seulement (pastille, jauge rayée).
+ */
 class BoardItem(
     val line: TransportLines.Line?,
     val picto: PictoSpec,
@@ -22,6 +25,7 @@ class BoardItem(
     val wait: Transport.Wait,
     val thenMinutes: Int?,
     val approach: Float,
+    val traffic: TransportTraffic.Level? = null,
 )
 
 /** Tailles d'une famille de formes : [picto] et [gauge] (jauge d'approche) en dp de haut, [wait], [dest] et [head] (arrêt) en sp. */
@@ -107,14 +111,14 @@ class BoardRows(private val context: Context, private val look: BoardLook, priva
         }
     }
 
-    private fun gauge(item: BoardItem) = ApproachBar(context, item.picto.barColor).apply {
+    private fun gauge(item: BoardItem) = ApproachBar(context, item.picto.barColor, item.traffic?.takeIf { it != TransportTraffic.Level.SOON }?.let { trafficColor(context, it) }).apply {
         fraction = item.approach
         importantForAccessibility = View.IMPORTANT_FOR_ACCESSIBILITY_NO
     }
 
     private fun gaugeParams() = LinearLayout.LayoutParams(MATCH_PARENT, context.dp(look.gauge)).apply { topMargin = context.dp(GAUGE_GAP) }
 
-    private fun picto(item: BoardItem) = LinePicto(context).apply { set(item.picto, item.line?.name.orEmpty(), look.picto) }
+    private fun picto(item: BoardItem) = LinePicto(context).apply { set(item.picto, item.line?.name.orEmpty(), look.picto, item.traffic) }
 
     private fun dest(item: BoardItem, sp: Float) = lcdText(context, sp).apply {
         text = item.destination
@@ -146,7 +150,7 @@ class BoardRows(private val context: Context, private val look: BoardLook, priva
         maxLines = 2
     }
 
-    private fun describe(item: BoardItem) = TransportSpeech.row(words, item.line, item.destination, item.wait)
+    private fun describe(item: BoardItem) = TransportSpeech.row(words, item.line, item.destination, item.wait, item.traffic)
 
     private companion object {
         const val GAP = 12

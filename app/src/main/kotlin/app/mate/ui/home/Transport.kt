@@ -38,7 +38,7 @@ import java.util.Locale
  * Rien de lourd : un appel par minute (le `load()` de l'hôte), réponse analysée une fois ([tablette-4.2], 128 Mo de tas).
  */
 object Transport {
-    private const val BASE = "https://prim.iledefrance-mobilites.fr/marketplace"
+    internal const val BASE = "https://prim.iledefrance-mobilites.fr/marketplace"
 
     /** Fraction de seconde des horodatages SIRI (« .000 »), retirée avant lecture ; compilée une fois. */
     private val FRACTION = Regex("\\.\\d+")
@@ -138,7 +138,7 @@ object Transport {
         obj.optJSONArray(field)?.optJSONObject(0)?.optString("value").orEmpty()
 
     /** Horodatage ISO 8601 d'IDFM (« 2026-11-10T14:03:00.000Z » ou avec décalage) → ms ; null si illisible. */
-    private fun epoch(iso: SimpleDateFormat, time: String): Long? {
+    internal fun epoch(iso: SimpleDateFormat, time: String): Long? {
         if (time.isBlank()) return null
         return runCatching { iso.parse(time.replace(FRACTION, ""))!!.time }.getOrNull()
     }
@@ -167,7 +167,7 @@ object Transport {
     /** Clé absente (debug ou release sans secret) : rien à lire chez IDFM. */
     val keyless get() = BuildConfig.IDFM_TOKEN.isBlank()
 
-    private suspend fun get(url: String): JSONObject = withTimeout(12_000) {
+    internal suspend fun get(url: String): JSONObject = withTimeout(12_000) {
         withContext(Dispatchers.IO) {
             val conn = URL(url).openConnection() as HttpURLConnection
             conn.setRequestProperty("apikey", BuildConfig.IDFM_TOKEN)
