@@ -15,6 +15,7 @@ import android.widget.LinearLayout
 import android.widget.TextView
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.widget.SwitchCompat
+import app.mate.AppLanguage
 import app.mate.R
 import app.mate.net.CalendarEvent
 import java.text.SimpleDateFormat
@@ -35,8 +36,8 @@ class EventDialog(
     private val onDelete: (() -> Unit)? = null,
 ) {
 
-    private val dayLabel = SimpleDateFormat("EEE d", Locale.FRANCE)
-    private val dateLabel = SimpleDateFormat("EEE d MMM", Locale.FRANCE)
+    private val dayLabel = SimpleDateFormat("EEE d", AppLanguage.locale)
+    private val dateLabel = SimpleDateFormat("EEE d MMM", AppLanguage.locale)
 
     fun show(existing: CalendarEvent? = null) {
         val root = LayoutInflater.from(context).inflate(R.layout.view_event_dialog, null)
@@ -102,7 +103,7 @@ class EventDialog(
             otherChip.isSelected = !inWeek
             otherChip.text = if (inWeek) context.getString(R.string.event_other_day) else dateLabel.format(day.time).replaceFirstChar { it.uppercase() }
             timeButton.visibility = if (allDay.isChecked) View.GONE else View.VISIBLE
-            timeButton.text = String.format(Locale.FRANCE, "%02d:%02d", hour, minute)
+            timeButton.text = String.format(Locale.ROOT, "%02d:%02d", hour, minute)
             // Rappel parlé seulement pour un événement à heure fixe.
             val showReminders = if (allDay.isChecked) View.GONE else View.VISIBLE
             reminderTitle.visibility = showReminders

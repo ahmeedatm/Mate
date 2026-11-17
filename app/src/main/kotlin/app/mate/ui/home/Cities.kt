@@ -1,6 +1,7 @@
 package app.mate.ui.home
 
 import android.content.Context
+import app.mate.AppLanguage
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.lang.ref.WeakReference
@@ -98,7 +99,7 @@ object Cities {
 
     /** « Brest · Bretagne, France » ; pas de région quand elle répète le nom. */
     fun label(city: City): String {
-        val country = Locale("", city.country).getDisplayCountry(Locale.FRENCH).ifBlank { city.country }
+        val country = Locale("", city.country).getDisplayCountry(AppLanguage.locale).ifBlank { city.country }
         val where = listOf(city.region.takeIf { it.isNotBlank() && it != city.name }, country).filterNotNull().joinToString(", ")
         return "${city.name} · $where"
     }

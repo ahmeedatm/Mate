@@ -2,6 +2,7 @@ package app.mate.ui.home
 
 import android.content.Context
 import android.view.View
+import app.mate.AppLanguage
 import app.mate.R
 import app.mate.net.BackendClient
 import app.mate.net.CalendarEvent
@@ -11,11 +12,10 @@ import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
 import java.util.Calendar
 import java.util.Date
-import java.util.Locale
 
-private val timeFormat get() = SimpleDateFormat("HH:mm", Locale.FRANCE)
-private val dayHeader get() = SimpleDateFormat("EEEE d MMMM", Locale.FRANCE)
-private val dayName get() = SimpleDateFormat("EEEE", Locale.FRANCE)
+private val timeFormat get() = SimpleDateFormat("HH:mm", AppLanguage.locale)
+private val dayHeader get() = SimpleDateFormat("EEEE d MMMM", AppLanguage.locale)
+private val dayName get() = SimpleDateFormat("EEEE", AppLanguage.locale)
 
 /** Jours entre aujourd'hui et `ms` (0 = aujourd'hui), au calendrier (pas en tranches de 24 h). */
 internal fun daysFrom(now: Long, ms: Long): Int {

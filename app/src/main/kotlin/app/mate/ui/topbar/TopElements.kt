@@ -9,6 +9,7 @@ import android.widget.LinearLayout
 import android.widget.SeekBar
 import android.widget.TextView
 import androidx.core.widget.ImageViewCompat
+import app.mate.AppLanguage
 import app.mate.Prefs
 import app.mate.R
 import app.mate.agents.AgentsFeed
@@ -35,7 +36,6 @@ import kotlinx.coroutines.launch
 import org.json.JSONObject
 import java.text.SimpleDateFormat
 import java.util.Date
-import java.util.Locale
 import kotlin.math.roundToInt
 
 /**
@@ -123,7 +123,7 @@ class MusicElement(host: TopBarHost) : TopElement(TopItem.MUSIC, host) {
 }
 
 class ClockElement(host: TopBarHost) : TopElement(TopItem.CLOCK, host) {
-    private val format = SimpleDateFormat("HH:mm", Locale.FRANCE)
+    private val format = SimpleDateFormat("HH:mm", AppLanguage.locale)
     override val view = label()
     private val tick: () -> Unit = { render() }
 
@@ -143,7 +143,7 @@ class ClockElement(host: TopBarHost) : TopElement(TopItem.CLOCK, host) {
 
 /** « Ven. 30 oct. » : courte, elle tient à côté de l'heure. */
 class DateElement(host: TopBarHost) : TopElement(TopItem.DATE, host) {
-    private val format = SimpleDateFormat("EEE d MMM", Locale.FRANCE)
+    private val format = SimpleDateFormat("EEE d MMM", AppLanguage.locale)
     override val view = label()
     private val tick: () -> Unit = { render() }
 

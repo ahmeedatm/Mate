@@ -8,13 +8,13 @@ import android.view.ViewGroup
 import android.widget.FrameLayout
 import android.widget.LinearLayout
 import app.mate.AnimFamily
+import app.mate.AppLanguage
 import app.mate.R
 import app.mate.net.CalendarEvent
 import app.mate.ui.Look
 import app.mate.ui.themeFont
 import java.text.SimpleDateFormat
 import java.util.Date
-import java.util.Locale
 
 /**
  * Ligne du jour de l'Accueil (DA Console douce), sans fond. Une mise en page par famille ([DayLineFace], direction Cadran,
@@ -37,7 +37,7 @@ class DayLineWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidg
     override val view = FrameLayout(context).barelyFramed()
     private var face = DayLineFace.of(placed.size)
     private var active = false
-    private val clock = SimpleDateFormat("HH:mm", Locale.FRANCE)
+    private val clock = SimpleDateFormat("HH:mm", AppLanguage.locale)
 
     /** Aperçu du catalogue : la journée d'exemple à la place de l'agenda de l'ordinateur. */
     private var sample: List<CalendarEvent>? = null

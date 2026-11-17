@@ -213,7 +213,7 @@ export const DECK_JS = `
         onclick: () => pfDeckOpen(slot),
       }, [
         pfSvg(key ? ICONS.keys : ICONS.add, "logo ink"),
-        pfDeckEl("b", { text: key ? key.label : "Touche " + (slot + 1) }),
+        pfDeckEl("b", { text: key ? key.label : "Touche " + (slot + 1), translate: key ? "no" : "yes" }),
         pfDeckEl("small", {}, [dot, document.createTextNode(state)]),
       ]));
     });

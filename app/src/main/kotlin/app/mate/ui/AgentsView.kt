@@ -15,6 +15,7 @@ import androidx.core.widget.ImageViewCompat
 import androidx.core.widget.TextViewCompat
 import androidx.lifecycle.LifecycleOwner
 import androidx.lifecycle.lifecycleScope
+import app.mate.AppLanguage
 import app.mate.MainActivity
 import app.mate.Prefs
 import app.mate.R
@@ -40,7 +41,6 @@ import app.mate.ui.home.lcdText
 import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
 import java.util.Date
-import java.util.Locale
 
 /** Couleur d'un état, comme dans Orca : orange (travaille), rouge (attend), vert (fini), bleu (limite), gris (inactif). */
 fun stateColor(context: Context, state: AgentState): Int = themeColor(
@@ -105,9 +105,9 @@ class AgentsView @JvmOverloads constructor(
     private val projectsButton = ImageButton(context, null, 0, R.style.IconButton_Flat)
     private val rows = LinkedHashMap<String, View>()
     private var signature: List<Any?> = emptyList()
-    private val clock = SimpleDateFormat("H 'h' mm", Locale.FRENCH)
-    private val weekday = SimpleDateFormat("EEEE", Locale.FRENCH)
-    private val dateDay = SimpleDateFormat("d MMMM", Locale.FRENCH)
+    private val clock = SimpleDateFormat(context.getString(R.string.agents_clock_format), AppLanguage.locale)
+    private val weekday = SimpleDateFormat("EEEE", AppLanguage.locale)
+    private val dateDay = SimpleDateFormat("d MMMM", AppLanguage.locale)
     private var observer: ((AgentsFeed.Snapshot) -> Unit)? = null
     private var active = false
     private lateinit var owner: LifecycleOwner

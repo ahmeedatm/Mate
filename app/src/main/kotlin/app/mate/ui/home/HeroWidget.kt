@@ -12,13 +12,13 @@ import android.widget.FrameLayout
 import android.widget.LinearLayout
 import android.widget.TextView
 import androidx.core.view.isVisible
+import app.mate.AppLanguage
 import app.mate.R
 import app.mate.net.CalendarEvent
 import app.mate.ui.RollingText
 import app.mate.ui.themeFont
 import java.text.SimpleDateFormat
 import java.util.Date
-import java.util.Locale
 import kotlin.math.roundToInt
 
 /**
@@ -122,10 +122,10 @@ class HeroWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidget(
     /** « Ensuite » au-dessus du titre, seulement si la réunion n'a pas commencé. */
     private val ringPrefix = label(15f, R.attr.c_text_faint).apply { setText(R.string.next_prefix) }
 
-    private val dateFormat = SimpleDateFormat("EEEE d MMMM", Locale.FRANCE)
-    private val clockFormat = SimpleDateFormat("HH:mm", Locale.FRANCE)
-    private val shortDate = SimpleDateFormat("EEE d MMM", Locale.FRANCE)
-    private val minuteFormat = SimpleDateFormat("m", Locale.FRANCE)
+    private val dateFormat = SimpleDateFormat("EEEE d MMMM", AppLanguage.locale)
+    private val clockFormat = SimpleDateFormat("HH:mm", AppLanguage.locale)
+    private val shortDate = SimpleDateFormat("EEE d MMM", AppLanguage.locale)
+    private val minuteFormat = SimpleDateFormat("m", AppLanguage.locale)
     private var active = false
 
     /** Aperçu du catalogue : la journée d'exemple à la place de l'agenda de l'ordinateur. */

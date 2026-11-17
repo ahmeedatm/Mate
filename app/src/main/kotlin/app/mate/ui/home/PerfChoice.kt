@@ -1,11 +1,11 @@
 package app.mate.ui.home
 
 import androidx.annotation.StringRes
+import app.mate.AppLanguage
 import app.mate.R
 import app.mate.net.PcPerf
 import org.json.JSONArray
 import org.json.JSONObject
-import java.util.Locale
 
 /** Groupe d'une info dans la liste à cocher des réglages. */
 enum class PerfGroup(@StringRes val title: Int) {
@@ -84,7 +84,7 @@ object PerfChoice {
 
 /** Nombre court : une décimale (« 20,1 »), aucune pour une valeur ronde ou de trois chiffres (« 32 », « 120 »). */
 fun perfNumber(value: Double): String =
-    if (value % 1.0 == 0.0 || value >= 99.5) Math.round(value).toString() else String.format(Locale.FRANCE, "%.1f", value)
+    if (value % 1.0 == 0.0 || value >= 99.5) Math.round(value).toString() else String.format(AppLanguage.locale, "%.1f", value)
 
 /** Débit à écrire : `value` en Ko/s, ou en Mo/s si `mega`. */
 data class PerfRate(val value: Double, val mega: Boolean)

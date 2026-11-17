@@ -9,6 +9,7 @@ import android.text.TextUtils
 import android.util.TypedValue
 import android.view.View
 import androidx.core.graphics.ColorUtils
+import app.mate.AppLanguage
 import app.mate.R
 import app.mate.net.CalendarEvent
 import app.mate.ui.Look
@@ -17,7 +18,6 @@ import app.mate.ui.themeColor
 import app.mate.ui.themeFont
 import java.text.SimpleDateFormat
 import java.util.Date
-import java.util.Locale
 
 /**
  * La journée de 8 h à 20 h en ligne de temps (direction Cadran, #180) : les rendez-vous en barres (passés effacés, le
@@ -46,7 +46,7 @@ class DayTrack(context: Context) : View(context) {
         DayLineModel.State.NEXT to themeColor(context, R.attr.c_accent),
         DayLineModel.State.LATER to themeColor(context, R.attr.c_graphic),
     )
-    private val clock = SimpleDateFormat("HH:mm", Locale.FRANCE)
+    private val clock = SimpleDateFormat("HH:mm", AppLanguage.locale)
     private val thick = context.dp(BAR_DP).toFloat()
     private val dot = context.dp(DOT_DP).toFloat()
     private val halo = context.dp(HALO_DP).toFloat()

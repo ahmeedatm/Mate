@@ -8,6 +8,7 @@ import android.widget.LinearLayout
 import android.widget.TextView
 import androidx.core.graphics.ColorUtils
 import androidx.lifecycle.lifecycleScope
+import app.mate.AppLanguage
 import app.mate.Computers
 import app.mate.MainActivity
 import app.mate.Prefs
@@ -17,7 +18,6 @@ import app.mate.net.BackendClient
 import app.mate.net.CalendarEvent
 import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
-import java.util.Locale
 
 /**
  * Alerte réunion (Réglages > Notifs et verrou) : 5 min avant le début d'un événement horaire de l'agenda, un plein écran par-dessus
@@ -34,7 +34,7 @@ class MeetingAlertOverlay(private val activity: MainActivity) : FrameLayout(acti
     private var lastMinutes = -1
 
     private fun color(attr: Int) = themeColor(context, attr)
-    private val timeFormat = SimpleDateFormat("HH:mm", Locale.FRANCE)
+    private val timeFormat = SimpleDateFormat("HH:mm", AppLanguage.locale)
 
     private val title = text(40f, R.attr.c_text).apply { typeface = themeFont(context, R.attr.c_font_medium); maxLines = 2; ellipsize = TextUtils.TruncateAt.END }
     private val start = text(24f, R.attr.c_text_dim)

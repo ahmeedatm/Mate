@@ -29,6 +29,7 @@ import androidx.core.widget.ImageViewCompat
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.lifecycleScope
 import app.mate.AnimFamily
+import app.mate.AppLanguage
 import app.mate.BuildConfig
 import app.mate.Computer
 import app.mate.Computers
@@ -236,6 +237,7 @@ class SettingsFragment :
         }
         HomeCard.bindChoice(view.findViewById(R.id.settings_home_cards)) { requireActivity().recreate() }
         setUpRail(view)
+        setUpLanguage(view)
         setUpAccessibility(view)
         setUpReadingAids(view)
         setUpAnimations(view)
@@ -451,6 +453,26 @@ class SettingsFragment :
     }
 
     // --- Accessibilité (COMP-50) : TalkBack et taille du texte, que le kiosque empêche de régler dans Android
+
+    /** Langue de l'appli : un appui la retient et recrée l'écran, qui revient dans cette langue (AppLanguage). */
+    private fun setUpLanguage(view: View) {
+        val ctx = requireContext()
+        val row = view.findViewById<LinearLayout>(R.id.settings_languages)
+        val current = AppLanguage.of(ctx)
+        for ((language, label) in LANGUAGES) {
+            val chip = Button(ctx, null, 0, R.style.Chip).apply {
+                setText(label)
+                isSelected = language == current
+                setOnClickListener {
+                    if (language == current) return@setOnClickListener
+                    Prefs.setLanguage(context, language)
+                    AppLanguage.applyToApp(context.applicationContext)
+                    requireActivity().recreate()
+                }
+            }
+            row.addView(chip, LinearLayout.LayoutParams(0, dp(48), 1f).apply { if (row.childCount > 0) marginStart = dp(10) })
+        }
+    }
 
     private fun setUpAccessibility(view: View) {
         val ctx = requireContext()
@@ -1377,6 +1399,11 @@ class SettingsFragment :
         const val THEME_COLUMNS = 5
 
         /** Facteurs de la taille du texte, en plus de celle d'Android : jusqu'à une fois et demie. */
+        val LANGUAGES = listOf(
+            AppLanguage.FRENCH to R.string.language_french,
+            AppLanguage.ENGLISH to R.string.language_english,
+        )
+
         val TEXT_SIZES = listOf(
             1f to R.string.a11y_size_normal,
             1.15f to R.string.a11y_size_large,

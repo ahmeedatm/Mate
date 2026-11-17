@@ -14,6 +14,7 @@ import android.widget.ScrollView
 import android.widget.TextView
 import androidx.fragment.app.FragmentActivity
 import androidx.lifecycle.lifecycleScope
+import app.mate.AppLanguage
 import app.mate.Computer
 import app.mate.R
 import app.mate.net.BackendClient
@@ -46,7 +47,6 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import java.text.NumberFormat
-import java.util.Locale
 
 /**
  * Page Cyberpunk 2077 : calque plein écran par-dessus le Deck (comme PageOverlay), ouvert tout seul au lancement du jeu
@@ -651,7 +651,7 @@ class CyberpunkOverlay(private val activity: FragmentActivity) {
         p ?: return
         v.level.text = activity.getString(R.string.cp_level, p.level)
         v.health.percent = p.health
-        v.money.text = activity.getString(R.string.cp_money, NumberFormat.getIntegerInstance(Locale.FRANCE).format(p.money))
+        v.money.text = activity.getString(R.string.cp_money, NumberFormat.getIntegerInstance(AppLanguage.locale).format(p.money))
     }
 
     private fun renderCall(v: Views, st: CyberpunkState) {

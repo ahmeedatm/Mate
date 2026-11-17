@@ -1,9 +1,9 @@
 package app.mate.ui.home
 
+import app.mate.AppLanguage
 import app.mate.net.CalendarEvent
 import java.text.SimpleDateFormat
 import java.util.Date
-import java.util.Locale
 
 /**
  * Ce que le Prochain rendez-vous montre dans une forme (#180, direction Cadran) : [across] = l'anneau à gauche du titre
@@ -67,5 +67,5 @@ object NextRing {
 
     private const val MINUTE = 60_000L
 
-    private fun clock(ms: Long) = SimpleDateFormat("HH:mm", Locale.FRANCE).format(Date(ms))
+    private fun clock(ms: Long) = SimpleDateFormat("HH:mm", AppLanguage.locale).format(Date(ms))
 }

@@ -810,6 +810,21 @@ export async function runSanity(opts: { url: string; token: string; os?: Os; hoo
       },
     },
     {
+      name: "erreurs en anglais (tablette réglée en English)",
+      run: async () => {
+        // Demande invalide refusée avant toute écriture : rien n'est créé.
+        const res = await fetch(base + "/tasks", {
+          method: "POST",
+          headers: { authorization: `Bearer ${opts.token}`, "content-type": "application/json", "accept-language": "en" },
+          body: JSON.stringify({ label: "" }),
+          signal: AbortSignal.timeout(45_000),
+        });
+        const json = (await res.json()) as { error?: string };
+        expectStatus({ status: res.status, json }, 400, "/tasks en anglais");
+        expect(json.error === "Invalid request: update the tablet app", `erreur pas traduite : ${json.error}`);
+      },
+    },
+    {
       name: "GitHub : PR et Actions (lecture seule)",
       run: async () => {
         const prs = await call("GET", "/github/prs");

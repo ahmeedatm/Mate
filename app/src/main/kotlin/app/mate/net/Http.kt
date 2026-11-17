@@ -1,5 +1,6 @@
 package app.mate.net
 
+import app.mate.AppLanguage
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import org.json.JSONObject
@@ -115,6 +116,8 @@ class Http(
         conn.connectTimeout = connectTimeoutMs
         conn.readTimeout = timeoutMs
         if (token.isNotEmpty()) conn.setRequestProperty("Authorization", "Bearer $token")
+        // Erreurs du compagnon dans la langue de l'appli (Réglages > Langue).
+        conn.setRequestProperty("Accept-Language", AppLanguage.acceptLanguage())
         headers.forEach { (name, value) -> conn.setRequestProperty(name, value) }
         requestHeaders.forEach { (name, value) -> conn.setRequestProperty(name, value) }
         if (body != null || writeBody != null) {
