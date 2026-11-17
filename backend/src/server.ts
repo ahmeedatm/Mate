@@ -70,6 +70,7 @@ import valorantRoutes from "./routes/valorant.ts";
 import windowRoutes from "./routes/windows.ts";
 import ytMusicRoutes from "./routes/ytmusic.ts";
 import { LOCAL_HOST, LOOPBACK } from "./net-guard.ts";
+import { langOf, translate } from "./i18n.ts";
 
 // Ce serveur pilote l'ordinateur : hors loopback (USB + adb reverse), un jeton est obligatoire.
 if (!config.loopbackOnly && !config.token) {
@@ -189,6 +190,24 @@ app.setErrorHandler((err: Error & { statusCode?: number; code?: unknown; validat
     return reply.code(status).send({ error: "L'ordinateur n'a pas pu le faire (détail dans son journal)" });
   }
   reply.send(err);
+});
+
+/**
+ * Erreurs dans la langue de la tablette ou de la page locale (`Accept-Language: en`, src/i18n.ts) : seuls `error` et
+ * `message` d'une réponse en erreur sont traduits, jamais une donnée (nom de page, de touche) d'une réponse réussie.
+ */
+app.addHook("onSend", async (req, reply, payload) => {
+  if (reply.statusCode < 400 || typeof payload !== "string") return payload;
+  const lang = langOf(req.headers["accept-language"]);
+  if (lang === "fr") return payload;
+  try {
+    const body = JSON.parse(payload) as Record<string, unknown>;
+    if (!body || typeof body !== "object") return payload;
+    for (const key of ["error", "message"]) if (typeof body[key] === "string") body[key] = translate(body[key], lang);
+    return JSON.stringify(body);
+  } catch {
+    return payload;
+  }
 });
 
 // Pilotage de l'ordinateur (deck d'applis et de raccourcis, son, micro) : macOS et Windows seulement.
