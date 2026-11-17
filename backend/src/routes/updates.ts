@@ -8,6 +8,14 @@ import { listBackends, listUpdates, updateFile } from "../updates.ts";
 export default async function updateRoutes(app: FastifyInstance) {
   /** Relancé par la boucle du lanceur (voir /companion/restart) ; après la réponse, pas avant. */
   const restartSoon = () => setTimeout(() => process.exit(0), 300);
+  /**
+   * Signature de la CI (essai-backend.ts, checkSignature), en en-tête : un compagnon plus ancien ignore l'en-tête, alors
+   * qu'il refuserait un paramètre inconnu dans l'adresse (`additionalProperties: false`).
+   */
+  const signature = (req: { headers: Record<string, string | string[] | undefined> }) => {
+    const value = req.headers["x-mate-signature"];
+    return typeof value === "string" ? value : undefined;
+  };
 
   /**
    * Redémarre le compagnon après une mise à jour de ses fichiers : la boucle du lanceur (exe portable
@@ -39,7 +47,7 @@ export default async function updateRoutes(app: FastifyInstance) {
     },
     async (req, reply) => {
       if (!Buffer.isBuffer(req.body) || req.body.length === 0) return reply.code(415).send({ error: "Corps application/gzip attendu" });
-      applyEssai(req.body, req.query.mr, req.query.sha256);
+      applyEssai(req.body, req.query.mr, req.query.sha256, signature(req));
       req.log.info({ mr: req.query.mr }, "backend d'essai posé, redémarrage");
       restartSoon();
       return { ok: true };
@@ -68,7 +76,7 @@ export default async function updateRoutes(app: FastifyInstance) {
     },
     async (req, reply) => {
       if (!Buffer.isBuffer(req.body) || req.body.length === 0) return reply.code(415).send({ error: "Corps application/gzip attendu" });
-      applyUpdate(req.body, req.query.sha256, req.query.version);
+      applyUpdate(req.body, req.query.sha256, signature(req), req.query.version);
       req.log.info({ version: req.query.version }, "backend mis à jour, redémarrage");
       restartSoon();
       return { ok: true };

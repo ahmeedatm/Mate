@@ -1,11 +1,11 @@
 import assert from "node:assert/strict";
 import { execFileSync } from "node:child_process";
-import { createHash } from "node:crypto";
+import { createHash, createPublicKey, generateKeyPairSync, sign as signBytes, type KeyObject } from "node:crypto";
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { after, before, describe, it } from "node:test";
-import { applyEssai, applyUpdate, backendState, restoreOrigin, type Layout } from "../src/essai-backend.ts";
+import { applyEssai, applyUpdate, backendState, defaultLayout, restoreOrigin, type Layout } from "../src/essai-backend.ts";
 import { startServer, TOKEN, type TestServer } from "./server.ts";
 
 const tmp = fs.mkdtempSync(path.join(os.tmpdir(), "companion-essai-test-"));
@@ -17,6 +17,15 @@ function write(root: string, files: Record<string, string>) {
     fs.writeFileSync(path.join(root, file), content);
   }
 }
+
+/** Clé de signature de la CI, ici propre au test : sa partie publique est celle du compagnon installé. */
+const ci = generateKeyPairSync("ed25519");
+const PUBLIC_KEY = ci.publicKey.export({ type: "spki", format: "pem" }).toString();
+/** Signature Ed25519 (base64) d'une archive, comme la pose la CI. */
+const sign = (data: Buffer, key: KeyObject = ci.privateKey) => signBytes(null, data, key).toString("base64");
+const essai = (tgz: Buffer, mr: number, sha256: string | undefined, layout: Layout) => applyEssai(tgz, mr, sha256, sign(tgz), layout);
+const update = (tgz: Buffer, sha256: string, version: string, current: string | undefined, layout: Layout) =>
+  applyUpdate(tgz, sha256, sign(tgz), version, current, layout);
 
 const read = (root: string, file: string) => fs.readFileSync(path.join(root, file), "utf8");
 const exists = (root: string, file: string) => fs.existsSync(path.join(root, file));
@@ -57,7 +66,7 @@ function install(platform: Layout["platform"]): Layout {
       ".env": "COMPANION_TOKEN=secret",
     }),
   );
-  return { root, dataDir: path.join(dir, "data"), platform, packaged: true };
+  return { root, dataDir: path.join(dir, "data"), platform, packaged: true, publicKey: PUBLIC_KEY };
 }
 
 describe("essai du backend d'une MR", () => {
@@ -65,7 +74,7 @@ describe("essai du backend d'une MR", () => {
     it(`${platform} : pose le backend de la MR, garde l'ordinateur tel quel, puis restaure l'origine`, () => {
       const layout = install(platform);
       const tgz = archive(platform, "mr109");
-      applyEssai(tgz, 109, undefined, layout);
+      essai(tgz, 109, undefined, layout);
 
       const sha256 = createHash("sha256").update(tgz).digest("hex");
       assert.deepEqual(backendState(layout), { packaged: true, mode: "essai", mr: 109, sha256 });
@@ -102,8 +111,8 @@ describe("essai du backend d'une MR", () => {
 
   it("un second essai ne remplace pas la copie d'origine", () => {
     const layout = install("windows");
-    applyEssai(archive("windows", "mr109"), 109, undefined, layout);
-    applyEssai(archive("windows", "mr110"), 110, undefined, layout);
+    essai(archive("windows", "mr109"), 109, undefined, layout);
+    essai(archive("windows", "mr110"), 110, undefined, layout);
     assert.equal(backendState(layout).mr, 110);
     assert.equal(read(layout.root, "dist/server.mjs"), "serveur mr110");
     assert.equal(read(layout.dataDir, "backend-origin/dist/server.mjs"), "serveur origine");
@@ -113,9 +122,9 @@ describe("essai du backend d'une MR", () => {
 
   it("MR republiée : l'empreinte de la nouvelle archive remplace l'ancienne, la copie d'origine reste", () => {
     const layout = install("mac");
-    applyEssai(archive("mac", "mr109 pipeline 1"), 109, undefined, layout);
+    essai(archive("mac", "mr109 pipeline 1"), 109, undefined, layout);
     const republished = archive("mac", "mr109 pipeline 2");
-    applyEssai(republished, 109, undefined, layout);
+    essai(republished, 109, undefined, layout);
     assert.equal(backendState(layout).sha256, createHash("sha256").update(republished).digest("hex"));
     assert.equal(read(layout.root, "dist/server.mjs"), "serveur mr109 pipeline 2");
     assert.equal(read(layout.dataDir, "backend-origin/dist/server.mjs"), "serveur origine");
@@ -123,23 +132,23 @@ describe("essai du backend d'une MR", () => {
 
   it("une nouvelle copie d'origine est prise à l'essai suivant le retour (compagnon mis à jour entre-temps)", () => {
     const layout = install("mac");
-    applyEssai(archive("mac", "mr109"), 109, undefined, layout);
+    essai(archive("mac", "mr109"), 109, undefined, layout);
     restoreOrigin(layout);
     write(layout.root, { "dist/server.mjs": "serveur mis à jour" });
-    applyEssai(archive("mac", "mr110"), 110, undefined, layout);
+    essai(archive("mac", "mr110"), 110, undefined, layout);
     restoreOrigin(layout);
     assert.equal(read(layout.root, "dist/server.mjs"), "serveur mis à jour");
   });
 
   it("compagnon réinstallé pendant un essai : la marque et la copie d'origine périmées sont oubliées", () => {
     const layout = install("mac");
-    applyEssai(archive("mac", "mr109"), 109, undefined, layout);
+    essai(archive("mac", "mr109"), 109, undefined, layout);
     write(layout.root, { "dist/server.mjs": "serveur du nouvel installeur" });
     assert.deepEqual(backendState(layout), { packaged: true, mode: "origin", mr: null, sha256: null });
     assert.equal(restoreOrigin(layout), false);
     assert.equal(read(layout.root, "dist/server.mjs"), "serveur du nouvel installeur", "pas remplacé par l'ancienne copie");
     assert.equal(exists(layout.dataDir, "backend-origin"), false);
-    applyEssai(archive("mac", "mr110"), 110, undefined, layout);
+    essai(archive("mac", "mr110"), 110, undefined, layout);
     restoreOrigin(layout);
     assert.equal(read(layout.root, "dist/server.mjs"), "serveur du nouvel installeur");
   });
@@ -152,7 +161,7 @@ describe("essai du backend d'une MR", () => {
 
   it("refuse hors paquet (lancé depuis le dépôt) sans rien changer", () => {
     const layout = { ...install("mac"), packaged: false };
-    assert.throws(() => applyEssai(archive("mac", "mr109"), 109, undefined, layout), /depuis le dépôt/);
+    assert.throws(() => essai(archive("mac", "mr109"), 109, undefined, layout), /depuis le dépôt/);
     assert.equal(read(layout.root, "dist/server.mjs"), "serveur origine");
     assert.equal(backendState(layout).mode, "origin");
   });
@@ -161,20 +170,53 @@ describe("essai du backend d'une MR", () => {
     const layout = install("windows");
     const good = archive("windows", "mr109");
     const sha = createHash("sha256").update(good).digest("hex");
-    assert.throws(() => applyEssai(good, 109, "0".repeat(64), layout), /SHA-256/);
-    assert.throws(() => applyEssai(Buffer.from("pas une archive"), 109, undefined, layout), /illisible/);
-    assert.throws(() => applyEssai(archive("mac", "mr109"), 109, undefined, layout), /pas un backend pour cet ordinateur/);
+    assert.throws(() => essai(good, 109, "0".repeat(64), layout), /SHA-256/);
+    assert.throws(() => essai(Buffer.from("pas une archive"), 109, undefined, layout), /illisible/);
+    assert.throws(() => essai(archive("mac", "mr109"), 109, undefined, layout), /pas un backend pour cet ordinateur/);
     const noServer = fs.mkdtempSync(path.join(tmp, "src-"));
     write(noServer, { "src/win/MateHelper.exe": "pilote" });
     const out = path.join(tmp, "sans-serveur.tar.gz");
     execFileSync("tar", ["-czf", out, "-C", noServer, "."]);
-    assert.throws(() => applyEssai(fs.readFileSync(out), 109, undefined, layout), /pas un backend pour cet ordinateur/);
+    assert.throws(() => essai(fs.readFileSync(out), 109, undefined, layout), /pas un backend pour cet ordinateur/);
     assert.equal(read(layout.root, "dist/server.mjs"), "serveur origine");
     assert.equal(backendState(layout).mode, "origin");
     assert.equal(exists(layout.dataDir, "backend-origin"), false);
 
-    applyEssai(good, 109, sha, layout);
+    essai(good, 109, sha, layout);
     assert.equal(read(layout.root, "dist/server.mjs"), "serveur mr109");
+  });
+
+  it("refuse une archive sans signature de la CI, ou signée par une autre clé, sans rien changer", () => {
+    const layout = install("windows");
+    const tgz = archive("windows", "pirate");
+    const other = generateKeyPairSync("ed25519").privateKey;
+    assert.throws(() => applyEssai(tgz, 109, undefined, undefined, layout), /signée/);
+    assert.throws(() => applyEssai(tgz, 109, undefined, "", layout), /signée/);
+    assert.throws(() => applyEssai(tgz, 109, undefined, "pas de la base64 !", layout), /signée/);
+    assert.throws(() => applyEssai(tgz, 109, undefined, sign(tgz, other), layout), /signée/);
+    assert.throws(() => applyEssai(tgz, 109, undefined, sign(archive("windows", "autre")), layout), /signée/);
+    // Compagnon sans clé de vérification (installé avant la signature) : rien n'est accepté, il faut l'installeur une fois.
+    assert.throws(() => applyEssai(tgz, 109, undefined, sign(tgz), { ...layout, publicKey: null }), /installeur/);
+    assert.equal(read(layout.root, "dist/server.mjs"), "serveur origine");
+    assert.equal(backendState(layout).mode, "origin");
+    assert.equal(exists(layout.dataDir, "backend-origin"), false);
+  });
+
+  it("changement de clé : accepte une signature de n'importe laquelle des clés livrées, jamais d'une autre", () => {
+    const next = generateKeyPairSync("ed25519");
+    const nextPublic = next.publicKey.export({ type: "spki", format: "pem" }).toString();
+    // Release de transition : l'ancienne et la nouvelle clé dans le même fichier.
+    const layout = { ...install("mac"), publicKey: PUBLIC_KEY + nextPublic };
+    const byNext = archive("mac", "nouvelle clé");
+    applyEssai(byNext, 109, undefined, sign(byNext, next.privateKey), layout);
+    assert.equal(read(layout.root, "dist/server.mjs"), "serveur nouvelle clé");
+    const byOld = archive("mac", "ancienne clé");
+    applyEssai(byOld, 110, undefined, sign(byOld), layout);
+    assert.equal(read(layout.root, "dist/server.mjs"), "serveur ancienne clé");
+    const stranger = generateKeyPairSync("ed25519").privateKey;
+    const pirate = archive("mac", "pirate");
+    assert.throws(() => applyEssai(pirate, 111, undefined, sign(pirate, stranger), layout), /signée/);
+    assert.equal(read(layout.root, "dist/server.mjs"), "serveur ancienne clé");
   });
 
   it("remet l'origine si le remplacement échoue en route", () => {
@@ -186,7 +228,7 @@ describe("essai du backend d'une MR", () => {
     const out = path.join(fs.mkdtempSync(path.join(tmp, "tgz-")), "backend.tar.gz");
     execFileSync("tar", ["-czf", out, "-C", dir, "."]);
 
-    assert.throws(() => applyEssai(fs.readFileSync(out), 109, undefined, layout), /ENOENT/);
+    assert.throws(() => essai(fs.readFileSync(out), 109, undefined, layout), /ENOENT/);
     assert.equal(read(layout.root, "dist/server.mjs"), "serveur origine");
     assert.equal(read(layout.root, "config/calls.json"), "calls origine");
     assert.equal(backendState(layout).mode, "origin");
@@ -200,7 +242,7 @@ describe("mise à jour stable du backend", () => {
     it(`${platform} : remplace le backend installé par celui de la release, garde l'ordinateur tel quel`, () => {
       const layout = install(platform);
       const tgz = archive(platform, "1.3.0");
-      applyUpdate(tgz, sha(tgz), "1.3.0", "1.2.0", layout);
+      update(tgz, sha(tgz), "1.3.0", "1.2.0", layout);
 
       assert.equal(read(layout.root, "dist/server.mjs"), "serveur 1.3.0");
       assert.equal(read(layout.root, "config/calls.json"), "calls 1.3.0");
@@ -220,18 +262,18 @@ describe("mise à jour stable du backend", () => {
   it("compagnon d'avant les versions ou backend d'essai (0.0.0) : mis à jour", () => {
     const tgz = archive("mac", "1.3.0");
     const old = install("mac");
-    applyUpdate(tgz, sha(tgz), "1.3.0", undefined, old);
+    update(tgz, sha(tgz), "1.3.0", undefined, old);
     assert.equal(read(old.root, "dist/server.mjs"), "serveur 1.3.0");
     const essai = install("mac");
-    applyUpdate(tgz, sha(tgz), "1.3.0", "0.0.0", essai);
+    update(tgz, sha(tgz), "1.3.0", "0.0.0", essai);
     assert.equal(read(essai.root, "dist/server.mjs"), "serveur 1.3.0");
   });
 
   it("par-dessus un essai de MR : la release devient l'origine, l'essai est oublié", () => {
     const layout = install("windows");
-    applyEssai(archive("windows", "mr109"), 109, undefined, layout);
+    essai(archive("windows", "mr109"), 109, undefined, layout);
     const tgz = archive("windows", "1.3.0");
-    applyUpdate(tgz, sha(tgz), "1.3.0", "0.0.0", layout);
+    update(tgz, sha(tgz), "1.3.0", "0.0.0", layout);
     assert.deepEqual(backendState(layout), { packaged: true, mode: "origin", mr: null, sha256: null });
     assert.equal(exists(layout.dataDir, "backend-origin"), false);
     assert.equal(restoreOrigin(layout), false);
@@ -241,13 +283,17 @@ describe("mise à jour stable du backend", () => {
   it("refuse une version pas plus récente, hors paquet, abîmée ou d'une autre plateforme, sans rien changer", () => {
     const layout = install("mac");
     const tgz = archive("mac", "1.3.0");
-    assert.throws(() => applyUpdate(tgz, sha(tgz), "1.3.0", "1.3.0", layout), /déjà en version 1\.3\.0/);
-    assert.throws(() => applyUpdate(tgz, sha(tgz), "1.2.9", "1.3.0", layout), /déjà en version/);
-    assert.throws(() => applyUpdate(tgz, sha(tgz), "1.3", "1.2.0", layout), /invalide/);
-    assert.throws(() => applyUpdate(tgz, sha(tgz), "1.3.0", "1.2.0", { ...layout, packaged: false }), /depuis le dépôt/);
-    assert.throws(() => applyUpdate(tgz, "0".repeat(64), "1.3.0", "1.2.0", layout), /SHA-256/);
+    assert.throws(() => update(tgz, sha(tgz), "1.3.0", "1.3.0", layout), /déjà en version 1\.3\.0/);
+    assert.throws(() => update(tgz, sha(tgz), "1.2.9", "1.3.0", layout), /déjà en version/);
+    assert.throws(() => update(tgz, sha(tgz), "1.3", "1.2.0", layout), /invalide/);
+    assert.throws(() => update(tgz, sha(tgz), "1.3.0", "1.2.0", { ...layout, packaged: false }), /depuis le dépôt/);
+    assert.throws(() => update(tgz, "0".repeat(64), "1.3.0", "1.2.0", layout), /SHA-256/);
     const win = archive("windows", "1.3.0");
-    assert.throws(() => applyUpdate(win, sha(win), "1.3.0", "1.2.0", layout), /pas un backend pour cet ordinateur/);
+    assert.throws(() => update(win, sha(win), "1.3.0", "1.2.0", layout), /pas un backend pour cet ordinateur/);
+    // Empreinte juste mais pas de signature de la CI : l'empreinte vient de l'expéditeur, elle ne prouve rien.
+    assert.throws(() => applyUpdate(tgz, sha(tgz), undefined, "1.3.0", "1.2.0", layout), /signée/);
+    const other = generateKeyPairSync("ed25519").privateKey;
+    assert.throws(() => applyUpdate(tgz, sha(tgz), sign(tgz, other), "1.3.0", "1.2.0", layout), /signée/);
     assert.equal(read(layout.root, "dist/server.mjs"), "serveur origine");
   });
 
@@ -260,11 +306,19 @@ describe("mise à jour stable du backend", () => {
     execFileSync("tar", ["-czf", out, "-C", dir, "."]);
     const tgz = fs.readFileSync(out);
 
-    assert.throws(() => applyUpdate(tgz, sha(tgz), "1.3.0", "1.2.0", layout), /ENOENT/);
+    assert.throws(() => update(tgz, sha(tgz), "1.3.0", "1.2.0", layout), /ENOENT/);
     assert.equal(read(layout.root, "dist/server.mjs"), "serveur origine");
     assert.equal(read(layout.root, "dist/ancien.mjs"), "fichier qui n'est plus dans l'essai");
     assert.equal(read(layout.root, "config/calls.json"), "calls origine");
     assert.equal(read(layout.root, "config/deck.json"), "deck de l'ordinateur");
+  });
+});
+
+describe("clé de vérification livrée", () => {
+  it("le compagnon lit la clé publique Ed25519 de la CI dans config/ (copiée par npm run package)", () => {
+    const { publicKey } = defaultLayout();
+    assert.ok(publicKey, "config/backend-signature.pub manquant : le compagnon refuserait toute mise à jour");
+    assert.equal(createPublicKey(publicKey).asymmetricKeyType, "ed25519");
   });
 });
 

@@ -39,6 +39,8 @@ const VERSION = /^v\d+\.\d+\.\d+$/.test(process.env.CI_COMMIT_TAG ?? "") ? proce
 /** Fichiers de config livrés : pas deck.json ni tasks.json (données de l'ordinateur, créées sur place). */
 const CONFIG = [
   "accounts.json",
+  // Clé publique de la CI : sans elle, le compagnon refuse toute mise à jour envoyée par la tablette (essai-backend.ts).
+  "backend-signature.pub",
   "calls.json",
   "confidentialite.txt",
   "deck.example.json",

@@ -192,8 +192,10 @@ function prClosed(repo, number) {
 }
 
 /**
- * Archives dist/backend-<os>.tar.gz : une par plateforme ou aucune, sinon arrêt. `add(fichier publié, contenu)` ;
- * renvoie leurs entrées {os, file, size, sha256, version}.
+ * Archives dist/backend-<os>.tar.gz : une par plateforme ou aucune, sinon arrêt. Chacune avec sa signature de la CI
+ * (dist/backend-<os>.tar.gz.sig, base64, posée par scripts/backend-signe.mjs) : sans elle, arrêt, car le compagnon
+ * refuserait l'archive (backend/src/essai-backend.ts). `add(fichier publié, contenu)` ; renvoie leurs entrées
+ * {os, file, size, sha256, signature, version}.
  */
 function backendArchives(distDir, version, add) {
   const backends = [];
@@ -201,9 +203,18 @@ function backendArchives(distDir, version, add) {
     const archive = path.join(distDir, `backend-${os}.tar.gz`);
     if (!fs.existsSync(archive)) continue;
     const data = fs.readFileSync(archive);
+    const signature = fs.existsSync(`${archive}.sig`)
+      ? fs.readFileSync(`${archive}.sig`, "utf8").trim()
+      : "";
+    if (!/^[A-Za-z0-9+/]{86}==$/.test(signature)) {
+      console.error(
+        `${archive} : signature de la CI absente ou mal formée (${archive}.sig, scripts/backend-signe.mjs)`,
+      );
+      process.exit(1);
+    }
     const file = `backend-${version}-${os}.tar.gz`;
     add(file, data);
-    backends.push({ os, file, ...fingerprint(data), version });
+    backends.push({ os, file, ...fingerprint(data), signature, version });
   }
   if (backends.length && backends.length !== BACKEND_PLATFORMS.length) {
     console.error(
@@ -305,12 +316,12 @@ if (mode === "release") {
     const apk = fs.readFileSync(path.join(distDir, entry.file));
     files[entry.file] = apk;
     const backend = {};
-    for (const { os, file, size, sha256 } of backendArchives(
+    for (const { os, file, size, sha256, signature } of backendArchives(
       distDir,
       entry.versionName,
       (file, data) => (files[file] = data),
     )) {
-      backend[os] = { file, size, sha256 };
+      backend[os] = { file, size, sha256, signature };
     }
     const title = (process.env.PR_TITLE ?? "").trim().slice(0, MAX_TITLE);
     essais.push({

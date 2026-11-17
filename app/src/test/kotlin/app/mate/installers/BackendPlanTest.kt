@@ -10,8 +10,9 @@ import org.junit.Test
 class BackendPlanTest {
 
     private val sha = "a".repeat(64)
-    private fun release(os: String, version: String, source: UpdateSource = UpdateSource.SERVER) =
-        BackendRelease(os, "backend-$version-$os.tar.gz", 5_000_000, sha, version, source)
+    private val sig = "s".repeat(86) + "=="
+    private fun release(os: String, version: String, source: UpdateSource = UpdateSource.SERVER, signature: String? = null) =
+        BackendRelease(os, "backend-$version-$os.tar.gz", 5_000_000, sha, version, source, signature)
 
     private fun mac(version: String?, backendUpdate: Boolean = true) = Identity("id", "Mac", "mac", true, version = version, backendUpdate = backendUpdate)
     private val origin = BackendState(true, "origin", null, null)
@@ -20,11 +21,16 @@ class BackendPlanTest {
     @Test
     fun `parse lit les archives et ecarte les entrees suspectes`() {
         val json = """{"updates":[],"backends":[
-            {"os":"mac","file":"backend-1.3.0-mac.tar.gz","size":5000000,"sha256":"$sha","version":"1.3.0"},
+            {"os":"mac","file":"backend-1.3.0-mac.tar.gz","size":5000000,"sha256":"$sha","signature":"$sig","version":"1.3.0"},
+            {"os":"windows","file":"backend-1.3.0-windows.tar.gz","size":5000000,"sha256":"$sha","version":"1.3.0"},
             {"os":"windows","file":"../x.tar.gz","size":5,"sha256":"$sha","version":"1.3.0"},
             {"os":"windows","file":"b.tar.gz","size":5,"sha256":"$sha","version":"dev"},
             {"os":"windows","file":"b.tar.gz","size":5,"sha256":"court","version":"1.3.0"}]}"""
-        assertEquals(listOf(release("mac", "1.3.0", UpdateSource.COMPUTER)), BackendPlan.parse(json, UpdateSource.COMPUTER))
+        // Sans signature (release d'avant) : listée quand même, le compagnon la refusera avec sa propre phrase.
+        assertEquals(
+            listOf(release("mac", "1.3.0", UpdateSource.COMPUTER, sig), release("windows", "1.3.0", UpdateSource.COMPUTER)),
+            BackendPlan.parse(json, UpdateSource.COMPUTER),
+        )
         assertEquals(emptyList<BackendRelease>(), BackendPlan.parse("""{"updates":[]}""", UpdateSource.SERVER))
     }
 

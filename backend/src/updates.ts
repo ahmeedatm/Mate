@@ -19,7 +19,8 @@ import { readJson } from "./store.ts";
 const dir = path.join(config.dataDir, "updates");
 
 export type Update = { package: string; label: string; versionCode: number; versionName: string; file: string };
-export type Backend = { os: "mac" | "windows"; file: string; version: string };
+/** `signature` : signature Ed25519 de la CI (base64), transmise par la tablette au compagnon (essai-backend.ts). */
+export type Backend = { os: "mac" | "windows"; file: string; version: string; signature?: string };
 
 const hashes = new Map<string, { mtimeMs: number; size: number; sha256: string }>();
 

@@ -1329,6 +1329,24 @@ export async function runSanity(opts: { url: string; token: string; os?: Os; hoo
       },
     },
     {
+      name: "archive du backend sans signature refusée",
+      run: async () => {
+        const packaged = (await call("GET", "/companion/backend")).json.packaged;
+        // Sans en-tête X-Mate-Signature : le paquet refuse avant d'écrire quoi que ce soit (403), le dépôt avant tout (409).
+        const res = await fetch(`${base}/companion/backend/essai?mr=999999`, {
+          method: "POST",
+          headers: { "content-type": "application/gzip", authorization: `Bearer ${opts.token}` },
+          body: "x",
+          signal: AbortSignal.timeout(45_000),
+        });
+        const expected = packaged ? 403 : 409;
+        expect(res.status === expected, `essai non signé : HTTP ${res.status}, ${expected} attendu`);
+        const after = await call("GET", "/companion/backend");
+        expect(after.json.mode === "origin", `le compagnon a posé l'archive : ${JSON.stringify(after.json)}`);
+        return packaged ? "refusée (403)" : "lancé depuis le dépôt (409)";
+      },
+    },
+    {
       name: "visualiseur /camera",
       run: async () => {
         const page = await call("GET", "/camera");
