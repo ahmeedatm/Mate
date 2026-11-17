@@ -221,11 +221,16 @@ class MainActivity : AppCompatActivity() {
         return answer.await()
     }
 
-    /** Taille du texte choisie dans Réglages > Accessibilité, en plus de celle d'Android (COMP-50). */
+    /** Langue (Réglages > Langue) et taille du texte (Réglages > Accessibilité, en plus de celle d'Android, COMP-50). */
     override fun attachBaseContext(newBase: Context) {
         super.attachBaseContext(newBase)
         val scale = Prefs.textScale(newBase)
-        if (scale != 1f) applyOverrideConfiguration(Configuration().apply { fontScale = newBase.resources.configuration.fontScale * scale })
+        applyOverrideConfiguration(
+            Configuration().apply {
+                AppLanguage.configure(newBase, this)
+                if (scale != 1f) fontScale = newBase.resources.configuration.fontScale * scale
+            },
+        )
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {

@@ -1919,6 +1919,10 @@
     <string name="a11y_talkback_locked">À autoriser à l\'installation de la tablette (voir la documentation du kiosque). Le raccourci des deux touches de volume reste à régler dans Paramètres d\'Android.</string>
     <string name="a11y_talkback_missing">TalkBack n\'est pas installé sur cette tablette.</string>
     <string name="a11y_text_size">Taille du texte</string>
+    <string name="language_title">Langue</string>
+    <!-- Chaque langue écrite dans sa propre langue : on la reconnaît même sans lire celle de l'écran. -->
+    <string name="language_french" translatable="false">Français</string>
+    <string name="language_english" translatable="false">English</string>
     <string name="a11y_size_normal">Normale</string>
     <string name="a11y_size_large">Grande</string>
     <string name="a11y_size_larger">Très grande</string>

@@ -41,6 +41,7 @@ object Prefs {
     private const val KEY_PRESENCE_SLEEP = "presence_sleep"
     private const val KEY_VOLUME_KEYS_COMPUTER = "volume_keys_computer"
     private const val KEY_THEME = "theme"
+    private const val KEY_LANGUAGE = "language"
     private const val KEY_RAIL_LABELS = "rail_labels"
     private const val KEY_TOUR_DONE = "tour_done"
     private const val KEY_TEMPLATES_OFFERED = "templates_offered"
@@ -370,6 +371,13 @@ object Prefs {
 
     fun setWeatherLocation(context: Context, value: Boolean) {
         prefs(context).edit().putBoolean(KEY_WEATHER_LOCATION, value).apply()
+    }
+
+    /** Langue choisie dans Réglages (clé d'[AppLanguage]) ; null : français. */
+    fun language(context: Context): String? = prefs(context).getString(KEY_LANGUAGE, null)
+
+    fun setLanguage(context: Context, value: AppLanguage) {
+        prefs(context).edit().putString(KEY_LANGUAGE, value.key).apply()
     }
 
     fun theme(context: Context): String? = prefs(context).getString(KEY_THEME, null)

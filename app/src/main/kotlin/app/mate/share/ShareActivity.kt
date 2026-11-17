@@ -1,5 +1,6 @@
 package app.mate.share
 
+import android.content.Context
 import android.content.Intent
 import android.net.Uri
 import android.os.Bundle
@@ -7,6 +8,7 @@ import android.provider.OpenableColumns
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.lifecycleScope
+import app.mate.AppLanguage
 import app.mate.Computers
 import app.mate.R
 import app.mate.UserFacingException
@@ -32,6 +34,12 @@ class ShareActivity : AppCompatActivity() {
     private class Item(val file: File, val mimeType: String)
 
     private class TooBig(val name: String) : Exception()
+
+    /** Messages de l'envoi dans la langue de l'appli (Réglages > Langue), comme MainActivity. */
+    override fun attachBaseContext(newBase: Context) {
+        super.attachBaseContext(newBase)
+        applyOverrideConfiguration(android.content.res.Configuration().apply { AppLanguage.configure(newBase, this) })
+    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
