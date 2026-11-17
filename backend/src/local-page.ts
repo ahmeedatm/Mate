@@ -1,5 +1,6 @@
 import { CONFIG_CSS, CONFIG_HTML, CONFIG_JS } from "./local-config.ts";
 import { CONSOLE_CSS, FAVICON, ICON_SVG } from "./web-style.ts";
+import { pageI18nScript } from "./i18n.ts";
 
 /**
  * Page http://127.0.0.1:3000/ ouverte sur l'ordinateur (le panneau de l'appli : relancer « Mate » la rouvre) :
@@ -54,6 +55,7 @@ ${FAVICON}
   .trait { position: absolute; left: 4px; top: 0; width: 3px; height: 20px; border-radius: 2px; background: var(--now); transition: transform 320ms cubic-bezier(.16, 1, .3, 1); }
   nav .foot { margin-top: auto; padding: 18px 12px 0; font-size: 13px; color: var(--ink-2); }
   nav .foot a { color: var(--ink-2); }
+  nav .foot .langs { margin-top: 6px; }
 
   main { padding: 36px 56px 96px; max-width: 1080px; width: 100%; }
   main > section { margin-bottom: 48px; }
@@ -260,6 +262,7 @@ ${FAVICON}
     .twin-grid input[type=range], input[type=range] { flex: 1; width: auto; }
   }
 </style>
+${pageI18nScript()}
 </head>
 <body>
 <nav aria-label="Sections">
@@ -276,6 +279,8 @@ ${FAVICON}
   <div class="foot">
     <a href="/local/confidentialite" target="_blank">Confidentialité</a>
     <span id="licences" hidden> · <a href="/local/licences" target="_blank">Licences des composants</a></span>
+    <!-- Langue de la page (src/i18n.ts) : chaque langue écrite dans sa langue, jamais traduite. -->
+    <div class="langs" translate="no"><a href="#" onclick="mateSetLang('fr'); return false">Français</a> · <a href="#" onclick="mateSetLang('en'); return false">English</a></div>
   </div>
 </nav>
 <main>

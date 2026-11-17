@@ -1,5 +1,6 @@
 import type { ServerResponse } from "node:http";
 import { CONSOLE_NIGHT_CSS, FAVICON } from "./web-style.ts";
+import { pageI18nScript } from "./i18n.ts";
 
 /**
  * Visualiseur : la tablette, posée au-dessus d'une feuille, envoie des JPEG 720p (POST /camera/frame)
@@ -96,6 +97,7 @@ ${FAVICON}
   body.idle .bar { opacity: 0; }
   body.idle { cursor: none; }
 </style>
+${pageI18nScript()}
 </head>
 <body>
 <div id="stage"><img id="frame" alt=""></div>

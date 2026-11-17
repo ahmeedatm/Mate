@@ -10,6 +10,7 @@ export default defineConfig({
   forbidOnly: !!process.env.CI,
   retries: process.env.CI ? 1 : 0,
   reporter: [["list"], ["junit", { outputFile: "e2e-results/junit.xml" }]],
-  use: { trace: "retain-on-failure" },
+  // Navigateur en français : la page locale suit sa langue tant que Français / English n'a pas été choisi (src/i18n.ts).
+  use: { trace: "retain-on-failure", locale: "fr-FR" },
   projects: [{ name: "chromium", use: { ...devices["Desktop Chrome"] } }],
 });
