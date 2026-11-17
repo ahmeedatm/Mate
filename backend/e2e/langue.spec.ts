@@ -23,6 +23,21 @@ test("navigateur en français : la page reste en français ; English la passe en
   await expect(page.locator("#state")).toHaveText("Tablette non connectée");
 });
 
+test("en anglais, une donnée marquée translate=no garde son texte même s'il ressemble à un libellé", async ({ page }) => {
+  await page.goto("/");
+  await page.getByRole("link", { name: "English" }).click();
+  await expect(page.locator("#state")).toHaveText("Tablet not connected");
+  // Nom de profil saisi sur la tablette (marqué comme dans local-config-profiles.ts), et un libellé posé à côté.
+  await page.evaluate(() => {
+    const name = Object.assign(document.createElement("b"), { id: "donnee", textContent: "Tablette non connectée", translate: false });
+    const label = Object.assign(document.createElement("b"), { id: "libelle", textContent: "Tablette non connectée" });
+    document.body.append(name, label);
+  });
+  await expect(page.locator("#libelle")).toHaveText("Tablet not connected");
+  await expect(page.locator("#donnee")).toHaveText("Tablette non connectée");
+  await page.getByRole("link", { name: "Français" }).click();
+});
+
 test.describe("navigateur en anglais", () => {
   test.use({ locale: "en-GB" });
 

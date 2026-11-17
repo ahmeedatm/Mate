@@ -103,7 +103,7 @@ class EventDialog(
             otherChip.isSelected = !inWeek
             otherChip.text = if (inWeek) context.getString(R.string.event_other_day) else dateLabel.format(day.time).replaceFirstChar { it.uppercase() }
             timeButton.visibility = if (allDay.isChecked) View.GONE else View.VISIBLE
-            timeButton.text = String.format(Locale.FRANCE, "%02d:%02d", hour, minute)
+            timeButton.text = String.format(Locale.ROOT, "%02d:%02d", hour, minute)
             // Rappel parlé seulement pour un événement à heure fixe.
             val showReminders = if (allDay.isChecked) View.GONE else View.VISIBLE
             reminderTitle.visibility = showReminders

@@ -25,6 +25,7 @@ import app.mate.Prefs
 import app.mate.R
 import app.mate.focus.FocusTimer
 import app.mate.net.Link
+import app.mate.ui.home.DefaultNames
 import app.mate.ui.home.HomeLayout
 import app.mate.ui.home.ProfileIcons
 import app.mate.ui.topbar.TopBar
@@ -276,7 +277,7 @@ class KeyDock(
     private fun decorateScreen(i: Int) {
         val screen = screens.getOrNull(i) ?: return
         val view = screenViews.getOrNull(i) ?: return
-        val name = layout.nameOf(screen.page, activity.getString(R.string.profile_first), activity.getString(R.string.profile_default))
+        val name = DefaultNames.shown(activity, layout.nameOf(screen.page, activity.getString(R.string.profile_first), activity.getString(R.string.profile_default)))
         val label = view.findViewById<TextView>(R.id.dock_label)
         label.text = name
         label.typeface = themeFont(activity, R.attr.c_font_label)

@@ -55,6 +55,7 @@
     </queries>
 
     <application
+        android:name=".MateApp"
         android:allowBackup="false"
         android:label="${appLabel}"
         android:icon="@drawable/ic_launcher"

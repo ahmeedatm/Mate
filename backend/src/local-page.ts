@@ -536,8 +536,8 @@ ${pageI18nScript()}
       // Mise à jour posée : le nouveau compagnon répond avec une autre version, la page se recharge.
       if (version !== null && s.version !== version) return location.reload();
       version = s.version;
-      document.getElementById("name").textContent = s.name;
-      document.getElementById("waitname").textContent = s.name;
+      // Nom de l'ordinateur : une donnée, jamais traduite (src/i18n.ts).
+      for (const id of ["name", "waitname"]) Object.assign(document.getElementById(id), { textContent: s.name, translate: false });
       document.getElementById("licences").hidden = !s.licences;
       document.body.classList.remove("down");
       document.getElementById("srvdot").className = "dot on";
@@ -762,7 +762,7 @@ ${pageI18nScript()}
       card.classList.add("focus");
       card.scrollIntoView({ block: "center" });
     }
-    document.getElementById("tabletname").textContent = t.name || "Tablette";
+    Object.assign(document.getElementById("tabletname"), { textContent: t.name || "Tablette", translate: !t.name });
     const b = t.battery;
     document.getElementById("tabletinfo").textContent = [
       t.model, t.app && "appli " + t.app, b && "batterie " + b.level + " %" + (b.charging ? " (en charge)" : ""),

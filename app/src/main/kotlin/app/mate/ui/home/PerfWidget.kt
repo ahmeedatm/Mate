@@ -974,7 +974,8 @@ class PerfWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidget(
         /** Part des chiffres et de la courbe quand « Ce qui consomme » est à côté ou dessous. */
         private const val FIGURES_SHARE = 0.55f
         private const val APPS_GAP = 20
-        private val RPM_FORMAT: NumberFormat = NumberFormat.getIntegerInstance(AppLanguage.locale)
+        // Relu à chaque usage : la langue peut changer sans relancer le processus (Réglages > Langue).
+        private val RPM_FORMAT: NumberFormat get() = NumberFormat.getIntegerInstance(AppLanguage.locale)
 
         /** Chiffre le plus large : la taille est bornée pour qu'un 100 % tienne. */
         private const val WIDEST = "100%"

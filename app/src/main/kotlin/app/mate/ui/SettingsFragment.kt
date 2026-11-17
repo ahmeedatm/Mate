@@ -466,6 +466,7 @@ class SettingsFragment :
                 setOnClickListener {
                     if (language == current) return@setOnClickListener
                     Prefs.setLanguage(context, language)
+                    AppLanguage.applyToApp(context.applicationContext)
                     requireActivity().recreate()
                 }
             }

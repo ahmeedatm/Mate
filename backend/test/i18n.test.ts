@@ -22,6 +22,9 @@ describe("langue des messages : Accept-Language", () => {
       "nas: address outside the local network refused",
     );
     assert.equal(translate("Un message que personne n'a traduit", "en"), "Un message que personne n'a traduit");
+    // Propriétés héritées d'un objet JavaScript : pas des clés du catalogue.
+    assert.equal(translate("constructor", "en"), "constructor");
+    assert.equal(translate("toString", "en"), "toString");
   });
 });
 

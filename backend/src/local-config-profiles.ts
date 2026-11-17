@@ -89,11 +89,11 @@ export const PROFILES_HTML = `
         <div class="device"><div class="screen pf-screen" id="pf-screen">
           <div class="pf-cells" id="pf-grid" role="group" aria-label="Grille du profil"></div>
         </div></div>
-        <figcaption><span id="pf-cap"></span><span id="pf-dim"></span></figcaption>
+        <figcaption><span id="pf-cap" translate="no"></span><span id="pf-dim"></span></figcaption>
       </figure>
       <div class="card group">
         <div class="row pf-ro" id="pf-banner" hidden><span class="dot"></span><span class="grow dim" id="pf-banner-text"></span></div>
-        <div class="row"><span class="grow"><b id="pf-cur"></b><span class="pf-hint" id="pf-cur-meta"></span></span><button type="button" class="ghost" id="pf-rename">Renommer</button></div>
+        <div class="row"><span class="grow"><b id="pf-cur" translate="no"></b><span class="pf-hint" id="pf-cur-meta"></span></span><button type="button" class="ghost" id="pf-rename">Renommer</button></div>
         <div class="row"><span class="grow">Changer l'ordre<span class="pf-hint">Glisse une tuile, ou utilise ces boutons.</span></span><button type="button" class="ghost" id="pf-up">Monter</button><button type="button" class="ghost" id="pf-down">Descendre</button></div>
         <div class="row"><span class="grow">Supprimer ce profil<span class="pf-hint" id="pf-del-hint"></span></span><button type="button" class="danger" id="pf-del">Supprimer</button></div>
         <div class="row"><span class="grow" id="pf-sel-text"></span><button type="button" class="ghost" id="pf-sel-edit" hidden>Régler le widget</button></div>
@@ -499,7 +499,10 @@ export const PROFILES_JS = `
         var small = el("small");
         var role = roleOf(i) && roleOf(i) !== nameOf(i) ? roleOf(i) + " · " : "";
         small.append(dot(n > 0), role + (n === 0 ? "Vide" : n + (n > 1 ? " widgets" : " widget")));
-        tile.append(pfSvg(ICONS.grid, "logo ink"), el("b", "", nameOf(i)), small);
+        // Nom saisi sur la tablette : jamais traduit (src/i18n.ts).
+        var name = el("b", "", nameOf(i));
+        name.translate = false;
+        tile.append(pfSvg(ICONS.grid, "logo ink"), name, small);
         tile.onclick = function () { S.page = i; S.sel = -1; renderProfiles(); };
         tile.onpointerdown = function (e) { dragTile(e, tile, i); };
         tiles.appendChild(tile);

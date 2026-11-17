@@ -66,6 +66,7 @@ export const BACKUP_JS = `
       pfBkKeys(part).forEach((e) => {
         const item = document.createElement("div");
         item.textContent = (e.page ? e.page + " : " : "") + String(e.key.label || "(sans nom)");
+        item.translate = false;
         const list = document.createElement("ul");
         pfBkSteps(e.key).forEach((s) => {
           const li = document.createElement("li");

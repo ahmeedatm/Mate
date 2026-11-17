@@ -28,6 +28,7 @@ import app.mate.ui.home.CatalogueView
 import app.mate.ui.home.DayLineWidget
 import app.mate.ui.home.DeckOverlays
 import app.mate.ui.home.DeckPagesCache
+import app.mate.ui.home.DefaultNames
 import app.mate.ui.home.Down
 import app.mate.ui.home.Fit
 import app.mate.ui.home.HomeHost
@@ -437,7 +438,8 @@ class HomeFragment : Fragment(), HomeHost, WidgetGrid.Listener {
     // --- Profils
 
     /** Nom du profil : celui donné par l'utilisateur, sinon « Bureau » pour le premier, « Profil N » pour les autres. */
-    fun profileName(index: Int): String = layout.nameOf(index, getString(R.string.profile_first), getString(R.string.profile_default))
+    fun profileName(index: Int): String =
+        DefaultNames.shown(requireContext(), layout.nameOf(index, getString(R.string.profile_first), getString(R.string.profile_default)))
 
     /** Donne son nom par défaut à chaque profil sans nom : il le garde quand on le déplace. Vrai si un nom a été posé. */
     private fun nameProfiles() = layout.nameMissing(getString(R.string.profile_first), getString(R.string.profile_default))

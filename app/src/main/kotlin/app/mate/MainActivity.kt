@@ -102,6 +102,7 @@ import app.mate.ui.WelcomeView
 import app.mate.ui.cyberpunk.CyberpunkOverlay
 import app.mate.ui.dp
 import app.mate.ui.errorText
+import app.mate.ui.home.DefaultNames
 import app.mate.ui.home.Down
 import app.mate.ui.home.FlowBandView
 import app.mate.ui.home.HomeLayout
@@ -1311,7 +1312,7 @@ class MainActivity : AppCompatActivity() {
     private fun sweepName(mode: Mode): String {
         if (mode != Mode.HOME) return getString(mode.label)
         val layout = HomeLayout.load(this)
-        return layout.nameOf(sweepTarget(layout), getString(R.string.profile_first), getString(R.string.profile_default))
+        return DefaultNames.shown(this, layout.nameOf(sweepTarget(layout), getString(R.string.profile_first), getString(R.string.profile_default)))
     }
 
     /** En-tête de l'écran affiché dans le bandeau du haut : celui de l'écran (titre, retour, boutons), sinon rien. */

@@ -12,6 +12,7 @@ import app.mate.Prefs
 import app.mate.R
 import app.mate.focus.FocusTimer
 import app.mate.net.Link
+import app.mate.ui.home.DefaultNames
 import app.mate.ui.home.HomeLayout
 
 /**
@@ -239,7 +240,7 @@ class ProfileRail(
         when (entry) {
             is RailEntry.Profile -> {
                 icon.setImageResource(app.mate.ui.home.ProfileIcons.of(layout, entry.page))
-                label.text = layout.nameOf(entry.page, activity.getString(R.string.profile_first), activity.getString(R.string.profile_default))
+                label.text = DefaultNames.shown(activity, layout.nameOf(entry.page, activity.getString(R.string.profile_first), activity.getString(R.string.profile_default)))
                 now = entry.isCall
                 val tasks = entry.page == layout.homeProfile && pendingTasks > 0
                 badge.text = pendingTasks.toString()

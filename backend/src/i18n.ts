@@ -42,6 +42,7 @@ function compiled(): Pattern[] {
  */
 export function pageI18nScript(): string {
   const catalog = JSON.stringify(EN).replace(/</g, "\\u003c");
+  const maxLength = Math.max(...Object.keys(EN).map((k) => k.length)) + 40;
   const pats = JSON.stringify(compiled().map(({ re, en }) => [re.source, en])).replace(/</g, "\\u003c");
   return String.raw`<script>
 (() => {
@@ -59,10 +60,12 @@ export function pageI18nScript(): string {
   };
   if (lang === "fr") return;
   var EN = ${catalog};
+  var MAX = ${maxLength};
   var PATS = ${pats}.map(function (p) { return [new RegExp(p[0], "s"), p[1]]; });
   function tr(value) {
     var key = value.replace(/\s+/g, " ").trim();
-    if (!key) return null;
+    // Plus long que toute phrase du catalogue : une donnée (journal, note), pas un libellé ; aucun gabarit essayé.
+    if (!key || key.length > MAX) return null;
     var en = Object.prototype.hasOwnProperty.call(EN, key) ? EN[key] : undefined;
     for (var i = 0; en === undefined && i < PATS.length; i++) {
       var m = PATS[i][0].exec(key);
@@ -114,8 +117,8 @@ export function pageI18nScript(): string {
 
 export function translate(text: string, lang: Lang): string {
   if (lang === "fr") return text;
-  const exact = EN[text];
-  if (exact !== undefined) return exact;
+  // Jamais une propriété héritée (« constructor », « toString ») : seulement les clés du catalogue.
+  if (Object.hasOwn(EN, text)) return EN[text];
   for (const { re, en } of compiled()) {
     const m = re.exec(text);
     if (m) {

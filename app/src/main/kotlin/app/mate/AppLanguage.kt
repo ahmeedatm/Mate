@@ -33,5 +33,16 @@ enum class AppLanguage(val key: String, val locale: Locale) {
             Locale.setDefault(current.locale)
             config.setLocale(current.locale)
         }
+
+        /**
+         * Langue posée sur le contexte de l'appli (MateApp, au démarrage du processus, et à chaque choix) : un processus
+         * lancé sans écran (mise à jour, kiosque, fournisseur de l'essai) parle déjà la bonne langue, textes et en-tête.
+         */
+        fun applyToApp(app: Context) {
+            val config = Configuration(app.resources.configuration)
+            configure(app, config)
+            @Suppress("DEPRECATION") // seul moyen, avant Android 13, de changer la langue du contexte de l'appli
+            app.resources.updateConfiguration(config, app.resources.displayMetrics)
+        }
     }
 }

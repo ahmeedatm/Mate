@@ -62,7 +62,7 @@ class TaskDialog(private val context: Context, private val onSave: (String, Stri
             daysRow.visibility = if (repeat == Repeat.CUSTOM) View.VISIBLE else View.GONE
             for (i in 0 until daysRow.childCount) daysRow.getChildAt(i).isSelected = (i + 1) in chosenDays
             timeButton.isEnabled = remind.isChecked
-            timeButton.text = String.format(Locale.FRANCE, "%02d:%02d", hour, minute)
+            timeButton.text = String.format(Locale.ROOT, "%02d:%02d", hour, minute)
             hint.setText(
                 when {
                     !remind.isChecked -> R.string.task_reminder_none
