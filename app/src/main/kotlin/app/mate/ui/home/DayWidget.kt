@@ -10,6 +10,7 @@ import android.widget.FrameLayout
 import android.widget.LinearLayout
 import android.widget.TextView
 import androidx.core.view.doOnNextLayout
+import app.mate.AppLanguage
 import app.mate.R
 import app.mate.focus.FocusTimer
 import app.mate.net.BackendClient
@@ -20,7 +21,6 @@ import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
 import java.util.Calendar
 import java.util.Date
-import java.util.Locale
 
 /**
  * Ma journée (Accueil de bureau, à la place de la grande heure : l'heure est déjà en haut à droite) : salutation et date,
@@ -49,7 +49,7 @@ class DayWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidget(c
     private var compl: HeroComplications? = null
     private val ring = CountdownRing(context)
     private val track = DayTrack(context)
-    private val dateFormat = SimpleDateFormat("EEEE d MMMM", Locale.FRANCE)
+    private val dateFormat = SimpleDateFormat("EEEE d MMMM", AppLanguage.locale)
     private var joinable: CalendarEvent? = null
     private var pill: DayBrief.FocusPill? = null
     private var dnd: Boolean? = null

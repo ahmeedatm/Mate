@@ -1,14 +1,14 @@
 package app.mate.ui.home
 
+import app.mate.AppLanguage
 import app.mate.net.Link
 import java.text.SimpleDateFormat
 import java.util.Date
-import java.util.Locale
 
 /** L'ordinateur actif ne répond plus ; [sinceMs] est le début de la coupure, null si la tablette ne l'a jamais vu répondre. */
 data class Down(val name: String, val sinceMs: Long?) {
     /** « 13:26 », l'heure du début de la coupure, null sans [sinceMs]. */
-    fun since(): String? = sinceMs?.let { SimpleDateFormat("HH:mm", Locale.FRANCE).format(Date(it)) }
+    fun since(): String? = sinceMs?.let { SimpleDateFormat("HH:mm", AppLanguage.locale).format(Date(it)) }
 }
 
 /**

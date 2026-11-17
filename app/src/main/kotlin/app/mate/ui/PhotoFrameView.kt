@@ -7,6 +7,7 @@ import android.widget.ImageView
 import android.widget.LinearLayout
 import android.widget.TextView
 import androidx.lifecycle.lifecycleScope
+import app.mate.AppLanguage
 import app.mate.MainActivity
 import app.mate.Prefs
 import app.mate.R
@@ -18,7 +19,6 @@ import kotlinx.coroutines.withContext
 import java.io.File
 import java.text.SimpleDateFormat
 import java.util.Date
-import java.util.Locale
 
 /**
  * Cadre photo : les photos du dossier « Cadre photo » de l'ordinateur, en plein écran, l'heure et la date en bas à
@@ -106,8 +106,8 @@ class PhotoFrameView(private val activity: MainActivity) : FrameLayout(activity)
     /** Heure et date, à chaque minute pleine tant que le cadre est affiché (`minute`). */
     fun tick() {
         val now = Date()
-        clock.text = SimpleDateFormat("HH:mm", Locale.FRANCE).format(now)
-        date.text = SimpleDateFormat("EEEE d MMMM", Locale.FRANCE).format(now).replaceFirstChar { it.uppercase() }
+        clock.text = SimpleDateFormat("HH:mm", AppLanguage.locale).format(now)
+        date.text = SimpleDateFormat("EEEE d MMMM", AppLanguage.locale).format(now).replaceFirstChar { it.uppercase() }
     }
 
     private fun next() {

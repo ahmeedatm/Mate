@@ -14,6 +14,7 @@ import androidx.fragment.app.Fragment
 import androidx.lifecycle.LifecycleOwner
 import androidx.lifecycle.lifecycleScope
 import app.mate.AnimFamily
+import app.mate.AppLanguage
 import app.mate.Computers
 import app.mate.MainActivity
 import app.mate.R
@@ -48,7 +49,6 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
 import java.util.Date
-import java.util.Locale
 
 /**
  * Accueil à widgets, personnalisable comme un écran de téléphone : appui long = mode Modifier (ajouter, retirer,
@@ -512,7 +512,7 @@ class HomeFragment : Fragment(), HomeHost, WidgetGrid.Listener {
     private fun showEmptyDate() {
         if (page >= 0) return
         empty.findViewById<TextView>(R.id.home_empty_date).text =
-            SimpleDateFormat("EEEE d MMMM", Locale.FRANCE).format(Date()).replaceFirstChar { it.uppercase() }
+            SimpleDateFormat("EEEE d MMMM", AppLanguage.locale).format(Date()).replaceFirstChar { it.uppercase() }
     }
 
     /**

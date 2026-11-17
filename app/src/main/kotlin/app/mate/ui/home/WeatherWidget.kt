@@ -13,6 +13,7 @@ import android.widget.LinearLayout
 import android.widget.TextView
 import androidx.annotation.DrawableRes
 import androidx.core.content.ContextCompat
+import app.mate.AppLanguage
 import app.mate.R
 import app.mate.ui.Look
 import app.mate.ui.themeColor
@@ -365,6 +366,6 @@ class WeatherWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidg
         const val DETAIL_MAX_SP = 24f
 
         val isoDate = SimpleDateFormat("yyyy-MM-dd", Locale.US)
-        val dayName = SimpleDateFormat("EEE", Locale.FRANCE)
+        val dayName = SimpleDateFormat("EEE", AppLanguage.locale)
     }
 }

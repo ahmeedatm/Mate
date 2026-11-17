@@ -10,6 +10,7 @@ import android.widget.Button
 import android.widget.FrameLayout
 import android.widget.LinearLayout
 import android.widget.TextView
+import app.mate.AppLanguage
 import app.mate.R
 import app.mate.net.CalendarEvent
 import app.mate.ui.Look
@@ -17,10 +18,9 @@ import app.mate.ui.TitleView
 import app.mate.ui.themeFont
 import java.text.SimpleDateFormat
 import java.util.Date
-import java.util.Locale
 
-private val nextTime get() = SimpleDateFormat("HH:mm", Locale.FRANCE)
-private val nextShortDay get() = SimpleDateFormat("EEE", Locale.FRANCE)
+private val nextTime get() = SimpleDateFormat("HH:mm", AppLanguage.locale)
+private val nextShortDay get() = SimpleDateFormat("EEE", AppLanguage.locale)
 
 /**
  * Prochain rendez-vous (ou la réunion touchée dans l'agenda), direction Cadran (#180) : un anneau qui se vide jusqu'au

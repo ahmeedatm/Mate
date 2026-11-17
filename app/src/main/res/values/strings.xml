@@ -2249,6 +2249,9 @@
     <string name="checklist_due_label">Échéance</string>
     <string name="checklist_due_none">Aucune</string>
     <string name="checklist_due_remove">Retirer l\'échéance</string>
+    <string name="key_mod_shift">⇧ Maj</string>
+    <!-- Heure des cartes d'agents (SimpleDateFormat) : « 9 h 05 » en français. -->
+    <string name="agents_clock_format">H \'h\' mm</string>
     <string name="checklist_due_format">EEE d MMM \'à\' HH:mm</string>
     <string name="checklist_steps_label">Étapes</string>
     <string name="checklist_step_hint">Nom de l\'étape</string>

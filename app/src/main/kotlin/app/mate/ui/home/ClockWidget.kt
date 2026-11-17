@@ -11,12 +11,12 @@ import android.widget.FrameLayout
 import android.widget.LinearLayout
 import android.widget.TextClock
 import android.widget.TextView
+import app.mate.AppLanguage
 import app.mate.R
 import app.mate.ui.themeFont
 import java.text.SimpleDateFormat
 import java.util.Calendar
 import java.util.Date
-import java.util.Locale
 
 /** Exemple du catalogue : l'Horloge montre l'heure qu'il est, elle n'a pas de données à inventer. */
 object ClockSample : WidgetSample
@@ -211,7 +211,7 @@ class ClockWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidget
         if (greeting.text.toString() != hello) greeting.text = hello
         // Dans le cadran de la Pastille, date courte (« Mer. 5 ») ; ailleurs, la date entière.
         val pattern = if (face.dateInDial) "EEE d" else "EEEE d MMMM"
-        val text = SimpleDateFormat(pattern, Locale.FRANCE).format(Date()).replaceFirstChar { it.uppercase() }
+        val text = SimpleDateFormat(pattern, AppLanguage.locale).format(Date()).replaceFirstChar { it.uppercase() }
         // Même texte : pas de nouvelle mise en page (une fois par minute sur la tablette).
         if (date.text.toString() != text) {
             date.text = text

@@ -11,13 +11,13 @@ import android.widget.FrameLayout
 import android.widget.ImageButton
 import android.widget.LinearLayout
 import android.widget.TextView
+import app.mate.AppLanguage
 import app.mate.R
 import app.mate.net.CalendarEvent
 import app.mate.ui.Look
 import java.text.SimpleDateFormat
 import java.util.Calendar
 import java.util.Date
-import java.util.Locale
 
 /**
  * Agenda : aujourd'hui et les 7 jours suivants, agendas reliés (Outlook, Google, ICS) et agenda personnel (+ pour noter
@@ -48,9 +48,9 @@ class AgendaWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidge
     override val view = FrameLayout(context)
 
     private var face = AgendaFace.of(placed.size)
-    private val timeFormat = SimpleDateFormat("HH:mm", Locale.FRANCE)
-    private val dayHeader = SimpleDateFormat("EEEE d MMMM", Locale.FRANCE)
-    private val weekDay = SimpleDateFormat("EEE d", Locale.FRANCE)
+    private val timeFormat = SimpleDateFormat("HH:mm", AppLanguage.locale)
+    private val dayHeader = SimpleDateFormat("EEEE d MMMM", AppLanguage.locale)
+    private val weekDay = SimpleDateFormat("EEE d", AppLanguage.locale)
 
     /** Aperçu du catalogue : la journée d'exemple à la place de l'agenda de l'ordinateur. */
     private var sample: List<CalendarEvent>? = null
@@ -332,7 +332,7 @@ class AgendaWidget(context: Context, host: HomeHost, placed: Placed) : HomeWidge
                 15 -> R.string.event_reminder_15
                 60 -> R.string.event_reminder_60
                 else -> R.string.event_reminder_at
-            }).lowercase(Locale.FRANCE))
+            }).lowercase(AppLanguage.locale))
         }
         val sub = listOfNotNull(event.location.takeIf { it.isNotBlank() }, reminder).joinToString(" · ")
         if (sub.isNotEmpty()) details.addView(TextView(context).apply {

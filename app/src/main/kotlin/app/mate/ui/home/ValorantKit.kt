@@ -10,6 +10,7 @@ import android.view.ViewGroup
 import android.widget.ImageView
 import android.widget.LinearLayout
 import android.widget.TextView
+import app.mate.AppLanguage
 import app.mate.R
 import app.mate.net.BackendClient
 import app.mate.ui.IconCache
@@ -18,7 +19,6 @@ import app.mate.ui.themeColor
 import app.mate.ui.themeFont
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
-import java.util.Locale
 
 /**
  * Morceaux communs du widget Valorant : icône d'agent et logo de rang (servis par l'ordinateur, gardés par [IconCache]),
@@ -161,7 +161,7 @@ class ValorantKit(val context: Context, private val scope: CoroutineScope, priva
         fun partyHue(party: Int?): Int? = party?.takeIf { it > 0 }?.let { PARTY_HUES[(it - 1) % PARTY_HUES.size] }
 
         /** K/D à deux décimales, à la française ; « — » si pas encore lu. */
-        fun kd(value: Double?): String = value?.let { String.format(Locale.FRANCE, "%.2f", it) } ?: DASH
+        fun kd(value: Double?): String = value?.let { String.format(AppLanguage.locale, "%.2f", it) } ?: DASH
 
         fun pct(value: Int?): String = value?.let { "$it %" } ?: DASH
 

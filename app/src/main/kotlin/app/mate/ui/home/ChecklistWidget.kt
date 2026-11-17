@@ -22,6 +22,7 @@ import androidx.annotation.StringRes
 import androidx.appcompat.app.AlertDialog
 import androidx.core.view.isVisible
 import androidx.core.widget.ImageViewCompat
+import app.mate.AppLanguage
 import app.mate.R
 import app.mate.ui.ListCardViews
 import app.mate.ui.ListShape
@@ -32,7 +33,6 @@ import app.mate.ui.showForTyping
 import app.mate.ui.showImmersive
 import java.text.SimpleDateFormat
 import java.util.Calendar
-import java.util.Locale
 
 /** Exemple de l'Échéance pour le catalogue : un titre, des étapes dont les [done] premières sont faites, l'échéance dans [days] jours. */
 class ChecklistSample(@StringRes val title: Int, @ArrayRes val steps: Int, val done: Int, val days: Int) : WidgetSample
@@ -174,7 +174,7 @@ class ChecklistWidget(context: Context, host: HomeHost, placed: Placed) : HomeWi
 
         box.addView(sectionLabel(R.string.checklist_due_label))
         val dueRow = LinearLayout(context).apply { gravity = Gravity.CENTER_VERTICAL }
-        val dueText = list.dueMs?.let { SimpleDateFormat(context.getString(R.string.checklist_due_format), Locale.FRANCE).format(it) }
+        val dueText = list.dueMs?.let { SimpleDateFormat(context.getString(R.string.checklist_due_format), AppLanguage.locale).format(it) }
             ?: context.getString(R.string.checklist_due_none)
         dueRow.addView(actionButton(dueText) { pickDue(list.dueMs, refresh) }, LinearLayout.LayoutParams(0, dp(52), 1f))
         if (list.dueMs != null) dueRow.addView(

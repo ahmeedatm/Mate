@@ -15,6 +15,7 @@ import android.widget.LinearLayout
 import android.widget.TextView
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.widget.SwitchCompat
+import app.mate.AppLanguage
 import app.mate.R
 import app.mate.net.CalendarEvent
 import java.text.SimpleDateFormat
@@ -35,8 +36,8 @@ class EventDialog(
     private val onDelete: (() -> Unit)? = null,
 ) {
 
-    private val dayLabel = SimpleDateFormat("EEE d", Locale.FRANCE)
-    private val dateLabel = SimpleDateFormat("EEE d MMM", Locale.FRANCE)
+    private val dayLabel = SimpleDateFormat("EEE d", AppLanguage.locale)
+    private val dateLabel = SimpleDateFormat("EEE d MMM", AppLanguage.locale)
 
     fun show(existing: CalendarEvent? = null) {
         val root = LayoutInflater.from(context).inflate(R.layout.view_event_dialog, null)

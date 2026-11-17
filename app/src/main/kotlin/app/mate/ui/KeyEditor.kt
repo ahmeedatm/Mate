@@ -366,8 +366,9 @@ class KeyEditor @JvmOverloads constructor(
     }
 
     private fun keysForm() {
-        val mods = if (onWindows) linkedMapOf("ctrl" to "Ctrl", "shift" to "⇧ Maj", "alt" to "Alt", "win" to "⊞ Win")
-        else linkedMapOf("cmd" to "⌘ Cmd", "shift" to "⇧ Maj", "alt" to "⌥ Option", "ctrl" to "⌃ Ctrl")
+        val shift = context.getString(R.string.key_mod_shift)
+        val mods = if (onWindows) linkedMapOf("ctrl" to "Ctrl", "shift" to shift, "alt" to "Alt", "win" to "⊞ Win")
+        else linkedMapOf("cmd" to "⌘ Cmd", "shift" to shift, "alt" to "⌥ Option", "ctrl" to "⌃ Ctrl")
         val chosen = mutableSetOf<String>()
         chipRow(mods.map { (mod, text) -> text to { if (!chosen.add(mod)) chosen.remove(mod) } }, toggle = true)
         lateinit var key: EditText
