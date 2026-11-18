@@ -64,6 +64,9 @@ export function stopCapteursWhenIdle(): () => void {
     const text = await fs.readFile(FILE, "utf8").catch(() => null);
     if (!capteursIdle(lastRead, text, Date.now())) return;
     lastStart = 0; // la prochaine lecture la relance sans attendre la minute
+    // Une lecture qui arriverait pendant l'arrêt trouverait encore le fichier frais et ne relancerait rien : on part
+    // d'ici pour compter la minute suivante, et la lecture d'après, fichier périmé, relance la tâche.
+    lastRead = Date.now();
     // Une tâche « droits maximum » s'arrête sans accord, comme elle se démarre.
     execFile("schtasks", ["/end", "/tn", CAPTEURS_TASK], { windowsHide: true }, () => {});
   }, IDLE_CHECK_MS);
