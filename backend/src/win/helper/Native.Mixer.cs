@@ -62,8 +62,7 @@ namespace Mate
             string name;
             if (!cache.TryGetValue(pid, out name))
             {
-                try { name = Simple(Process.GetProcessById((int)pid).ProcessName); }
-                catch (Exception) { name = ""; }
+                name = Simple(ProcessNameOf(pid));
                 cache[pid] = name;
             }
             return name.Length == 0 ? null : name;

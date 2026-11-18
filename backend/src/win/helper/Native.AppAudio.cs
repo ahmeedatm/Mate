@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.IO;
 using System.Linq;
 using System.Runtime.InteropServices;
 using System.Text.RegularExpressions;
@@ -101,6 +102,26 @@ namespace Mate
             return Regex.Replace((s ?? "").ToLowerInvariant(), "[^a-z0-9]", "");
         }
 
+        static readonly Dictionary<uint, string> slowNames = new Dictionary<uint, string>();
+
+        /**
+         * Nom du processus (l'exe sans « .exe », comme Process.ProcessName), lu par son chemin : le mixeur et le son par
+         * appli le demandent pour chaque session, plusieurs fois par seconde, et Process.GetProcessById parcourt tous les
+         * processus de la machine à chaque appel (3 ms pour 400 processus). Processus protégé (chemin illisible) : lu à
+         * l'ancienne, une fois, puis gardé.
+         */
+        static string ProcessNameOf(uint pid)
+        {
+            string exe = ExePath(pid);
+            if (exe != null) return Path.GetFileNameWithoutExtension(exe);
+            string name;
+            if (slowNames.TryGetValue(pid, out name)) return name;
+            try { name = Process.GetProcessById((int)pid).ProcessName; }
+            catch (Exception) { name = ""; }
+            if (slowNames.Count > 200) slowNames.Clear();
+            return slowNames[pid] = name;
+        }
+
         /** Nom simplifié du processus d'une session ("discord"), "" pour les sons système ; `state` : 0 inactive, 1 active, 2 expirée. */
         static string SessionProcess(IAudioSessionControl2 session, Dictionary<uint, string> cache, out int state)
         {
@@ -110,8 +131,7 @@ namespace Mate
             string name;
             if (!cache.TryGetValue(pid, out name))
             {
-                try { name = Simple(Process.GetProcessById((int)pid).ProcessName); }
-                catch (Exception) { name = ""; }
+                name = Simple(ProcessNameOf(pid));
                 cache[pid] = name;
             }
             return name;
