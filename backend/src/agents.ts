@@ -1061,13 +1061,15 @@ export function createAgents(deps: AgentsDeps) {
   }
 
   /**
-   * Un tour du filet : rien sans tablette ; à chaque tour si elle montre les agents ou s'il n'y a pas de hooks (seule
-   * source des alertes alors) ; sinon une fois par `IDLE_REFRESH_MS`.
+   * Un tour du filet : rien sans tablette ; à chaque tour si elle montre les agents, ou si une session suivie n'a jamais
+   * envoyé de hook (le filet est alors la seule source de ses alertes) ; sinon une fois par `IDLE_REFRESH_MS`. Une
+   * session lancée sans hooks pendant ce temps n'est vue qu'à la relecture suivante.
    */
   function tick() {
     if (!deps.tabletConnected()) return;
     const t = now();
-    if (t - lastWatch < WATCH_MS || !hooksSeen || t - lastRefresh >= IDLE_REFRESH_MS) void refresh().catch(() => {});
+    const unhooked = !hooksSeen || [...sessions.values()].some((s) => s.hookAt === 0);
+    if (t - lastWatch < WATCH_MS || unhooked || t - lastRefresh >= IDLE_REFRESH_MS) void refresh().catch(() => {});
   }
 
   /** La tablette lit les agents (`GET /agents`) : le filet reprend son rythme, et relit tout de suite s'il dormait. */

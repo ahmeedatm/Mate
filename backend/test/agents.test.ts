@@ -1413,6 +1413,19 @@ describe("relecture de claude agents (le filet)", () => {
     assert.equal(calls(), 2);
   });
 
+  it("une session sans hooks garde le rythme, même si une autre en a", async () => {
+    const { d, calls } = counting();
+    const a = createAgents(d);
+    await a.hook(event("UserPromptSubmit"), {});
+    live = [{ sessionId: "s2", cwd: "/work/autre", pid: process.pid, status: "busy" }];
+    for (let i = 0; i < 4; i++) {
+      clock += 8_000;
+      a.tick();
+      await flush();
+    }
+    assert.equal(calls(), 4);
+  });
+
   it("rien sans tablette connectée", async () => {
     const { d, calls } = counting();
     const a = createAgents(d);
