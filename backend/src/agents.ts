@@ -5,7 +5,8 @@ import path from "node:path";
  * Agents Claude Code : l'état des sessions de l'ordinateur et les réponses depuis la tablette.
  *
  * Trois sources, aucune installation obligatoire pour lire :
- * - `claude agents --json` (filet, toutes les 4 s, 8 s sous Windows, seulement tablette connectée) : toutes les sessions,
+ * - `claude agents --json` (filet, toutes les 4 s, 8 s sous Windows, tablette connectée, une fois par minute si elle ne
+ *   montre pas les agents et que les hooks sont là) : toutes les sessions,
  *   terminal compris ;
  * - les hooks HTTP de Claude Code (`POST /agents/hook`) : l'instant exact, la commande ou la question en attente ;
  * - `orca worktree ps --json` si Orca est là : branche, dernier outil, terminal à qui écrire.
@@ -217,6 +218,13 @@ const QUOTA_TTL_MS = 3 * 3_600_000;
 const QUOTA_READ_MS = 60_000;
 /** Une session connue par hook seulement, sans `SessionEnd`, est oubliée après ce délai sans nouvelle. */
 const SILENT_TTL_MS = 12 * 3600_000;
+/** La tablette montre les agents tant qu'elle a lu `GET /agents` depuis moins que ça (elle relit toutes les 3 s). */
+export const WATCH_MS = 15_000;
+/**
+ * Hooks installés et agents pas montrés : les hooks donnent alertes et états, le filet ne sert qu'à oublier les sessions
+ * fermées. Chaque `claude agents --json` coûte près d'une demi-seconde de processeur à l'ordinateur.
+ */
+export const IDLE_REFRESH_MS = 60_000;
 
 export const LIMITS = {
   plan: 6000,
@@ -456,6 +464,9 @@ export function createAgents(deps: AgentsDeps) {
   let timer: NodeJS.Timeout | undefined;
   let refreshing = false;
   let lastOrca = 0;
+  let lastRefresh = -Infinity;
+  let lastWatch = -Infinity;
+  let pollMs = 4_000;
   /** Chats Orca sans processus Claude (stoppés), relus avec Orca : au repos ; un message les relance (Orca les reprend). */
   let stopped: Session[] = [];
   const find = (id: string) => sessions.get(id) ?? stopped.find((s) => s.id === id);
@@ -908,6 +919,7 @@ export function createAgents(deps: AgentsDeps) {
   async function refresh() {
     if (refreshing) return;
     refreshing = true;
+    lastRefresh = now();
     try {
       const [live, orca] = await Promise.all([deps.listClaude(), now() - lastOrca > 8_000 ? deps.listOrca() : Promise.resolve(undefined)]);
       if (orca !== undefined) lastOrca = now();
@@ -1048,11 +1060,26 @@ export function createAgents(deps: AgentsDeps) {
     );
   }
 
+  /**
+   * Un tour du filet : rien sans tablette ; à chaque tour si elle montre les agents ou s'il n'y a pas de hooks (seule
+   * source des alertes alors) ; sinon une fois par `IDLE_REFRESH_MS`.
+   */
+  function tick() {
+    if (!deps.tabletConnected()) return;
+    const t = now();
+    if (t - lastWatch < WATCH_MS || !hooksSeen || t - lastRefresh >= IDLE_REFRESH_MS) void refresh().catch(() => {});
+  }
+
+  /** La tablette lit les agents (`GET /agents`) : le filet reprend son rythme, et relit tout de suite s'il dormait. */
+  function watch() {
+    lastWatch = now();
+    if (now() - lastRefresh >= pollMs) void refresh().catch(() => {});
+  }
+
   function start(intervalMs = 4_000) {
     stop();
-    timer = setInterval(() => {
-      if (deps.tabletConnected()) void refresh().catch(() => {});
-    }, intervalMs);
+    pollMs = intervalMs;
+    timer = setInterval(tick, intervalMs);
     timer.unref?.();
   }
 
@@ -1159,7 +1186,7 @@ export function createAgents(deps: AgentsDeps) {
     s.resumeTimer.unref?.();
   }
 
-  return { hook, answer, list, ask, askTablet, refresh, start, stop, handleOf, send, focus, resume, interrupt, statusline };
+  return { hook, answer, list, ask, askTablet, refresh, tick, watch, start, stop, handleOf, send, focus, resume, interrupt, statusline };
 }
 
 export type Agents = ReturnType<typeof createAgents>;

@@ -1340,3 +1340,86 @@ describe("Windows : fenêtre du terminal, sans Orca", () => {
     assert.ok(!calls.some((c) => c.startsWith("locate")), "pas cherchée");
   });
 });
+
+describe("relecture de claude agents (le filet)", () => {
+  const counting = () => {
+    const d = deps();
+    let calls = 0;
+    d.listClaude = async () => {
+      calls++;
+      return live;
+    };
+    return { d, calls: () => calls };
+  };
+
+  it("sans hooks, relit à chaque tour : c'est la seule source des alertes", async () => {
+    const { d, calls } = counting();
+    const a = createAgents(d);
+    for (let i = 0; i < 3; i++) {
+      clock += 8_000;
+      a.tick();
+      await flush();
+    }
+    assert.equal(calls(), 3);
+  });
+
+  it("hooks vus et tablette qui ne regarde pas : une relecture par minute seulement", async () => {
+    const { d, calls } = counting();
+    const a = createAgents(d);
+    await a.hook(event("UserPromptSubmit"), {});
+    for (let i = 0; i < 15; i++) {
+      clock += 8_000;
+      a.tick();
+      await flush();
+    }
+    // 120 s : le premier tour, puis un toutes les 60 s.
+    assert.equal(calls(), 2);
+  });
+
+  it("la tablette regarde les agents : chaque tour relit, puis plus quand elle arrête", async () => {
+    const { d, calls } = counting();
+    const a = createAgents(d);
+    await a.hook(event("UserPromptSubmit"), {});
+    clock += 8_000;
+    a.tick();
+    await flush();
+    assert.equal(calls(), 1);
+    for (let i = 0; i < 3; i++) {
+      a.watch();
+      clock += 8_000;
+      a.tick();
+      await flush();
+    }
+    assert.equal(calls(), 4);
+    clock += 20_000; // plus de lecture de la tablette
+    a.tick();
+    await flush();
+    assert.equal(calls(), 4);
+  });
+
+  it("la tablette revient sur les agents : relecture tout de suite si la dernière est vieille", async () => {
+    const { d, calls } = counting();
+    const a = createAgents(d);
+    await a.hook(event("UserPromptSubmit"), {});
+    a.watch();
+    await flush();
+    assert.equal(calls(), 1);
+    a.watch(); // juste relue : pas de nouvelle lecture
+    await flush();
+    assert.equal(calls(), 1);
+    clock += 30_000;
+    a.watch();
+    await flush();
+    assert.equal(calls(), 2);
+  });
+
+  it("rien sans tablette connectée", async () => {
+    const { d, calls } = counting();
+    const a = createAgents(d);
+    tablet = false;
+    clock += 8_000;
+    a.tick();
+    await flush();
+    assert.equal(calls(), 0);
+  });
+});
