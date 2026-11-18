@@ -13,7 +13,17 @@ import { GitLabError } from "./gitlab.ts";
 import { setLogger } from "./log.ts";
 import { startAutoJoin } from "./meetings.ts";
 import { notificationHistory, setNotificationsRead, watchNotifications } from "./notifications.ts";
-import { canControl, clipboardStamp, frontApp, getClipboard, isMac, osName, readNotifications, screenLocked } from "./os.ts";
+import {
+  canControl,
+  clipboardStamp,
+  frontApp,
+  getClipboard,
+  isMac,
+  osName,
+  readNotifications,
+  screenLocked,
+  stopSensorsWhenIdle,
+} from "./os.ts";
 import { identity, lanAddresses, PairingError, startDiscovery } from "./pairing.ts";
 import { sendToTablet, tabletStatus } from "./tablet.ts";
 import { startForegroundWatch } from "./foreground-watch.ts";
@@ -289,6 +299,7 @@ const remind = async (text: string) => (await sendToTablet({ type: "message", te
 startReminders(remind);
 startEventReminders(remind);
 startSchedule();
+stopSensorsWhenIdle();
 // Appel entrant : prévenir la tablette sans attendre sa réponse (la sonnerie ne doit pas bloquer la surveillance).
 void startCallWatch((event) => void sendToTablet({ type: "call", ...event }, 30_000));
 // Réunion en cours : la tablette passe sur son profil Réunion (et en revient), seulement tant qu'elle est connectée.
