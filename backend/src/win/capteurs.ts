@@ -13,6 +13,13 @@ export const CAPTEURS_TASK = "MateCapteurs";
 /** Au-delà, le capteur est considéré arrêté : mieux vaut rien qu'un chiffre vieux. */
 export const CAPTEURS_MAX_AGE_MS = 6000;
 const RESTART_EVERY_MS = 60_000;
+/**
+ * Sans lecture depuis ce délai (widget Performances fermé, tablette partie), la tâche est arrêtée : LibreHardwareMonitor
+ * relit processeur, carte graphique et carte mère toutes les 2 s, ce qui chauffe certains portables pour rien. La
+ * prochaine lecture la relance (`startTask`).
+ */
+export const CAPTEURS_IDLE_MS = 60_000;
+const IDLE_CHECK_MS = 30_000;
 const FILE = path.join(process.env.LOCALAPPDATA ?? os.tmpdir(), "Mate", "capteurs", "cpu-temp.json");
 
 export type CapteursReading = { cpuTempC?: number; cpuWatts?: number; cpuFanRpm?: number; gpuWatts?: number };
@@ -37,6 +44,35 @@ export function parseCapteursReading(text: string, nowMs: number): CapteursReadi
 }
 
 let lastStart = 0;
+/** Départ du compagnon : la tâche lancée à l'ouverture de session s'arrête aussi si personne ne la lit. */
+let lastRead = Date.now();
+
+/** Arrêter la tâche : pas lue depuis `CAPTEURS_IDLE_MS`, et son fichier est encore frais (elle tourne). */
+export function capteursIdle(lastReadMs: number, fileText: string | null, nowMs: number): boolean {
+  if (nowMs - lastReadMs < CAPTEURS_IDLE_MS || fileText === null) return false;
+  try {
+    const at = (JSON.parse(fileText) as { at?: unknown } | null)?.at;
+    return typeof at === "number" && nowMs - at >= 0 && nowMs - at <= CAPTEURS_MAX_AGE_MS;
+  } catch {
+    return false;
+  }
+}
+
+/** Arrête la tâche quand plus rien ne la lit (vérifié toutes les 30 s) ; renvoie la fonction qui arrête la veille. */
+export function stopCapteursWhenIdle(): () => void {
+  const timer = setInterval(async () => {
+    const text = await fs.readFile(FILE, "utf8").catch(() => null);
+    if (!capteursIdle(lastRead, text, Date.now())) return;
+    lastStart = 0; // la prochaine lecture la relance sans attendre la minute
+    // Une lecture qui arriverait pendant l'arrêt trouverait encore le fichier frais et ne relancerait rien : on part
+    // d'ici pour compter la minute suivante, et la lecture d'après, fichier périmé, relance la tâche.
+    lastRead = Date.now();
+    // Une tâche « droits maximum » s'arrête sans accord, comme elle se démarre.
+    execFile("schtasks", ["/end", "/tn", CAPTEURS_TASK], { windowsHide: true }, () => {});
+  }, IDLE_CHECK_MS);
+  timer.unref();
+  return () => clearInterval(timer);
+}
 
 /** Relance la tâche (sans droits : une tâche « droits maximum » se démarre sans accord) au plus une fois par minute. */
 function startTask() {
@@ -47,6 +83,7 @@ function startTask() {
 }
 
 async function readCapteurs(): Promise<CapteursReading | null> {
+  lastRead = Date.now();
   try {
     const reading = parseCapteursReading(await fs.readFile(FILE, "utf8"), Date.now());
     if (reading === null) startTask();

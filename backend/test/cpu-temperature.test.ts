@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import { parseMacmonPower, parseMacmonTemp } from "../src/mac/temperature.ts";
-import { CAPTEURS_MAX_AGE_MS, parseCapteursReading } from "../src/win/capteurs.ts";
+import { CAPTEURS_MAX_AGE_MS, capteursIdle, CAPTEURS_IDLE_MS, parseCapteursReading } from "../src/win/capteurs.ts";
 
 test("macmon : température moyenne du processeur lue dans la sortie JSON", () => {
   assert.equal(parseMacmonTemp('{"cpu_usage_pct":0.2,"temp":{"cpu_temp_avg":64.05,"gpu_temp_avg":66.2}}'), 64.05);
@@ -60,4 +60,15 @@ test("capteur Windows : fichier sans température mais avec des watts → les wa
   assert.deepEqual(parseCapteursReading(text, 1_000_000), { cpuWatts: 20 });
   assert.equal(parseCapteursReading(text, 1_000_000 + CAPTEURS_MAX_AGE_MS + 1), null);
   for (const bad of ["", "{", "{}", '{"at":1}', '{"cpuWatts":"x","at":1}', "null"]) assert.equal(parseCapteursReading(bad, 1), null, bad);
+});
+
+test("capteurs : arrêtés après une minute sans lecture, seulement s'ils tournent encore", () => {
+  const t = 10_000_000;
+  const running = String(JSON.stringify({ cpuTempC: 40, at: t - 1000 }));
+  assert.equal(capteursIdle(t - CAPTEURS_IDLE_MS, running, t), true);
+  assert.equal(capteursIdle(t - CAPTEURS_IDLE_MS + 1, running, t), false, "lus il y a moins d'une minute");
+  // Déjà arrêtés : le fichier ne bouge plus, pas de « schtasks /end » toutes les 30 s.
+  const stale = String(JSON.stringify({ cpuTempC: 40, at: t - CAPTEURS_MAX_AGE_MS - 1 }));
+  assert.equal(capteursIdle(0, stale, t), false);
+  assert.equal(capteursIdle(0, null, t), false, "pas de fichier : pas lancés");
 });

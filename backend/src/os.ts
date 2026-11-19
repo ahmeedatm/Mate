@@ -53,6 +53,11 @@ export const isMac = process.platform === "darwin";
 export const isWindows = process.platform === "win32";
 /** Le deck, le son et les fenêtres sont pilotables. */
 export const canControl = isMac || isWindows;
+
+/** Windows : arrête la tâche des capteurs (température, watts) quand plus rien ne la lit ; ailleurs, rien à arrêter. */
+export function stopSensorsWhenIdle(): () => void {
+  return isWindows ? winCapteurs.stopCapteursWhenIdle() : () => {};
+}
 export const osName = isMac ? "mac" : isWindows ? "windows" : "other";
 /** Instance de test (CI sur le Mac de quelqu'un) : rien ne s'affiche ni ne s'ouvre à l'écran. */
 const headless = process.env.COMPANION_HEADLESS === "1";

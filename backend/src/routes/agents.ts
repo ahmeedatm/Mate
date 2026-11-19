@@ -30,6 +30,7 @@ const supported = isMac || isWindows;
 /**
  * Relecture de `claude agents --json` (le filet, tablette connectée) : AGENTS_POLL_MS, sinon 4 s sur Mac et 8 s sous
  * Windows, où chaque appel prend près d'une seconde (0,24 s sur Mac) ; les hooks donnent l'instant exact de toute façon.
+ * À ce rythme seulement quand la tablette montre les agents ou sans hooks ; sinon une fois par minute (src/agents.ts).
  */
 const pollMs = Math.max(1, Number(process.env.AGENTS_POLL_MS) || (isWindows ? 8000 : 4000));
 
@@ -91,13 +92,16 @@ export default async function agentRoutes(app: FastifyInstance) {
     },
   );
 
-  app.get("/agents", { logLevel: "warn" }, async () => ({
-    ...agents.list(),
-    available: agentsAvailable(),
-    // `voice` : micro des sessions (whisper-cli sur l'ordinateur).
-    voice: voiceAvailable(),
-    now: Date.now(),
-  }));
+  app.get("/agents", { logLevel: "warn" }, async () => {
+    agents.watch();
+    return {
+      ...agents.list(),
+      available: agentsAvailable(),
+      // `voice` : micro des sessions (whisper-cli sur l'ordinateur).
+      voice: voiceAvailable(),
+      now: Date.now(),
+    };
+  });
 
   app.get<{ Querystring: { id: string } }>(
     "/agents/ask",

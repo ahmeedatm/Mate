@@ -126,6 +126,7 @@ const fakeOs = process.env.FAKE_OS === "windows" || process.env.FAKE_OS === "oth
 export const isMac = fakeOs === "mac";
 export const isWindows = fakeOs === "windows";
 export const canControl = fakeOs !== "other";
+export const stopSensorsWhenIdle = () => () => {};
 export const osName = fakeOs;
 export const canMedia = isWindows || isMac;
 
